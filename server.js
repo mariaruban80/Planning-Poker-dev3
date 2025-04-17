@@ -8,6 +8,38 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 const PORT = process.env.PORT || 3000;
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', (ws, req) => {
+  ws.on('message', (message) => {
+    const data = JSON.parse(message);
+    
+    if (data.type === "joinRoom") {
+      const { roomName, userName } = data;
+      
+      // Add the user to the room (e.g., store in a Map)
+      // Assuming a Map that holds room information
+      if (!rooms[roomName]) {
+        rooms[roomName] = [];
+      }
+      
+      rooms[roomName].push(userName);
+      console.log(`${userName} joined room ${roomName}`);
+
+      // Send back updated user list to all clients in the room
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "userList",
+            users: rooms[roomName]
+          }));
+        }
+      });
+    }
+  });
+});
+
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
