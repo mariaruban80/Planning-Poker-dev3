@@ -1,70 +1,52 @@
-const WebSocket = require('ws');
+const express = require('express');
 const http = require('http');
+const socketIo = require('socket.io');
+const path = require('path');
 
-const rooms = {};
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 
+const PORT = process.env.PORT || 3000;
 
-const server = http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end("WebSocket server is running");
-});
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-const wss = new WebSocket.Server({ server });
-
-wss.on('connection', function connection(ws) {
-  ws.on('message', function incoming(message) {
-    try {
-      const msg = JSON.parse(message);
-      const { type, user, roomId, ...rest } = msg;
-
-      if (type === 'join') {
-        ws.user = user;
-        ws.roomId = roomId;
-
-        if (!rooms[roomId]) rooms[roomId] = [];
-        rooms[roomId].push(ws);
-
-        broadcastToRoom(roomId, {
-          type: 'userList',
-          users: rooms[roomId].map(client => client.user),
-        });
-      }
-
-      if (['voteUpdate', 'storyChange'].includes(type)) {
-        broadcastToRoom(roomId, { type, user, ...rest });
-      }
-
-    } catch (e) {
-      console.error('Invalid message:', message);
-    }
-  });
-
-  ws.on('close', () => {
-    const roomId = ws.roomId;
-    if (roomId && rooms[roomId]) {
-      rooms[roomId] = rooms[roomId].filter(client => client !== ws);
-      broadcastToRoom(roomId, {
-        type: 'userList',
-        users: rooms[roomId].map(client => client.user),
-      });
-    }
-  });
-});
-
-function broadcastToRoom(roomId, message) {
-  if (!rooms[roomId]) return;
-  const data = JSON.stringify(message);
-  rooms[roomId].forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
-  });
-}
-
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`WebSocket server running on port ${PORT}`);
-});
+// Fallback for SPA
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.sendFile(path.join(__dirname, 'public/index.html'));
+});
+
+// Socket.io logic
+let users = [];
+
+io.on('connection', socket => {
+  console.log('New client connected:', socket.id);
+
+  socket.on('addUser', name => {
+    const user = { id: socket.id, name };
+    users.push(user);
+    io.emit('updateUsers', users);
+  });
+
+  socket.on('vote', ({ user, story, value }) => {
+    io.emit('userVoted', { user, story, value });
+  });
+
+  socket.on('revealVotes', () => {
+    io.emit('revealVotes');
+  });
+
+  socket.on('resetVotes', () => {
+    io.emit('resetVotes');
+  });
+
+  socket.on('disconnect', () => {
+    users = users.filter(u => u.id !== socket.id);
+    io.emit('updateUsers', users);
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
