@@ -329,19 +329,17 @@ display: flex; /* Aligning the children horizontally */
 <script>
 let socket;
 let userId;
-function initWebSocket() {
-//  const socket = new WebSocket(`wss://${window.location.host}`);
-const socket = new WebSocket('wss://your-backend-url.onrender.com');
+  function initWebSocket() {
+  socket = new WebSocket('wss://your-backend-url.onrender.com');
 
   socket.onopen = () => {
     console.log("Connected to server");
-    userId = "User" + Math.floor(Math.random() * 10000); // Simple user ID
-    socket.send(JSON.stringify({ type: "join", user: userId }));
+    userId = "User" + Math.floor(Math.random() * 10000);
+    socket.send(JSON.stringify({ type: "join", user: userId, roomId: currentRoomId })); // ✅ Include roomId
   };
 
   socket.onmessage = (event) => {
     const msg = JSON.parse(event.data);
-
     switch (msg.type) {
       case "userList":
         users = msg.users;
@@ -362,6 +360,7 @@ const socket = new WebSocket('wss://your-backend-url.onrender.com');
     }
   };
 }
+
 
 
   let users = [];
