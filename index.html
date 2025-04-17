@@ -101,12 +101,19 @@
     }
 
     .upload-section {
+display: flex; /* Aligning the children horizontally */
+  justify-content: flex-end; /* Aligning the content to the right */
       text-align: right;
       padding: 10px;
       background: #fff;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      gap: 10px; /* Adds some spacing between buttons */
     }
-
+.upload-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
     #story-info {
       margin-top: 10px;
       font-size: 14px;
@@ -137,6 +144,7 @@
 }
 
 
+
     .button {
       margin: 10px 0;
       padding: 8px 12px;
@@ -159,6 +167,73 @@
 </head>
 <body>
 <div class="banner">Planning Poker</div>
+<!-- Invite Button and Modal -->
+<style>
+  .invite-button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  background-color: #ff9800;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  .modal {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    text-align: center;
+  }
+
+  .modal input {
+    width: 100%;
+    padding: 6px;
+    margin-top: 10px;
+    font-size: 14px;
+  }
+
+  .modal button {
+    margin-top: 10px;
+    background-color: #6c63ff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .modal img {
+    margin-top: 15px;
+    max-width: 100%;
+  }
+</style>
+
+
+
+<div class="modal-overlay" id="inviteModal">
+  <div class="modal">
+    <h3>Invite Link</h3>
+    <input type="text" id="inviteLink" readonly />
+    <button onclick="copyInviteLink()">Copy Link</button>
+    
+    <button onclick="hideInviteModal()">Close</button>
+  </div>
+</div>
+
 
 <script>
   if (performance.getEntriesByType("navigation")[0].type === "reload") {
@@ -167,13 +242,18 @@
 </script>
 
 <div class="upload-section">
+<div class="upload-right">
+
   <input type="file" id="csvInput" accept=".csv" />
+<button class="invite-button" onclick="showInviteModal()">Invite Others</button>
   <span id="storyCount"></span>
   <div id="story-info"></div>
+</div>
 </div>
 <div class="container">
   <div class="sidebar">
     <button class="button" id="addMemberBtn">Add Member</button>
+
     <div class="user-list" id="userList"></div>      
     <h3>Voted</h3>
     <button class="button" id="revealVotesBtn">Reveal Votes</button>
@@ -203,6 +283,42 @@
 </div>
 
 <script>
+let socket;
+let userId;
+
+function initWebSocket() {
+  socket = new WebSocket("ws://localhost:3000");
+
+  socket.onopen = () => {
+    console.log("Connected to server");
+    userId = "User" + Math.floor(Math.random() * 10000); // Simple user ID
+    socket.send(JSON.stringify({ type: "join", user: userId }));
+  };
+
+  socket.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    switch (msg.type) {
+      case "userList":
+        users = msg.users;
+        renderUsers();
+        break;
+      case "voteUpdate":
+        storyVotesByUser[msg.story] = msg.votes;
+        renderUsers();
+        break;
+      case "storyChange":
+        selectedStory = msg.story;
+        currentStoryIndex = msg.index;
+        localStorage.setItem('selectedStory', selectedStory);
+        localStorage.setItem('selectedStoryIndex', currentStoryIndex);
+        highlightSelectedStory(JSON.parse(localStorage.getItem('stories') || '[]'));
+        renderUsers();
+        break;
+    }
+  };
+}
+
   let users = [];
   let reveal = false;
   const storyVotesByUser = JSON.parse(localStorage.getItem('storyVotesByUser')) || {};
@@ -442,8 +558,32 @@ updateStoryHighlights();
   window.addEventListener('DOMContentLoaded', () => {
     const stories = JSON.parse(localStorage.getItem('stories')) || [];
     loadStories(stories);
+initWebSocket();
     renderUsers();
   });
+function showInviteModal() {
+  const url = window.location.href;
+  const modal = document.getElementById('inviteModal');
+  const input = document.getElementById('inviteLink');
+
+input.value = url;
+modal.style.display = 'flex';
+
+}
+
+function hideInviteModal() {
+  document.getElementById('inviteModal').style.display = 'none';
+}
+
+
+function copyInviteLink() {
+  const input = document.getElementById('inviteLink');
+  input.select();
+  input.setSelectionRange(0, 99999);
+  document.execCommand('copy');
+  alert('Link copied to clipboard!');
+}
+
 </script>
 </body>
 </html>
