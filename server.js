@@ -65,3 +65,6 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`WebSocket server running on port ${PORT}`);
 });
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
