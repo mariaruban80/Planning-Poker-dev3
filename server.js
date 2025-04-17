@@ -3,7 +3,12 @@ const http = require('http');
 
 const rooms = {};
 
-const server = http.createServer();
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end("WebSocket server is running");
+});
+
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', function connection(ws) {
