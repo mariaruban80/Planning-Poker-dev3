@@ -283,7 +283,7 @@ display: flex; /* Aligning the children horizontally */
 </div>
 
 <script>
-  const socket = new WebSocket(`wss://${window.location.host}`);
+  
 
   // Generate or fetch roomId from the URL
   function ensureRoomId() {
@@ -326,12 +326,8 @@ display: flex; /* Aligning the children horizontally */
 <script>
 let socket;
 let userId;
-
 function initWebSocket() {
-const WS_HOST = location.hostname === "localhost"
-  ? "ws://localhost:3000"
-  : "wss://<your-websocket-backend-url>";
-socket = new WebSocket(WS_HOST);
+  const socket = new WebSocket(`wss://${window.location.host}`);
 
   socket.onopen = () => {
     console.log("Connected to server");
@@ -362,6 +358,7 @@ socket = new WebSocket(WS_HOST);
     }
   };
 }
+
 
   let users = [];
   let reveal = false;
