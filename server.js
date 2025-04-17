@@ -18,32 +18,51 @@ app.get('*', (req, res) => {
 });
 
 // Socket.io logic
-let users = [];
+let rooms = {};  // Object to store room data
 
 io.on('connection', socket => {
   console.log('New client connected:', socket.id);
 
-  socket.on('addUser', name => {
-    const user = { id: socket.id, name };
-    users.push(user);
-    io.emit('updateUsers', users);
+  // Join a room
+  socket.on('joinRoom', (roomName, userName) => {
+    socket.join(roomName);
+    if (!rooms[roomName]) {
+      rooms[roomName] = [];
+    }
+
+    // Add user to the room
+    rooms[roomName].push({ id: socket.id, name: userName });
+
+    // Emit updated user list for the room
+    io.to(roomName).emit('updateUsers', rooms[roomName]);
   });
 
-  socket.on('vote', ({ user, story, value }) => {
-    io.emit('userVoted', { user, story, value });
+  // Handle voting
+  socket.on('vote', ({ roomName, user, story, value }) => {
+    io.to(roomName).emit('userVoted', { user, story, value });
   });
 
-  socket.on('revealVotes', () => {
-    io.emit('revealVotes');
+  // Reveal votes for a room
+  socket.on('revealVotes', (roomName) => {
+    io.to(roomName).emit('revealVotes');
   });
 
-  socket.on('resetVotes', () => {
-    io.emit('resetVotes');
+  // Reset votes for a room
+  socket.on('resetVotes', (roomName) => {
+    io.to(roomName).emit('resetVotes');
   });
 
+  // Disconnect logic
   socket.on('disconnect', () => {
-    users = users.filter(u => u.id !== socket.id);
-    io.emit('updateUsers', users);
+    // Remove user from all rooms
+    for (let roomName in rooms) {
+      rooms[roomName] = rooms[roomName].filter(u => u.id !== socket.id);
+      if (rooms[roomName].length === 0) {
+        delete rooms[roomName];
+      }
+    }
+    // Emit updated user list across all rooms
+    io.emit('updateUsers', rooms);
   });
 });
 
