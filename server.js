@@ -1,34 +1,34 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// server.js
+const WebSocket = require('ws');
+const server = new WebSocket.Server({ port: 8080 });
 
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer);
+const rooms = {};
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+server.on('connection', socket => {
+  let roomId, username;
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
-
-// WebSocket logic
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  socket.on('message', (msg) => {
-    console.log('Received message:', msg);
-    io.emit('message', msg); // Broadcast to all clients
+  socket.on('message', message => {
+    const data = JSON.parse(message);
+    if (data.type === 'join') {
+      roomId = data.roomId;
+      username = data.user;
+      rooms[roomId] = rooms[roomId] || [];
+      rooms[roomId].push({ socket, user: username });
+      broadcastUserList();
+    }
   });
 
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+  socket.on('close', () => {
+    if (rooms[roomId]) {
+      rooms[roomId] = rooms[roomId].filter(u => u.socket !== socket);
+      broadcastUserList();
+    }
   });
-});
 
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  function broadcastUserList() {
+    const users = rooms[roomId]?.map(u => u.user);
+    rooms[roomId]?.forEach(u => {
+      u.socket.send(JSON.stringify({ type: 'userList', users }));
+    });
+  }
 });
