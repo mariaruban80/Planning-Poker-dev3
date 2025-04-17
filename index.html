@@ -281,6 +281,7 @@ display: flex; /* Aligning the children horizontally */
     <button class="button" onclick="navigateStory('next')">Next Story</button>
   </div>
 </div>
+
 <script>
   // Generate or fetch roomId from the URL
   function ensureRoomId() {
@@ -325,7 +326,10 @@ let socket;
 let userId;
 
 function initWebSocket() {
-  socket = new WebSocket("ws://localhost:3000");
+const WS_HOST = location.hostname === "localhost"
+  ? "ws://localhost:3000"
+  : "wss://<your-websocket-backend-url>";
+socket = new WebSocket(WS_HOST);
 
   socket.onopen = () => {
     console.log("Connected to server");
