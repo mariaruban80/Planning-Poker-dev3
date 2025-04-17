@@ -283,6 +283,8 @@ display: flex; /* Aligning the children horizontally */
 </div>
 
 <script>
+  const socket = new WebSocket(`wss://${window.location.host}`);
+
   // Generate or fetch roomId from the URL
   function ensureRoomId() {
     const url = new URL(window.location.href);
