@@ -1,80 +1,39 @@
-// server.js
-const WebSocket = require('ws');
-const http = require('http');
+import express from 'express';
+import http from 'http';
+import { WebSocketServer } from 'ws';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const server = http.createServer();
-const wss = new WebSocket.Server({ server });
+// Get __dirname in ES module environment
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const rooms = {}; // roomId -> { users: Set, sockets: Set }
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
 
-function broadcastToRoom(roomId, data) {
-  if (!rooms[roomId]) return;
-  rooms[roomId].sockets.forEach(ws => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(data));
-    }
-  });
-}
+// Serve static HTML and assets
+app.use(express.static(path.join(__dirname, 'public')));
 
 wss.on('connection', (ws) => {
-  let currentRoom = null;
-  let currentUser = null;
+  console.log('Client connected');
 
   ws.on('message', (message) => {
-    try {
-      const msg = JSON.parse(message);
-
-      if (msg.type === 'join') {
-        const { roomId, user } = msg;
-        currentRoom = roomId;
-        currentUser = user;
-
-        if (!rooms[roomId]) {
-          rooms[roomId] = { users: new Set(), sockets: new Set() };
-        }
-
-        rooms[roomId].users.add(user);
-        rooms[roomId].sockets.add(ws);
-
-        broadcastToRoom(roomId, {
-          type: 'userList',
-          users: Array.from(rooms[roomId].users),
-        });
-
-      } else if (msg.type === 'voteUpdate') {
-        broadcastToRoom(currentRoom, {
-          type: 'voteUpdate',
-          story: msg.story,
-          votes: msg.votes,
-        });
-
-      } else if (msg.type === 'storyChange') {
-        broadcastToRoom(currentRoom, {
-          type: 'storyChange',
-          story: msg.story,
-          index: msg.index,
-        });
+    console.log('Received:', message);
+    // Broadcast to all other clients
+    wss.clients.forEach((client) => {
+      if (client !== ws && client.readyState === ws.OPEN) {
+        client.send(message);
       }
-
-    } catch (err) {
-      console.error('Invalid message:', err);
-    }
+    });
   });
 
   ws.on('close', () => {
-    if (currentRoom && rooms[currentRoom]) {
-      rooms[currentRoom].users.delete(currentUser);
-      rooms[currentRoom].sockets.delete(ws);
-
-      broadcastToRoom(currentRoom, {
-        type: 'userList',
-        users: Array.from(rooms[currentRoom].users),
-      });
-    }
+    console.log('Client disconnected');
   });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`WebSocket server running on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
