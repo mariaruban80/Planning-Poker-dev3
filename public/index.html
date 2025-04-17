@@ -447,6 +447,49 @@ updateStoryHighlights();
       });
     });
   }
+  function initWebSocket() {
+  socket = new WebSocket('wss://your-backend-url.onrender.com');
+
+  socket.onopen = () => {
+    console.log("Connected to server");
+
+    // Generate a random username or get it from user input
+    const userName = "User" + Math.floor(Math.random() * 10000);
+
+    // Emit 'joinRoom' to the server with roomId and userName
+    socket.send(JSON.stringify({
+      type: "joinRoom", 
+      roomName: currentRoomId,  // Room ID is already defined from URL
+      userName: userName        // Randomly generated user name
+    }));
+
+    // Optionally, store userName for later use (in case you need to show it or use it)
+    localStorage.setItem('userName', userName);
+  };
+
+  socket.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    switch (msg.type) {
+      case "userList":
+        users = msg.users;
+        renderUsers();
+        break;
+      case "voteUpdate":
+        storyVotesByUser[msg.story] = msg.votes;
+        renderUsers();
+        break;
+      case "storyChange":
+        selectedStory = msg.story;
+        currentStoryIndex = msg.index;
+        localStorage.setItem('selectedStory', selectedStory);
+        localStorage.setItem('selectedStoryIndex', currentStoryIndex);
+        highlightSelectedStory(JSON.parse(localStorage.getItem('stories') || '[]'));
+        renderUsers();
+        break;
+    }
+  };
+}
+
 
   document.querySelectorAll('.card').forEach(card => {
     card.addEventListener('dragstart', e => {
