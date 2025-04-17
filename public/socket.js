@@ -1,6 +1,17 @@
 // socket.js
 
 let socket;
+const socket = io(window.location.origin);
+
+// Optional: Log connection success and errors
+socket.on('connect', () => {
+  console.log('Connected to WebSocket:', socket.id);
+});
+
+socket.on('connect_error', (err) => {
+  console.error('WebSocket connection error:', err);
+});
+
 
 // Function to initialize WebSocket connection
 export const initializeWebSocket = (currentRoomId) => {
