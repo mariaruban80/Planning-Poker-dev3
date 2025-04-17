@@ -281,6 +281,44 @@ display: flex; /* Aligning the children horizontally */
     <button class="button" onclick="navigateStory('next')">Next Story</button>
   </div>
 </div>
+<script>
+  // Generate or fetch roomId from the URL
+  function ensureRoomId() {
+    const url = new URL(window.location.href);
+    let roomId = url.searchParams.get("roomId");
+
+    if (!roomId) {
+      // Generate a simple unique ID (e.g., timestamp + random)
+      roomId = 'room-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5);
+      url.searchParams.set("roomId", roomId);
+      window.history.replaceState({}, '', url); // Update URL without reloading
+    }
+
+    return roomId;
+  }
+
+  const currentRoomId = ensureRoomId(); // Ensure roomId is set in URL
+
+  // Set invite link when opening the modal
+  function showInviteModal() {
+    document.getElementById("inviteModal").style.display = "flex";
+    document.getElementById("inviteLink").value = window.location.href;
+  }
+
+  function hideInviteModal() {
+    document.getElementById("inviteModal").style.display = "none";
+  }
+
+  function copyInviteLink() {
+    const input = document.getElementById("inviteLink");
+    input.select();
+    document.execCommand("copy");
+    alert("Invite link copied!");
+  }
+
+  // Example usage: pass roomId to server if needed
+  // socket.send(JSON.stringify({ type: "join", user: userId, roomId: currentRoomId }));
+</script>
 
 <script>
 let socket;
