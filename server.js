@@ -1,39 +1,34 @@
 import express from 'express';
-import http from 'http';
-import { WebSocketServer } from 'ws';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Get __dirname in ES module environment
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
-
-// Serve static HTML and assets
+// Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-wss.on('connection', (ws) => {
-  console.log('Client connected');
+// WebSocket logic
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
 
-  ws.on('message', (message) => {
-    console.log('Received:', message);
-    // Broadcast to all other clients
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === ws.OPEN) {
-        client.send(message);
-      }
-    });
+  socket.on('message', (msg) => {
+    console.log('Received message:', msg);
+    io.emit('message', msg); // Broadcast to all clients
   });
 
-  ws.on('close', () => {
-    console.log('Client disconnected');
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
