@@ -1113,8 +1113,10 @@ function setupStoryNavigation() {
 
   if (nextButton) {
     nextButton.addEventListener('click', () => {
-      if (csvData.length === 0) return;
-      const newIndex = (currentStoryIndex + 1) % csvData.length;
+      const storyList = document.getElementById('storyList');
+      const storyCount = storyList ? storyList.children.length : 0;
+      if (storyCount === 0) return;
+      const newIndex = (currentStoryIndex + 1) % storyCount;
       console.log('[NAV] Next Story Clicked:', newIndex);
       selectStory(newIndex);
     });
@@ -1122,13 +1124,16 @@ function setupStoryNavigation() {
 
   if (prevButton) {
     prevButton.addEventListener('click', () => {
-      if (csvData.length === 0) return;
-      const newIndex = (currentStoryIndex - 1 + csvData.length) % csvData.length;
+      const storyList = document.getElementById('storyList');
+      const storyCount = storyList ? storyList.children.length : 0;
+      if (storyCount === 0) return;
+      const newIndex = (currentStoryIndex - 1 + storyCount) % storyCount;
       console.log('[NAV] Previous Story Clicked:', newIndex);
       selectStory(newIndex);
     });
   }
 }
+
 
 /**
  * Generate avatar URL
