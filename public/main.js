@@ -1512,6 +1512,27 @@ function handleSocketMessage(message) {
         updateUserList(message.users);
       }
       break;
+    case 'forceSelectionSync':
+  // Handle forced selection sync from server
+  console.log('[SOCKET] Received forced selection sync:', message.storyId || message.storyIndex);
+  
+  // Always process this, even if we're in the middle of another selection
+  const wasProcessingRemoteSelection = processingRemoteSelection;
+  processingRemoteSelection = true;
+  
+  try {
+    if (message.storyId) {
+      // Force DOM selection to match this ID
+      forceSelectStoryById(message.storyId);
+    } else if (message.storyIndex !== undefined) {
+      // Fall back to index-based selection
+      forceSelectStoryByIndex(message.storyIndex);
+    }
+  } finally {
+    // Restore previous processing state
+    processingRemoteSelection = wasProcessingRemoteSelection;
+  }
+  break;
 
     case 'addTicket':
       // Handle ticket added by another user
@@ -1674,6 +1695,112 @@ function handleSocketMessage(message) {
       break;
   }
 }
+// Add these helper functions to main.js
+/**
+ * Force select a story by ID - ignores all checks and flags
+ */
+function forceSelectStoryById(storyId) {
+  if (!storyId) return;
+  
+  console.log('[UI] Force selecting story by ID:', storyId);
+  
+  // Find the story card with this ID
+  const storyCard = document.getElementById(storyId);
+  if (!storyCard) {
+    console.warn(`[UI] Force select: Could not find story with ID: ${storyId}`);
+    return;
+  }
+  
+  // Get the index from the card's data attribute
+  const index = parseInt(storyCard.dataset.index, 10);
+  if (isNaN(index)) {
+    console.warn(`[UI] Force select: Invalid index for story ID ${storyId}`);
+    return;
+  }
+  
+  // Directly update UI and state
+  forceUpdateStorySelection(storyCard, index, storyId);
+}
+
+/**
+ * Force select a story by index - ignores all checks and flags
+ */
+function forceSelectStoryByIndex(index) {
+  if (index === undefined || index === null) return;
+  
+  console.log('[UI] Force selecting story by index:', index);
+  
+  // Find the story card with this index
+  const storyCard = document.querySelector(`.story-card[data-index="${index}"]`);
+  if (!storyCard) {
+    console.warn(`[UI] Force select: Could not find story with index: ${index}`);
+    return;
+  }
+  
+  // Directly update UI and state
+  forceUpdateStorySelection(storyCard, index, storyCard.id);
+}
+
+/**
+ * Directly update UI for story selection without any checks
+ */
+function forceUpdateStorySelection(storyCard, index, storyId) {
+  // Update UI directly
+  document.querySelectorAll('.story-card').forEach(card => {
+    card.classList.remove('selected', 'active');
+  });
+  
+  storyCard.classList.add('selected', 'active');
+  storyCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  // Update state
+  currentStoryIndex = index;
+  currentStoryId = storyId;
+  
+  // Update visuals for current selection
+  renderCurrentStory();
+  resetOrRestoreVotes(index);
+}
+
+// Add this to window.initializeSocketWithName to ensure sync on join
+window.initializeSocketWithName = function(roomId, name) {
+  // Existing code...
+  
+  // Request all tickets and force user list refresh after a delay
+  setTimeout(() => {
+    if (socket && socket.connected) {
+      console.log('[APP] Requesting all tickets after initialization');
+      socket.emit('requestAllTickets');
+      
+      // Explicitly request the current user list
+      if (typeof requestUserList === 'function') {
+        requestUserList();
+      } else if (socket.emit) {
+        socket.emit('requestUserList');
+      }
+      
+      // Request current story selection
+      socket.emit('requestCurrentStory');
+      
+      // Also request selection sync
+      socket.emit('syncCurrentSelection');
+      
+      hasRequestedTickets = true;
+    }
+  }, 1000);
+  
+  // Rest of existing code...
+};
+
+// Add debugger function to manually trigger selection sync
+window.syncSelection = function() {
+  if (socket && socket.connected) {
+    socket.emit('syncCurrentSelection');
+    return true;
+  }
+  return false;
+};
+
 
 // Improved check user list status function
 function checkUserListStatus() {
