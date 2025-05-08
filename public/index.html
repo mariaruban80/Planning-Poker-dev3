@@ -1990,6 +1990,16 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
     }
   });
 </script>
+    <!-- Add this before the closing </body> tag -->
+<script src="userlist-fix.js"></script>
+<script>
+  // Force user list fix on page interaction
+  document.addEventListener('click', function() {
+    if (typeof directUserFix === 'function') {
+      directUserFix();
+    }
+  }, { once: true });
+</script>
     <!-- The socket.js script should use getUserName() to get the username -->
     <script src="socket.js"></script>
     <script src="main.js"></script>
