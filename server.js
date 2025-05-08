@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
 app.use(express.static(join(__dirname, 'public')));
 
 // Enhanced room structure with vote revealing state
-const rooms = {}; // roomId: { users, votes, story, revealed, csvData, tickets, selectedIndex, votesPerStory, votesRevealed }
+const rooms = {}; // roomId: { users, votes, story, revealed, csvData, tickets, selectedIndex, selectedStoryId, votesPerStory, votesRevealed }
 
 io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
@@ -48,6 +48,7 @@ io.on('connection', (socket) => {
         csvData: [],
         tickets: [],
         selectedIndex: 0,
+        selectedStoryId: null, // Add this new field
         votesPerStory: {},
         votesRevealed: {}
       };
@@ -73,12 +74,22 @@ io.on('connection', (socket) => {
       socket.emit('syncCSVData', rooms[roomId].csvData);
     }
     
-    // Send current story selection to the new user
-    const currentStoryIndex = rooms[roomId].selectedIndex || 0;
-    socket.emit('storySelected', { 
-      storyIndex: currentStoryIndex,
-      isInitialSync: true 
-    });
+    // Send current story selection to the new user using ID if available
+    if (rooms[roomId].selectedStoryId) {
+      console.log(`[SERVER] Sending selected story ID to new user: ${rooms[roomId].selectedStoryId}`);
+      socket.emit('storySelectedById', { 
+        storyId: rooms[roomId].selectedStoryId,
+        isInitialSync: true 
+      });
+    } else if (typeof rooms[roomId].selectedIndex === 'number') {
+      // Fall back to index-based selection if no ID is available
+      const storyIndex = rooms[roomId].selectedIndex;
+      console.log(`[SERVER] Sending selected story index to new user: ${storyIndex}`);
+      socket.emit('storySelected', { 
+        storyIndex,
+        isInitialSync: true 
+      });
+    }
   });
   
   // Handle requesting user list explicitly
@@ -97,13 +108,48 @@ io.on('connection', (socket) => {
   socket.on('requestCurrentStory', () => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
-      const currentStoryIndex = rooms[roomId].selectedIndex || 0;
-      console.log(`[SERVER] Client ${socket.id} requested current story, sending: ${currentStoryIndex}`);
+      // Prefer ID-based selection if available
+      if (rooms[roomId].selectedStoryId) {
+        console.log(`[SERVER] Client ${socket.id} requested current story, sending ID: ${rooms[roomId].selectedStoryId}`);
+        socket.emit('storySelectedById', { 
+          storyId: rooms[roomId].selectedStoryId,
+          isInitialSync: true
+        });
+      } else {
+        // Fall back to index-based selection
+        const currentStoryIndex = rooms[roomId].selectedIndex || 0;
+        console.log(`[SERVER] Client ${socket.id} requested current story, sending index: ${currentStoryIndex}`);
+        socket.emit('storySelected', { 
+          storyIndex: currentStoryIndex,
+          isInitialSync: true
+        });
+      }
+    }
+  });
+  
+  // Add a new handler for story selection by ID
+  socket.on('storySelectedById', ({ storyId }) => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      console.log(`[SERVER] Story selection by ID received from ${socket.id} (${socket.data.userName}) in room ${roomId}, storyId: ${storyId}`);
       
-      // Send just to the requesting client
-      socket.emit('storySelected', { 
-        storyIndex: currentStoryIndex,
-        isInitialSync: true
+      // Store the selected story ID in room state
+      rooms[roomId].selectedStoryId = storyId;
+      
+      // Try to find the corresponding index for backward compatibility
+      if (rooms[roomId].tickets && Array.isArray(rooms[roomId].tickets)) {
+        const index = rooms[roomId].tickets.findIndex(t => t.id === storyId);
+        if (index !== -1) {
+          rooms[roomId].selectedIndex = index;
+          console.log(`[SERVER] Found corresponding index ${index} for storyId ${storyId}`);
+        }
+      }
+      
+      // Broadcast to ALL clients in the room
+      io.to(roomId).emit('storySelectedById', { 
+        storyId: storyId,
+        selectorId: socket.id,
+        selectorName: socket.data.userName
       });
     }
   });
@@ -147,9 +193,15 @@ io.on('connection', (socket) => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
       // Now that CSV is loaded, send the current story selection
-      if (typeof rooms[roomId].selectedIndex === 'number') {
+      if (rooms[roomId].selectedStoryId) {
+        // Prefer ID-based selection
+        socket.emit('storySelectedById', { 
+          storyId: rooms[roomId].selectedStoryId,
+          isInitialSync: true
+        });
+      } else if (typeof rooms[roomId].selectedIndex === 'number') {
+        // Fall back to index-based selection
         const storyIndex = rooms[roomId].selectedIndex;
-        console.log(`[SERVER] Client ${socket.id} confirmed CSV loaded, sending current story: ${storyIndex}`);
         socket.emit('storySelected', { storyIndex });
         
         // Send votes for the current story if any exist
@@ -166,19 +218,28 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle story selection
+  // Update the old index-based handler to set the ID too
   socket.on('storySelected', ({ storyIndex }) => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
-      console.log(`[SERVER] storySelected received from ${socket.id} (${socket.data.userName}) in room ${roomId}, storyIndex: ${storyIndex}`);
+      console.log(`[SERVER] Story selection by index received from ${socket.id} (${socket.data.userName}) in room ${roomId}, index: ${storyIndex}`);
       
       // Store the selected index in room state
       rooms[roomId].selectedIndex = storyIndex;
       
-      // Broadcast to ALL clients in the room (including sender for confirmation)
+      // Find the story ID that corresponds to this index if possible
+      let selectedStoryId = null;
+      if (rooms[roomId].tickets && Array.isArray(rooms[roomId].tickets) && 
+          storyIndex >= 0 && storyIndex < rooms[roomId].tickets.length) {
+        selectedStoryId = rooms[roomId].tickets[storyIndex].id;
+        rooms[roomId].selectedStoryId = selectedStoryId;
+        console.log(`[SERVER] Found story ID ${selectedStoryId} for index ${storyIndex}`);
+      }
+      
+      // Broadcast to ALL clients in the room
       io.to(roomId).emit('storySelected', { 
         storyIndex,
-        // Add userId of who selected the story for debugging
+        storyId: selectedStoryId,
         userId: socket.id,
         userName: socket.data.userName
       });
@@ -302,8 +363,15 @@ io.on('connection', (socket) => {
         });
       });
       
-      // Reset selected index and voting state
+      // Reset selected index and story ID
       rooms[roomId].selectedIndex = 0;
+      if (rooms[roomId].tickets.length > 0) {
+        rooms[roomId].selectedStoryId = rooms[roomId].tickets[0].id;
+      } else {
+        rooms[roomId].selectedStoryId = null;
+      }
+      
+      // Reset voting state
       rooms[roomId].votesPerStory = {}; 
       rooms[roomId].votesRevealed = {};
       
