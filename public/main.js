@@ -1116,10 +1116,9 @@ function setupStoryNavigation() {
       const storyList = document.getElementById('storyList');
       const storyCount = storyList ? storyList.children.length : 0;
       if (storyCount === 0) return;
-      //const newIndex = (currentStoryIndex + 1) % storyCount;
-      const newIndex = (currentStoryIndex + 1) % totalStories;
-      console.log('[NAV] Next Story Clicked:', newIndex);
-      selectStory(newIndex);
+      const newIndex = (currentStoryIndex + 1) % storyCount;
+      console.log('[NAV] Next Story Clicked:', currentStoryIndex, '→', newIndex);
+      selectStory(newIndex); // ✅ This emits to server
     });
   }
 
@@ -1128,13 +1127,13 @@ function setupStoryNavigation() {
       const storyList = document.getElementById('storyList');
       const storyCount = storyList ? storyList.children.length : 0;
       if (storyCount === 0) return;
-    //  const newIndex = (currentStoryIndex - 1 + storyCount) % storyCount;
-        const newIndex = (currentStoryIndex - 1 + totalStories) % totalStories;
-      console.log('[NAV] Previous Story Clicked:', newIndex);
-      selectStory(newIndex);
+      const newIndex = (currentStoryIndex - 1 + storyCount) % storyCount;
+      console.log('[NAV] Previous Story Clicked:', currentStoryIndex, '→', newIndex);
+      selectStory(newIndex); // ✅ This emits to server
     });
   }
 }
+
 
 
 /**
