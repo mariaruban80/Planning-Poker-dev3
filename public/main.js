@@ -481,6 +481,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.classList.remove('disabled');
     card.setAttribute('draggable', 'true');
   });
+  normalizeStoryIndexes();
 }
 
 /**
@@ -517,6 +518,8 @@ function processAllTickets(tickets) {
     currentStoryIndex = 0;
     selectStory(0, false); // Don't emit to avoid loops
   }
+   // ✅ Fix indexes to ensure navigation works
+  normalizeStoryIndexes();
 }
 
 /**
@@ -638,6 +641,18 @@ function parseCSV(data) {
   return rows.map(row => row.split(','));
 }
 
+function normalizeStoryIndexes() {
+  const storyList = document.getElementById('storyList');
+  if (!storyList) return;
+
+  const storyCards = storyList.querySelectorAll('.story-card');
+  storyCards.forEach((card, index) => {
+    card.dataset.index = index;
+    card.onclick = () => selectStory(index); // ensure correct click behavior
+  });
+}
+
+
 /**
  * Display CSV data in the story list
  */
@@ -750,6 +765,7 @@ function displayCSVData(data) {
       currentStoryIndex = 0;
     }
   } finally {
+    normalizeStoryIndexes();
     // Always release the processing flag
     processingCSVData = false;
   }
