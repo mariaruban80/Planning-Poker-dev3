@@ -72,6 +72,13 @@ io.on('connection', (socket) => {
     if (rooms[roomId].csvData?.length > 0) {
       socket.emit('syncCSVData', rooms[roomId].csvData);
     }
+    
+    // Send current story selection to the new user
+    const currentStoryIndex = rooms[roomId].selectedIndex || 0;
+    socket.emit('storySelected', { 
+      storyIndex: currentStoryIndex,
+      isInitialSync: true 
+    });
   });
   
   // Handle requesting user list explicitly
@@ -83,6 +90,21 @@ io.on('connection', (socket) => {
       
       // Send the user list directly to the requesting client
       socket.emit('userList', rooms[roomId].users);
+    }
+  });
+  
+  // Handle requesting current story selection
+  socket.on('requestCurrentStory', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      const currentStoryIndex = rooms[roomId].selectedIndex || 0;
+      console.log(`[SERVER] Client ${socket.id} requested current story, sending: ${currentStoryIndex}`);
+      
+      // Send just to the requesting client
+      socket.emit('storySelected', { 
+        storyIndex: currentStoryIndex,
+        isInitialSync: true
+      });
     }
   });
 
@@ -148,13 +170,18 @@ io.on('connection', (socket) => {
   socket.on('storySelected', ({ storyIndex }) => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
-      console.log(`[SERVER] storySelected received from ${socket.id} in room ${roomId}, storyIndex: ${storyIndex}`);
+      console.log(`[SERVER] storySelected received from ${socket.id} (${socket.data.userName}) in room ${roomId}, storyIndex: ${storyIndex}`);
       
       // Store the selected index in room state
       rooms[roomId].selectedIndex = storyIndex;
       
       // Broadcast to ALL clients in the room (including sender for confirmation)
-      io.to(roomId).emit('storySelected', { storyIndex });
+      io.to(roomId).emit('storySelected', { 
+        storyIndex,
+        // Add userId of who selected the story for debugging
+        userId: socket.id,
+        userName: socket.data.userName
+      });
     }
   });
 
