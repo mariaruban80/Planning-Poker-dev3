@@ -1111,40 +1111,40 @@ function setupStoryNavigation() {
   const nextButton = document.getElementById('nextStory');
   const prevButton = document.getElementById('prevStory');
 
-  function getCurrentStoryIndexFromDOM() {
+  if (!nextButton || !prevButton) return;
+
+  function getOrderedCards() {
+    return [...document.querySelectorAll('.story-card')];
+  }
+
+  function getSelectedCardIndex() {
+    const cards = getOrderedCards();
     const selected = document.querySelector('.story-card.selected');
-    if (!selected) return 0;
-    const cards = [...document.querySelectorAll('.story-card')];
-    return cards.indexOf(selected);
+    return cards.findIndex(card => card === selected);
   }
 
-  if (nextButton) {
-    nextButton.addEventListener('click', () => {
-      const cards = [...document.querySelectorAll('.story-card')];
-      if (cards.length === 0) return;
+  nextButton.addEventListener('click', () => {
+    const cards = getOrderedCards();
+    if (cards.length === 0) return;
 
-      const currentIndex = getCurrentStoryIndexFromDOM();
-      const nextIndex = (currentIndex + 1) % cards.length;
+    const currentIndex = getSelectedCardIndex();
+    const nextIndex = (currentIndex + 1) % cards.length;
 
-      console.log('[NAV] Next: ', currentIndex, '→', nextIndex);
-      selectStory(nextIndex); // emit to server
-    });
-  }
+    console.log(`[NAV] Next from ${currentIndex} → ${nextIndex}`);
+    selectStory(nextIndex); // emit to server
+  });
 
-  if (prevButton) {
-    prevButton.addEventListener('click', () => {
-      const cards = [...document.querySelectorAll('.story-card')];
-      if (cards.length === 0) return;
+  prevButton.addEventListener('click', () => {
+    const cards = getOrderedCards();
+    if (cards.length === 0) return;
 
-      const currentIndex = getCurrentStoryIndexFromDOM();
-      const prevIndex = (currentIndex - 1 + cards.length) % cards.length;
+    const currentIndex = getSelectedCardIndex();
+    const prevIndex = (currentIndex - 1 + cards.length) % cards.length;
 
-      console.log('[NAV] Previous: ', currentIndex, '→', prevIndex);
-      selectStory(prevIndex); // emit to server
-    });
-  }
+    console.log(`[NAV] Previous from ${currentIndex} → ${prevIndex}`);
+    selectStory(prevIndex); // emit to server
+  });
 }
-
 
 
 /**
