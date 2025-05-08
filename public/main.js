@@ -1113,6 +1113,13 @@ function setupStoryNavigation() {
 
   if (!nextButton || !prevButton) return;
 
+  // Prevent multiple event listeners from being added
+  nextButton.replaceWith(nextButton.cloneNode(true));
+  prevButton.replaceWith(prevButton.cloneNode(true));
+
+  const newNextButton = document.getElementById('nextStory');
+  const newPrevButton = document.getElementById('prevStory');
+
   function getOrderedCards() {
     return [...document.querySelectorAll('.story-card')];
   }
@@ -1123,7 +1130,7 @@ function setupStoryNavigation() {
     return cards.findIndex(card => card === selected);
   }
 
-  nextButton.addEventListener('click', () => {
+  newNextButton.addEventListener('click', () => {
     const cards = getOrderedCards();
     if (cards.length === 0) return;
 
@@ -1134,7 +1141,7 @@ function setupStoryNavigation() {
     selectStory(nextIndex); // emit to server
   });
 
-  prevButton.addEventListener('click', () => {
+  newPrevButton.addEventListener('click', () => {
     const cards = getOrderedCards();
     if (cards.length === 0) return;
 
