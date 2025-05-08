@@ -6,7 +6,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Planning Poker Interactive</title>
 <style>
-    /* Existing CSS styles preserved - not changing UI */
+    
     body { 
       background: white;
       font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -15,9 +15,968 @@
       margin: 0;
       padding: 0;
     }
-    /* All other existing styles remain unchanged */
-    /* ... your existing styles ... */
-</style>
+    .container { 
+      display: flex; 
+      background: white;
+      min-height: calc(100vh - 140px);
+    }
+    
+    .sidebar, .rightbar { 
+      width: 20%; 
+      background: white; 
+      padding: 20px; 
+      overflow-y: auto;
+      border-right: white;
+      border-left-color: white;
+    }
+    
+    .rightbar {
+      border-right: none;
+      border-left: 1px solid white;
+    }
+    
+    .main { 
+      flex: 1; 
+      padding: 20px; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+      background: white;
+      border-right: white;
+      border-left-color: white;
+      box-shadow: none;
+    }
+    
+    
+    /* Updated story card styling to match reference screenshot */
+    .story-card { 
+      display: flex;
+      align-items: center;
+      justify-content: flex-start; /* Left align text */
+      margin-bottom: 10px; 
+      padding: 14px 16px; 
+      background-color: white; 
+      color: #333; /* Dark text color for better readability */
+      border: 1px solid #e0e0e0; /* Light gray border */
+      border-radius: 8px; /* Less rounded corners */
+      cursor: pointer; 
+      transition: all 0.2s ease;
+      font-size: 13px;
+      font-weight: normal; /* Regular font weight */
+      text-align: left; /* Left aligned text */
+      height: auto; /* Allow flexible height */
+      min-height: 42px; /* Minimum height */
+      width: 100%;
+      box-sizing: border-box;
+      white-space: normal;
+      line-height: 1.4;
+    }
+    
+    .story-card:hover {
+      background-color: #f5f5f5; /* Light gray background on hover */
+      border-color: #d0d0d0;
+    }
+    
+    .story-card.selected { 
+      background-color: #e8f0fe; /* Light blue background */
+      border-color: #4285f4; /* Google blue border */
+      color: #333;
+    }
+    
+    .story-card.active { 
+      background-color: #e8f0fe; /* Light blue color for active state */
+      border-color: #4285f4;
+      color: #333;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow to indicate active */
+    }
+    
+    /* Updated button styling to match the ADD TICKET reference */
+    .button { 
+      margin: 10px 0; 
+      padding: 12px 20px; 
+      background-color: white; 
+      color: #673ab7; 
+      border: 1px solid #673ab7; 
+      border-radius: 25px; /* More rounded corners like ADD TICKET */
+      cursor: pointer; 
+      width: 100%;
+      font-weight: 600;
+      transition: all 0.2s;
+      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      font-size: 14px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      height: 42px; /* Fixed height for all buttons */
+      min-width: 140px; /* Minimum width to ensure buttons look good */
+      box-shadow: none;
+    }
+    
+    .button:hover { 
+      background-color: #f0e6ff; /* Lighter purple background on hover */
+      color: #673ab7;
+    }
+    
+    /* Controls section with fixed height buttons */
+    .controls-section {
+      display: flex;
+      flex-direction: column;
+      margin-top: 15px;
+    }
+    
+    .controls-section .button {
+      margin: 5px 0;
+    }
+    
+    /* Navigation button container for parallel display */
+    .navigation-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      width: 100%;
+    }
+    
+    .navigation-buttons .button {
+      flex: 1;
+      margin: 0;
+    }
+    
+    /* Updated upload section to match reference screenshot */
+    .upload-section { 
+      padding: 15px 20px;
+      background: white;
+      display: flex;
+      justify-content: flex-end; /* Align to right side */
+      border-bottom: 1px solid transparent;
+    }
+    
+    .upload-right { 
+      display: flex;
+      gap: 10px;
+      width: auto; /* Not full width anymore */
+    }
+    
+    /* Fixed width buttons to match reference screenshot */
+    .invite-button { 
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      background-color: white;
+      color: #673ab7;
+      border: 1px solid #673ab7;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      height: 42px;
+      width: 140px; /* Fixed width */
+      box-sizing: border-box;
+      white-space: nowrap;
+    }
+
+    .invite-button:hover {
+      background-color: #f0e6ff;
+    }
+    
+    /* File input container to match reference screenshot */
+    .file-input {
+      display: inline-flex;
+      position: relative;
+      height: 42px;
+      width: 140px; /* Fixed width */
+    }
+
+    /* Fixed file button styling */
+    .file-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      background-color: white;
+      color: #673ab7;
+      border: 1px solid #673ab7;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      height: 42px;
+      width: 100%;
+      box-sizing: border-box;
+      white-space: nowrap;
+    }
+
+    .file-button:hover {
+      background-color: #f0e6ff;
+    }
+
+    .file-input input[type="file"] {
+      opacity: 0;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      z-index: 2;
+    }
+    
+    /* Updated modal styling with higher z-index to ensure it appears on top */
+    #inviteModalCustom {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    
+    .modal-content {
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      min-width: 300px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    
+    .modal-content h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    
+    .modal-content input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    
+    .modal-content .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .modal-content button {
+      padding: 10px 15px;
+      background: #673ab7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      min-width: 80px;
+      transition: all 0.2s;
+    }
+    
+    .modal-content button:hover {
+      background: #5c33a4;
+    }
+    
+    /* User list styling */
+    .sidebar h3, .rightbar h3 {
+      color: #673ab7;
+      margin-top: 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid white; /* Changed to white */
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      text-transform: uppercase;  
+    }
+    
+    #userList {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0.5rem 0;
+      width: 100%;
+    }
+
+    .user-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: white;
+      border-radius: 30px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .user-entry.voted {
+      background: linear-gradient(to right, #e5f7e5, #c1e1c1);
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+    }
+
+    .username {
+      font-weight: 600;
+      font-size: 14px;
+      color: #3b444b;
+      flex: 1;
+    }
+
+    /* Updated - Only change the opacity of question marks but keep original functionality */
+    .vote-badge {
+      background-color: transparent;
+      font-size: 14px; /* Match username font size */
+      font-weight: 600; /* Match username font weight */
+      padding: 2px 8px;
+      min-width: 28px;
+      text-align: center;
+      color: transparent; /* Hide question marks */
+    }
+    
+    /* When votes are revealed, show them with this color */
+    body.votes-revealed .vote-badge {
+      color: #673ab7 !important;
+      font-size: 14px;
+    }
+    
+    /* New poker table layout */
+    .poker-table-layout {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      gap: 20px;
+      padding: 20px 0;
+    }
+    
+    .current-story-display {
+      width: 100%;
+      max-width: 700px;
+      padding: 15px;
+      background-color: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .avatar-row {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .vote-row {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .avatar-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 70px;
+    }
+    
+    .avatar-circle {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      font-size: 18px;
+      background-color: #673ab7;
+      transition: all 0.3s ease;
+    }
+    
+    .has-voted .avatar-circle {
+      border: 2px solid #4CAF50;
+    }
+    
+    .user-name {
+      font-size: 12px;
+      margin-top: 5px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      font-weight: 500;
+    }
+    
+    .vote-card-space {
+      width: 40px;
+      height: 90px;
+      border: 1px dashed #ccc;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: white;
+      transition: all 0.2s ease;
+    }
+    
+    .vote-card-space:hover {
+      border-color: #999;
+      background-color: #f9f9f9;
+    }
+    
+    .vote-card-space.has-vote {
+      border-style: solid;
+      border-color: #673ab7;
+      background-color: #f0e6ff;
+    }
+    
+    /* Updated - Make vote card question marks invisible but still functional */
+    .vote-card-space .vote-badge {
+     // font-size: 18px;
+      font-size: 14px;
+      font-weight: bold;
+      color: transparent; /* Make question marks invisible */
+    }
+    
+    /* Show vote values when votes are revealed */
+    body.votes-revealed .vote-card-space .vote-badge {
+      color: #333 !important;
+    }
+    
+    .reveal-button-container {
+      margin: 15px 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .reveal-votes-button {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: white;
+      color: #673ab7;
+      border: 2px solid #673ab7;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 1px;
+      min-width: 200px;
+      text-transform: uppercase;
+      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    .reveal-votes-button:hover {
+      background-color: #673ab7;
+      color: white;
+    }
+    
+    /* Vote cards styling */
+    .planning-cards-section {
+      width: 100%;
+      text-align: center;
+      margin-top: 20px;
+      padding: 15px;
+      background-color: white;
+    }
+    
+    .planning-cards-section h3 {
+      color: #673ab7; /* Changed to purple */
+      margin-bottom: 15px;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 1px solid white;
+      text-transform: uppercase;
+    }
+    
+    .cards {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .card {
+      width: 55px; /* Decreased size */
+      height: 50px; /* Decreased size */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e6e6fa; /* Light purple background */
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px; /* Smaller size */
+      text-align: center;
+      transition: all 0.2s;
+      color: #333;
+      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 4px; /* Small margin */
+    }
+    
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Add disabled state for planning cards */
+    .card.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+      background-color: #f0f0f0;
+      color: #aaa;
+    }
+    
+    .card.disabled:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Voted heading in sidebar */
+    .section-heading {
+      font-size: 14px;
+      font-weight: 600;
+      padding-bottom: 10px;  
+      color: #673ab7;
+      margin: 20px 0 10px 0;
+      padding-bottom: 5px;
+      border-bottom: 1px solid white; /* Changed to white */
+    }
+
+    /* User-friendly UI tweaks */
+    @media (max-width: 1200px) {
+      .container {
+        flex-direction: column;
+        height: auto;
+      }
+      .sidebar, .rightbar {
+        width: 100%;
+        max-width: 100%;
+        border: none;
+        border-bottom: 1px solid white; /* Changed to white */
+      }
+    }
+
+    /* User circle container styling */
+    #userCircle {
+      background-color: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+    
+    /* Add Ticket button styling - Updated to match image */
+    .add-ticket-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      background-color: white;
+      color: #673ab7;
+      border: 1px solid #673ab7;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      margin: 0 0 20px 0;
+      height: 42px;
+    }
+    
+    .add-ticket-btn:hover {
+      background-color: #f0e6ff;
+    }
+    
+    .add-ticket-btn span {
+      margin-right: 5px;
+      font-size: 18px;
+      color: #673ab7;
+    }
+    
+    /* Story list container - no top heading */
+    .story-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    /* Hide any modal coming from main.js */
+    .modal-dialog, .modal-overlay {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    
+    /* Updated story text to handle long content */
+    .story-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 3; /* Show max of 3 lines */
+      -webkit-box-orient: vertical;
+      max-height: none; /* Remove fixed height constraint */
+      width: 100%;
+      text-align: left;
+    }
+    
+    /* Hide elements for guest users */
+    .hide-for-guests {
+      display: none !important; /* Use !important to override any inline styles */
+    }
+    /* Add disabled state for buttons */
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+      background-color: #f0f0f0;
+      color: #aaa;
+    }
+    /* No stories message */
+    .no-stories-message {
+      display: none;
+      text-align: center;
+      margin: 20px auto;
+      padding: 10px 15px;
+      background-color: #f9f9f9;
+      border: 1px dashed #ccc;
+      border-radius: 8px;
+      color: #666;
+      font-style: italic;
+      max-width: 80%;
+    }
+    /* Add these styles to the existing style section */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: white;
+      border-bottom: 1px solid white;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+    }
+    
+    .logo img {
+      width: 24px;
+      height: 24px;
+      margin-right: 8px;
+    }
+    
+    .logo span {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 14px;
+    }
+    
+    .nav-links a {
+      text-decoration: none;
+      color: #6b7280;
+      padding: 5px;
+    }
+    
+    .session-button {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .new-session {
+      background-color: #f3f4f6;
+      color: #111827;
+    }
+    
+    .new-session:before {
+      content: "+";
+      margin-right: 4px;
+      font-weight: bold;
+    }
+    
+    .join-session {
+      background-color: transparent;
+      color: #111827;
+    }
+    
+    .join-session:before {
+      content: "🧭";
+      margin-right: 4px;
+      font-size: 14px;
+    }
+    
+    .github-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+    }
+    
+    .country-selector {
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+     .action-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    #logOffBtn {
+      background-color: transparent;
+      color: #111827;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;  
+        
+    }
+    
+    #logOffBtn:hover {
+      background-color: white; 
+    }    
+    /* Custom Login Modal Styling */
+#loginModalCustom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+#loginModalCustom .modal-content {
+  background-color: white;
+  border-radius: 10px;
+  padding: 30px 40px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+#loginModalCustom h3 {
+  color: #673ab7;
+  margin-top: 0;
+  font-size: 22px;
+  margin-bottom: 15px;
+}
+
+#loginModalCustom p {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+#loginModalCustom input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  border: 1px solid #d0d0d0;
+  border-radius: 25px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+#loginModalCustom input:focus {
+  outline: none;
+  border-color: #673ab7;
+  box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
+}
+
+#loginModalCustom .button-group {
+  display: flex;
+  justify-content: center;
+}
+
+#loginModalCustom .action-button {
+  background-color: #673ab7;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#loginModalCustom .action-button:hover {
+  background-color: #5c33a4;
+  transform: translateY(-2px);
+}
+
+#loginModalCustom .action-button:active {
+  transform: translateY(0);
+}
+ /* Custom Add Ticket Modal Styling */
+#addTicketModalCustom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.add-ticket-modal {
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px 25px;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  border: 2px solid #673ab7;
+}
+
+.add-ticket-modal h3 {
+  color: #673ab7;
+  margin-top: 0;
+  font-size: 20px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.input-group {
+  margin-bottom: 16px;
+}
+
+.input-group label {
+  display: block;
+  color: #673ab7;
+  font-size: 14px;
+  margin-bottom: 6px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #673ab7;
+  box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
+}
+
+.add-ticket-modal .button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 25px;
+}
+
+.cancel-button {
+  background-color: white;
+  color: #666;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 48%;
+}
+
+.cancel-button:hover {
+  background-color: #f5f5f5;
+}
+
+.confirm-button {
+  background-color: #673ab7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 48%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-button:hover {
+  background-color: #5c33a4;
+}
+
+.plus-icon {
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+/* Add input shake animation for validation if not already present */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}   
+    
+  </style>
 </head>
 <body>
 
@@ -27,10 +986,11 @@
     <span>Planning Poker</span>
   </div>
   <div class="nav-links">    
+    
     <button id="logOffBtn" class="btn btn-danger join-session">LOG OFF</button>   
+    
   </div>
 </header>
-
 <!-- Create a completely new custom invite modal that doesn't use the same ID or classes as the original -->
 <div id="inviteModalCustom">
 <div class="modal-content">
@@ -42,7 +1002,6 @@
 </div>
 </div>
 </div>
-
 <!-- Custom Login Modal -->
 <div id="loginModalCustom" style="display: none;">
   <div class="modal-content">
@@ -54,7 +1013,6 @@
     </div>
   </div>
 </div>    
-
 <!-- Custom Add Ticket Modal -->
 <div id="addTicketModalCustom" style="display: none;">
   <div class="modal-content add-ticket-modal">
@@ -78,7 +1036,6 @@
     </div>
   </div>
 </div>    
-
 <!-- Updated Upload Section - moved to right side as per screenshot -->
 <div class="upload-section">
 <div class="upload-right">
@@ -89,7 +1046,6 @@
 <button class="invite-button" id="inviteButton">Invite Others</button>
 </div>
 </div>
-
 <div class="container">
 <div class="sidebar">
 <h3>Current Members</h3>
@@ -138,7 +1094,6 @@
 </div>
 </div>
 </div>
-
 <!-- Scripts -->
 <script src="main.js" type="module"></script>
 <script>
@@ -188,115 +1143,113 @@
         modal.style.pointerEvents = 'none';
       });
     }
-      
-    // Add Ticket Modal Functions
-    function showAddTicketModal() {
-      // Clear previous input values
-      document.getElementById('ticketNameInput').value = '';
-      document.getElementById('ticketDescriptionInput').value = '';
-      
-      // Show the modal
-      document.getElementById('addTicketModalCustom').style.display = 'flex';
-      
-      // Focus on the name input
-      setTimeout(() => {
-        document.getElementById('ticketNameInput').focus();
-      }, 100);
-    }
+// Add Ticket Modal Functions
+function showAddTicketModal() {
+  // Clear previous input values
+  document.getElementById('ticketNameInput').value = '';
+  document.getElementById('ticketDescriptionInput').value = '';
+  
+  // Show the modal
+  document.getElementById('addTicketModalCustom').style.display = 'flex';
+  
+  // Focus on the name input
+  setTimeout(() => {
+    document.getElementById('ticketNameInput').focus();
+  }, 100);
+}
 
-    function hideAddTicketModal() {
-      document.getElementById('addTicketModalCustom').style.display = 'none';
-    }
+function hideAddTicketModal() {
+  document.getElementById('addTicketModalCustom').style.display = 'none';
+}
 
-    function handleAddTicketSubmit() {
-      const ticketName = document.getElementById('ticketNameInput').value.trim();
-      const ticketDescription = document.getElementById('ticketDescriptionInput').value.trim();
-      
-      // Validate input
-      if (!ticketName) {
-        const nameInput = document.getElementById('ticketNameInput');
-        nameInput.classList.add('shake');
-        nameInput.style.borderColor = '#ff4d4f';
-        
-        setTimeout(() => {
-          nameInput.classList.remove('shake');
-        }, 500);
-        
-        return;
-      }
-      
-      // Prepare ticket text (combine name and description if provided)
-      let ticketText = ticketName;
-      if (ticketDescription) {
-        ticketText = ticketName + ': ' + ticketDescription;
-      }
-      
-      // Create ticket data
-      const ticketData = {
-        id: `story_${Date.now()}`,
-        text: ticketText
-      };
-      
-      // Hide the modal
-      hideAddTicketModal();
-      
-      // If we have access to main.js functions
-      if (window.addTicketFromModal) {
-        window.addTicketFromModal(ticketData);
-      } else {
-        // Fallback implementation
-        const storyList = document.getElementById('storyList');
-        
-        if (storyList) {
-          const storyCard = document.createElement('div');
-          storyCard.className = 'story-card';
-          storyCard.id = ticketData.id;
-          
-          const storyTitle = document.createElement('div');
-          storyTitle.className = 'story-title';
-          storyTitle.textContent = ticketData.text;
-          
-          storyCard.appendChild(storyTitle);
-          storyList.appendChild(storyCard);
-          
-          // Try to emit to socket if available
-          if (window.socket) {
-            window.socket.emit('addTicket', ticketData);
-          }
-        }
-      }
-    }
-
-    // Set up event listeners for the add ticket modal
-    document.addEventListener('DOMContentLoaded', function() {
-      // Set up Add Ticket button to use modal
-      const addTicketBtn = document.getElementById('addTicketBtn');
-      if (addTicketBtn) {
-        // Remove any existing click handlers by cloning the button
-        const newBtn = addTicketBtn.cloneNode(true);
-        addTicketBtn.parentNode.replaceChild(newBtn, addTicketBtn);
-        
-        // Add new click handler for the modal
-        newBtn.addEventListener('click', showAddTicketModal);
-      }
-      
-      // Set up modal buttons
-      document.getElementById('cancelAddTicket').addEventListener('click', hideAddTicketModal);
-      document.getElementById('confirmAddTicket').addEventListener('click', handleAddTicketSubmit);
-      
-      // Set up enter key in description field
-      document.getElementById('ticketDescriptionInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          handleAddTicketSubmit();
-        }
-      });
-    });
-
-    // Expose function for main.js
-    window.showAddTicketModal = showAddTicketModal;
+function handleAddTicketSubmit() {
+  const ticketName = document.getElementById('ticketNameInput').value.trim();
+  const ticketDescription = document.getElementById('ticketDescriptionInput').value.trim();
+  
+  // Validate input
+  if (!ticketName) {
+    const nameInput = document.getElementById('ticketNameInput');
+    nameInput.classList.add('shake');
+    nameInput.style.borderColor = '#ff4d4f';
     
+    setTimeout(() => {
+      nameInput.classList.remove('shake');
+    }, 500);
+    
+    return;
+  }
+  
+  // Prepare ticket text (combine name and description if provided)
+  let ticketText = ticketName;
+  if (ticketDescription) {
+    ticketText = ticketName + ': ' + ticketDescription;
+  }
+  
+  // Create ticket data
+  const ticketData = {
+    id: `story_${Date.now()}`,
+    text: ticketText
+  };
+  
+  // Hide the modal
+  hideAddTicketModal();
+  
+  // If we have access to main.js functions
+  if (window.addTicketFromModal) {
+    window.addTicketFromModal(ticketData);
+  } else {
+    // Fallback implementation
+    const storyList = document.getElementById('storyList');
+    
+    if (storyList) {
+      const storyCard = document.createElement('div');
+      storyCard.className = 'story-card';
+      storyCard.id = ticketData.id;
+      
+      const storyTitle = document.createElement('div');
+      storyTitle.className = 'story-title';
+      storyTitle.textContent = ticketData.text;
+      
+      storyCard.appendChild(storyTitle);
+      storyList.appendChild(storyCard);
+      
+      // Try to emit to socket if available
+      if (window.socket) {
+        window.socket.emit('addTicket', ticketData);
+      }
+    }
+  }
+}
+
+// Set up event listeners for the add ticket modal
+document.addEventListener('DOMContentLoaded', function() {
+  // Set up Add Ticket button to use modal
+  const addTicketBtn = document.getElementById('addTicketBtn');
+  if (addTicketBtn) {
+    // Remove any existing click handlers by cloning the button
+    const newBtn = addTicketBtn.cloneNode(true);
+    addTicketBtn.parentNode.replaceChild(newBtn, addTicketBtn);
+    
+    // Add new click handler for the modal
+    newBtn.addEventListener('click', showAddTicketModal);
+  }
+  
+  // Set up modal buttons
+  document.getElementById('cancelAddTicket').addEventListener('click', hideAddTicketModal);
+  document.getElementById('confirmAddTicket').addEventListener('click', handleAddTicketSubmit);
+  
+  // Set up enter key in description field
+  document.getElementById('ticketDescriptionInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      handleAddTicketSubmit();
+    }
+  });
+});
+
+// Expose function for main.js
+window.showAddTicketModal = showAddTicketModal;
     function isGuestUser() {
-      // Check if URL contains 'roomId' parameter but not 'host=true'
+     // Check if URL contains 'roomId' parameter but not 'host=true'
       const urlParams = new URLSearchParams(window.location.search);
       
       // Consider user a guest if:
@@ -352,25 +1305,26 @@
     function showInviteModalCustom() {
       // First hide any existing modals from the original app
       hideAllOriginalModals();
-      // Create a guest URL
+          // Create a guest URL
       const currentUrl = new URL(window.location.href);
       const params = new URLSearchParams(currentUrl.search);
       const roomId = params.get('roomId');
       // Create clean guest URL (without host parameter)
       const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
       // Set the link value
+      //document.getElementById('inviteLinkCustom').value = window.location.href;
       document.getElementById('inviteLinkCustom').value = guestUrl;
       
-      // Show our custom modal
-      const modalElement = document.getElementById('inviteModalCustom');
-      if (modalElement) {
-        modalElement.style.display = 'flex';
-      } else {
-        console.error('Modal element not found!');
-        // Fallback to alert if modal element is missing
-        alert(`Share this invite link: ${guestUrl}`);
-      }
-    }
+    // Show our custom modal
+  const modalElement = document.getElementById('inviteModalCustom');
+  if (modalElement) {
+    modalElement.style.display = 'flex';
+  } else {
+    console.error('Modal element not found!');
+    // Fallback to alert if modal element is missing
+    alert(`Share this invite link: ${guestUrl}`);
+  }
+}
 
     function hideInviteModalCustom() {
       document.getElementById('inviteModalCustom').style.display = 'none';
@@ -388,302 +1342,346 @@
       document.body.classList.add('votes-revealed');
     }
 
-    // ENHANCED SCRIPT FOR USERNAME HANDLING -->
-    // Global flag to track if username is ready
-    window.userNameReady = false;
-    
-    // Define initializeAppWithName first to ensure it's available
-    function initializeAppWithName(username) {
-      if (!username) {
-        console.error('[APP] Cannot initialize: missing username');
-        return;
-      }
+    // Debugging function to help see what votes are stored
+    function debugVotes() {
+      console.clear();
+      console.log("DEBUG: Checking all story cards for votes");
       
-      // Initialize socket connection with the username
-      const urlParams = new URLSearchParams(window.location.search);
-      const roomId = urlParams.get('roomId');
-      if (!roomId) {
-        console.error('[APP] Cannot initialize: missing roomId in URL parameters');
-        return;
-      }
+      const storyList = document.getElementById('storyList');
+      const storyCards = Array.from(storyList?.querySelectorAll('.story-card') || []);
       
-      console.log(`[APP] Initializing app with username=${username}, roomId=${roomId}`);
+      console.log(`Found ${storyCards.length} story cards`);
       
-      if (typeof window.initializeSocketWithName === 'function') {
-        console.log('[APP] Found initializeSocketWithName function, calling it...');
-        window.initializeSocketWithName(roomId, username);
-      } else {
-        console.error('[APP] initializeSocketWithName function not available');
+      let totalVotes = 0;
+      
+      storyCards.forEach((card, index) => {
+        console.group(`Story ${index + 1}: ${card.id}`);
         
-        // Check if main.js is loaded
-        if (typeof initializeWebSocket === 'undefined') {
-          console.error('[APP] initializeWebSocket is not defined - main.js might not be loaded yet');
-          
-          // Wait a bit and try again
-          setTimeout(() => {
-            if (typeof window.initializeSocketWithName === 'function') {
-              console.log('[APP] Found initializeSocketWithName function after delay, calling it...');
-              window.initializeSocketWithName(roomId, username);
-            } else {
-              // Last resort - reload page
-              console.log('[APP] Still cannot find initialization function, reloading page');
-              window.location.reload();
-            }
-          }, 1000);
+        // Check data-vote attribute
+        if (card.hasAttribute('data-vote')) {
+          console.log(`✅ data-vote attribute: "${card.getAttribute('data-vote')}"`);
+          totalVotes++;
         } else {
-          // Fallback to reloading
-          window.location.reload();
+          console.log("❌ No data-vote attribute");
         }
-      }
+        
+        // Check data-voted attribute
+        if (card.hasAttribute('data-voted')) {
+          console.log(`✅ data-voted attribute: "${card.getAttribute('data-voted')}"`);
+        } else {
+          console.log("❌ No data-voted attribute");
+        }
+        
+        // Check vote-badge elements
+        const voteBadges = card.querySelectorAll('.vote-badge');
+        if (voteBadges.length > 0) {
+          console.log(`✅ Found ${voteBadges.length} vote badge(s):`);
+          voteBadges.forEach((badge, i) => {
+            console.log(`   Badge ${i + 1}: "${badge.textContent}" (${badge.hidden ? 'hidden' : 'visible'})`);
+          });
+        } else {
+          console.log("❌ No vote-badge elements");
+        }
+        
+        console.groupEnd();
+      });
+      
+      console.log(`Summary: Found ${totalVotes} stories with votes out of ${storyCards.length} total stories`);
+      
+      // Check if any planning cards are marked as selected
+      const selectedCards = document.querySelectorAll('.card[data-selected="true"]');
+      console.log(`Found ${selectedCards.length} selected planning cards`);
+      selectedCards.forEach(card => {
+        console.log(`   Value: ${card.getAttribute('data-value')}`);
+      });
     }
-    
-    // Handle username synchronization and prompt for invited users
-    document.addEventListener('DOMContentLoaded', function() {
-      // STEP 1: Check for username from main.html (userName with capital N)
-      const storedUserName = sessionStorage.getItem('userName');
-      
-      // STEP 2: Check if this is a new user joining via invite link
-      const urlParams = new URLSearchParams(window.location.search);
-      const isJoiningViaInvite = urlParams.has('roomId') && !storedUserName;
-      
-      if (isJoiningViaInvite) {
-        // This is someone joining via invite link who doesn't have a userName yet
-        showLoginModal();
-        
-        // Important: Mark username as not ready to prevent socket connection
-        window.userNameReady = false;
-        
-        // Hide main content until user provides name
-        hideMainContent();
-      } else {
-        // User already has a name, mark as ready
-        window.userNameReady = true;
-      }
-      
-      // Debugging info
-      console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
-    });
-    
-    // Function to hide main content until user provides name
-    function hideMainContent() {
-      const container = document.querySelector('.container');
-      const uploadSection = document.querySelector('.upload-section');
-      
-      if (container) container.style.display = 'none';
-      if (uploadSection) uploadSection.style.display = 'none';
-    }
-    
-    // Function to show main content after user provides name
-    function showMainContent() {
-      const container = document.querySelector('.container');
-      const uploadSection = document.querySelector('.upload-section');
-      
-      if (container) container.style.display = 'flex';
-      if (uploadSection) uploadSection.style.display = 'flex';
-    }
-    
-    // Function to show custom login modal
-    function showLoginModal() {
-      const loginModal = document.getElementById('loginModalCustom');
-      if (loginModal) {
-        // Mark username as explicitly not ready to prevent socket connection
-        window.userNameReady = false;
-        loginModal.style.display = 'flex';
-        
-        // Focus on the input field
-        setTimeout(() => {
-          document.getElementById('userNameInput').focus();
-        }, 100);
-        
-        // Add event listener to join button
-        document.getElementById('joinSessionWithName').addEventListener('click', handleLoginSubmit);
-        
-        // Add event listener for enter key
-        document.getElementById('userNameInput').addEventListener('keypress', function(e) {
-          if (e.key === 'Enter') {
-            handleLoginSubmit();
-          }
-        });
-      } else {
-        // Fallback to prompt if modal doesn't exist
-        fallbackToPrompt();
-      }
-    }
-    
-    // Function to handle login form submission
-    function handleLoginSubmit() {
-      const username = document.getElementById('userNameInput').value.trim();
-      
-      if (username) {
-        // Debug the username
-        console.log('[LOGIN] User entered name:', username);
-        
-        // Store with both key formats for compatibility
-        sessionStorage.setItem('userName', username);
-        console.log(`User joined as: ${username}`);
-        
-        // Hide the modal
-        document.getElementById('loginModalCustom').style.display = 'none';
-        
-        // Mark username as ready
-        window.userNameReady = true;
-        
-        // Show main content
-        showMainContent();
-        
-        // Initialize the app now that we have a username
-        initializeAppWithName(username);
-      } else {
-        // Show validation error - shake the input
-        const input = document.getElementById('userNameInput');
-        input.style.borderColor = '#ff4d4f';
-        input.classList.add('shake');
-        
-        setTimeout(() => {
-          input.classList.remove('shake');
-        }, 500);
-      }
-    }
-    
-    // Fallback to browser prompt if modal doesn't exist
-    function fallbackToPrompt() {
-      const username = prompt('Please enter your name to join the planning poker session:');
-      
-      if (username && username.trim()) {
-        // Store with both key formats for compatibility
-        sessionStorage.setItem('userName', username.trim());
-        console.log(`User joined as: ${username.trim()}`);
-        
-        // Mark username as ready
-        window.userNameReady = true;
-        
-        // Show main content and initialize
-        showMainContent();
-        initializeAppWithName(username.trim());
-      } else {
-        // If no username provided, set a default
-        const guestName = 'Guest ' + Math.floor(Math.random() * 1000);
-        sessionStorage.setItem('userName', guestName);
-        alert(`You will join as "${guestName}"`);
-        
-        // Mark username as ready
-        window.userNameReady = true;
-        
-        // Show main content and initialize
-        showMainContent();
-        initializeAppWithName(guestName);
-      }
-    }
-    
-    // Make getUserName function available globally for socket.js
-    window.getUserName = function() {
-      return sessionStorage.getItem('userName') || 'Anonymous';
-    };
 
-    // Log off button functionality
-    document.addEventListener('DOMContentLoaded', function() {
-      // Check if the button exists before trying to use it
-      const logOffBtn = document.getElementById('logOffBtn');
-      
-      if (logOffBtn) {
-        logOffBtn.addEventListener('click', function() {
-          // Clear session storage
-          sessionStorage.clear();
+    // IMPROVED: Export function that retrieves ONLY actual votes
+    function exportAllVotes() {
+      try {
+        console.log("Export function started - retrieving actual votes only");
+        
+        // Force vote visibility for export
+        document.body.classList.add('votes-revealed');
+        
+        // Get all story cards
+        const storyList = document.getElementById('storyList');
+        const storyCards = Array.from(storyList?.querySelectorAll('.story-card') || []);
+        
+        if (storyCards.length === 0) {
+          alert('No stories available to export.');
+          return;
+        }
+        
+        console.log(`Found ${storyCards.length} story cards`);
+        
+        // Save current selection to restore later
+        const originalSelectedStory = document.querySelector('.story-card.selected');
+        
+        // Prepare CSV content
+        let csv = `Story ID,Story Description,Highest Vote\n`;
+        
+        // First, gather all existing votes
+        console.log("Gathering all votes from story cards");
+        
+        // Process each story card
+        storyCards.forEach((card, index) => {
+          // Get story ID
+          const storyId = card.id || `story_${index}`;
           
-          // Redirect to main.html
-          window.location.href = 'main.html';
+          // Get story description
+          let storyDesc = '';
+          const storyTitleElement = card.querySelector('.story-title');
+          if (storyTitleElement) {
+            storyDesc = storyTitleElement.textContent.trim();
+          } else {
+            storyDesc = card.textContent.trim();
+          }
+          
+          // FOCUS: Find the actual vote for this story
+          let highestVote = 'No votes';
+          
+          // Check data-vote attribute (primary storage method)
+          if (card.hasAttribute('data-vote')) {
+            const voteValue = card.getAttribute('data-vote');
+            if (voteValue && !isNaN(voteValue)) {
+              highestVote = voteValue;
+              console.log(`Story ${storyId} has vote ${voteValue} from data-vote attribute`);
+            }
+          }
+          
+          // Check for vote-badge elements (secondary storage method)
+          if (highestVote === 'No votes') {
+            const voteBadges = card.querySelectorAll('.vote-badge');
+            voteBadges.forEach(badge => {
+              const voteText = badge.textContent.trim();
+              if (voteText && !isNaN(voteText)) {
+                highestVote = voteText;
+                console.log(`Story ${storyId} has vote ${voteText} from vote-badge element`);
+              }
+            });
+          }
+          
+          // Check data-voted attribute as indicator (tertiary check)
+          if (highestVote === 'No votes' && card.hasAttribute('data-voted')) {
+            // Story is marked as voted but no value found
+            console.log(`Story ${storyId} is marked as voted but no value found`);
+          }
+          
+          // Properly escape the description for CSV format
+          const escapedDesc = storyDesc.includes('"') || storyDesc.includes(',') ? 
+                             `"${storyDesc.replace(/"/g, '""')}"` : storyDesc;
+          
+          // Add this row to the CSV
+          csv += `${storyId},${escapedDesc},${highestVote}\n`;
         });
-      } else {
-        console.error('Log Off button not found - make sure the button exists in HTML');
+        
+        // Restore original selection
+        if (originalSelectedStory) {
+          document.querySelectorAll('.story-card').forEach(s => s.classList.remove('selected'));
+          originalSelectedStory.classList.add('selected');
+        }
+        
+        // Create and trigger the download
+        console.log("Creating CSV file for download");
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'planning_poker_votes.csv');
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        console.log("Export completed with actual votes only");
+        
+      } catch (error) {
+        console.error('Error exporting votes:', error);
+        alert('Error exporting votes: ' + (error.message || 'Unknown error'));
+      }
+    }
+// Monitor for CSV file uploads
+document.getElementById('csvInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const csvData = event.target.result;
+    const storyList = document.getElementById('storyList');
+    
+    // Save existing manually added stories before processing CSV
+    const existingStories = [];
+    if (storyList) {
+      const manualStories = storyList.querySelectorAll('.story-card[id^="story_"]');
+      manualStories.forEach(card => {
+        // Only save non-CSV stories (using ID pattern)
+        if (card.id && !card.id.includes('story_csv_')) {
+          existingStories.push({
+            id: card.id,
+            text: card.querySelector('.story-title').textContent
+          });
+        }
+      });
+      
+      console.log(`Saved ${existingStories.length} existing stories before CSV processing`);
+      
+      // Now clear the list for new content
+      storyList.innerHTML = '';
+    }
+    
+    // First, restore the manually added stories
+    existingStories.forEach((story, index) => {
+      const storyCard = document.createElement('div');
+      storyCard.className = 'story-card';
+      storyCard.id = story.id;
+      storyCard.dataset.index = index;
+      
+      const storyTitle = document.createElement('div');
+      storyTitle.className = 'story-title';
+      storyTitle.textContent = story.text;
+      
+      storyCard.appendChild(storyTitle);
+      storyList.appendChild(storyCard);
+    });
+    
+    // Then add the CSV stories
+    const stories = csvData.split('\n');
+    let startIndex = existingStories.length;
+    
+    stories.forEach(function(story, index) {
+      if (story.trim()) {
+        const storyCard = document.createElement('div');
+        storyCard.className = 'story-card';
+        storyCard.id = `story_csv_${index}`;
+        storyCard.dataset.index = startIndex + index;
+        
+        const storyTitle = document.createElement('div');
+        storyTitle.className = 'story-title';
+        storyTitle.textContent = story.trim();
+        
+        storyCard.appendChild(storyTitle);
+        storyList.appendChild(storyCard);
       }
     });
     
-    // Expose modal functions to window scope for main.js to use
-    window.showInviteModalCustom = function() {
-      // First hide any existing modals from the original app
-      if (typeof hideAllOriginalModals === 'function') {
-        hideAllOriginalModals();
-      }
-      
-      // Create a guest URL
-      const currentUrl = new URL(window.location.href);
-      const params = new URLSearchParams(currentUrl.search);
-      const roomId = params.get('roomId');
-      
-      // Create clean guest URL (without host parameter)
-      const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
-      
-      // Set the link value
-      document.getElementById('inviteLinkCustom').value = guestUrl;
-      
-      // Show our custom modal
-      document.getElementById('inviteModalCustom').style.display = 'flex';
-    };
+    // Check for stories again after CSV upload
+    checkForStories();
     
-    window.hideInviteModalCustom = function() {
-      document.getElementById('inviteModalCustom').style.display = 'none';
-    };
-    
-    window.copyInviteLinkCustom = function() {
-      const inviteInput = document.getElementById('inviteLinkCustom');
-      inviteInput.select();
-      document.execCommand('copy');
-      alert('Invite link copied!');
-    };
-    
-    // Diagnostic function to check user list status
-    function checkUserListStatus() {
-      console.log('[DIAGNOSTIC] Checking user list status...');
-      
-      const userListEl = document.getElementById('userList');
-      if (!userListEl) {
-        console.log('[DIAGNOSTIC] User list element not found!');
-        return;
-      }
-      
-      const userEntries = userListEl.querySelectorAll('.user-entry');
-      console.log('[DIAGNOSTIC] Found', userEntries.length, 'user entries in DOM');
-      
-      if (userEntries.length === 0) {
-        console.log('[DIAGNOSTIC] User list is empty! This needs to be fixed.');
-        
-        // Get the username from session storage
-        const currentUsername = sessionStorage.getItem('userName');
-        console.log('[DIAGNOSTIC] Current username from session:', currentUsername);
-        
-        if (currentUsername) {
-          console.log('[DIAGNOSTIC] Attempting to create emergency user entry');
-          
-          // Create an emergency entry for the current user
-          const userEntry = document.createElement('div');
-          userEntry.classList.add('user-entry');
-          userEntry.id = `user-emergency`;
-          
-          // Generate avatar background color
-          const avatarColor = '#673ab7'; // Use purple as default
-          
-          userEntry.innerHTML = `
-            <div class="avatar" style="background-color: ${avatarColor}">
-              ${currentUsername.charAt(0).toUpperCase()}
-            </div>
-            <span class="username">${currentUsername}</span>
-            <span class="vote-badge">?</span>
-          `;
-          
-          userListEl.appendChild(userEntry);
-          console.log('[DIAGNOSTIC] Emergency user entry added');
-          
-          // Also try to request user list again from server
-          if (window.socket && window.socket.connected) {
-            console.log('[DIAGNOSTIC] Requesting user list from server');
-            window.socket.emit('requestUserList');
-          }
-        }
-      }
+    // Select the first story if there are any
+    const firstStory = storyList.querySelector('.story-card');
+    if (firstStory) {
+      firstStory.classList.add('selected');
     }
     
-    // Run diagnostic check after loading
-    setTimeout(checkUserListStatus, 3000);
+    // Notify main.js about the combined stories if possible
+    if (window.notifyStoriesUpdated && typeof window.notifyStoriesUpdated === 'function') {
+      window.notifyStoriesUpdated();
+    }
+  };
+  
+  reader.readAsText(file);
+});
+    
+   /** 
+   // Add ticket button functionality - removed to avoid duplicate handlers
+// This is now handled in main.js    
+    // Add ticket button functionality
+    const addTicketBtn = document.getElementById('addTicketBtn');
+    if (addTicketBtn) {
+     
+        if (window.ticketHandlerAttached !== true) {
+         const storyText = prompt("Enter the story details:");
+        
+        if (storyText && storyText.trim()) {
+          const storyList = document.getElementById('storyList');
+          
+          const storyCard = document.createElement('div');
+          storyCard.className = 'story-card';
+          storyCard.id = `story_${Date.now()}`;
+          
+          const storyTitle = document.createElement('div');
+          storyTitle.className = 'story-title';
+          storyTitle.textContent = storyText.trim();
+          
+          storyCard.appendChild(storyTitle);
+          storyList.appendChild(storyCard);
+          
+          // Check for stories after adding a story
+          checkForStories();
+          
+          // If this is the first story, select it
+          if (storyList.querySelectorAll('.story-card').length === 1) {
+            storyCard.classList.add('selected');
+          }
+        }
+      });
+    } */
+    
+    // Story selection functionality
+    document.addEventListener('click', function(e) {
+      const clickedStory = e.target.closest('.story-card');
+      if (clickedStory) {
+        // Deselect all stories
+        document.querySelectorAll('.story-card').forEach(story => {
+          story.classList.remove('selected');
+        });
+        
+        // Select the clicked story
+        clickedStory.classList.add('selected');
+      }
+    });
+    
+    // Previous and Next story button handlers
+    document.getElementById('prevStory')?.addEventListener('click', function() {
+      const selectedStory = document.querySelector('.story-card.selected');
+      if (selectedStory && selectedStory.previousElementSibling) {
+        selectedStory.classList.remove('selected');
+        selectedStory.previousElementSibling.classList.add('selected');
+      }
+    });
+    
+    document.getElementById('nextStory')?.addEventListener('click', function() {
+      const selectedStory = document.querySelector('.story-card.selected');
+      if (selectedStory && selectedStory.nextElementSibling) {
+        selectedStory.classList.remove('selected');
+        selectedStory.nextElementSibling.classList.add('selected');
+      }
+    });
+    
+    // Add click handlers for planning cards - to store votes in data attributes
+    document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('click', function() {
+        const value = this.getAttribute('data-value');
+        const selectedStory = document.querySelector('.story-card.selected');
+        
+        if (selectedStory) {
+          // Store the vote directly on the story card as a data attribute
+          selectedStory.setAttribute('data-vote', value);
+          selectedStory.setAttribute('data-voted', 'true');
+          
+          // Store which card was selected
+          document.querySelectorAll('.card').forEach(c => {
+            c.removeAttribute('data-selected');
+          });
+          this.setAttribute('data-selected', 'true');
+          
+          // Update any vote badge if it exists
+          let voteBadge = selectedStory.querySelector('.vote-badge');
+          if (!voteBadge) {
+            voteBadge = document.createElement('span');
+            voteBadge.className = 'vote-badge';
+            selectedStory.appendChild(voteBadge);
+          }
+          voteBadge.textContent = value;
+        }
+      });
+    });
     
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -694,6 +1692,12 @@
       const revealBtn = document.getElementById('revealVotesBtn');
       if (revealBtn) {
         revealBtn.addEventListener('click', revealVotes);
+      }
+      
+      // Setup export button with direct onclick handler
+      const exportBtn = document.getElementById('exportCsvBtn');
+      if (exportBtn) {
+        exportBtn.onclick = exportAllVotes;
       }
       
       // Setup invite button with direct handler to ensure it uses our custom modal
@@ -711,15 +1715,283 @@
         });
       }
       
+      // Setup NEW SESSION button to include host parameter
+      const newSessionBtn = document.getElementById('newSessionBtn');
+      if (newSessionBtn) {
+        newSessionBtn.addEventListener('click', function() {
+          const roomId = 'room-' + Math.floor(Math.random() * 10000);
+          window.location.href = `${window.location.origin}${window.location.pathname}?roomId=${roomId}&host=true`;
+        });
+      }
+      
       // Setup guest mode restrictions
       setupGuestModeOnLoad();
       
       // Hide original modals
       hideAllOriginalModals();
     });
+    
+    // Watch for story list changes
+    const storyList = document.getElementById('storyList');
+    if (storyList) {
+      const observer = new MutationObserver(function(mutations) {
+        checkForStories();
+      });
+      
+      observer.observe(storyList, { 
+        childList: true,
+        subtree: true
+      });
+    }
+    
+    // Override existing invite functions if they exist
+    if (typeof openInviteModal === 'function') {
+      console.log('Overriding existing openInviteModal function');
+      window.openInviteModal = function() {
+        showInviteModalCustom();
+        return false;
+      };
+    }
   </script>
-  <!-- The socket.js script should use getUserName() to get the username -->
-  <script src="socket.js"></script>
-  <script src="main.js"></script>
+
+   <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if the button exists before trying to use it
+            const logOffBtn = document.getElementById('logOffBtn');
+            
+            if (logOffBtn) {
+                logOffBtn.addEventListener('click', function() {
+                    // Clear session storage
+                    sessionStorage.clear();
+                    
+                    // Redirect to main.html
+                    window.location.href = 'main.html';
+                });
+            } else {
+                console.error('Log Off button not found - make sure the button exists in HTML');
+            }
+        });
+    </script>
+   <!-- ENHANCED SCRIPT FOR USERNAME HANDLING -->
+<script>
+  // Global flag to track if username is ready
+  window.userNameReady = false;
+  
+  // Handle username synchronization and prompt for invited users
+  document.addEventListener('DOMContentLoaded', function() {
+    // STEP 1: Check for username from main.html (userName with capital N)
+    const storedUserName = sessionStorage.getItem('userName');
+    
+    // STEP 2: Check if this is a new user joining via invite link
+    const urlParams = new URLSearchParams(window.location.search);
+    const isJoiningViaInvite = urlParams.has('roomId') && !storedUserName;
+    
+    if (isJoiningViaInvite) {
+      // This is someone joining via invite link who doesn't have a userName yet
+      showLoginModal();
+      
+      // Important: Mark username as not ready to prevent socket connection
+      window.userNameReady = false;
+      
+      // Hide main content until user provides name
+      hideMainContent();
+    } else {
+      // User already has a name, mark as ready
+      window.userNameReady = true;
+    }
+    
+    // Debugging info
+    console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
+  });
+  
+  // Function to hide main content until user provides name
+  function hideMainContent() {
+    const container = document.querySelector('.container');
+    const uploadSection = document.querySelector('.upload-section');
+    
+    if (container) container.style.display = 'none';
+    if (uploadSection) uploadSection.style.display = 'none';
+  }
+  
+  // Function to show main content after user provides name
+  function showMainContent() {
+    const container = document.querySelector('.container');
+    const uploadSection = document.querySelector('.upload-section');
+    
+    if (container) container.style.display = 'flex';
+    if (uploadSection) uploadSection.style.display = 'flex';
+  }
+  
+  // Function to show custom login modal
+  function showLoginModal() {
+    const loginModal = document.getElementById('loginModalCustom');
+    if (loginModal) {
+      // Mark username as explicitly not ready to prevent socket connection
+        window.userNameReady = false;  
+        loginModal.style.display = 'flex';
+      
+      // Focus on the input field
+      setTimeout(() => {
+        document.getElementById('userNameInput').focus();
+      }, 100);
+      
+      // Add event listener to join button
+      document.getElementById('joinSessionWithName').addEventListener('click', handleLoginSubmit);
+      
+      // Add event listener for enter key
+      document.getElementById('userNameInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          handleLoginSubmit();
+        }
+      });
+    } else {
+      // Fallback to prompt if modal doesn't exist
+      fallbackToPrompt();
+    }
+  }
+  
+  // Function to handle login form submission
+  function handleLoginSubmit() {
+    const username = document.getElementById('userNameInput').value.trim();
+    
+    if (username) {
+      // Store with both key formats for compatibility
+      sessionStorage.setItem('userName', username);
+      console.log(`User joined as: ${username}`);
+      
+      // Hide the modal
+      document.getElementById('loginModalCustom').style.display = 'none';
+      
+      // Mark username as ready
+      window.userNameReady = true;
+      
+      // Show main content
+      showMainContent();
+      
+      // Initialize the app now that we have a username
+      initializeAppWithName(username);
+    } else {
+      // Show validation error - shake the input
+      const input = document.getElementById('userNameInput');
+      input.style.borderColor = '#ff4d4f';
+      input.classList.add('shake');
+      
+      setTimeout(() => {
+        input.classList.remove('shake');
+      }, 500);
+    }
+  }
+  
+  // Initialize the app with the provided username
+  function initializeAppWithName(username) {
+    // Initialize socket connection with the username
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId');
+    
+    if (window.initializeSocketWithName) {
+      window.initializeSocketWithName(roomId, username);
+    } else {
+      // Fallback to reloading if the function isn't available
+      window.location.reload();
+    }
+  }
+  
+  // Fallback to browser prompt if modal doesn't exist
+  function fallbackToPrompt() {
+    const username = prompt('Please enter your name to join the planning poker session:');
+    
+    if (username && username.trim()) {
+      // Store with both key formats for compatibility
+      sessionStorage.setItem('userName', username.trim());
+      console.log(`User joined as: ${username.trim()}`);
+      
+      // Mark username as ready
+      window.userNameReady = true;
+      
+      // Show main content and initialize
+      showMainContent();
+      initializeAppWithName(username.trim());
+    } else {
+      // If no username provided, set a default
+      const guestName = 'Guest ' + Math.floor(Math.random() * 1000);
+      sessionStorage.setItem('userName', guestName);
+      alert(`You will join as "${guestName}"`);
+      
+      // Mark username as ready
+      window.userNameReady = true;
+      
+      // Show main content and initialize
+      showMainContent();
+      initializeAppWithName(guestName);
+    }
+  }
+  
+  // Make getUserName function available globally for socket.js
+  window.getUserName = function() {
+    return sessionStorage.getItem('userName') || 'Anonymous';
+  };
+  
+  // Add a little shake animation for validation errors
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .shake {
+      animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+  `;
+  document.head.appendChild(style);
+</script> 
+    
+    <script>
+  // Expose modal functions to window scope for main.js to use
+  window.showInviteModalCustom = function() {
+    // First hide any existing modals from the original app
+    if (typeof hideAllOriginalModals === 'function') {
+      hideAllOriginalModals();
+    }
+    
+    // Create a guest URL
+    const currentUrl = new URL(window.location.href);
+    const params = new URLSearchParams(currentUrl.search);
+    const roomId = params.get('roomId');
+    
+    // Create clean guest URL (without host parameter)
+    const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
+    
+    // Set the link value
+    document.getElementById('inviteLinkCustom').value = guestUrl;
+    
+    // Show our custom modal
+    document.getElementById('inviteModalCustom').style.display = 'flex';
+  };
+  
+  window.hideInviteModalCustom = function() {
+    document.getElementById('inviteModalCustom').style.display = 'none';
+  };
+  
+  window.copyInviteLinkCustom = function() {
+    const inviteInput = document.getElementById('inviteLinkCustom');
+    inviteInput.select();
+    document.execCommand('copy');
+    alert('Invite link copied!');
+  };
+  
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    // Ensure the invite button uses our custom modal function
+    const inviteBtn = document.getElementById('inviteButton');
+    if (inviteBtn) {
+      inviteBtn.onclick = window.showInviteModalCustom;
+    }
+  });
+</script>
+    <!-- The socket.js script should use getUserName() to get the username -->
+    <script src="socket.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
