@@ -1111,25 +1111,36 @@ function setupStoryNavigation() {
   const nextButton = document.getElementById('nextStory');
   const prevButton = document.getElementById('prevStory');
 
+  function getCurrentStoryIndexFromDOM() {
+    const selected = document.querySelector('.story-card.selected');
+    if (!selected) return 0;
+    const cards = [...document.querySelectorAll('.story-card')];
+    return cards.indexOf(selected);
+  }
+
   if (nextButton) {
     nextButton.addEventListener('click', () => {
-      const storyList = document.getElementById('storyList');
-      const storyCount = storyList ? storyList.children.length : 0;
-      if (storyCount === 0) return;
-      const newIndex = (currentStoryIndex + 1) % storyCount;
-      console.log('[NAV] Next Story Clicked:', currentStoryIndex, '→', newIndex);
-      selectStory(newIndex); // ✅ This emits to server
+      const cards = [...document.querySelectorAll('.story-card')];
+      if (cards.length === 0) return;
+
+      const currentIndex = getCurrentStoryIndexFromDOM();
+      const nextIndex = (currentIndex + 1) % cards.length;
+
+      console.log('[NAV] Next: ', currentIndex, '→', nextIndex);
+      selectStory(nextIndex); // emit to server
     });
   }
 
   if (prevButton) {
     prevButton.addEventListener('click', () => {
-      const storyList = document.getElementById('storyList');
-      const storyCount = storyList ? storyList.children.length : 0;
-      if (storyCount === 0) return;
-      const newIndex = (currentStoryIndex - 1 + storyCount) % storyCount;
-      console.log('[NAV] Previous Story Clicked:', currentStoryIndex, '→', newIndex);
-      selectStory(newIndex); // ✅ This emits to server
+      const cards = [...document.querySelectorAll('.story-card')];
+      if (cards.length === 0) return;
+
+      const currentIndex = getCurrentStoryIndexFromDOM();
+      const prevIndex = (currentIndex - 1 + cards.length) % cards.length;
+
+      console.log('[NAV] Previous: ', currentIndex, '→', prevIndex);
+      selectStory(prevIndex); // emit to server
     });
   }
 }
