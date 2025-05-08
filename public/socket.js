@@ -4,6 +4,7 @@ import { io } from 'https://cdn.socket.io/4.7.2/socket.io.esm.min.js';
 // Module state
 let socket = null;
 let selectedStoryIndex = null;
+let selectedStoryId = null; // New state to track selected story ID
 let roomId = null;
 let userName = null;
 
@@ -52,6 +53,26 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     }, 1000);
   });
 
+  // Add new event handler for story selection by ID
+  socket.on('storySelectedById', ({ storyId, selectorId, selectorName, isInitialSync }) => {
+    console.log(`[SOCKET] Story selected by ID: ${storyId}`, 
+                selectorId ? `(selected by ${selectorName || selectorId})` : '',
+                isInitialSync ? '(initial sync)' : '');
+    
+    // Store the selected story ID in module state
+    selectedStoryId = storyId;
+    
+    // Pass to the handler with additional information
+    handleMessage({
+      type: 'storySelectedById',
+      storyId,
+      selectorId,
+      selectorName,
+      fromRemote: true,
+      isInitialSync: !!isInitialSync
+    });
+  });
+
   socket.on('addTicket', ({ ticketData }) => {
     console.log('[SOCKET] Received new ticket from another user:', ticketData);
     handleMessage({ type: 'addTicket', ticketData });
@@ -85,18 +106,25 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     }, 100);
   });
 
-  socket.on('storySelected', ({ storyIndex, userId, userName, isInitialSync }) => {
+  socket.on('storySelected', ({ storyIndex, storyId, userId, userName, isInitialSync }) => {
     console.log('[SOCKET] Story selection event received:', storyIndex, 
                 userId ? `(selected by ${userName || userId})` : '', 
-                isInitialSync ? '(initial sync)' : '');
+                isInitialSync ? '(initial sync)' : '',
+                storyId ? `storyId: ${storyId}` : '');
     
     // Store the selected index in module state
     selectedStoryIndex = storyIndex;
+    
+    // Also store the story ID if provided (for new ID-based selection)
+    if (storyId) {
+      selectedStoryId = storyId;
+    }
     
     // Pass to the handler with additional information
     handleMessage({ 
       type: 'storySelected', 
       storyIndex, 
+      storyId,
       userId,
       userName, 
       fromRemote: true,
@@ -216,6 +244,27 @@ export function emitStorySelected(index) {
 }
 
 /**
+ * Emit story selection by ID to server
+ * @param {string} storyId - ID of the selected story
+ * @returns {boolean} - Whether the selection was emitted successfully
+ */
+export function emitStorySelectedById(storyId) {
+  if (socket && socket.connected && storyId) {
+    console.log('[SOCKET] Emitting story selection by ID:', storyId);
+    socket.emit('storySelectedById', { storyId });
+    selectedStoryId = storyId;
+    return true;
+  } else {
+    if (!storyId) {
+      console.warn('[SOCKET] Cannot emit storySelectedById - missing ID');
+    } else {
+      console.warn('[SOCKET] Cannot emit storySelectedById - socket not connected');
+    }
+    return false;
+  }
+}
+
+/**
  * Cast a vote for a story
  * @param {string} vote - The vote value
  * @param {string} targetUserId - The user ID receiving the vote
@@ -279,6 +328,14 @@ export function getCurrentStoryIndex() {
 }
 
 /**
+ * Get the currently selected story ID
+ * @returns {string|null} - Selected story ID or null if none selected
+ */
+export function getSelectedStoryId() {
+  return selectedStoryId;
+}
+
+/**
  * Check if socket is connected
  * @returns {boolean} - Connection status
  */
@@ -314,4 +371,23 @@ export function reconnect() {
   }
   
   return false;
+}
+
+/**
+ * Debug function to log the current selection state
+ * Can be called from console for troubleshooting
+ */
+export function debugSelectionState() {
+  console.log('====== SOCKET SELECTION STATE ======');
+  console.log('Selected story index:', selectedStoryIndex);
+  console.log('Selected story ID:', selectedStoryId);
+  console.log('Room ID:', roomId);
+  console.log('Username:', userName);
+  console.log('Socket connected:', socket && socket.connected);
+  console.log('==================================');
+}
+
+// Expose debug function to window for console access
+if (typeof window !== 'undefined') {
+  window.debugSocketSelection = debugSelectionState;
 }
