@@ -15,14 +15,18 @@ let userName = null;
  * @returns {Object} - Socket instance for external reference
  */
 export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage) {
-   // First verify that we have a valid username
+  // First verify that we have a valid username
   if (!userNameValue) {
     console.error('[SOCKET] Cannot initialize without a username');
     return null;
   }
+  
   // Store params for potential reconnection
   roomId = roomIdentifier;
   userName = userNameValue;
+  
+  // Debug to verify username
+  console.log('[SOCKET] Initializing with username:', userName);  
   
   // Initialize socket connection
   socket = io({
@@ -32,24 +36,33 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     reconnectionDelay: 1000,
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
-
-  socket.on('addTicket', ({ ticketData }) => {
-  console.log('[SOCKET] Received new ticket from another user:', ticketData);
-  handleMessage({ type: 'addTicket', ticketData });
-});
-
-socket.on('allTickets', ({ tickets }) => {
-  console.log('[SOCKET] Received all tickets:', tickets.length);
-  handleMessage({ type: 'allTickets', tickets });
-});
-
+  
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
+    console.log('[SOCKET] Joining room with username:', userNameValue);
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
   });
 
+  socket.on('addTicket', ({ ticketData }) => {
+    console.log('[SOCKET] Received new ticket from another user:', ticketData);
+    handleMessage({ type: 'addTicket', ticketData });
+  });
+
+  socket.on('allTickets', ({ tickets }) => {
+    console.log('[SOCKET] Received all tickets:', tickets.length);
+    // Track what types of tickets we received
+    const csvTickets = tickets.filter(t => t.id && t.id.includes('csv')).length;
+    const manualTickets = tickets.length - csvTickets;
+    console.log(`[SOCKET] Breakdown: ${csvTickets} CSV tickets, ${manualTickets} manual tickets`);     
+    handleMessage({ type: 'allTickets', tickets });
+  });
+
   socket.on('userList', (users) => {
+    console.log('[SOCKET] Received user list:', users?.length || 0, 'users');
+    if (Array.isArray(users) && users.length > 0) {
+      console.log('[SOCKET] Users:', users.map(u => `${u.name || 'unnamed'} (${u.id})`).join(', '));
+    }
     handleMessage({ type: 'userList', users });
   });
 
@@ -122,6 +135,26 @@ socket.on('allTickets', ({ tickets }) => {
 
   // Return socket for external operations if needed
   return socket;
+}
+
+/**
+ * Request user list from server
+ */
+export function requestUserList() {
+  if (socket && socket.connected) {
+    console.log('[SOCKET] Requesting user list from server');
+    socket.emit('requestUserList');
+  }
+}
+
+/**
+ * Request all tickets from the server
+ */
+export function requestAllTickets() {
+  if (socket) {
+    console.log('[SOCKET] Requesting all tickets from server');
+    socket.emit('requestAllTickets');
+  }
 }
 
 /**
@@ -237,7 +270,8 @@ export function reconnect() {
   if (!socket) {
     console.warn('[SOCKET] Cannot reconnect: no socket instance');
     return false;
-  }   
+  }
+  
   if (!socket.connected && roomId && userName) {
     console.log('[SOCKET] Attempting to reconnect...');
     socket.connect();
