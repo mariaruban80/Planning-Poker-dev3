@@ -826,7 +826,7 @@ function resetOrRestoreVotes(index) {
  */
 function applyVotesToUI(votes, hideValues) {
   Object.entries(votes).forEach(([userId, vote]) => {
-    updateVoteVisuals(userId, hideValues ? '✓' : vote, true);
+    updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
   });
 }
 
@@ -1042,14 +1042,14 @@ function createVoteCardSpace(user) {
     votesPerStory[currentStoryIndex][userId] = vote;
     
     // Update UI - show checkmark if votes aren't revealed
-    updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '✓', true);
+    updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
   });
   
   // Check if there's an existing vote for this user in the current story
   const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
   if (existingVote) {
     voteCard.classList.add('has-vote');
-    voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '✓';
+    voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '👍';
   }
   
   return voteCard;
@@ -1251,7 +1251,7 @@ function handleSocketMessage(message) {
           votesPerStory[currentStoryIndex] = {};
         }
         votesPerStory[currentStoryIndex][message.userId] = message.vote;
-        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '✓', true);
+        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
       }
       break;
       
