@@ -1883,3 +1883,79 @@ window.debugUsers = function() {
 
 // Run diagnostic check after loading
 setTimeout(checkUserListStatus, 3000);
+
+
+
+// Emergency fix for user list display issues
+document.addEventListener('DOMContentLoaded', function() {
+  // First check - immediate
+  setTimeout(emergencyUserListFix, 500);
+  
+  // Second check - wait a bit longer
+  setTimeout(emergencyUserListFix, 2000);
+  
+  // Third check - give plenty of time for everything to load
+  setTimeout(emergencyUserListFix, 5000);
+});
+
+// Function to ensure user list is visible
+function emergencyUserListFix() {
+  console.log('Running emergency user list fix...');
+  
+  const userListContainer = document.getElementById('userList');
+  if (!userListContainer) {
+    console.error('User list container not found!');
+    return;
+  }
+  
+  // Check if empty
+  if (userListContainer.children.length === 0) {
+    console.log('User list is empty! Adding local user as emergency...');
+    
+    // Get current username
+    const currentName = sessionStorage.getItem('userName');
+    if (!currentName) {
+      console.log('No username found in sessionStorage');
+      return;
+    }
+    
+    // Create emergency user entry
+    const userEntry = document.createElement('div');
+    userEntry.classList.add('user-entry');
+    userEntry.id = 'user-emergency';
+    
+    // Generate color
+    let avatarColor = '#673ab7';
+    if (typeof stringToColor === 'function') {
+      avatarColor = stringToColor(currentName);
+    }
+    
+    // Get initials
+    let initials = currentName.charAt(0).toUpperCase();
+    if (typeof getInitials === 'function') {
+      initials = getInitials(currentName);
+    }
+    
+    userEntry.innerHTML = `
+      <div class="avatar" style="background-color: ${avatarColor}">
+        ${initials}
+      </div>
+      <span class="username">${currentName}</span>
+      <span class="vote-badge">?</span>
+    `;
+    
+    userListContainer.appendChild(userEntry);
+    console.log('Added emergency user entry for', currentName);
+    
+    // Also request user list from server again
+    if (socket && socket.connected) {
+      console.log('Requesting user list from server...');
+      socket.emit('requestUserList');
+    }
+  } else {
+    console.log('User list already has', userListContainer.children.length, 'entries');
+  }
+}
+
+// Export emergency fix function for console use
+window.fixUserList = emergencyUserListFix;
