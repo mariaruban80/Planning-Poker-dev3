@@ -495,11 +495,13 @@ function processAllTickets(tickets) {
   // Clear the story list first
   const storyList = document.getElementById('storyList');
   if (storyList) {
-    storyList.innerHTML = '';
+ //   storyList.innerHTML = '';
+    const manualCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+  manualCards.forEach(card => card.remove());
   }
   
   // Reset csvData
-  csvData = [];
+//  csvData = [];
   
   // Add all tickets to the UI
   tickets.forEach((ticket, index) => {
