@@ -91,6 +91,9 @@ window.initializeSocketWithName = function(roomId, name) {
     updateUserList(tempUserList);
     
     console.log('[APP] Added temporary local user to user list');
+    
+    // Check visibility
+    ensureUserListVisible();
   }, 100);
   
   // Request all tickets and force user list refresh after a delay
@@ -110,6 +113,9 @@ window.initializeSocketWithName = function(roomId, name) {
       socket.emit('requestCurrentStory');
       
       hasRequestedTickets = true; // Set flag to avoid duplicate requests
+      
+      // Ensure user list is visible
+      ensureUserListVisible();
     }
   }, 1000);
   
@@ -141,6 +147,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   appendRoomIdToURL(roomId);
   initializeApp(roomId);
+  
+  // Schedule regular checks for user list visibility during the first minute
+  setTimeout(ensureUserListVisible, 500);
+  setTimeout(ensureUserListVisible, 2000);
+  setTimeout(ensureUserListVisible, 5000);
+  localStorage.setItem('lastVisibilityCheck', Date.now().toString());
 });
 
 // Global state variables
@@ -157,6 +169,79 @@ let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 let ignoreNextStorySelection = false; // Flag to prevent loopback selections
 let processingRemoteSelection = false; // Flag to prevent processing a remote selection while rendering
+
+/**
+ * Function to ensure user list is properly displayed
+ */
+function ensureUserListVisible() {
+  console.log('[USERLIST] Checking user list visibility...');
+  
+  const userListContainer = document.getElementById('userList');
+  if (!userListContainer) {
+    console.error('[USERLIST] User list container not found!');
+    return;
+  }
+  
+  // Check if container is visible
+  const containerStyle = window.getComputedStyle(userListContainer);
+  const isVisible = containerStyle.display !== 'none' && containerStyle.visibility !== 'hidden';
+  
+  console.log('[USERLIST] User list container visibility:', isVisible ? 'Visible' : 'Hidden');
+  
+  const userEntries = userListContainer.querySelectorAll('.user-entry');
+  console.log('[USERLIST] User entries found:', userEntries.length);
+  
+  if (userEntries.length === 0) {
+    // Emergency: Add current user if no entries are visible
+    addEmergencyUserEntry();
+    
+    // Request user list from server again
+    if (socket && socket.connected) {
+      console.log('[USERLIST] Requesting user list from server');
+      socket.emit('requestUserList');
+    }
+  }
+  
+  // Don't check too frequently - only if at least 10 seconds have passed
+  const lastCheck = localStorage.getItem('lastVisibilityCheck');
+  const now = Date.now();
+  if (!lastCheck || (now - parseInt(lastCheck, 10) > 10000)) {
+    localStorage.setItem('lastVisibilityCheck', now.toString());
+    
+    // Check again in 5 seconds
+    setTimeout(ensureUserListVisible, 5000);
+  }
+}
+
+/**
+ * Function to add emergency user entry
+ */
+function addEmergencyUserEntry() {
+  const userListContainer = document.getElementById('userList');
+  if (!userListContainer) return;
+  
+  const currentUsername = sessionStorage.getItem('userName');
+  if (!currentUsername) return;
+  
+  console.log('[USERLIST] Adding emergency user entry for:', currentUsername);
+  
+  const userEntry = document.createElement('div');
+  userEntry.classList.add('user-entry');
+  userEntry.id = `user-emergency`;
+  
+  // Generate avatar color
+  const avatarColor = stringToColor(currentUsername);
+  
+  userEntry.innerHTML = `
+    <div class="avatar" style="background-color: ${avatarColor}">
+      ${getInitials(currentUsername)}
+    </div>
+    <span class="username">${currentUsername}</span>
+    <span class="vote-badge">?</span>
+  `;
+  
+  userListContainer.appendChild(userEntry);
+}
 
 /**
  * Determines if current user is a guest
@@ -239,14 +324,190 @@ function initializeApp(roomId) {
  * Add CSS styles for the new layout
  */
 function addNewLayoutStyles() {
-  // Existing function - unchanged
+  const style = document.createElement('style');
+  style.textContent = `
+    .poker-table-layout {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      gap: 15px;
+      padding: 20px 0;
+    }
+    
+    .avatar-row {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .vote-row {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .avatar-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 80px;
+      transition: transform 0.2s;
+    }
+    
+    .avatar-container:hover {
+      transform: translateY(-3px);
+    }
+    
+    .avatar-circle {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #ccc;
+      background-color: white;
+      transition: all 0.3s ease;
+    }
+    
+    .has-voted .avatar-circle {
+      border-color: #4CAF50;
+      background-color: #c1e1c1;
+    }
+    
+    .user-name {
+      font-size: 12px;
+      margin-top: 5px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    
+    .vote-card-space {
+      width: 60px;
+      height: 90px;
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9f9f9;
+      transition: all 0.2s ease;
+    }
+    
+    .vote-card-space:hover {
+      border-color: #999;
+      background-color: #f0f0f0;
+    }
+    
+    .vote-card-space.has-vote {
+      border-style: solid;
+      border-color: #673ab7;
+      background-color: #f0e6ff;
+    }
+    
+    .vote-badge {
+      font-size: 22px;
+      font-weight: bold;
+      color: #673ab7;
+    }
+    
+    .reveal-button-container {
+      margin: 10px 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .reveal-votes-button {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #ffffff;
+      color: #673ab7;
+      border: 2px solid #673ab7;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 1px;
+    }
+    
+    .reveal-votes-button:hover {
+      background-color: #673ab7;
+      color: white;
+    }
+    
+    .cards {
+      margin-top: 30px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .card {
+      padding: 10px 20px;
+      background: #cfc6f7;
+      border-radius: 8px;
+      cursor: grab;
+      font-weight: bold;
+      font-size: 18px;
+      min-width: 40px;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Add hide-for-guests class if not already defined in index.html */
+    .hide-for-guests {
+      display: none !important;
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 /**
  * Setup Add Ticket button
  */
 function setupAddTicketButton() {
-  // Existing function - unchanged
+  const addTicketBtn = document.getElementById('addTicketBtn');
+  if (!addTicketBtn) return;
+
+  // Use the modal instead of prompt
+  addTicketBtn.addEventListener('click', () => {
+    if (typeof window.showAddTicketModal === 'function') {
+      window.showAddTicketModal();
+    } else {
+      // Fallback to the old prompt method if modal function isn't available
+      const storyText = prompt("Enter the story details:");
+      if (storyText && storyText.trim()) {
+        const ticketData = {
+          id: `story_${Date.now()}`,
+          text: storyText.trim()
+        };
+        
+        if (typeof emitAddTicket === 'function') {
+          emitAddTicket(ticketData);
+        } else if (socket) {
+          socket.emit('addTicket', ticketData);
+        }
+        
+        addTicketToUI(ticketData, true);
+        manuallyAddedTickets.push(ticketData);
+      }
+    }
+  });
 }
 
 /**
@@ -360,28 +621,143 @@ function processAllTickets(tickets) {
  * Update visibility of stories and related UI elements
  */
 function updateStoriesVisibility() {
-  // Existing function - unchanged
+  const storyList = document.getElementById('storyList');
+  const noStoriesMessage = document.getElementById('noStoriesMessage');
+  
+  const hasStories = storyList && storyList.children.length > 0;
+  
+  // Update no stories message
+  if (noStoriesMessage) {
+    noStoriesMessage.style.display = hasStories ? 'none' : 'block';
+  }
+  
+  // Update planning cards state
+  document.querySelectorAll('#planningCards .card').forEach(card => {
+    if (hasStories) {
+      card.classList.remove('disabled');
+      card.setAttribute('draggable', 'true');
+    } else {
+      card.classList.add('disabled');
+      card.setAttribute('draggable', 'false');
+    }
+  });
 }
 
 /**
  * Setup reveal and reset buttons
  */
 function setupRevealResetButtons() {
-  // Existing function - unchanged
+  // Set up reveal votes button
+  const revealVotesBtn = document.getElementById('revealVotesBtn');
+  if (revealVotesBtn) {
+    revealVotesBtn.addEventListener('click', () => {
+      if (socket) {
+        socket.emit('revealVotes');
+        votesRevealed[currentStoryIndex] = true;
+        
+        // Update UI if we have votes for this story
+        if (votesPerStory[currentStoryIndex]) {
+          applyVotesToUI(votesPerStory[currentStoryIndex], false);
+        }
+      }
+    });
+  }
+  
+  // Set up reset votes button
+  const resetVotesBtn = document.getElementById('resetVotesBtn');
+  if (resetVotesBtn) {
+    resetVotesBtn.addEventListener('click', () => {
+      if (socket) {
+        socket.emit('resetVotes');
+        
+        // Reset local state
+        if (votesPerStory[currentStoryIndex]) {
+          votesPerStory[currentStoryIndex] = {};
+        }
+        votesRevealed[currentStoryIndex] = false;
+        
+        // Update UI
+        resetAllVoteVisuals();
+      }
+    });
+  }
 }
 
 /**
  * Setup CSV file uploader
  */
 function setupCSVUploader() {
-  // Existing function - unchanged
+  const csvInput = document.getElementById('csvInput');
+  if (!csvInput) return;
+
+  csvInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Save existing manually added tickets before processing CSV
+      const storyList = document.getElementById('storyList');
+      const existingTickets = [];
+      
+      if (storyList) {
+        const manualTickets = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+        manualTickets.forEach(card => {
+          const title = card.querySelector('.story-title');
+          if (title) {
+            existingTickets.push({
+              id: card.id, 
+              text: title.textContent
+            });
+          }
+        });
+      }
+      
+      console.log(`[CSV] Saved ${existingTickets.length} manual tickets before processing upload`);
+      
+      // Parse the CSV data
+      const parsedData = parseCSV(e.target.result);
+      
+      // Store in the module state
+      csvData = parsedData;
+      
+      // Display CSV data - this will clear and rebuild the story list
+      displayCSVData(csvData);
+      
+      // Re-add the preserved manual tickets
+      existingTickets.forEach((ticket, index) => {
+        // Make sure this ticket isn't already in the list to avoid duplicates
+        if (!document.getElementById(ticket.id)) {
+          addTicketToUI(ticket, false);
+        }
+      });
+      
+      // Store these for future preservation
+      preservedManualTickets = [...existingTickets];
+      
+      // Emit the CSV data to server AFTER ensuring all UI is updated
+      emitCSVData(parsedData);
+      
+      // Reset voting state for new data
+      votesPerStory = {};
+      votesRevealed = {};
+      
+      // Reset current story index only if no stories were selected before
+      if (!document.querySelector('.story-card.selected')) {
+        currentStoryIndex = 0;
+        renderCurrentStory();
+      }
+    };
+    reader.readAsText(file);
+  });
 }
 
 /**
  * Parse CSV text into array structure
  */
 function parseCSV(data) {
-  // Existing function - unchanged
+  const rows = data.trim().split('\n');
+  return rows.map(row => row.split(','));
 }
 
 /**
@@ -635,21 +1011,38 @@ function selectStory(index, emitToServer = true) {
  * Reset or restore votes for a story
  */
 function resetOrRestoreVotes(index) {
-  // Existing function - unchanged
+  resetAllVoteVisuals();
+  
+  // If we have stored votes for this story and they've been revealed
+  if (votesPerStory[index] && votesRevealed[index]) {
+    applyVotesToUI(votesPerStory[index], false);
+  }
 }
 
 /**
  * Apply votes to UI
  */
 function applyVotesToUI(votes, hideValues) {
-  // Existing function - unchanged
+  Object.entries(votes).forEach(([userId, vote]) => {
+    updateVoteVisuals(userId, hideValues ? '✓' : vote, true);
+  });
 }
 
 /**
  * Reset all vote visuals
  */
 function resetAllVoteVisuals() {
-  // Existing function - unchanged
+  document.querySelectorAll('.vote-badge').forEach(badge => {
+    badge.textContent = '?';
+  });
+  
+  document.querySelectorAll('.has-vote').forEach(el => {
+    el.classList.remove('has-vote');
+  });
+  
+  document.querySelectorAll('.has-voted').forEach(el => {
+    el.classList.remove('has-voted');
+  });
 }
 
 /**
@@ -710,42 +1103,312 @@ function renderCurrentStory() {
  * Helper function to get initials from name
  */
 function getInitials(name) {
-  // Existing function - unchanged
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
 }
 
 /**
  * Helper function to generate color from string
  */
 function stringToColor(str) {
-  // Existing function - unchanged
+  if (!str) return '#673ab7'; // Default purple
+  
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xFF;
+    color += ('00' + value.toString(16)).substr(-2);
+  }
+  
+  return color;
 }
 
 /**
  * Update the user list display with the new layout
  */
 function updateUserList(users) {
-  // Existing function - unchanged
+  // Check if users is valid
+  if (!Array.isArray(users) || users.length === 0) {
+    console.warn('[UI] Empty or invalid user list received:', users);
+    return;
+  }
+  
+  console.log('[UI] Updating user list with', users.length, 'users:', 
+    users.map(u => `${u.name || 'unnamed'} (${u.id})`).join(', '));
+  
+  const userListContainer = document.getElementById('userList');
+  const userCircleContainer = document.getElementById('userCircle');
+  
+  if (!userListContainer) {
+    console.error('[UI] User list container not found!');
+    return;
+  }
+  
+  if (!userCircleContainer) {
+    console.warn('[UI] User circle container not found, but continuing with sidebar user list');
+  }
+  
+  // Clear existing content in the sidebar user list
+  userListContainer.innerHTML = '';
+  
+  // Clear user circle if it exists
+  if (userCircleContainer) {
+    userCircleContainer.innerHTML = '';
+  }
+
+  // Create left sidebar user list
+  users.forEach(user => {
+    // Skip users with empty names
+    if (!user || !user.name) {
+      console.warn('[UI] Skipping user with empty name:', user);
+      return;
+    }
+    
+    const userEntry = document.createElement('div');
+    userEntry.classList.add('user-entry');
+    userEntry.id = `user-${user.id}`;
+    
+    // Generate avatar background color based on name
+    const avatarColor = stringToColor(user.name);
+    
+    userEntry.innerHTML = `
+      <div class="avatar" style="background-color: ${avatarColor}">
+        ${getInitials(user.name)}
+      </div>
+      <span class="username">${user.name}</span>
+      <span class="vote-badge">?</span>
+    `;
+    
+    userListContainer.appendChild(userEntry);
+  });
+
+  // If userCircleContainer exists, create the poker layout
+  if (userCircleContainer) {
+    createPokerTableLayout(userCircleContainer, users);
+  }
+  
+  // After updating users, check if we need to request tickets
+  if (!hasRequestedTickets && users.length > 0) {
+    setTimeout(() => {
+      if (socket && socket.connected) {
+        console.log('[INFO] Requesting all tickets after user list update');
+        socket.emit('requestAllTickets');
+        hasRequestedTickets = true;
+      }
+    }, 500);
+  }
+  
+  console.log('[UI] User list updated successfully with', users.length, 'users');
+}
+
+/**
+ * Create the poker table layout
+ */
+function createPokerTableLayout(container, users) {
+  // Create new grid layout for center area
+  const gridLayout = document.createElement('div');
+  gridLayout.classList.add('poker-table-layout');
+
+  // Split users into two rows
+  const halfPoint = Math.ceil(users.length / 2);
+  const topUsers = users.slice(0, halfPoint);
+  const bottomUsers = users.slice(halfPoint);
+
+  // Create top row of avatars
+  const topAvatarRow = document.createElement('div');
+  topAvatarRow.classList.add('avatar-row');
+  
+  topUsers.forEach(user => {
+    const avatarContainer = createAvatarContainer(user);
+    topAvatarRow.appendChild(avatarContainer);
+  });
+  
+  // Create top row of vote cards
+  const topVoteRow = document.createElement('div');
+  topVoteRow.classList.add('vote-row');
+  
+  topUsers.forEach(user => {
+    const voteCard = createVoteCardSpace(user);
+    topVoteRow.appendChild(voteCard);
+  });
+
+  // Create reveal button
+  const revealButtonContainer = document.createElement('div');
+  revealButtonContainer.classList.add('reveal-button-container');
+  
+  const revealBtn = document.createElement('button');
+  revealBtn.textContent = 'REVEAL VOTES';
+  revealBtn.classList.add('reveal-votes-button');
+  
+  // Handle guest mode for the reveal button
+  if (isGuestUser()) {
+    revealBtn.classList.add('hide-for-guests');
+  } else {
+    revealBtn.onclick = () => {
+      if (socket) {
+        socket.emit('revealVotes');
+        votesRevealed[currentStoryIndex] = true;
+        
+        // Update UI if we have votes for this story
+        if (votesPerStory[currentStoryIndex]) {
+          applyVotesToUI(votesPerStory[currentStoryIndex], false);
+        }
+      }
+    };
+  }
+  
+  revealButtonContainer.appendChild(revealBtn);
+
+  // Create bottom row of vote cards
+  const bottomVoteRow = document.createElement('div');
+  bottomVoteRow.classList.add('vote-row');
+  
+  bottomUsers.forEach(user => {
+    const voteCard = createVoteCardSpace(user);
+    bottomVoteRow.appendChild(voteCard);
+  });
+
+  // Create bottom row of avatars
+  const bottomAvatarRow = document.createElement('div');
+  bottomAvatarRow.classList.add('avatar-row');
+  
+  bottomUsers.forEach(user => {
+    const avatarContainer = createAvatarContainer(user);
+    bottomAvatarRow.appendChild(avatarContainer);
+  });
+
+  // Assemble the grid
+  gridLayout.appendChild(topAvatarRow);
+  gridLayout.appendChild(topVoteRow);
+  gridLayout.appendChild(revealButtonContainer);
+  gridLayout.appendChild(bottomVoteRow);
+  gridLayout.appendChild(bottomAvatarRow);
+  
+  container.appendChild(gridLayout);
 }
 
 /**
  * Create avatar container for a user
  */
 function createAvatarContainer(user) {
-  // Existing function - unchanged
+  const avatarContainer = document.createElement('div');
+  avatarContainer.classList.add('avatar-container');
+  avatarContainer.id = `user-circle-${user.id}`;
+  
+  // Generate avatar background color
+  const avatarColor = stringToColor(user.name);
+  
+  avatarContainer.innerHTML = `
+    <div class="avatar-circle" style="background-color: ${avatarColor}">
+      ${getInitials(user.name)}
+    </div>
+    <div class="user-name">${user.name}</div>
+  `;
+  
+  avatarContainer.setAttribute('data-user-id', user.id);
+  
+  // Check if there's an existing vote for this user in the current story
+  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
+  if (existingVote) {
+    avatarContainer.classList.add('has-voted');
+  }
+  
+  return avatarContainer;
 }
 
 /**
  * Create vote card space for a user
  */
 function createVoteCardSpace(user) {
-  // Existing function - unchanged
+  const voteCard = document.createElement('div');
+  voteCard.classList.add('vote-card-space');
+  voteCard.id = `vote-space-${user.id}`;
+  
+  // Add vote badge inside the card space
+  const voteBadge = document.createElement('span');
+  voteBadge.classList.add('vote-badge');
+  voteBadge.textContent = '?';
+  voteCard.appendChild(voteBadge);
+  
+  // Make it a drop target for vote cards
+  voteCard.addEventListener('dragover', (e) => e.preventDefault());
+  voteCard.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const vote = e.dataTransfer.getData('text/plain');
+    const userId = user.id;
+
+    if (socket && vote) {
+      socket.emit('castVote', { vote, targetUserId: userId });
+    }
+
+    // Store vote locally
+    if (!votesPerStory[currentStoryIndex]) {
+      votesPerStory[currentStoryIndex] = {};
+    }
+    votesPerStory[currentStoryIndex][userId] = vote;
+    
+    // Update UI - show checkmark if votes aren't revealed
+    updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '✓', true);
+  });
+  
+  // Check if there's an existing vote for this user in the current story
+  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
+  if (existingVote) {
+    voteCard.classList.add('has-vote');
+    voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '✓';
+  }
+  
+  return voteCard;
 }
 
 /**
  * Update vote visuals for a user
  */
 function updateVoteVisuals(userId, vote, hasVoted = false) {
-  // Existing function - unchanged
+  // Update badges in sidebar
+  const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
+  if (sidebarBadge) sidebarBadge.textContent = vote;
+  
+  // Update vote card space
+  const voteSpace = document.querySelector(`#vote-space-${userId}`);
+  if (voteSpace) {
+    const voteBadge = voteSpace.querySelector('.vote-badge');
+    if (voteBadge) voteBadge.textContent = vote;
+    
+    if (hasVoted) {
+      voteSpace.classList.add('has-vote');
+    } else {
+      voteSpace.classList.remove('has-vote');
+    }
+  }
+
+  // Update avatar to show they've voted
+  if (hasVoted) {
+    const avatarContainer = document.querySelector(`#user-circle-${userId}`);
+    if (avatarContainer) {
+      avatarContainer.classList.add('has-voted');
+      
+      const avatar = avatarContainer.querySelector('.avatar-circle');
+      if (avatar) {
+        avatar.style.backgroundColor = '#c1e1c1'; // Green background
+      }
+    }
+    
+    // Also update sidebar avatar
+    const sidebarAvatar = document.querySelector(`#user-${userId} .avatar`);
+    if (sidebarAvatar) {
+      sidebarAvatar.style.backgroundColor = '#c1e1c1';
+    }
+  }
 }
 
 /**
@@ -802,14 +1465,38 @@ function setupStoryNavigation() {
  * Setup invite button
  */
 function setupInviteButton() {
-  // Existing function - unchanged
+  const inviteButton = document.getElementById('inviteButton');
+  if (!inviteButton) return;
+
+  inviteButton.onclick = () => {
+    // Check if the custom function exists in window scope
+    if (typeof window.showInviteModalCustom === 'function') {
+      window.showInviteModalCustom();
+    } else if (typeof showInviteModalCustom === 'function') {
+      showInviteModalCustom();
+    } else {
+      // Fallback if function isn't available
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      const roomId = params.get('roomId') || getRoomIdFromURL();
+      
+      // Create guest URL (remove any host parameter)
+      const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
+      
+      alert(`Share this invite link: ${guestUrl}`);
+    }
+  };
 }
 
 /**
  * Setup vote cards drag functionality
  */
 function setupVoteCardsDrag() {
-  // Existing function - unchanged
+  document.querySelectorAll('#planningCards .card').forEach(card => {
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', card.textContent.trim());
+    });
+  });
 }
 
 /**
@@ -988,9 +1675,30 @@ function handleSocketMessage(message) {
   }
 }
 
-// Add diagnostic function to check user list status
+// Improved check user list status function
 function checkUserListStatus() {
-  // Existing function - unchanged
+  console.log('[DIAGNOSTIC] Checking user list status...');
+  
+  const userListEl = document.getElementById('userList');
+  if (!userListEl) {
+    console.log('[DIAGNOSTIC] User list element not found!');
+    return;
+  }
+  
+  const userEntries = userListEl.querySelectorAll('.user-entry');
+  console.log('[DIAGNOSTIC] Found', userEntries.length, 'user entries in DOM');
+  
+  if (userEntries.length === 0) {
+    console.log('[DIAGNOSTIC] User list is empty! Adding emergency entry...');
+    
+    addEmergencyUserEntry();
+    
+    // Also try to request user list again from server
+    if (socket && socket.connected) {
+      console.log('[DIAGNOSTIC] Requesting user list from server');
+      socket.emit('requestUserList');
+    }
+  }
 }
 
 // Debug function that can be called from the console
@@ -1036,6 +1744,14 @@ window.debugStorySelection = function(enable = true) {
     storyCount: storyCards.length,
     isConnected: socket && socket.connected
   };
+};
+
+// Add window functions for manual debugging and fixing
+window.fixUserList = ensureUserListVisible;
+window.debugUsers = function() {
+  console.log('User list container:', document.getElementById('userList'));
+  console.log('User entries:', document.querySelectorAll('.user-entry').length);
+  return document.querySelectorAll('#userList .user-entry');
 };
 
 // Run diagnostic check after loading
