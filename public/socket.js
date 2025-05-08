@@ -42,6 +42,14 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.log('[SOCKET] Connected to server with ID:', socket.id);
     console.log('[SOCKET] Joining room with username:', userNameValue);
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+    
+    // Request current story selection from server after a delay
+    setTimeout(() => {
+      if (socket && socket.connected) {
+        console.log('[SOCKET] Requesting current story selection from server');
+        socket.emit('requestCurrentStory');
+      }
+    }, 1000);
   });
 
   socket.on('addTicket', ({ ticketData }) => {
@@ -77,10 +85,23 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     }, 100);
   });
 
-  socket.on('storySelected', ({ storyIndex }) => {
-    console.log('[SOCKET] Story selected event received:', storyIndex);
+  socket.on('storySelected', ({ storyIndex, userId, userName, isInitialSync }) => {
+    console.log('[SOCKET] Story selection event received:', storyIndex, 
+                userId ? `(selected by ${userName || userId})` : '', 
+                isInitialSync ? '(initial sync)' : '');
+    
+    // Store the selected index in module state
     selectedStoryIndex = storyIndex;
-    handleMessage({ type: 'storySelected', storyIndex });
+    
+    // Pass to the handler with additional information
+    handleMessage({ 
+      type: 'storySelected', 
+      storyIndex, 
+      userId,
+      userName, 
+      fromRemote: true,
+      isInitialSync: isInitialSync || false
+    });
   });
 
   socket.on('voteUpdate', ({ userId, vote, storyIndex }) => {
@@ -158,6 +179,16 @@ export function requestAllTickets() {
 }
 
 /**
+ * Request the current story selection from the server
+ */
+export function requestCurrentStory() {
+  if (socket && socket.connected) {
+    console.log('[SOCKET] Requesting current story selection');
+    socket.emit('requestCurrentStory');
+  }
+}
+
+/**
  * Send CSV data to server for synchronization
  * @param {Array} data - CSV data to synchronize
  */
@@ -173,10 +204,14 @@ export function emitCSVData(data) {
  * @param {number} index - Index of the selected story
  */
 export function emitStorySelected(index) {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Emitting storySelected:', index);
     socket.emit('storySelected', { storyIndex: index });
     selectedStoryIndex = index;
+    return true;
+  } else {
+    console.warn('[SOCKET] Cannot emit storySelected - socket not connected');
+    return false;
   }
 }
 
