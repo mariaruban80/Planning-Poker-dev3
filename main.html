@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Planning Poker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: white;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+    }
+
+    .logo img {
+      width: 24px;
+      height: 24px;
+      margin-right: 8px;
+    }
+
+    .logo span {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 14px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: #6b7280;
+      padding: 5px;
+    }
+
+    .session-button {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+
+    .new-session {
+      background-color: #f3f4f6;
+      color: #111827;
+    }
+
+    .new-session:before {
+      content: "+";
+      margin-right: 4px;
+      font-weight: bold;
+    }
+
+    .join-session {
+      background-color: transparent;
+      color: #111827;
+    }
+
+    .join-session:before {
+      content: "🧭";
+      margin-right: 4px;
+      font-size: 14px;
+    }
+
+    .github-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+    }
+
+    .country-selector {
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    main {
+      display: flex;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+
+    .image-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      max-width: 50%;
+    }
+
+    .image-container img {
+      max-width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+    }
+
+    .forms-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+
+    .session-box {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+      width: 400px;
+      padding: 30px;
+    }
+
+    .session-box h2 {
+      margin-top: 0;
+      font-size: 24px;
+      margin-bottom: 24px;
+      color: #111827;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 5px;
+      color: #374151;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .radio-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .radio-group input[type="radio"] {
+      margin-right: 8px;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      margin: 15px 0;
+    }
+
+    .checkbox-container input {
+      margin-right: 8px;
+    }
+
+    .action-button {
+      background-color: #3b82f6;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      text-align: center;
+      transition: background-color 0.2s;
+    }
+
+    .action-button:hover {
+      background-color: #2563eb;
+    }
+
+    #joinSessionBox {
+      display: none;
+      text-align: center;
+    }
+
+    #joinSessionBox h2 {
+      text-align: center;
+    }
+
+    #joinSessionBox .action-button {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="spade.png" alt="Planning Poker" />
+      <span>Planning Poker</span>
+    </div>
+    <div class="nav-links">
+      <a href="#">WHAT IS PLANNING POKER?</a>
+      <a href="#">GUIDE</a>
+      <a href="#">EXAMPLES</a>
+      <button id="newSessionBtn" class="session-button new-session">NEW SESSION</button>
+      <button id="joinSessionBtn" class="session-button join-session">JOIN SESSION</button>
+      <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="github-icon" />
+      <div class="country-selector">US</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="image-container">
+      <img src="planning-poker-image.png" alt="Planning Poker Session" />
+    </div>
+    
+    <div class="forms-container">
+      <div class="session-box" id="createSessionBox">
+        <h2>Create new session</h2>
+
+        <div class="form-group">
+          <label>Session name *</label>
+          <input type="text" id="sessionNameInput" placeholder="Session Name" />
+        </div>
+
+        <div class="form-group">
+          <label>Your name *</label>
+          <input type="text" id="createNameInput" placeholder="Your Name" />
+        </div>
+
+        <div class="radio-group">
+          <input type="radio" name="scale" id="fibonacci" checked value="fibonacci" />
+          <label for="fibonacci">Fibonacci (0, 1, 2, 3, 5, 8, 13, 21...)</label>
+        </div>
+        <div class="radio-group">
+          <input type="radio" name="scale" id="shortFib" value="shortFib" />
+          <label for="shortFib">Short Fibonacci (0, ½, 1, 2, 3...)</label>
+        </div>
+        <div class="radio-group">
+          <input type="radio" name="scale" id="tshirt" value="tshirt" />
+          <label for="tshirt">T-Shirt (XXS, XS, S, M...)</label>
+        </div>
+        <div class="radio-group">
+          <input type="radio" name="scale" id="tshirtNum" value="tshirtNum" />
+          <label for="tshirtNum">T-Shirt & Numbers</label>
+        </div>
+        <div class="radio-group">
+          <input type="radio" name="scale" id="custom" value="custom" />
+          <label for="custom">Custom</label>
+        </div>
+
+        <div class="checkbox-container">
+          <input type="checkbox" id="allowManage" />
+          <label for="allowManage">Allow members to manage session</label>
+        </div>
+
+        <button class="action-button" onclick="createRoom()">Start new game</button>
+      </div>
+      
+      <div class="session-box" id="joinSessionBox">
+        <h2>Join a Session</h2>
+        
+        <div class="form-group">
+          <input type="text" id="sessionIdInput" placeholder="Session ID *" />
+        </div>
+        
+        <div class="form-group">
+          <input type="text" id="joinNameInput" placeholder="Your Name *" />
+        </div>
+        
+        <button class="action-button" onclick="joinRoom()">JOIN</button>
+      </div>
+    </div>
+  </main>
+  
+  <script>
+    // Add event listeners when the DOM is fully loaded
+    document.addEventListener("DOMContentLoaded", function() {
+      // Setup event listeners for the navigation buttons
+      document.getElementById("newSessionBtn").addEventListener("click", function() {
+        document.getElementById("createSessionBox").style.display = "block";
+        document.getElementById("joinSessionBox").style.display = "none";
+      });
+      
+      document.getElementById("joinSessionBtn").addEventListener("click", function() {
+        document.getElementById("createSessionBox").style.display = "none";
+        document.getElementById("joinSessionBox").style.display = "block";
+      });
+    });
+    
+    function createRoom() {
+      const name = document.getElementById("createNameInput").value.trim();
+      const sessionName = document.getElementById("sessionNameInput").value.trim();
+      
+      if (!name) {
+        alert("Please enter your name.");
+        return;
+      }
+      
+      if (!sessionName) {
+        alert("Please enter a session name.");
+        return;
+      }
+      
+      // Get selected voting system
+      const selectedScale = document.querySelector('input[name="scale"]:checked').value;
+      // Check if members can manage session
+      const allowMemberManage = document.getElementById("allowManage").checked;
+      
+      // Generate room ID
+      const roomId = Math.random().toString(36).substring(2, 10); 
+      
+      // Store session data in sessionStorage
+      sessionStorage.setItem("userName", name);
+      sessionStorage.setItem("sessionName", sessionName);
+      sessionStorage.setItem("votingSystem", selectedScale);
+      sessionStorage.setItem("allowMemberManage", allowMemberManage);
+      sessionStorage.setItem("isHost", "true");
+      
+      // Navigate to the room with the generated ID
+    //  window.location.href = `/index.html?roomId=${roomId}`;
+      window.location.href = `/index.html?roomId=${roomId}&host=true`;
+    }
+    
+    function joinRoom() {
+      const name = document.getElementById("joinNameInput").value.trim();
+      const sessionId = document.getElementById("sessionIdInput").value.trim();
+      
+      if (!name) {
+        alert("Please enter your name.");
+        return;
+      }
+      
+      if (!sessionId) {
+        alert("Please enter a session ID.");
+        return;
+      }
+      
+      // Store user data in sessionStorage
+      sessionStorage.setItem("userName", name);
+      sessionStorage.setItem("isHost", "false");
+      
+      // Navigate to the room with the provided ID
+      window.location.href = `/index.html?roomId=${sessionId}`;
+    }
+  </script>
+</body>
+</html>
