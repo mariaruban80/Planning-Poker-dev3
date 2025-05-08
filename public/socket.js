@@ -37,7 +37,28 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     reconnectionDelay: 1000,
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
+  // Add this event handler in socket.js
+socket.on('forceSelectionSync', ({ storyId, storyIndex, forcedSync }) => {
+  console.log('[SOCKET] Received forced selection sync:', { storyId, storyIndex });
   
+  // Pass to message handler with special flag indicating this needs to be applied
+  handleMessage({ 
+    type: 'forceSelectionSync', 
+    storyId, 
+    storyIndex,
+    forcedSync: true
+  });
+});
+
+// Also add this function to export
+export function requestSelectionSync() {
+  if (socket && socket.connected) {
+    console.log('[SOCKET] Requesting server to sync current selection to all clients');
+    socket.emit('syncCurrentSelection');
+    return true;
+  }
+  return false;
+}
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
