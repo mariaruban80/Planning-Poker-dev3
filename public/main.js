@@ -2,7 +2,7 @@
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
 // Import socket functionality
-import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
+import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, requestUserList } from './socket.js'; 
 
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
@@ -33,6 +33,7 @@ window.notifyStoriesUpdated = function() {
   
   console.log(`Preserved ${preservedManualTickets.length} manual tickets`);
 };
+
 /**
  * Handle adding a ticket from the modal
  * @param {Object} ticketData - Ticket data {id, text}
@@ -56,14 +57,16 @@ window.addTicketFromModal = function(ticketData) {
   manuallyAddedTickets.push(ticketData);
 };
 
-
 /**
  * Initialize socket with a specific name (used when joining via invite)
  * @param {string} roomId - Room ID to join 
  * @param {string} name - Username to use
  */
 window.initializeSocketWithName = function(roomId, name) {
-  if (!roomId || !name) return;
+  if (!roomId || !name) {
+    console.error('[APP] Cannot initialize: missing roomId or username');
+    return;
+  }
   
   console.log(`[APP] Initializing socket with name: ${name} for room: ${roomId}`);
   
@@ -72,6 +75,37 @@ window.initializeSocketWithName = function(roomId, name) {
   
   // Initialize socket with the name
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
+  
+  // Add a manual user list update with just the current user
+  // This ensures there's at least one user visible while waiting for server
+  setTimeout(() => {
+    // Create a temporary user entry with the current user
+    const tempUserList = [
+      { id: 'local-user', name: name }
+    ];
+    
+    // Update UI with this temporary user
+    updateUserList(tempUserList);
+    
+    console.log('[APP] Added temporary local user to user list');
+  }, 100);
+  
+  // Request all tickets and force user list refresh after a delay
+  setTimeout(() => {
+    if (socket && socket.connected) {
+      console.log('[APP] Requesting all tickets after initialization');
+      socket.emit('requestAllTickets');
+      
+      // Explicitly request the current user list
+      if (typeof requestUserList === 'function') {
+        requestUserList();
+      } else if (socket.emit) {
+        socket.emit('requestUserList');
+      }
+      
+      hasRequestedTickets = true; // Set flag to avoid duplicate requests
+    }
+  }, 1000);
   
   // Continue with other initialization steps
   setupCSVUploader();
@@ -351,38 +385,6 @@ function addNewLayoutStyles() {
 
 /**
  * Setup Add Ticket button
- 
-function setupAddTicketButton() {
-  const addTicketBtn = document.getElementById('addTicketBtn');
-  if (addTicketBtn) {
-      // Set flag to prevent double handling
-    window.ticketHandlerAttached = true;
-    addTicketBtn.addEventListener('click', () => {
-      const storyText = prompt("Enter the story details:");
-      if (storyText && storyText.trim()) {
-        // Create ticket data
-        const ticketData = {
-          id: `story_${Date.now()}`,
-          text: storyText.trim()
-        };
-        
-        // Emit to server for synchronization
-         emitAddTicket(ticketData);
-       // if (socket) {
-          //socket.emit('addTicket', ticketData);
-        //}
-        
-        // Add ticket locally
-        addTicketToUI(ticketData, true);
-        
-        // Store in manually added tickets
-        manuallyAddedTickets.push(ticketData);
-      }
-    });
-  }
-} */
-/**
- * Setup Add Ticket button
  */
 function setupAddTicketButton() {
   const addTicketBtn = document.getElementById('addTicketBtn');
@@ -471,16 +473,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   }
   
   // Check for stories message
-  const noStoriesMessage = document.getElementById('noStoriesMessage');
-  if (noStoriesMessage) {
-    noStoriesMessage.style.display = 'none';
-  }
-  
-  // Enable planning cards if they were disabled
-  document.querySelectorAll('#planningCards .card').forEach(card => {
-    card.classList.remove('disabled');
-    card.setAttribute('draggable', 'true');
-  });
+  updateStoriesVisibility();
 }
 
 /**
@@ -507,6 +500,10 @@ function processAllTickets(tickets) {
     if (ticket && ticket.id && ticket.text) {
       // Add to UI without selecting
       addTicketToUI(ticket, false);
+      // If this is a CSV ticket (ID contains "csv"), also add to csvData
+      if (ticket.id.includes('csv')) {
+        csvData.push([ticket.text]);
+      }
     }
   });
   
@@ -515,6 +512,35 @@ function processAllTickets(tickets) {
     currentStoryIndex = 0;
     selectStory(0, false); // Don't emit to avoid loops
   }
+  
+  // Check for stories message
+  updateStoriesVisibility();
+}
+
+/**
+ * Update visibility of stories and related UI elements
+ */
+function updateStoriesVisibility() {
+  const storyList = document.getElementById('storyList');
+  const noStoriesMessage = document.getElementById('noStoriesMessage');
+  
+  const hasStories = storyList && storyList.children.length > 0;
+  
+  // Update no stories message
+  if (noStoriesMessage) {
+    noStoriesMessage.style.display = hasStories ? 'none' : 'block';
+  }
+  
+  // Update planning cards state
+  document.querySelectorAll('#planningCards .card').forEach(card => {
+    if (hasStories) {
+      card.classList.remove('disabled');
+      card.setAttribute('draggable', 'true');
+    } else {
+      card.classList.add('disabled');
+      card.setAttribute('draggable', 'false');
+    }
+  });
 }
 
 /**
@@ -557,9 +583,6 @@ function setupRevealResetButtons() {
   }
 }
 
-/**
- * Setup CSV file uploader
- */
 /**
  * Setup CSV file uploader
  */
@@ -628,6 +651,7 @@ function setupCSVUploader() {
     reader.readAsText(file);
   });
 }
+
 /**
  * Parse CSV text into array structure
  */
@@ -724,22 +748,7 @@ function displayCSVData(data) {
     console.log(`[CSV] Display complete: ${existingStories.length} manual + ${data.length} CSV = ${storyListContainer.children.length} total`);
     
     // Check if there are any stories and show/hide message accordingly
-    const noStoriesMessage = document.getElementById('noStoriesMessage');
-    if (noStoriesMessage) {
-      noStoriesMessage.style.display = storyListContainer.children.length === 0 ? 'block' : 'none';
-    }
-    
-    // Enable/disable planning cards based on story availability
-    const planningCards = document.querySelectorAll('#planningCards .card');
-    planningCards.forEach(card => {
-      if (storyListContainer.children.length === 0) {
-        card.classList.add('disabled');
-        card.setAttribute('draggable', 'false');
-      } else {
-        card.classList.remove('disabled');
-        card.setAttribute('draggable', 'true');
-      }
-    });
+    updateStoriesVisibility();
     
     // Select first story if none is selected
     const selectedStory = storyListContainer.querySelector('.story-card.selected');
@@ -752,6 +761,7 @@ function displayCSVData(data) {
     processingCSVData = false;
   }
 }
+
 /**
  * Select a story by index
  * @param {number} index - Story index to select
@@ -834,7 +844,7 @@ function resetAllVoteVisuals() {
  */
 function renderCurrentStory() {
   const storyListContainer = document.getElementById('storyList');
-  if (!storyListContainer || csvData.length === 0) return;
+  if (!storyListContainer) return;
 
   const allStoryItems = storyListContainer.querySelectorAll('.story-card');
   allStoryItems.forEach(card => card.classList.remove('active'));
@@ -844,34 +854,95 @@ function renderCurrentStory() {
   
   // Update the current story display, if present
   const currentStoryDisplay = document.getElementById('currentStory');
-  if (currentStoryDisplay && csvData[currentStoryIndex]) {
-    currentStoryDisplay.textContent = csvData[currentStoryIndex].join(' | ');
+  if (currentStoryDisplay && current) {
+    const storyTitle = current.querySelector('.story-title');
+    if (storyTitle) {
+      currentStoryDisplay.textContent = storyTitle.textContent;
+    }
   }
+}
+
+/**
+ * Helper function to get initials from name
+ */
+function getInitials(name) {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+}
+
+/**
+ * Helper function to generate color from string
+ */
+function stringToColor(str) {
+  if (!str) return '#673ab7'; // Default purple
+  
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xFF;
+    color += ('00' + value.toString(16)).substr(-2);
+  }
+  
+  return color;
 }
 
 /**
  * Update the user list display with the new layout
  */
 function updateUserList(users) {
+  // Check if users is valid
+  if (!Array.isArray(users) || users.length === 0) {
+    console.warn('[UI] Empty or invalid user list received:', users);
+    return;
+  }
+  
+  console.log('[UI] Updating user list with', users.length, 'users:', 
+    users.map(u => `${u.name} (${u.id})`).join(', '));
+  
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
   
-  if (!userListContainer || !userCircleContainer) return;
-
+  if (!userListContainer || !userCircleContainer) {
+    console.error('[UI] User list containers not found!');
+    return;
+  }
+  
   // Clear existing content
   userListContainer.innerHTML = '';
   userCircleContainer.innerHTML = '';
 
   // Create left sidebar user list
   users.forEach(user => {
+    // Skip users with empty names
+    if (!user.name) {
+      console.warn('[UI] Skipping user with empty name:', user);
+      return;
+    }
+    
     const userEntry = document.createElement('div');
     userEntry.classList.add('user-entry');
     userEntry.id = `user-${user.id}`;
+    
+    // Generate avatar background color based on name
+    const avatarColor = stringToColor(user.name);
+    
     userEntry.innerHTML = `
-      <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
+      <div class="avatar" style="background-color: ${avatarColor}">
+        ${getInitials(user.name)}
+      </div>
       <span class="username">${user.name}</span>
       <span class="vote-badge">?</span>
     `;
+    
     userListContainer.appendChild(userEntry);
   });
 
@@ -966,6 +1037,8 @@ function updateUserList(users) {
       }
     }, 500);
   }
+  
+  console.log('[UI] User list updated successfully with', users.length, 'users');
 }
 
 /**
@@ -976,8 +1049,13 @@ function createAvatarContainer(user) {
   avatarContainer.classList.add('avatar-container');
   avatarContainer.id = `user-circle-${user.id}`;
   
+  // Generate avatar background color
+  const avatarColor = stringToColor(user.name);
+  
   avatarContainer.innerHTML = `
-    <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
+    <div class="avatar-circle" style="background-color: ${avatarColor}">
+      ${getInitials(user.name)}
+    </div>
     <div class="user-name">${user.name}</div>
   `;
   
@@ -1071,19 +1149,11 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
     }
     
     // Also update sidebar avatar
-    const sidebarAvatar = document.querySelector(`#user-${userId} img.avatar`);
+    const sidebarAvatar = document.querySelector(`#user-${userId} .avatar`);
     if (sidebarAvatar) {
       sidebarAvatar.style.backgroundColor = '#c1e1c1';
     }
   }
-}
-
-/**
- * Update story title
- */
-function updateStory(story) {
-  const storyTitle = document.getElementById('currentStory');
-  if (storyTitle) storyTitle.textContent = story;
 }
 
 /**
@@ -1095,8 +1165,10 @@ function setupStoryNavigation() {
 
   if (nextButton) {
     nextButton.addEventListener('click', () => {
-      if (csvData.length === 0) return;
-      const newIndex = (currentStoryIndex + 1) % csvData.length;
+      const storyList = document.getElementById('storyList');
+      if (!storyList || storyList.children.length === 0) return;
+      
+      const newIndex = (currentStoryIndex + 1) % storyList.children.length;
       console.log('[NAV] Next Story Clicked:', newIndex);
       selectStory(newIndex);
     });
@@ -1104,8 +1176,10 @@ function setupStoryNavigation() {
 
   if (prevButton) {
     prevButton.addEventListener('click', () => {
-      if (csvData.length === 0) return;
-      const newIndex = (currentStoryIndex - 1 + csvData.length) % csvData.length;
+      const storyList = document.getElementById('storyList');
+      if (!storyList || storyList.children.length === 0) return;
+      
+      const newIndex = (currentStoryIndex - 1 + storyList.children.length) % storyList.children.length;
       console.log('[NAV] Previous Story Clicked:', newIndex);
       selectStory(newIndex);
     });
@@ -1113,16 +1187,8 @@ function setupStoryNavigation() {
 }
 
 /**
- * Generate avatar URL
- */
-function generateAvatarUrl(name) {
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&rounded=true`;
-}
-
-/**
  * Setup invite button
  */
-
 function setupInviteButton() {
   const inviteButton = document.getElementById('inviteButton');
   if (!inviteButton) return;
@@ -1151,7 +1217,7 @@ function setupInviteButton() {
  * Setup vote cards drag functionality
  */
 function setupVoteCardsDrag() {
-  document.querySelectorAll('.card').forEach(card => {
+  document.querySelectorAll('#planningCards .card').forEach(card => {
     card.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', card.textContent.trim());
     });
@@ -1183,7 +1249,7 @@ function handleSocketMessage(message) {
       }
       break;
 
-      case 'allTickets':
+    case 'allTickets':
       // Handle receiving all tickets (used when joining a room)
       if (Array.isArray(message.tickets)) {
         console.log('[SOCKET] Received all tickets:', message.tickets.length);
@@ -1240,66 +1306,53 @@ function handleSocketMessage(message) {
       break;
       
     case 'syncCSVData':
-       // Handle CSV data sync with improved handling
-  if (Array.isArray(message.csvData)) {
-    console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
-    
-    // Store the CSV data
-    csvData = message.csvData;
-    csvDataLoaded = true;
-    
-    // Temporarily save manually added tickets to preserve them
-    const storyList = document.getElementById('storyList');
-    const manualTickets = [];
-    
-    if (storyList) {
-      const manualStoryCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
-      manualStoryCards.forEach(card => {
-        const title = card.querySelector('.story-title');
-        if (title) {
-          manualTickets.push({
-            id: card.id,
-            text: title.textContent
+      // Handle CSV data sync with improved handling
+      if (Array.isArray(message.csvData)) {
+        console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
+        
+        // Store the CSV data
+        csvData = message.csvData;
+        csvDataLoaded = true;
+        
+        // Temporarily save manually added tickets to preserve them
+        const storyList = document.getElementById('storyList');
+        const manualTickets = [];
+        
+        if (storyList) {
+          const manualStoryCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+          manualStoryCards.forEach(card => {
+            const title = card.querySelector('.story-title');
+            if (title) {
+              manualTickets.push({
+                id: card.id,
+                text: title.textContent
+              });
+            }
           });
         }
-      });
-    }
-    
-    console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
-    
-    // Display CSV data (this will clear CSV stories but preserve manual ones)
-    displayCSVData(csvData);
-    
-    // We don't need to re-add manual tickets because displayCSVData now preserves them
-    
-    // Update UI
-    renderCurrentStory();
-  }
-  break;
+        
+        console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
+        
+        // Display CSV data (this will clear CSV stories but preserve manual ones)
+        displayCSVData(csvData);
+        
+        // We don't need to re-add manual tickets because displayCSVData now preserves them
+        
+        // Update UI
+        renderCurrentStory();
+      }
+      break;
 
-    case 'addTicket':
-      // Handle new ticket added by another user
-      if (message.ticketData) {
-        console.log('[SOCKET] New ticket received:', message.ticketData);
-        // Add ticket to UI without selecting it (to avoid loops)
-        addTicketToUI(message.ticketData, false);
-      }
-      break;
-      
-    case 'allTickets':
-      // Handle receiving all tickets (used when joining a room)
-      if (Array.isArray(message.tickets)) {
-        console.log('[SOCKET] Received all tickets:', message.tickets.length);
-        processAllTickets(message.tickets);
-      }
-      break;
-      
     case 'connect':
       // When connection is established, request tickets
       setTimeout(() => {
         if (socket && socket.connected && !hasRequestedTickets) {
           console.log('[SOCKET] Connected, requesting all tickets');
           socket.emit('requestAllTickets');
+          
+          // Explicitly request the current user list
+          socket.emit('requestUserList');
+          
           hasRequestedTickets = true;
         }
       }, 500);
@@ -1307,12 +1360,56 @@ function handleSocketMessage(message) {
   }
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-  let roomId = getRoomIdFromURL();
-  if (!roomId) {
-    roomId = 'room-' + Math.floor(Math.random() * 10000);
+// Add diagnostic function to check user list status
+function checkUserListStatus() {
+  console.log('[DIAGNOSTIC] Checking user list status...');
+  
+  const userListEl = document.getElementById('userList');
+  if (!userListEl) {
+    console.log('[DIAGNOSTIC] User list element not found!');
+    return;
   }
-  appendRoomIdToURL(roomId);
-  initializeApp(roomId);
-});
+  
+  const userEntries = userListEl.querySelectorAll('.user-entry');
+  console.log('[DIAGNOSTIC] Found', userEntries.length, 'user entries in DOM');
+  
+  if (userEntries.length === 0) {
+    console.log('[DIAGNOSTIC] User list is empty! This needs to be fixed.');
+    
+    // Get the username from session storage
+    const currentUsername = sessionStorage.getItem('userName');
+    console.log('[DIAGNOSTIC] Current username from session:', currentUsername);
+    
+    if (currentUsername) {
+      console.log('[DIAGNOSTIC] Attempting to create emergency user entry');
+      
+      // Create an emergency entry for the current user
+      const userEntry = document.createElement('div');
+      userEntry.classList.add('user-entry');
+      userEntry.id = `user-emergency`;
+      
+      // Generate avatar background color
+      const avatarColor = '#673ab7'; // Use purple as default
+      
+      userEntry.innerHTML = `
+        <div class="avatar" style="background-color: ${avatarColor}">
+          ${currentUsername.charAt(0).toUpperCase()}
+        </div>
+        <span class="username">${currentUsername}</span>
+        <span class="vote-badge">?</span>
+      `;
+      
+      userListEl.appendChild(userEntry);
+      console.log('[DIAGNOSTIC] Emergency user entry added');
+      
+      // Also try to request user list again from server
+      if (socket && socket.connected) {
+        console.log('[DIAGNOSTIC] Requesting user list from server');
+        socket.emit('requestUserList');
+      }
+    }
+  }
+}
+
+// Run diagnostic check after loading
+setTimeout(checkUserListStatus, 3000);
