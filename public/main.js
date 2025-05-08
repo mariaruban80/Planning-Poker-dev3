@@ -261,21 +261,7 @@ function addNewLayoutStyles() {
       text-overflow: ellipsis;
       max-width: 100%;
     }
-    .emoji-burst {
-  position: absolute;
-  font-size: 24px;
-  pointer-events: none;
-  animation: none;
-  opacity: 0;
-  transform: translateY(0);
-  transition: all 0.5s ease-out;
-}
-
-.burst-animate {
-  opacity: 1;
-  transform: translateY(-40px) scale(1.5);
-}
-    .vote-card-space {
+     .vote-card-space {
       width: 60px;
       height: 90px;
       border: 2px dashed #ccc;
@@ -285,7 +271,7 @@ function addNewLayoutStyles() {
       justify-content: center;
       background-color: #f9f9f9;
       transition: all 0.2s ease;
-      position: relative;
+      
     }
     
     .vote-card-space:hover {
@@ -311,7 +297,21 @@ function addNewLayoutStyles() {
       display: flex;
       justify-content: center;
     }
-    
+    .global-emoji-burst {
+  position: fixed;
+  font-size: 2rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.5) translateY(0);
+  transition: transform 0.8s ease-out, opacity 0.8s ease-out;
+  z-index: 9999;
+}
+
+.global-emoji-burst.burst-go {
+  opacity: 1;
+  transform: scale(1.5) translateY(-100px);
+}
+
     .reveal-votes-button {
       padding: 12px 24px;
       font-size: 16px;
@@ -853,13 +853,13 @@ function resetOrRestoreVotes(index) {
  */
 function applyVotesToUI(votes, hideValues) {
   Object.entries(votes).forEach(([userId, vote]) => {
- //   updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
-        updateVoteVisuals(userId, vote, true);
-    showEmojiBurst(userId, vote);
+  updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+ //     updateVoteVisuals(userId, vote, true);
+  //  showEmojiBurst(userId, vote);
   });
 }
 
-function showEmojiBurst(userId, vote) {
+/** function showEmojiBurst(userId, vote) {
   const voteSpace = document.getElementById(`vote-space-${userId}`);
   if (!voteSpace) return;
 
@@ -877,7 +877,7 @@ function showEmojiBurst(userId, vote) {
   setTimeout(() => {
     burst.remove();
   }, 1000); // remove after animation
-}
+} */
 
 /**
  * Reset all vote visuals
@@ -1249,6 +1249,34 @@ function setupVoteCardsDrag() {
   });
 }
 
+function triggerGlobalEmojiBurst() {
+  const emojis = ['🎉', '✨', '👍', '🔥', '🚀', '💥'];
+  const container = document.body;
+
+  for (let i = 0; i < 20; i++) {
+    const burst = document.createElement('div');
+    burst.className = 'global-emoji-burst';
+    burst.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+    // Random position on screen
+    burst.style.left = `${Math.random() * 100}vw`;
+    burst.style.top = `${Math.random() * 100}vh`;
+
+    container.appendChild(burst);
+
+    // Trigger animation
+    setTimeout(() => {
+      burst.classList.add('burst-go');
+    }, 10);
+
+    // Remove after animation
+    setTimeout(() => {
+      burst.remove();
+    }, 1200);
+  }
+}
+
+
 /**
  * Handle socket messages
  */
@@ -1310,6 +1338,7 @@ function handleSocketMessage(message) {
       if (votesPerStory[currentStoryIndex]) {
         applyVotesToUI(votesPerStory[currentStoryIndex], false);
       }
+      triggerGlobalEmojiBurst();
       break;
       
     case 'votesReset':
