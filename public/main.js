@@ -91,9 +91,6 @@ window.initializeSocketWithName = function(roomId, name) {
     updateUserList(tempUserList);
     
     console.log('[APP] Added temporary local user to user list');
-    
-    // Check visibility
-    ensureUserListVisible();
   }, 100);
   
   // Request all tickets and force user list refresh after a delay
@@ -112,10 +109,10 @@ window.initializeSocketWithName = function(roomId, name) {
       // Request current story selection
       socket.emit('requestCurrentStory');
       
-      hasRequestedTickets = true; // Set flag to avoid duplicate requests
+      // Also request selection sync
+      socket.emit('syncCurrentSelection');
       
-      // Ensure user list is visible
-      ensureUserListVisible();
+      hasRequestedTickets = true; // Set flag to avoid duplicate requests
     }
   }, 1000);
   
@@ -148,11 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
   appendRoomIdToURL(roomId);
   initializeApp(roomId);
   
-  // Schedule regular checks for user list visibility during the first minute
-  setTimeout(ensureUserListVisible, 500);
-  setTimeout(ensureUserListVisible, 2000);
-  setTimeout(ensureUserListVisible, 5000);
-  localStorage.setItem('lastVisibilityCheck', Date.now().toString());
+  // Schedule user list check
+  setTimeout(checkUserListStatus, 3000);
 });
 
 // Global state variables
@@ -169,79 +163,6 @@ let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 let ignoreNextStorySelection = false; // Flag to prevent loopback selections
 let processingRemoteSelection = false; // Flag to prevent processing a remote selection while rendering
-
-/**
- * Function to ensure user list is properly displayed
- */
-function ensureUserListVisible() {
-  console.log('[USERLIST] Checking user list visibility...');
-  
-  const userListContainer = document.getElementById('userList');
-  if (!userListContainer) {
-    console.error('[USERLIST] User list container not found!');
-    return;
-  }
-  
-  // Check if container is visible
-  const containerStyle = window.getComputedStyle(userListContainer);
-  const isVisible = containerStyle.display !== 'none' && containerStyle.visibility !== 'hidden';
-  
-  console.log('[USERLIST] User list container visibility:', isVisible ? 'Visible' : 'Hidden');
-  
-  const userEntries = userListContainer.querySelectorAll('.user-entry');
-  console.log('[USERLIST] User entries found:', userEntries.length);
-  
-  if (userEntries.length === 0) {
-    // Emergency: Add current user if no entries are visible
-    addEmergencyUserEntry();
-    
-    // Request user list from server again
-    if (socket && socket.connected) {
-      console.log('[USERLIST] Requesting user list from server');
-      socket.emit('requestUserList');
-    }
-  }
-  
-  // Don't check too frequently - only if at least 10 seconds have passed
-  const lastCheck = localStorage.getItem('lastVisibilityCheck');
-  const now = Date.now();
-  if (!lastCheck || (now - parseInt(lastCheck, 10) > 10000)) {
-    localStorage.setItem('lastVisibilityCheck', now.toString());
-    
-    // Check again in 5 seconds
-    setTimeout(ensureUserListVisible, 5000);
-  }
-}
-
-/**
- * Function to add emergency user entry
- */
-function addEmergencyUserEntry() {
-  const userListContainer = document.getElementById('userList');
-  if (!userListContainer) return;
-  
-  const currentUsername = sessionStorage.getItem('userName');
-  if (!currentUsername) return;
-  
-  console.log('[USERLIST] Adding emergency user entry for:', currentUsername);
-  
-  const userEntry = document.createElement('div');
-  userEntry.classList.add('user-entry');
-  userEntry.id = `user-emergency`;
-  
-  // Generate avatar color
-  const avatarColor = stringToColor(currentUsername);
-  
-  userEntry.innerHTML = `
-    <div class="avatar" style="background-color: ${avatarColor}">
-      ${getInitials(currentUsername)}
-    </div>
-    <span class="username">${currentUsername}</span>
-    <span class="vote-badge">?</span>
-  `;
-  
-  userListContainer.appendChild(userEntry);
-}
 
 /**
  * Determines if current user is a guest
@@ -866,6 +787,72 @@ function displayCSVData(data) {
 }
 
 /**
+ * Force select a story by ID - ignores all checks and flags
+ */
+function forceSelectStoryById(storyId) {
+  if (!storyId) return;
+  
+  console.log('[UI] Force selecting story by ID:', storyId);
+  
+  // Find the story card with this ID
+  const storyCard = document.getElementById(storyId);
+  if (!storyCard) {
+    console.warn(`[UI] Force select: Could not find story with ID: ${storyId}`);
+    return;
+  }
+  
+  // Get the index from the card's data attribute
+  const index = parseInt(storyCard.dataset.index, 10);
+  if (isNaN(index)) {
+    console.warn(`[UI] Force select: Invalid index for story ID ${storyId}`);
+    return;
+  }
+  
+  // Directly update UI and state
+  forceUpdateStorySelection(storyCard, index, storyId);
+}
+
+/**
+ * Force select a story by index - ignores all checks and flags
+ */
+function forceSelectStoryByIndex(index) {
+  if (index === undefined || index === null) return;
+  
+  console.log('[UI] Force selecting story by index:', index);
+  
+  // Find the story card with this index
+  const storyCard = document.querySelector(`.story-card[data-index="${index}"]`);
+  if (!storyCard) {
+    console.warn(`[UI] Force select: Could not find story with index: ${index}`);
+    return;
+  }
+  
+  // Directly update UI and state
+  forceUpdateStorySelection(storyCard, index, storyCard.id);
+}
+
+/**
+ * Directly update UI for story selection without any checks
+ */
+function forceUpdateStorySelection(storyCard, index, storyId) {
+  // Update UI directly
+  document.querySelectorAll('.story-card').forEach(card => {
+    card.classList.remove('selected', 'active');
+  });
+  
+  storyCard.classList.add('selected', 'active');
+  storyCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  // Update state
+  currentStoryIndex = index;
+  currentStoryId = storyId;
+  
+  // Update visuals for current selection
+  renderCurrentStory();
+  resetOrRestoreVotes(index);
+}
+
+/**
  * Select a story by its ID
  * @param {string} storyId - ID of the story to select
  * @param {boolean} emitToServer - Whether to emit to server (default: true)
@@ -1136,15 +1123,15 @@ function stringToColor(str) {
  * Update the user list display with the new layout
  */
 function updateUserList(users) {
+  console.log('[UI] updateUserList called with', users?.length || 0, 'users');
+  
   // Check if users is valid
   if (!Array.isArray(users) || users.length === 0) {
-    console.warn('[UI] Empty or invalid user list received:', users);
+    console.warn('[UI] Empty or invalid user list received');
     return;
   }
   
-  console.log('[UI] Updating user list with', users.length, 'users:', 
-    users.map(u => `${u.name || 'unnamed'} (${u.id})`).join(', '));
-  
+  // Get DOM elements
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
   
@@ -1153,17 +1140,12 @@ function updateUserList(users) {
     return;
   }
   
-  if (!userCircleContainer) {
-    console.warn('[UI] User circle container not found, but continuing with sidebar user list');
-  }
+  console.log('[UI] Updating user list with users:', 
+    users.map(u => `${u.name || 'unnamed'} (${u.id})`).join(', '));
   
-  // Clear existing content in the sidebar user list
+  // Clear existing content
   userListContainer.innerHTML = '';
-  
-  // Clear user circle if it exists
-  if (userCircleContainer) {
-    userCircleContainer.innerHTML = '';
-  }
+  if (userCircleContainer) userCircleContainer.innerHTML = '';
 
   // Create left sidebar user list
   users.forEach(user => {
@@ -1173,27 +1155,139 @@ function updateUserList(users) {
       return;
     }
     
-    const userEntry = document.createElement('div');
-    userEntry.classList.add('user-entry');
-    userEntry.id = `user-${user.id}`;
-    
-    // Generate avatar background color based on name
-    const avatarColor = stringToColor(user.name);
-    
-    userEntry.innerHTML = `
-      <div class="avatar" style="background-color: ${avatarColor}">
-        ${getInitials(user.name)}
-      </div>
-      <span class="username">${user.name}</span>
-      <span class="vote-badge">?</span>
-    `;
-    
-    userListContainer.appendChild(userEntry);
+    try {
+      const userEntry = document.createElement('div');
+      userEntry.className = 'user-entry';
+      userEntry.id = `user-${user.id}`;
+      
+      // Generate avatar background color based on name
+      const avatarColor = stringToColor(user.name);
+      
+      userEntry.innerHTML = `
+        <div class="avatar" style="background-color: ${avatarColor}">
+          ${getInitials(user.name)}
+        </div>
+        <span class="username">${user.name}</span>
+        <span class="vote-badge">?</span>
+      `;
+      
+      userListContainer.appendChild(userEntry);
+    } catch (err) {
+      console.error('[UI] Error creating user entry for', user.name, ':', err);
+    }
   });
 
-  // If userCircleContainer exists, create the poker layout
+  // Create user circle if container exists
   if (userCircleContainer) {
-    createPokerTableLayout(userCircleContainer, users);
+    try {
+      // Create new grid layout for center area
+      const gridLayout = document.createElement('div');
+      gridLayout.className = 'poker-table-layout';
+      
+      // Split users into two rows
+      const halfPoint = Math.ceil(users.length / 2);
+      const topUsers = users.slice(0, halfPoint);
+      const bottomUsers = users.slice(halfPoint);
+      
+      // Create top row of avatars
+      const topAvatarRow = document.createElement('div');
+      topAvatarRow.className = 'avatar-row';
+      
+      topUsers.forEach(user => {
+        if (user && user.name) {
+          try {
+            const avatarContainer = createAvatarContainer(user);
+            topAvatarRow.appendChild(avatarContainer);
+          } catch (err) {
+            console.error('[UI] Error creating avatar container:', err);
+          }
+        }
+      });
+      
+      // Create top row of vote cards
+      const topVoteRow = document.createElement('div');
+      topVoteRow.className = 'vote-row';
+      
+      topUsers.forEach(user => {
+        if (user && user.name) {
+          try {
+            const voteCard = createVoteCardSpace(user);
+            topVoteRow.appendChild(voteCard);
+          } catch (err) {
+            console.error('[UI] Error creating vote card:', err);
+          }
+        }
+      });
+      
+      // Create reveal button
+      const revealButtonContainer = document.createElement('div');
+      revealButtonContainer.className = 'reveal-button-container';
+      
+      const revealBtn = document.createElement('button');
+      revealBtn.textContent = 'REVEAL VOTES';
+      revealBtn.className = 'reveal-votes-button';
+      
+      if (isGuestUser()) {
+        revealBtn.classList.add('hide-for-guests');
+      } else {
+        revealBtn.addEventListener('click', function() {
+          if (socket && socket.connected) {
+            socket.emit('revealVotes');
+            if (typeof votesRevealed !== 'undefined' && typeof currentStoryIndex !== 'undefined') {
+              votesRevealed[currentStoryIndex] = true;
+              
+              // Update UI if we have votes for this story
+              if (votesPerStory && votesPerStory[currentStoryIndex]) {
+                applyVotesToUI(votesPerStory[currentStoryIndex], false);
+              }
+            }
+          }
+        });
+      }
+      
+      revealButtonContainer.appendChild(revealBtn);
+      
+      // Create bottom row of vote cards
+      const bottomVoteRow = document.createElement('div');
+      bottomVoteRow.className = 'vote-row';
+      
+      bottomUsers.forEach(user => {
+        if (user && user.name) {
+          try {
+            const voteCard = createVoteCardSpace(user);
+            bottomVoteRow.appendChild(voteCard);
+          } catch (err) {
+            console.error('[UI] Error creating vote card:', err);
+          }
+        }
+      });
+      
+      // Create bottom row of avatars
+      const bottomAvatarRow = document.createElement('div');
+      bottomAvatarRow.className = 'avatar-row';
+      
+      bottomUsers.forEach(user => {
+        if (user && user.name) {
+          try {
+            const avatarContainer = createAvatarContainer(user);
+            bottomAvatarRow.appendChild(avatarContainer);
+          } catch (err) {
+            console.error('[UI] Error creating avatar container:', err);
+          }
+        }
+      });
+      
+      // Assemble the grid
+      gridLayout.appendChild(topAvatarRow);
+      gridLayout.appendChild(topVoteRow);
+      gridLayout.appendChild(revealButtonContainer);
+      gridLayout.appendChild(bottomVoteRow);
+      gridLayout.appendChild(bottomAvatarRow);
+      
+      userCircleContainer.appendChild(gridLayout);
+    } catch (err) {
+      console.error('[UI] Error creating user circle:', err);
+    }
   }
   
   // After updating users, check if we need to request tickets
@@ -1208,92 +1302,6 @@ function updateUserList(users) {
   }
   
   console.log('[UI] User list updated successfully with', users.length, 'users');
-}
-
-/**
- * Create the poker table layout
- */
-function createPokerTableLayout(container, users) {
-  // Create new grid layout for center area
-  const gridLayout = document.createElement('div');
-  gridLayout.classList.add('poker-table-layout');
-
-  // Split users into two rows
-  const halfPoint = Math.ceil(users.length / 2);
-  const topUsers = users.slice(0, halfPoint);
-  const bottomUsers = users.slice(halfPoint);
-
-  // Create top row of avatars
-  const topAvatarRow = document.createElement('div');
-  topAvatarRow.classList.add('avatar-row');
-  
-  topUsers.forEach(user => {
-    const avatarContainer = createAvatarContainer(user);
-    topAvatarRow.appendChild(avatarContainer);
-  });
-  
-  // Create top row of vote cards
-  const topVoteRow = document.createElement('div');
-  topVoteRow.classList.add('vote-row');
-  
-  topUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user);
-    topVoteRow.appendChild(voteCard);
-  });
-
-  // Create reveal button
-  const revealButtonContainer = document.createElement('div');
-  revealButtonContainer.classList.add('reveal-button-container');
-  
-  const revealBtn = document.createElement('button');
-  revealBtn.textContent = 'REVEAL VOTES';
-  revealBtn.classList.add('reveal-votes-button');
-  
-  // Handle guest mode for the reveal button
-  if (isGuestUser()) {
-    revealBtn.classList.add('hide-for-guests');
-  } else {
-    revealBtn.onclick = () => {
-      if (socket) {
-        socket.emit('revealVotes');
-        votesRevealed[currentStoryIndex] = true;
-        
-        // Update UI if we have votes for this story
-        if (votesPerStory[currentStoryIndex]) {
-          applyVotesToUI(votesPerStory[currentStoryIndex], false);
-        }
-      }
-    };
-  }
-  
-  revealButtonContainer.appendChild(revealBtn);
-
-  // Create bottom row of vote cards
-  const bottomVoteRow = document.createElement('div');
-  bottomVoteRow.classList.add('vote-row');
-  
-  bottomUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user);
-    bottomVoteRow.appendChild(voteCard);
-  });
-
-  // Create bottom row of avatars
-  const bottomAvatarRow = document.createElement('div');
-  bottomAvatarRow.classList.add('avatar-row');
-  
-  bottomUsers.forEach(user => {
-    const avatarContainer = createAvatarContainer(user);
-    bottomAvatarRow.appendChild(avatarContainer);
-  });
-
-  // Assemble the grid
-  gridLayout.appendChild(topAvatarRow);
-  gridLayout.appendChild(topVoteRow);
-  gridLayout.appendChild(revealButtonContainer);
-  gridLayout.appendChild(bottomVoteRow);
-  gridLayout.appendChild(bottomAvatarRow);
-  
-  container.appendChild(gridLayout);
 }
 
 /**
@@ -1512,27 +1520,6 @@ function handleSocketMessage(message) {
         updateUserList(message.users);
       }
       break;
-    case 'forceSelectionSync':
-  // Handle forced selection sync from server
-  console.log('[SOCKET] Received forced selection sync:', message.storyId || message.storyIndex);
-  
-  // Always process this, even if we're in the middle of another selection
-  const wasProcessingRemoteSelection = processingRemoteSelection;
-  processingRemoteSelection = true;
-  
-  try {
-    if (message.storyId) {
-      // Force DOM selection to match this ID
-      forceSelectStoryById(message.storyId);
-    } else if (message.storyIndex !== undefined) {
-      // Fall back to index-based selection
-      forceSelectStoryByIndex(message.storyIndex);
-    }
-  } finally {
-    // Restore previous processing state
-    processingRemoteSelection = wasProcessingRemoteSelection;
-  }
-  break;
 
     case 'addTicket':
       // Handle ticket added by another user
@@ -1548,6 +1535,28 @@ function handleSocketMessage(message) {
       if (Array.isArray(message.tickets)) {
         console.log('[SOCKET] Received all tickets:', message.tickets.length);
         processAllTickets(message.tickets);
+      }
+      break;
+      
+    case 'forceSelectionSync':
+      // Handle forced selection sync from server
+      console.log('[SOCKET] Received forced selection sync:', message.storyId || message.storyIndex);
+      
+      // Always process this, even if we're in the middle of another selection
+      const wasProcessingRemoteSelection = processingRemoteSelection;
+      processingRemoteSelection = true;
+      
+      try {
+        if (message.storyId) {
+          // Force DOM selection to match this ID
+          forceSelectStoryById(message.storyId);
+        } else if (message.storyIndex !== undefined) {
+          // Fall back to index-based selection
+          forceSelectStoryByIndex(message.storyIndex);
+        }
+      } finally {
+        // Restore previous processing state
+        processingRemoteSelection = wasProcessingRemoteSelection;
       }
       break;
       
@@ -1590,14 +1599,6 @@ function handleSocketMessage(message) {
           processingRemoteSelection = false;
         }
       }
-      break;
-      
-    case 'userJoined':
-      // Individual user joined - could update existing list
-      break;
-      
-    case 'userLeft':
-      // Handle user leaving
       break;
       
     case 'voteReceived':
@@ -1689,120 +1690,19 @@ function handleSocketMessage(message) {
           // Request current story selection
           socket.emit('requestCurrentStory');
           
+          // Also request selection sync
+          socket.emit('syncCurrentSelection');
+          
           hasRequestedTickets = true;
         }
       }, 500);
       break;
   }
 }
-// Add these helper functions to main.js
-/**
- * Force select a story by ID - ignores all checks and flags
- */
-function forceSelectStoryById(storyId) {
-  if (!storyId) return;
-  
-  console.log('[UI] Force selecting story by ID:', storyId);
-  
-  // Find the story card with this ID
-  const storyCard = document.getElementById(storyId);
-  if (!storyCard) {
-    console.warn(`[UI] Force select: Could not find story with ID: ${storyId}`);
-    return;
-  }
-  
-  // Get the index from the card's data attribute
-  const index = parseInt(storyCard.dataset.index, 10);
-  if (isNaN(index)) {
-    console.warn(`[UI] Force select: Invalid index for story ID ${storyId}`);
-    return;
-  }
-  
-  // Directly update UI and state
-  forceUpdateStorySelection(storyCard, index, storyId);
-}
 
 /**
- * Force select a story by index - ignores all checks and flags
+ * Check user list status and fix if needed
  */
-function forceSelectStoryByIndex(index) {
-  if (index === undefined || index === null) return;
-  
-  console.log('[UI] Force selecting story by index:', index);
-  
-  // Find the story card with this index
-  const storyCard = document.querySelector(`.story-card[data-index="${index}"]`);
-  if (!storyCard) {
-    console.warn(`[UI] Force select: Could not find story with index: ${index}`);
-    return;
-  }
-  
-  // Directly update UI and state
-  forceUpdateStorySelection(storyCard, index, storyCard.id);
-}
-
-/**
- * Directly update UI for story selection without any checks
- */
-function forceUpdateStorySelection(storyCard, index, storyId) {
-  // Update UI directly
-  document.querySelectorAll('.story-card').forEach(card => {
-    card.classList.remove('selected', 'active');
-  });
-  
-  storyCard.classList.add('selected', 'active');
-  storyCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  
-  // Update state
-  currentStoryIndex = index;
-  currentStoryId = storyId;
-  
-  // Update visuals for current selection
-  renderCurrentStory();
-  resetOrRestoreVotes(index);
-}
-
-// Add this to window.initializeSocketWithName to ensure sync on join
-window.initializeSocketWithName = function(roomId, name) {
-  // Existing code...
-  
-  // Request all tickets and force user list refresh after a delay
-  setTimeout(() => {
-    if (socket && socket.connected) {
-      console.log('[APP] Requesting all tickets after initialization');
-      socket.emit('requestAllTickets');
-      
-      // Explicitly request the current user list
-      if (typeof requestUserList === 'function') {
-        requestUserList();
-      } else if (socket.emit) {
-        socket.emit('requestUserList');
-      }
-      
-      // Request current story selection
-      socket.emit('requestCurrentStory');
-      
-      // Also request selection sync
-      socket.emit('syncCurrentSelection');
-      
-      hasRequestedTickets = true;
-    }
-  }, 1000);
-  
-  // Rest of existing code...
-};
-
-// Add debugger function to manually trigger selection sync
-window.syncSelection = function() {
-  if (socket && socket.connected) {
-    socket.emit('syncCurrentSelection');
-    return true;
-  }
-  return false;
-};
-
-
-// Improved check user list status function
 function checkUserListStatus() {
   console.log('[DIAGNOSTIC] Checking user list status...');
   
@@ -1818,7 +1718,27 @@ function checkUserListStatus() {
   if (userEntries.length === 0) {
     console.log('[DIAGNOSTIC] User list is empty! Adding emergency entry...');
     
-    addEmergencyUserEntry();
+    // Add emergency entry
+    const currentUsername = sessionStorage.getItem('userName');
+    if (currentUsername) {
+      const userEntry = document.createElement('div');
+      userEntry.classList.add('user-entry');
+      userEntry.id = `user-emergency`;
+      
+      // Generate avatar color
+      const avatarColor = stringToColor(currentUsername);
+      
+      userEntry.innerHTML = `
+        <div class="avatar" style="background-color: ${avatarColor}">
+          ${getInitials(currentUsername)}
+        </div>
+        <span class="username">${currentUsername}</span>
+        <span class="vote-badge">?</span>
+      `;
+      
+      userListEl.appendChild(userEntry);
+      console.log('[DIAGNOSTIC] Added emergency user entry for', currentUsername);
+    }
     
     // Also try to request user list again from server
     if (socket && socket.connected) {
@@ -1852,110 +1772,3 @@ window.debugStorySelection = function(enable = true) {
     const index = card.dataset.index;
     const text = card.textContent.trim().substring(0, 30) + (card.textContent.length > 30 ? '...' : '');
     
-    console.log(
-      `Story ${i}: ${isSelected ? '[SELECTED]' : ''}${isActive ? '[ACTIVE]' : ''} ` +
-      `ID: ${id}, Index: ${index}, Text: "${text}"`
-    );
-  });
-  
-  console.log('Connection status:', socket && socket.connected ? 'Connected' : 'Disconnected');
-  console.log('Room ID:', roomId);
-  console.log('Username:', userName);
-  console.log('Processing remote selection:', processingRemoteSelection);
-  console.log('==========================================');
-  
-  // Return info that might be useful
-  return {
-    currentIndex: currentStoryIndex,
-    currentId: currentStoryId,
-    storyCount: storyCards.length,
-    isConnected: socket && socket.connected
-  };
-};
-
-// Add window functions for manual debugging and fixing
-window.fixUserList = ensureUserListVisible;
-window.debugUsers = function() {
-  console.log('User list container:', document.getElementById('userList'));
-  console.log('User entries:', document.querySelectorAll('.user-entry').length);
-  return document.querySelectorAll('#userList .user-entry');
-};
-
-// Run diagnostic check after loading
-setTimeout(checkUserListStatus, 3000);
-
-
-
-// Emergency fix for user list display issues
-document.addEventListener('DOMContentLoaded', function() {
-  // First check - immediate
-  setTimeout(emergencyUserListFix, 500);
-  
-  // Second check - wait a bit longer
-  setTimeout(emergencyUserListFix, 2000);
-  
-  // Third check - give plenty of time for everything to load
-  setTimeout(emergencyUserListFix, 5000);
-});
-
-// Function to ensure user list is visible
-function emergencyUserListFix() {
-  console.log('Running emergency user list fix...');
-  
-  const userListContainer = document.getElementById('userList');
-  if (!userListContainer) {
-    console.error('User list container not found!');
-    return;
-  }
-  
-  // Check if empty
-  if (userListContainer.children.length === 0) {
-    console.log('User list is empty! Adding local user as emergency...');
-    
-    // Get current username
-    const currentName = sessionStorage.getItem('userName');
-    if (!currentName) {
-      console.log('No username found in sessionStorage');
-      return;
-    }
-    
-    // Create emergency user entry
-    const userEntry = document.createElement('div');
-    userEntry.classList.add('user-entry');
-    userEntry.id = 'user-emergency';
-    
-    // Generate color
-    let avatarColor = '#673ab7';
-    if (typeof stringToColor === 'function') {
-      avatarColor = stringToColor(currentName);
-    }
-    
-    // Get initials
-    let initials = currentName.charAt(0).toUpperCase();
-    if (typeof getInitials === 'function') {
-      initials = getInitials(currentName);
-    }
-    
-    userEntry.innerHTML = `
-      <div class="avatar" style="background-color: ${avatarColor}">
-        ${initials}
-      </div>
-      <span class="username">${currentName}</span>
-      <span class="vote-badge">?</span>
-    `;
-    
-    userListContainer.appendChild(userEntry);
-    console.log('Added emergency user entry for', currentName);
-    
-    // Also request user list from server again
-    if (socket && socket.connected) {
-      console.log('Requesting user list from server...');
-      socket.emit('requestUserList');
-    }
-  } else {
-    console.log('User list already has', userListContainer.children.length, 'entries');
-  }
-}
-
-// Export emergency fix function for console use
-window.fixUserList = emergencyUserListFix;
