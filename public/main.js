@@ -1182,12 +1182,7 @@ function handleSocketMessage(message) {
         addTicketToUI(message.ticketData, false);
       }
       break;
-      case 'storySelected':
-      if (typeof message.storyIndex === 'number') {
-      console.log('[SOCKET] Story selected from server:', message.storyIndex);
-      selectStory(message.storyIndex, false); // false to avoid re-emitting
-      }
-      break;
+   
 
 
       case 'allTickets':
@@ -1233,6 +1228,13 @@ function handleSocketMessage(message) {
       }
       votesRevealed[currentStoryIndex] = false;
       resetAllVoteVisuals();
+      break;
+
+         case 'storySelected':
+      if (typeof message.storyIndex === 'number') {
+      console.log('[SOCKET] Story selected from server:', message.storyIndex);
+      selectStory(message.storyIndex, false); // false to avoid re-emitting
+      }
       break;
       
     case 'storyVotes':
