@@ -91,7 +91,20 @@ io.on('connection', (socket) => {
       });
     }
   });
-  
+  // Add this to server.js
+socket.on('syncCurrentSelection', () => {
+  const roomId = socket.data.roomId;
+  if (roomId && rooms[roomId]) {
+    console.log(`[SERVER] Client ${socket.id} requested selection sync. Broadcasting selected storyId: ${rooms[roomId].selectedStoryId}`);
+    
+    // Send the current selection to everyone in the room to ensure consistency
+    io.to(roomId).emit('forceSelectionSync', { 
+      storyId: rooms[roomId].selectedStoryId,
+      storyIndex: rooms[roomId].selectedIndex,
+      forcedSync: true
+    });
+  }
+});
   // Handle requesting user list explicitly
   socket.on('requestUserList', () => {
     const roomId = socket.data.roomId;
