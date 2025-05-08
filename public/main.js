@@ -2,7 +2,7 @@
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
 // Import socket functionality
-import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, requestUserList } from './socket.js'; 
+import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, requestUserList, emitStorySelected } from './socket.js'; 
 
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
@@ -103,6 +103,9 @@ window.initializeSocketWithName = function(roomId, name) {
         socket.emit('requestUserList');
       }
       
+      // Request current story selection
+      socket.emit('requestCurrentStory');
+      
       hasRequestedTickets = true; // Set flag to avoid duplicate requests
     }
   }, 1000);
@@ -148,6 +151,7 @@ let votesPerStory = {};     // Track votes for each story { storyIndex: { userId
 let votesRevealed = {};     // Track which stories have revealed votes { storyIndex: boolean }
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
+let ignoreNextStorySelection = false; // Flag to prevent loopback selections
 
 /**
  * Determines if current user is a guest
@@ -768,7 +772,15 @@ function displayCSVData(data) {
  * @param {boolean} emitToServer - Whether to emit to server (default: true)
  */
 function selectStory(index, emitToServer = true) {
-  console.log('[UI] Story selected by user:', index);
+  console.log('[UI] Story selection requested:', index, 
+              emitToServer ? '(will broadcast)' : '(local only)');
+  
+  // Prevent selection if we're currently handling a remote selection
+  if (ignoreNextStorySelection) {
+    console.log('[UI] Ignoring story selection due to remote selection in progress');
+    ignoreNextStorySelection = false;
+    return;
+  }
   
   // Update UI first for responsiveness
   document.querySelectorAll('.story-card').forEach(card => {
@@ -778,6 +790,10 @@ function selectStory(index, emitToServer = true) {
   const storyCard = document.querySelector(`.story-card[data-index="${index}"]`);
   if (storyCard) {
     storyCard.classList.add('selected', 'active');
+    // Make sure it's visible
+    storyCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    console.warn(`[UI] Could not find story card with index ${index}`);
   }
   
   // Update local state
@@ -788,14 +804,20 @@ function selectStory(index, emitToServer = true) {
   resetOrRestoreVotes(index);
   
   // Notify server about selection if requested
-  if (emitToServer && socket) {
-    console.log('[EMIT] Broadcasting story selection:', index);
-    socket.emit('storySelected', { storyIndex: index });
+  if (emitToServer && socket && socket.connected) {
+    console.log('[EMIT] Broadcasting story selection to server:', index);
+    
+    // Use the emitStorySelected function if available
+    if (typeof emitStorySelected === 'function') {
+      emitStorySelected(index);
+    } else {
+      socket.emit('storySelected', { storyIndex: index });
+    }
     
     // Request votes for this story
     if (typeof requestStoryVotes === 'function') {
       requestStoryVotes(index);
-    } else {
+    } else if (socket.emit) {
       socket.emit('requestStoryVotes', { storyIndex: index });
     }
   }
@@ -844,13 +866,29 @@ function resetAllVoteVisuals() {
  */
 function renderCurrentStory() {
   const storyListContainer = document.getElementById('storyList');
-  if (!storyListContainer) return;
+  if (!storyListContainer) {
+    console.warn('[UI] Cannot render current story - storyList not found');
+    return;
+  }
 
   const allStoryItems = storyListContainer.querySelectorAll('.story-card');
+  
+  // Log debugging info
+  console.log(`[UI] Rendering current story: ${currentStoryIndex} (total stories: ${allStoryItems.length})`);
+  
+  // Remove 'active' class from all stories
   allStoryItems.forEach(card => card.classList.remove('active'));
 
   const current = allStoryItems[currentStoryIndex];
-  if (current) current.classList.add('active');
+  if (current) {
+    console.log('[UI] Activating story with text:', current.textContent.trim());
+    current.classList.add('active');
+    
+    // Also make sure it's scrolled into view
+    current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    console.warn(`[UI] Could not find story at index ${currentStoryIndex}`);
+  }
   
   // Update the current story display, if present
   const currentStoryDisplay = document.getElementById('currentStory');
@@ -1230,8 +1268,6 @@ function setupVoteCardsDrag() {
 function handleSocketMessage(message) {
   const eventType = message.type;
   
-  // console.log(`[SOCKET] Received ${eventType}:`, message);
-  
   switch(eventType) {
     case 'userList':
       // Update the user list when server sends an updated list
@@ -1254,6 +1290,26 @@ function handleSocketMessage(message) {
       if (Array.isArray(message.tickets)) {
         console.log('[SOCKET] Received all tickets:', message.tickets.length);
         processAllTickets(message.tickets);
+      }
+      break;
+      
+    case 'storySelected':
+      // Handle story selection from other users
+      if (message.storyIndex !== undefined) {
+        console.log('[SOCKET] Remote story selection received, index:', message.storyIndex);
+        
+        // Check if this is different from our current selection
+        if (message.storyIndex !== currentStoryIndex) {
+          // Set flag to ignore next local selection (prevent loops)
+          ignoreNextStorySelection = true;
+          
+          // Update UI without emitting back to server
+          selectStory(message.storyIndex, false);
+          
+          console.log(`[UI] Story selected remotely (${message.storyIndex})`);
+        } else {
+          console.log('[UI] Remote story selection matches current - no change needed');
+        }
       }
       break;
       
@@ -1336,8 +1392,6 @@ function handleSocketMessage(message) {
         // Display CSV data (this will clear CSV stories but preserve manual ones)
         displayCSVData(csvData);
         
-        // We don't need to re-add manual tickets because displayCSVData now preserves them
-        
         // Update UI
         renderCurrentStory();
       }
@@ -1352,6 +1406,9 @@ function handleSocketMessage(message) {
           
           // Explicitly request the current user list
           socket.emit('requestUserList');
+          
+          // Request current story selection
+          socket.emit('requestCurrentStory');
           
           hasRequestedTickets = true;
         }
