@@ -13,27 +13,28 @@ const io = new Server(httpServer, {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// added to call the main.html file
+
+// Static file serving and routes
 app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'main.html'));
 });
 app.use(express.static(join(__dirname, 'public')));
 
-
 // Enhanced room structure with vote revealing state
-const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed }
+const rooms = {}; // roomId: { users, votes, story, revealed, csvData, tickets, selectedIndex, votesPerStory, votesRevealed }
 
 io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
   
   // Handle room joining
   socket.on('joinRoom', ({ roomId, userName }) => {
-     // Validate username - reject if missing
-  if (!userName) {
-    console.log(`[SERVER] Rejected connection without username for socket ${socket.id}`);
-    socket.emit('error', { message: 'Username is required to join a room' });
-    return;
-  }
+    // Validate username - reject if missing
+    if (!userName) {
+      console.log(`[SERVER] Rejected connection without username for socket ${socket.id}`);
+      socket.emit('error', { message: 'Username is required to join a room' });
+      return;
+    }
+    
     socket.data.roomId = roomId;
     socket.data.userName = userName;
 
@@ -45,18 +46,24 @@ io.on('connection', (socket) => {
         story: [],
         revealed: false,
         csvData: [],
-        selectedIndex: 0, // Default to first story
+        tickets: [],
+        selectedIndex: 0,
         votesPerStory: {},
-        votesRevealed: {} // Track which stories have revealed votes
+        votesRevealed: {}
       };
+      console.log(`[SERVER] Created new room: ${roomId}`);
     }
 
-    // Update user list (remove if exists, then add)
+    // Remove existing user entry if present (by socket ID)
     rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
+    
+    // Add new user entry with username
     rooms[roomId].users.push({ id: socket.id, name: userName });
     socket.join(roomId);
 
     console.log(`[SERVER] User ${userName} (${socket.id}) joined room ${roomId}`);
+    console.log(`[SERVER] Room ${roomId} now has ${rooms[roomId].users.length} users:`, 
+      rooms[roomId].users.map(u => `${u.name} (${u.id})`).join(', '));
     
     // Send user list to everyone in the room
     io.to(roomId).emit('userList', rooms[roomId].users);
@@ -66,31 +73,52 @@ io.on('connection', (socket) => {
       socket.emit('syncCSVData', rooms[roomId].csvData);
     }
   });
-// Handle ticket synchronization - add THIS inside the connection handler
-  socket.on('addTicket', (ticketData) => {
-  const roomId = socket.data.roomId;
-  if (roomId && rooms[roomId]) {
-    console.log(`[SERVER] New ticket added to room ${roomId}`);
-    
-    // Broadcast the new ticket to everyone in the room EXCEPT sender
-    socket.broadcast.to(roomId).emit('addTicket', { ticketData });
-    
-    // Keep track of tickets on the server (optional)
-    if (!rooms[roomId].tickets) {
-      rooms[roomId].tickets = [];
+  
+  // Handle requesting user list explicitly
+  socket.on('requestUserList', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      console.log(`[SERVER] User ${socket.id} requested user list for room ${roomId}`);
+      console.log(`[SERVER] Sending list of ${rooms[roomId].users.length} users`);
+      
+      // Send the user list directly to the requesting client
+      socket.emit('userList', rooms[roomId].users);
     }
-    rooms[roomId].tickets.push(ticketData);
-  }
-});
+  });
 
-// Add handler for getting all tickets
-socket.on('requestAllTickets', () => {
-  const roomId = socket.data.roomId;
-  if (roomId && rooms[roomId] && rooms[roomId].tickets) {
-    console.log(`[SERVER] Sending all tickets to client ${socket.id}`);
-    socket.emit('allTickets', { tickets: rooms[roomId].tickets });
-  }
-});
+  // Handle ticket synchronization
+  socket.on('addTicket', (ticketData) => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      console.log(`[SERVER] New ticket added to room ${roomId}: ${ticketData.id}`);
+      
+      // Initialize tickets array if needed
+      if (!rooms[roomId].tickets) {
+        rooms[roomId].tickets = [];
+      }
+      
+      // Check if ticket already exists to avoid duplicates
+      const existingIndex = rooms[roomId].tickets.findIndex(t => t.id === ticketData.id);
+      if (existingIndex === -1) {
+        // Add new ticket
+        rooms[roomId].tickets.push(ticketData);
+        
+        // Broadcast the new ticket to everyone in the room EXCEPT sender
+        socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+      } else {
+        console.log(`[SERVER] Ticket ${ticketData.id} already exists, not adding duplicate`);
+      }
+    }
+  });
+
+  // Add handler for getting all tickets
+  socket.on('requestAllTickets', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId] && rooms[roomId].tickets) {
+      console.log(`[SERVER] Sending all tickets to client ${socket.id}`);
+      socket.emit('allTickets', { tickets: rooms[roomId].tickets });
+    }
+  });
 
   // Handle CSV data loaded confirmation
   socket.on('csvDataLoaded', () => {
@@ -223,11 +251,42 @@ socket.on('requestAllTickets', () => {
   socket.on('syncCSVData', (csvData) => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
+      // Store the raw CSV data
       rooms[roomId].csvData = csvData;
-      rooms[roomId].selectedIndex = 0; // Reset selected index when new CSV data is loaded
-      rooms[roomId].votesPerStory = {}; // Reset all votes when new CSV data is loaded
-      rooms[roomId].votesRevealed = {}; // Reset all reveal states when new CSV data is loaded
+      
+      // Initialize tickets array if needed
+      if (!rooms[roomId].tickets) {
+        rooms[roomId].tickets = [];
+      }
+      
+      // Get existing manual tickets (non-CSV tickets)
+      const manualTickets = rooms[roomId].tickets.filter(t => 
+        t.id && !t.id.includes('story_csv_'));
+      
+      // Create new tickets array with manual tickets preserved
+      rooms[roomId].tickets = [...manualTickets];
+      
+      // Add new CSV tickets
+      csvData.forEach((row, index) => {
+        const ticketText = Array.isArray(row) ? row.join(' | ') : row;
+        rooms[roomId].tickets.push({
+          id: `story_csv_${index}`,
+          text: ticketText
+        });
+      });
+      
+      // Reset selected index and voting state
+      rooms[roomId].selectedIndex = 0;
+      rooms[roomId].votesPerStory = {}; 
+      rooms[roomId].votesRevealed = {};
+      
+      // Broadcast updated CSV data
       io.to(roomId).emit('syncCSVData', csvData);
+      
+      // Also broadcast all tickets to ensure consistency
+      io.to(roomId).emit('allTickets', { tickets: rooms[roomId].tickets });
+      
+      console.log(`[SERVER] CSV data synced for room ${roomId}. Total tickets: ${rooms[roomId].tickets.length}`);
     }
   });
 
@@ -267,7 +326,6 @@ socket.on('requestAllTickets', () => {
     }
   });
 });
-// In server.js add:
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
