@@ -261,7 +261,20 @@ function addNewLayoutStyles() {
       text-overflow: ellipsis;
       max-width: 100%;
     }
-    
+    .emoji-burst {
+  position: absolute;
+  font-size: 24px;
+  pointer-events: none;
+  animation: none;
+  opacity: 0;
+  transform: translateY(0);
+  transition: all 0.5s ease-out;
+}
+
+.burst-animate {
+  opacity: 1;
+  transform: translateY(-40px) scale(1.5);
+}
     .vote-card-space {
       width: 60px;
       height: 90px;
@@ -272,6 +285,7 @@ function addNewLayoutStyles() {
       justify-content: center;
       background-color: #f9f9f9;
       transition: all 0.2s ease;
+      position: relative;
     }
     
     .vote-card-space:hover {
@@ -412,6 +426,19 @@ function setupAddTicketButton() {
       }
     }
   });
+}
+
+function getVoteEmoji(vote) {
+  const map = {
+    '1': '🟢',
+    '2': '🟡',
+    '3': '🔴',
+    '5': '🚀',
+    '8': '🔥',
+    '?': '❓',
+    '👍': '👍'
+  };
+  return map[vote] || '🎉';
 }
 
 /**
@@ -826,8 +853,30 @@ function resetOrRestoreVotes(index) {
  */
 function applyVotesToUI(votes, hideValues) {
   Object.entries(votes).forEach(([userId, vote]) => {
-    updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+ //   updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+        updateVoteVisuals(userId, vote, true);
+    showEmojiBurst(userId, vote);
   });
+}
+
+function showEmojiBurst(userId, vote) {
+  const voteSpace = document.getElementById(`vote-space-${userId}`);
+  if (!voteSpace) return;
+
+  const burst = document.createElement('div');
+  burst.className = 'emoji-burst';
+  burst.textContent = getVoteEmoji(vote); // 🎯 customizable emoji
+
+  voteSpace.appendChild(burst);
+
+  // Animate and remove after
+  setTimeout(() => {
+    burst.classList.add('burst-animate');
+  }, 10); // allow DOM insert
+
+  setTimeout(() => {
+    burst.remove();
+  }, 1000); // remove after animation
 }
 
 /**
