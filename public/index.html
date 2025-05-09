@@ -975,51 +975,52 @@
 }
     /* Current user display in header */
 .current-user-display {
-  display: flex;
+    display: flex;
   align-items: center;
   margin-right: 15px;
-  padding: 4px 10px;
-  background-color: white;
-  border-radius: 20px;
-  border: 1px solid white;
+  background-color: transparent;
+  padding: 0;
+  border: none;
 }
 
 .user-avatar {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background-color: #673ab7;
-  color: white;
+  background-color: white;
+  border: 1px solid #ddd;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   font-weight: bold;
-  margin-right: 8px;
   font-size: 14px;
 }
 
 #headerUsername {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: #333;
+  margin-right: 8px;
 }
 
 /* Updated LOG OFF button style */
 #logOffBtn {
-  display: flex;
+    display: flex;
   align-items: center;
   padding: 6px 12px;
   background-color: white;
-  color: #111827;
-  border: white;
-  border-radius: 4px;
+  color: #673ab7;
+  border: 1px solid #673ab7;
+  border-radius: 20px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
+  transition: all 0.2s;
 }
 
 #logOffBtn:hover {
-  background-color: #e5e7eb;
+  background-color: #f0e6ff;
 }
 
 #logOffBtn:before {
