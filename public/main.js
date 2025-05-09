@@ -126,8 +126,11 @@ function isGuestUser() {
 
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
-  if (!container) return;
-
+  if (!container) { 
+ console.warn('[CARDS] planningCards container not found in DOM!');
+    return;
+  }
+  console.log('[CARDS] Generating cards...');
   const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
   const scales = {
