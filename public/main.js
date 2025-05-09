@@ -191,7 +191,9 @@ function initializeApp(roomId) {
   // Add CSS for new layout
   addNewLayoutStyles();
 }
-
+function isCurrentUserHost() {
+  return sessionStorage.getItem('isHost') === 'true';
+}
 /**
  * Add CSS styles for the new layout
  */
@@ -216,6 +218,12 @@ function addNewLayoutStyles() {
       gap: 20px;
       flex-wrap: wrap;
     }
+    .disabled-nav {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
     
     .vote-row {
       display: flex;
@@ -1170,7 +1178,15 @@ function setupStoryNavigation() {
   const prevButton = document.getElementById('prevStory');
 
   if (!nextButton || !prevButton) return;
-
+// ✅ Disable for non-hosts
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  if (!isHost) {
+    nextButton.disabled = true;
+    prevButton.disabled = true;
+    nextButton.classList.add('disabled-nav');
+    prevButton.classList.add('disabled-nav');
+    return;
+  }
   // Prevent multiple event listeners from being added
   nextButton.replaceWith(nextButton.cloneNode(true));
   prevButton.replaceWith(prevButton.cloneNode(true));
