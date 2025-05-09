@@ -759,6 +759,8 @@ if (isHost) {
   storyItem.addEventListener('click', () => {
     selectStory(startIndex + index);
   });
+  } else {
+  storyItem.classList.add('disabled-story'); // Optional visual cue
 }      
 });
     
