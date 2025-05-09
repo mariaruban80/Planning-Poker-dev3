@@ -123,12 +123,14 @@ function isGuestUser() {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.has('roomId') && !urlParams.has('host');
 }
-
 function setupPlanningCards() {
+  console.log('[UI] Setting up planning cards...');
   const container = document.getElementById('planningCards');
   if (!container) return;
 
+  // Get current voting system value
   const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+  console.log('[UI] Using voting system:', votingSystem);
 
   const scales = {
     fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
@@ -139,6 +141,7 @@ function setupPlanningCards() {
   };
 
   const values = scales[votingSystem] || scales.fibonacci;
+  console.log('[UI] Card values:', values);
 
   container.innerHTML = ''; // Clear any existing cards
 
@@ -151,9 +154,10 @@ function setupPlanningCards() {
     container.appendChild(card);
   });
 
-  // ✅ Enable drag after cards are added
+  // Enable drag after cards are added
   setupVoteCardsDrag();
 }
+
 
 
 /**
@@ -208,36 +212,38 @@ function appendRoomIdToURL(roomId) {
 /**
  * Initialize the application
  */
+
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-//  Guest: Listen for host's voting system
-socket.on('votingSystemUpdate', ({ votingSystem }) => {
-  console.log('[SOCKET] Received voting system from host:', votingSystem);
-  sessionStorage.setItem('votingSystem', votingSystem);
-  setupPlanningCards(); // Dynamically regenerate vote cards
-});
 
-// Host: Emit selected voting system to server
-const isHost = sessionStorage.getItem('isHost') === 'true';
-const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
-
-if (isHost && socket) {
-  socket.emit('votingSystemSelected', { roomId, votingSystem });
-}
-
+  // Other setup functions
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
-//  setupVoteCardsDrag();
-  setupPlanningCards(); // generates the cards AND sets up drag listeners
-
+  setupPlanningCards(); // First setup with default or stored values
   setupRevealResetButtons();
   setupAddTicketButton();
-  setupGuestModeRestrictions(); // Add guest mode restrictions
-  
-  // Add CSS for new layout
+  setupGuestModeRestrictions();
   addNewLayoutStyles();
+  
+  // Add listener for voting system updates (guests)
+  socket.on('votingSystemUpdate', ({ votingSystem }) => {
+    console.log('[SOCKET] Received voting system from host:', votingSystem);
+    sessionStorage.setItem('votingSystem', votingSystem);
+    setupPlanningCards(); // Regenerate vote cards
+  });
+  
+  // Delayed emit for host to ensure socket is connected
+  setTimeout(() => {
+    const isHost = sessionStorage.getItem('isHost') === 'true';
+    const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+    
+    if (isHost && socket && socket.connected) {
+      console.log('[HOST] Emitting voting system:', votingSystem);
+      socket.emit('votingSystemSelected', { roomId, votingSystem });
+    }
+  }, 1000); // Add a small delay to ensure socket connection
 }
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
