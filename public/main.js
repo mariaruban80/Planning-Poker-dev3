@@ -817,6 +817,10 @@ function selectStory(index, emitToServer = true) {
   
   // Update local state
   currentStoryIndex = index;
+  // ✅ Ensure vote reveal state is initialized
+  if (typeof votesRevealed[index] === 'undefined') {
+    votesRevealed[index] = false;
+  }
   renderCurrentStory();
   
   // Reset or restore vote badges for the current story
@@ -1108,17 +1112,20 @@ function createVoteCardSpace(user) {
  * Update vote visuals for a user
  */
 function updateVoteVisuals(userId, vote, hasVoted = false) {
+    // Determine what to show based on reveal state
+  const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
   // Update badges in sidebar
   const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
-  if (sidebarBadge) sidebarBadge.textContent = vote;
+//  if (sidebarBadge) sidebarBadge.textContent = vote;
+    if (sidebarBadge) sidebarBadge.textContent = displayVote;
   
   // Update vote card space
   const voteSpace = document.querySelector(`#vote-space-${userId}`);
   if (voteSpace) {
     const voteBadge = voteSpace.querySelector('.vote-badge');
     if (voteBadge) 
-      //voteBadge.textContent = vote;
-      voteBadge.textContent = votesRevealed[currentStoryIndex] ? vote : '👍';
+      voteBadge.textContent = displayVote;
+      //voteBadge.textContent = votesRevealed[currentStoryIndex] ? vote : '👍';
     
     if (hasVoted) {
       voteSpace.classList.add('has-vote');
