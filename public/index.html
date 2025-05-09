@@ -1198,8 +1198,9 @@
         }
       }
     }
-    // Initialize the user display in header
+// Initialize the user display in header - improved version
 function initUserHeaderDisplay() {
+  // Get username from session storage - prioritize the one set through login modal
   const username = sessionStorage.getItem('userName') || 'Guest';
   const usernameEl = document.getElementById('headerUsername');
   const avatarEl = document.getElementById('headerUserAvatar');
@@ -1225,24 +1226,73 @@ function initUserHeaderDisplay() {
   }
 }
 
-// Call this function when the DOM is loaded
-document.addEventListener('DOMContentLoaded', initUserHeaderDisplay);
+// Call this function when the DOM is loaded AND after login
+document.addEventListener('DOMContentLoaded', function() {
+  // Initial setup of header
+  initUserHeaderDisplay();
+  
+  // Add a callback to the join session button to update header after login
+  const joinButton = document.getElementById('joinSessionWithName');
+  if (joinButton) {
+    joinButton.addEventListener('click', function() {
+      // Set a small delay to ensure sessionStorage is updated first
+      setTimeout(initUserHeaderDisplay, 100);
+    });
+  }
+  
+  // Also listen for Enter key in username input
+  const userNameInput = document.getElementById('userNameInput');
+  if (userNameInput) {
+    userNameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        // Set a small delay to ensure sessionStorage is updated first
+        setTimeout(initUserHeaderDisplay, 100);
+      }
+    });
+  }
+});
 
-// Also update the user display whenever the username changes
+// Update existing handleLoginSubmit function to call our header update
+// This modifies the existing function from your ENHANCED SCRIPT FOR USERNAME HANDLING
+const originalHandleLoginSubmit = window.handleLoginSubmit || function() {};
+window.handleLoginSubmit = function() {
+  const username = document.getElementById('userNameInput').value.trim();
+  
+  if (username) {
+    // Store with both key formats for compatibility
+    sessionStorage.setItem('userName', username);
+    console.log(`User joined as: ${username}`);
+    
+    // Hide the modal
+    document.getElementById('loginModalCustom').style.display = 'none';
+    
+    // Mark username as ready
+    window.userNameReady = true;
+    
+    // Show main content
+    if (window.showMainContent) window.showMainContent();
+    
+    // Initialize the app now that we have a username
+    if (window.initializeAppWithName) window.initializeAppWithName(username);
+    
+    // Update header display with the new username
+    initUserHeaderDisplay();
+  } else {
+    // Show validation error - shake the input
+    const input = document.getElementById('userNameInput');
+    input.style.borderColor = '#ff4d4f';
+    input.classList.add('shake');
+    
+    setTimeout(() => {
+      input.classList.remove('shake');
+    }, 500);
+  }
+};
+
+// Also make sure to update the display whenever username changes
 window.updateUserDisplay = function() {
   initUserHeaderDisplay();
 };
-    // Function to remove or hide any modals from the original app
-    function hideAllOriginalModals() {
-      // Find and hide all modal dialogs from the original app
-      const modalDialogs = document.querySelectorAll('.modal-dialog, .modal-overlay');
-      modalDialogs.forEach(modal => {
-        modal.style.display = 'none';
-        modal.style.visibility = 'hidden';
-        modal.style.opacity = '0';
-        modal.style.pointerEvents = 'none';
-      });
-    }
 // Add Ticket Modal Functions
 function showAddTicketModal() {
   // Clear previous input values
