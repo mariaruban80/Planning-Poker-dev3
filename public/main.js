@@ -224,13 +224,15 @@ const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
 if (isHost && socket) {
   socket.emit('votingSystemSelected', { roomId, votingSystem });
+    // For host, we can render cards immediately
+    setupPlanningCards();
 }
 
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
 //  setupVoteCardsDrag();
-  setupPlanningCards(); // generates the cards AND sets up drag listeners
+
 
   setupRevealResetButtons();
   setupAddTicketButton();
