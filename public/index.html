@@ -973,6 +973,60 @@
   margin-right: 5px;
   font-weight: bold;
 }
+    /* Current user display in header */
+.current-user-display {
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
+  padding: 4px 10px;
+  background-color: #f9f9f9;
+  border-radius: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #673ab7;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-right: 8px;
+  font-size: 12px;
+}
+
+#headerUsername {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Updated LOG OFF button style */
+#logOffBtn {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: #f3f4f6;
+  color: #111827;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+#logOffBtn:hover {
+  background-color: #e5e7eb;
+}
+
+#logOffBtn:before {
+  content: "🚪";
+  margin-right: 4px;
+  font-size: 14px;
+}
 
 /* Add input shake animation for validation if not already present */
 @keyframes shake {
@@ -995,7 +1049,11 @@
     <span>Planning Poker</span>
   </div>
   <div class="nav-links">    
-    
+    <!-- New user display element -->
+    <div class="current-user-display">
+      <div class="user-avatar" id="headerUserAvatar"></div>
+      <span id="headerUsername">User</span>
+    </div>
     <button id="logOffBtn" class="btn btn-danger join-session">LOG OFF</button>   
     
   </div>
@@ -1140,7 +1198,40 @@
         }
       }
     }
+    // Initialize the user display in header
+function initUserHeaderDisplay() {
+  const username = sessionStorage.getItem('userName') || 'Guest';
+  const usernameEl = document.getElementById('headerUsername');
+  const avatarEl = document.getElementById('headerUserAvatar');
+  
+  if (usernameEl) usernameEl.textContent = username;
+  
+  if (avatarEl) {
+    // Generate initials for the avatar
+    const initials = username.split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+      
+    avatarEl.textContent = initials;
     
+    // Generate a consistent color based on username
+    const hue = Math.abs(username.split('').reduce((a, b) => {
+      return a + b.charCodeAt(0);
+    }, 0) % 360);
+    
+    avatarEl.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
+  }
+}
+
+// Call this function when the DOM is loaded
+document.addEventListener('DOMContentLoaded', initUserHeaderDisplay);
+
+// Also update the user display whenever the username changes
+window.updateUserDisplay = function() {
+  initUserHeaderDisplay();
+};
     // Function to remove or hide any modals from the original app
     function hideAllOriginalModals() {
       // Find and hide all modal dialogs from the original app
