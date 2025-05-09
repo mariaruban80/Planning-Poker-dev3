@@ -1116,7 +1116,9 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   const voteSpace = document.querySelector(`#vote-space-${userId}`);
   if (voteSpace) {
     const voteBadge = voteSpace.querySelector('.vote-badge');
-    if (voteBadge) voteBadge.textContent = vote;
+    if (voteBadge) 
+      //voteBadge.textContent = vote;
+      voteBadge.textContent = votesRevealed[currentStoryIndex] ? vote : '👍';
     
     if (hasVoted) {
       voteSpace.classList.add('has-vote');
@@ -1250,7 +1252,7 @@ function setupVoteCardsDrag() {
 }
 
 function triggerGlobalEmojiBurst() {
-  const emojis = ['🎉', '✨', '👍', '🔥', '🚀', '💥'];
+  const emojis = ['😀', '✨', '😆', '😝', '😄', '😍'];
   const container = document.body;
 
   for (let i = 0; i < 20; i++) {
