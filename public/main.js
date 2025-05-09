@@ -1470,7 +1470,11 @@ function handleSocketMessage(message) {
          applyGuestRestrictions();
       }
       break;
-   
+     case 'votingSystemUpdate':
+      console.log('[DEBUG] Got voting system update:', message.votingSystem);
+      sessionStorage.setItem('votingSystem', message.votingSystem);
+      setupPlanningCards(); // Regenerate cards
+      break;
 
 
       case 'allTickets':
