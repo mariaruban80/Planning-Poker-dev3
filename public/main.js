@@ -345,6 +345,12 @@ function addNewLayoutStyles() {
       flex-wrap: wrap;
       justify-content: center;
     }
+    .disabled-story {
+  pointer-events: none;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
     
     .card {
       padding: 10px 20px;
@@ -745,10 +751,16 @@ function displayCSVData(data) {
       storyItem.appendChild(storyTitle);
       storyListContainer.appendChild(storyItem);
       
-      storyItem.addEventListener('click', () => {
+  /**  storyItem.addEventListener('click', () => {
         selectStory(index);
-      });
-    });
+      }); */
+const isHost = sessionStorage.getItem('isHost') === 'true';
+if (isHost) {
+  storyItem.addEventListener('click', () => {
+    selectStory(startIndex + index);
+  });
+}      
+});
     
     // Then add CSV data
     let startIndex = existingStories.length;
