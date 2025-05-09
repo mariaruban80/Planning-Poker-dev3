@@ -126,11 +126,8 @@ function isGuestUser() {
 
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
-  if (!container) { 
- console.warn('[CARDS] planningCards container not found in DOM!');
-    return;
-  }
-  console.log('[CARDS] Generating cards...');
+  if (!container) return;
+
   const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
   const scales = {
@@ -214,12 +211,12 @@ function appendRoomIdToURL(roomId) {
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-/**  Guest: Listen for host's voting system
+//  Guest: Listen for host's voting system
 socket.on('votingSystemUpdate', ({ votingSystem }) => {
   console.log('[SOCKET] Received voting system from host:', votingSystem);
   sessionStorage.setItem('votingSystem', votingSystem);
   setupPlanningCards(); // Dynamically regenerate vote cards
-}); */
+});
 
 // Host: Emit selected voting system to server
 const isHost = sessionStorage.getItem('isHost') === 'true';
@@ -227,15 +224,13 @@ const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
 if (isHost && socket) {
   socket.emit('votingSystemSelected', { roomId, votingSystem });
-    // For host, we can render cards immediately
-    setupPlanningCards();
 }
 
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
 //  setupVoteCardsDrag();
-
+  setupPlanningCards(); // generates the cards AND sets up drag listeners
 
   setupRevealResetButtons();
   setupAddTicketButton();
@@ -1391,12 +1386,7 @@ function handleSocketMessage(message) {
         addTicketToUI(message.ticketData, false);
       }
       break;
-   case 'votingSystemUpdate':
-    console.log('[SOCKET] Received voting system from server:', message.votingSystem);
-    sessionStorage.setItem('votingSystem', message.votingSystem);
-    setupPlanningCards();
-    break;
-
+   
 
 
       case 'allTickets':
