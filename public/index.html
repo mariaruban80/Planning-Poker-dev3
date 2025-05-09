@@ -764,20 +764,29 @@
     }
     
     #logOffBtn {
-      background-color: transparent;
+       display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      background-color: #f3f4f6;
       color: #111827;
       border: none;
-      padding: 8px 16px;
       border-radius: 4px;
       cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;  
+      font-weight: 500;
+      font-size: 14px;
         
     }
     
     #logOffBtn:hover {
-      background-color: white; 
+      background-color: #e5e7eb; 
     }    
+/* Add a logout icon before the text */
+#logOffBtn:before {
+  content: "🚪";
+  margin-right: 4px;
+  font-size: 14px;
+}
+    
     /* Custom Login Modal Styling */
 #loginModalCustom {
   position: fixed;
