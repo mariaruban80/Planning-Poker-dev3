@@ -20,6 +20,11 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.error('[SOCKET] Cannot initialize without a username');
     return null;
   }
+   // Add this new handler for voting system updates
+  socket.on('votingSystemUpdate', ({ votingSystem }) => {
+    console.log('[SOCKET] Received voting system update:', votingSystem);
+    handleMessage({ type: 'votingSystemUpdate', votingSystem });
+  });
   // Store params for potential reconnection
   roomId = roomIdentifier;
   userName = userNameValue;
