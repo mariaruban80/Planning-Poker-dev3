@@ -211,12 +211,12 @@ function appendRoomIdToURL(roomId) {
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-//  Guest: Listen for host's voting system
+/**  Guest: Listen for host's voting system
 socket.on('votingSystemUpdate', ({ votingSystem }) => {
   console.log('[SOCKET] Received voting system from host:', votingSystem);
   sessionStorage.setItem('votingSystem', votingSystem);
   setupPlanningCards(); // Dynamically regenerate vote cards
-});
+}); */
 
 // Host: Emit selected voting system to server
 const isHost = sessionStorage.getItem('isHost') === 'true';
@@ -1388,7 +1388,12 @@ function handleSocketMessage(message) {
         addTicketToUI(message.ticketData, false);
       }
       break;
-   
+   case 'votingSystemUpdate':
+    console.log('[SOCKET] Received voting system from server:', message.votingSystem);
+    sessionStorage.setItem('votingSystem', message.votingSystem);
+    setupPlanningCards();
+    break;
+
 
 
       case 'allTickets':
