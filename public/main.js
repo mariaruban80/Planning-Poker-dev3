@@ -124,6 +124,38 @@ function isGuestUser() {
   return urlParams.has('roomId') && !urlParams.has('host');
 }
 
+function setupPlanningCards() {
+  const container = document.getElementById('planningCards');
+  if (!container) return;
+
+  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+
+  const scales = {
+    fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
+    shortFib: ['0', '½', '1', '2', '3'],
+    tshirt: ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    tshirtNum: ['XS (1)', 'S (2)', 'M (3)', 'L (5)', 'XL (8)', 'XXL (13)'],
+    custom: ['?', '☕', '∞']
+  };
+
+  const values = scales[votingSystem] || scales.fibonacci;
+
+  container.innerHTML = ''; // Clear any existing cards
+
+  values.forEach(value => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('data-value', value);
+    card.setAttribute('draggable', 'true');
+    card.textContent = value;
+    container.appendChild(card);
+  });
+
+  // ✅ Enable drag after cards are added
+  setupVoteCardsDrag();
+}
+
+
 /**
  * Set up guest mode restrictions
  */
@@ -183,7 +215,9 @@ function initializeApp(roomId) {
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
-  setupVoteCardsDrag();
+//  setupVoteCardsDrag();
+  setupPlanningCards(); // generates the cards AND sets up drag listeners
+
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions(); // Add guest mode restrictions
