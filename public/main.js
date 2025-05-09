@@ -1392,7 +1392,12 @@ function handleSocketMessage(message) {
         addTicketToUI(message.ticketData, false);
       }
       break;
-   
+   case 'votingSystemUpdate':
+      console.log('[SOCKET] Voting system update received:', message.votingSystem);
+      sessionStorage.setItem('votingSystem', message.votingSystem);
+      setupPlanningCards(); // Rebuild cards with new voting system
+      break;
+
 
 
       case 'allTickets':
