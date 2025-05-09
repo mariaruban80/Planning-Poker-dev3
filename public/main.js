@@ -536,28 +536,22 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   storyCard.appendChild(storyTitle);
   storyList.appendChild(storyCard);
   
-  // Add click event listener
-  storyCard.addEventListener('click', () => {
+  // Check if user is guest and handle accordingly
+  if (isGuestUser()) {
+    storyCard.classList.add('disabled-story');
+  } else {
+    // Add click event listener only for hosts
+    storyCard.addEventListener('click', () => {
+      selectStory(newIndex);
+    });
+  }
+  
+  // Select the new story if requested (only for hosts)
+  if (selectAfterAdd && !isGuestUser()) {
     selectStory(newIndex);
-  });
-  
-  // Select the new story if requested
-  if (selectAfterAdd) {
-    selectStory(newIndex);
   }
   
-  // Add this ticket to csvData if not already there
-  if (!Array.isArray(csvData)) {
-    csvData = [];
-  }
-  
-  // Check if this ticket is already in csvData
-  const existingIndex = csvData.findIndex(row => 
-    row.length > 0 && row[0] === ticketData.text);
-  
-  if (existingIndex === -1) {
-    csvData.push([ticketData.text]);
-  }
+  // Rest of your existing code...
   
   // Check for stories message
   const noStoriesMessage = document.getElementById('noStoriesMessage');
@@ -571,6 +565,59 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.setAttribute('draggable', 'true');
   });
   normalizeStoryIndexes();
+}
+
+/**
+ * Set up a mutation observer to catch any newly added story cards
+ */
+function setupStoryCardObserver() {
+  if (!isGuestUser()) return; // Only needed for guests
+  
+  const storyList = document.getElementById('storyList');
+  if (!storyList) return;
+  
+  // Create a mutation observer
+  const observer = new MutationObserver((mutations) => {
+    let needsUpdate = false;
+    
+    mutations.forEach((mutation) => {
+      if (mutation.addedNodes.length > 0) {
+        needsUpdate = true;
+      }
+    });
+    
+    if (needsUpdate) {
+      applyGuestRestrictions();
+    }
+  });
+  
+  // Start observing
+  observer.observe(storyList, { 
+    childList: true, 
+    subtree: true 
+  });
+}
+
+/**
+ * Apply guest restrictions to all story cards
+ * This ensures manually added cards are also properly restricted
+ */
+function applyGuestRestrictions() {
+  if (!isGuestUser()) return; // Only apply to guests
+  
+  // Select all story cards
+  const storyCards = document.querySelectorAll('.story-card');
+  
+  storyCards.forEach(card => {
+    // Make sure the card has the disabled class
+    card.classList.add('disabled-story');
+    
+    // Remove all click events by cloning and replacing
+    const newCard = card.cloneNode(true);
+    if (card.parentNode) {
+      card.parentNode.replaceChild(newCard, card);
+    }
+  });
 }
 
 /**
@@ -1420,6 +1467,7 @@ function handleSocketMessage(message) {
         console.log('[SOCKET] New ticket received:', message.ticketData);
         // Add ticket to UI without selecting it (to avoid loops)
         addTicketToUI(message.ticketData, false);
+         applyGuestRestrictions();
       }
       break;
    
@@ -1430,6 +1478,7 @@ function handleSocketMessage(message) {
       if (Array.isArray(message.tickets)) {
         console.log('[SOCKET] Received all tickets:', message.tickets.length);
         processAllTickets(message.tickets);
+         applyGuestRestrictions();
       }
       break;
       
