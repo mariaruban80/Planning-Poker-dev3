@@ -59,8 +59,7 @@ io.on('connection', (socket) => {
     socket.join(roomId);
 // Send the current voting system to the joining user
 const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
-//socket.emit('votingSystemUpdate', { votingSystem });
-socket.emit('message', { type: 'votingSystemUpdate', votingSystem });
+socket.emit('votingSystemUpdate', { votingSystem });
 
     console.log(`[SERVER] User ${userName} (${socket.id}) joined room ${roomId}`);
     
