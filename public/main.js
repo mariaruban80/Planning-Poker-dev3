@@ -114,17 +114,6 @@ let votesPerStory = {};     // Track votes for each story { storyIndex: { userId
 let votesRevealed = {};     // Track which stories have revealed votes { storyIndex: boolean }
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
-function addStoryClickListener(storyItem, index) {
-  const isHost = sessionStorage.getItem('isHost') === 'true';
-  if (!isHost) {
-    storyItem.classList.add('disabled-story'); // Optional visual cue
-    return;
-  }
-
-  storyItem.addEventListener('click', () => {
-    selectStory(index);
-  });
-}
 
 /**
  * Determines if current user is a guest
@@ -500,11 +489,9 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   storyList.appendChild(storyCard);
   
   // Add click event listener
- /** storyCard.addEventListener('click', () => {
+  storyCard.addEventListener('click', () => {
     selectStory(newIndex);
-  }); */
-  addStoryClickListener(storyCard, storyIndex);
-
+  });
   
   // Select the new story if requested
   if (selectAfterAdd) {
@@ -767,16 +754,12 @@ function displayCSVData(data) {
   /**  storyItem.addEventListener('click', () => {
         selectStory(index);
       }); */
-/** const isHost = sessionStorage.getItem('isHost') === 'true';
+const isHost = sessionStorage.getItem('isHost') === 'true';
 if (isHost) {
   storyItem.addEventListener('click', () => {
     selectStory(startIndex + index);
   });
-  } else {
-  storyItem.classList.add('disabled-story'); // Optional visual cue
-}  */
-    addStoryClickListener(storyItem, index);
-  
+}      
 });
     
     // Then add CSV data
@@ -794,11 +777,8 @@ if (isHost) {
       storyItem.appendChild(storyTitle);
       storyListContainer.appendChild(storyItem);
       
- //     storyItem.addEventListener('click', () => {
-   //     selectStory(startIndex + index);
-   addStoryClickListener(storyItem, startIndex + index);
-
-
+      storyItem.addEventListener('click', () => {
+        selectStory(startIndex + index);
       });
     });
     
