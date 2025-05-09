@@ -22,6 +22,8 @@ app.use(express.static(join(__dirname, 'public')));
 
 // Enhanced room structure with vote revealing state
 const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed }
+const roomVotingSystems = {}; // roomId → voting system
+
 
 io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
@@ -55,6 +57,9 @@ io.on('connection', (socket) => {
     rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
     rooms[roomId].users.push({ id: socket.id, name: userName });
     socket.join(roomId);
+// Send the current voting system to the joining user
+const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
+socket.emit('votingSystemUpdate', { votingSystem });
 
     console.log(`[SERVER] User ${userName} (${socket.id}) joined room ${roomId}`);
     
@@ -82,7 +87,13 @@ io.on('connection', (socket) => {
     rooms[roomId].tickets.push(ticketData);
   }
 });
-
+// NEW: Store the selected voting system for the room
+  socket.on('votingSystemSelected', ({ roomId, votingSystem }) => {
+    if (roomId && votingSystem) {
+      console.log(`[SERVER] Host selected voting system '${votingSystem}' for room ${roomId}`);
+      roomVotingSystems[roomId] = votingSystem;
+    }
+  });
 // Add handler for getting all tickets
 socket.on('requestAllTickets', () => {
   const roomId = socket.data.roomId;
