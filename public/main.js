@@ -115,15 +115,14 @@ let votesRevealed = {};     // Track which stories have revealed votes { storyIn
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 
+
 /**
  * Determines if current user is a guest
  */
 function isGuestUser() {
-  // Check if URL contains 'roomId' parameter but not 'host=true'
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.has('roomId') && !urlParams.has('host');
+  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
 }
-
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
   if (!container) return;
@@ -235,7 +234,8 @@ if (isHost && socket) {
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions(); // Add guest mode restrictions
-  
+   // Add this line
+  setupStoryCardInteractions();
   // Add CSS for new layout
   addNewLayoutStyles();
 }
@@ -609,6 +609,8 @@ function processAllTickets(tickets) {
   }
    // ✅ Fix indexes to ensure navigation works
   normalizeStoryIndexes();
+   
+  setupStoryCardInteractions();
 }
 
 /**
@@ -861,6 +863,7 @@ if (isHost) {
     }
   } finally {
     normalizeStoryIndexes();
+    setupStoryCardInteractions();
     // Always release the processing flag
     processingCSVData = false;
   }
@@ -1284,6 +1287,39 @@ function setupStoryNavigation() {
 
     console.log(`[NAV] Previous from ${currentIndex} → ${prevIndex}`);
     selectStory(prevIndex); // emit to server
+  });
+}
+
+/**
+ * Set up story card interactions based on user role
+ */
+function setupStoryCardInteractions() {
+  // Check if user is a guest (joined via shared URL)
+  const isGuest = isGuestUser();
+  
+  // Select all story cards
+  const storyCards = document.querySelectorAll('.story-card');
+  
+  storyCards.forEach(card => {
+    if (isGuest) {
+      // For guests: disable clicking and add visual indicator
+      card.classList.add('disabled-story');
+      
+      // Remove any existing click handlers by cloning and replacing
+      const newCard = card.cloneNode(true);
+      card.parentNode.replaceChild(newCard, card);
+    } else {
+      // For hosts: maintain normal selection behavior
+      // Remove existing handlers first to prevent duplicates
+      const newCard = card.cloneNode(true);
+      card.parentNode.replaceChild(newCard, card);
+      
+      // Add fresh click event listener
+      newCard.addEventListener('click', () => {
+        const index = parseInt(newCard.dataset.index || 0);
+        selectStory(index);
+      });
+    }
   });
 }
 
