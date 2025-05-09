@@ -52,6 +52,12 @@ socket.on('allTickets', ({ tickets }) => {
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
   });
+   // ADD THE NEW HANDLER RIGHT HERE, among the other socket.on handlers
+  socket.on('votingSystemUpdate', data => {
+    console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
+    // Forward this to the handler
+    handleMessage({ type: 'votingSystemUpdate', ...data });
+  });
 
   socket.on('syncCSVData', (csvData) => {
     console.log('[SOCKET] Received CSV data:', Array.isArray(csvData) ? csvData.length : 'invalid', 'rows');
