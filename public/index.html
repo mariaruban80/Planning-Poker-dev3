@@ -373,13 +373,13 @@
     /* New poker table layout */
     .poker-table-layout {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-      max-width: 900px;
-      margin: 0 auto;
-      gap: 20px;
-      padding: 20px 0;
+       flex-direction: column;
+       align-items: center;
+       width: 100%;
+       max-width: 100%; /* Allow full width on smaller screens */
+       margin: 0 auto;
+       gap: 15px;
+       padding: 20px 5px; /* Reduce horizontal padding on small screens */;
     }
     
     .current-story-display {
@@ -482,13 +482,14 @@
     /* Show vote values when votes are revealed */
     body.votes-revealed .vote-card-space .vote-badge {
       font-size: 16px !important; /* Base size for revealed votes */
-  max-width: 80% !important;
+  max-width: 90% !important;
   overflow: hidden !important;
   text-align: center !important;
-  line-height: 1 !important
+  
     }
      /* Special cases for longer text in revealed votes */
-body.votes-revealed .vote-card-space .vote-badge:contains("XX") {
+body.votes-revealed .vote-card-space .vote-badge:contains("XX")
+ body.votes-revealed .vote-card-space .vote-badge:-webkit-any(:-contains("XX")) {    
   font-size: 14px !important;
 }
 
@@ -1059,6 +1060,55 @@ body.votes-revealed .vote-card-space .vote-badge:contains("XXS") {
   content: "🚪";
   margin-right: 4px;
   font-size: 14px;
+}
+
+/* Add these responsive styles to index.html's style section */
+
+/* Make the layout responsive */
+@media (max-width: 768px) {
+  .avatar-row, .vote-row {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 5px;
+    box-sizing: border-box;
+  }
+  
+  .vote-card-space {
+    width: 55px;
+    height: 85px;
+    min-width: 55px;
+    margin: 3px;
+  }
+  
+  /* Smaller font for votes on mobile */
+  body.votes-revealed .vote-card-space .vote-badge {
+    font-size: 14px !important;
+  }
+  
+  body.votes-revealed .vote-card-space .vote-badge:contains("XX") {
+    font-size: 12px !important;
+  }
+}
+
+/* Smaller mobile screens */
+@media (max-width: 480px) {
+  .container {
+    flex-direction: column;
+  }
+  
+  .sidebar, .rightbar {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .vote-card-space {
+    width: 45px;
+    height: 70px;
+    min-width: 45px;
+  }
 }
 
 /* Add input shake animation for validation if not already present */
