@@ -431,60 +431,60 @@ function createVoteStatisticsDisplay(votes) {
   container.className = 'vote-statistics-display';
   
   // Calculate statistics
-  const voteValues = Object.values(votes).filter(v => !isNaN(parseFloat(v)));
-  const numericValues = voteValues.map(v => parseFloat(v));
+  const voteValues = Object.values(votes);
+  const numericValues = voteValues
+    .filter(v => !isNaN(parseFloat(v)) && v !== null && v !== undefined)
+    .map(v => parseFloat(v));
   
-  // Only proceed with calculations if we have numeric votes
+  // Default values
+  let mostCommonVote = voteValues.length > 0 ? voteValues[0] : 'No votes';
+  let voteCount = voteValues.length;
+  let averageValue = 0;
+  let agreementPercent = 0;
+  
+  // Calculate statistics if we have numeric values
   if (numericValues.length > 0) {
-    const average = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
-    const roundedAverage = Math.round(average * 10) / 10; // Round to 1 decimal place
+    // Find most common vote
+    const voteFrequency = {};
+    let maxCount = 0;
+    
+    voteValues.forEach(vote => {
+      voteFrequency[vote] = (voteFrequency[vote] || 0) + 1;
+      if (voteFrequency[vote] > maxCount) {
+        maxCount = voteFrequency[vote];
+        mostCommonVote = vote;
+      }
+    });
+    
+    // Calculate average
+    averageValue = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+    averageValue = Math.round(averageValue * 10) / 10; // Round to 1 decimal place
     
     // Calculate agreement percentage
-    const highestVote = Math.max(...numericValues);
-    const votesForHighest = numericValues.filter(v => v === highestVote).length;
-    const agreementPercentage = (votesForHighest / numericValues.length) * 100;
-    
-    // Create HTML
-    container.innerHTML = `
-      <div class="vote-chart">
-        <div class="vote-card-box">
-          <div class="vote-value">${highestVote}</div>
-        </div>
-        <div class="vote-count">${numericValues.length} Vote${numericValues.length !== 1 ? 's' : ''}</div>
-      </div>
-      <div class="vote-stats">
-        <div class="stat-row">
-          <div class="stat-label">Average:</div>
-          <div class="stat-value">${roundedAverage}</div>
-        </div>
-        <div class="stat-row">
-          <div class="stat-label">Agreement:</div>
-          <div class="stat-circle" style="background-color: ${getAgreementColor(agreementPercentage)}">
-            <div class="agreement-icon">👍</div>
-          </div>
-        </div>
-      </div>
-    `;
-  } else {
-    // Handle non-numeric votes like T-shirt sizes
-    const voteCount = Object.values(votes).length;
-    const mostCommon = findMostCommonVote(votes);
-    
-    container.innerHTML = `
-      <div class="vote-chart">
-        <div class="vote-card-box">
-          <div class="vote-value">${mostCommon}</div>
-        </div>
-        <div class="vote-count">${voteCount} Vote${voteCount !== 1 ? 's' : ''}</div>
-      </div>
-      <div class="vote-stats">
-        <div class="stat-row">
-          <div class="stat-label">Most Common:</div>
-          <div class="stat-value">${mostCommon}</div>
-        </div>
-      </div>
-    `;
+    agreementPercent = (maxCount / voteValues.length) * 100;
   }
+  
+  // Create HTML that matches your CSS classes
+  container.innerHTML = `
+    <div class="vote-chart">
+      <div class="vote-card-box">
+        <div class="vote-value">${mostCommonVote}</div>
+      </div>
+      <div class="vote-count">${voteCount} Vote${voteCount !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="vote-stats">
+      <div class="stat-row">
+        <div class="stat-label">Average:</div>
+        <div class="stat-value">${averageValue}</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label">Agreement:</div>
+        <div class="stat-circle" style="background-color: ${getAgreementColor(agreementPercent)}">
+          <div class="agreement-icon">●</div>
+        </div>
+      </div>
+    </div>
+  `;
   
   return container;
 }
@@ -518,7 +518,13 @@ function getAgreementColor(percentage) {
   if (percentage >= 50) return '#ffeb3b';  // Medium agreement - yellow
   return '#ff9100';  // Low agreement - orange
 }
-function addVoteStatisticsStyles() {
+function addVoteStatisticsStyles() 
+{
+    // Remove any existing vote statistics styles first to avoid duplication
+  const existingStyle = document.getElementById('vote-statistics-styles');
+  if (existingStyle) {
+    existingStyle.remove();
+  }
   const style = document.createElement('style');
   style.textContent = `
     .vote-statistics-display {
