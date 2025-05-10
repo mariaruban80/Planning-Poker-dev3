@@ -376,7 +376,7 @@ if (isHost && socket) {
 
   
   // removed this function addVoteStatisticsStyles();
-
+ updateHeaderStyle();
     addFixedVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
