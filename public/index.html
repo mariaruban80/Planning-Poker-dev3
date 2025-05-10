@@ -1184,6 +1184,76 @@
 <!-- Scripts -->
 <script src="main.js" type="module"></script>
 <script>
+
+function updateHeaderStyle() {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Reset header styles to match the image */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      height: 60px;
+      box-sizing: border-box;
+    }
+    
+    /* Logo and text styling */
+    .logo {
+      display: flex;
+      align-items: center;
+    }
+    
+    .logo img {
+      width: 32px;
+      height: 32px;
+      margin-right: 12px;
+    }
+    
+    .logo span {
+      font-size: 20px;
+      font-weight: bold;
+      color: #000;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Nav links styling */
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    /* Keep existing buttons but adjust general navigation style */
+    .nav-links a, 
+    .nav-links button:not(#logOffBtn):not(.current-user-display) {
+      text-decoration: none;
+      color: #555;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    /* Don't modify these elements */
+    #headerUsername,
+    #headerUserAvatar,
+    #logOffBtn,
+    .current-user-display {
+      /* Preserve existing styles */
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Optionally, update the logo element if needed
+  const logoElement = document.querySelector('.logo img');
+  if (logoElement) {
+    // Update to a solid black spade if it's not already
+    // Only do this if the logo needs updating
+    // logoElement.src = 'blackspade.png'; 
+  }
+}
+     
     // Function to check if there are any stories and update UI accordingly
     function checkForStories() {
       const storyList = document.getElementById('storyList');
