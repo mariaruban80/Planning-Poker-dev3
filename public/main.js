@@ -127,12 +127,11 @@ function addFixedVoteStatisticsStyles() {
   const style = document.createElement('style');
   style.id = 'fixed-vote-statistics-styles'; // Use a different ID
   
-  // CSS that exactly matches your image
   style.textContent = `
     .fixed-vote-display {
       background-color: white;
       border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    //  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
       max-width: 300px;
       margin: 20px auto;
       padding: 20px;
@@ -257,7 +256,7 @@ function createFixedVoteDisplay(votes) {
       <div class="fixed-stat-group">
         <div class="fixed-stat-label">Agreement:</div>
         <div class="fixed-agreement-circle">
-          <div class="fixed-agreement-dot"></div>
+       <div class="agreement-icon">👍</div>
         </div>
       </div>
     </div>
