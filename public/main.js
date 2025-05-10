@@ -1625,11 +1625,12 @@ function createVoteCardSpace(user) {
  * Update vote visuals for a user
  */
 function updateVoteVisuals(userId, vote, hasVoted = false) {
-    // Determine what to show based on reveal state
+  // Determine what to show based on reveal state
   const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
+  
   // Update badges in sidebar
   const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
-   if (sidebarBadge) {
+  if (sidebarBadge) {
     // Only set content if the user has voted
     if (hasVoted) {
       sidebarBadge.textContent = displayVote;
@@ -1637,47 +1638,26 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
       sidebarBadge.textContent = ''; // Empty if no vote
     }
   }
-//  if (sidebarBadge) sidebarBadge.textContent = vote;
-//    if (sidebarBadge) sidebarBadge.textContent = displayVote;
   
   // Update vote card space
   const voteSpace = document.querySelector(`#vote-space-${userId}`);
   if (voteSpace) {
     const voteBadge = voteSpace.querySelector('.vote-badge');
-    if (voteBadge) 
-       // Only show vote if they've voted
+    if (voteBadge) {
+      // Only show vote if they've voted
       if (hasVoted) {
         voteBadge.textContent = displayVote;
       } else {
         voteBadge.textContent = ''; // Empty if no vote
       }
     }
-     // voteBadge.textContent = displayVote;
-      //voteBadge.textContent = votesRevealed[currentStoryIndex] ? vote : '👍';
     
-//    if (hasVoted) {
-  //    voteSpace.classList.add('has-vote');
-    //} else {
-      //voteSpace.classList.remove('has-vote');
-   // }
-  // Update avatar to show they've voted
-  if (hasVoted) {
-    const avatarContainer = document.querySelector(`#user-circle-${userId}`);
-    if (avatarContainer) {
-      avatarContainer.classList.add('has-voted');
-      
-      const avatar = avatarContainer.querySelector('.avatar-circle');
-      if (avatar) {
-        avatar.style.backgroundColor = '#c1e1c1'; // Green background
-      }
+    // Update vote space class
+    if (hasVoted) {
+      voteSpace.classList.add('has-vote');
+    } else {
+      voteSpace.classList.remove('has-vote');
     }
-    
-    // Also update sidebar avatar
-    const sidebarAvatar = document.querySelector(`#user-${userId} img.avatar`);
-    if (sidebarAvatar) {
-      sidebarAvatar.style.backgroundColor = '#c1e1c1';
-    }
-  }
   }
 
   // Update avatar to show they've voted
