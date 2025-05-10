@@ -1136,16 +1136,28 @@ function setupRevealResetButtons() {
     revealVotesBtn.addEventListener('click', () => {
       if (socket) {
         socket.emit('revealVotes');
-        votesRevealed[currentStoryIndex] = true;
-        
-        // Update UI if we have votes for this story
+        // Reset local state
         if (votesPerStory[currentStoryIndex]) {
-          applyVotesToUI(votesPerStory[currentStoryIndex], false);
+          votesPerStory[currentStoryIndex] = {};
+        }
+        votesRevealed[currentStoryIndex] = false;
+        // Update UI
+        resetAllVoteVisuals();
+        // Explicitly show planning cards and hide statistics
+        const planningCardsSection = document.querySelector('.planning-cards-section');
+        const statsContainer = document.querySelector('.vote-statistics-container');
+        
+        if (planningCardsSection) {
+          planningCardsSection.style.display = 'block';
+        }
+        
+        if (statsContainer) {
+          statsContainer.style.display = 'none';
         }
       }
-    });
+   });
   }
-  
+} 
   // Set up reset votes button
   const resetVotesBtn = document.getElementById('resetVotesBtn');
   if (resetVotesBtn) {
@@ -1494,6 +1506,17 @@ function resetAllVoteVisuals() {
   document.querySelectorAll('.has-voted').forEach(el => {
     el.classList.remove('has-voted');
   });
+  // Show planning cards again and hide statistics
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  
+  if (planningCardsSection) {
+    planningCardsSection.style.display = 'block';
+  }
+  
+  if (statsContainer) {
+    statsContainer.style.display = 'none';
+  }
 }
 
 /**
@@ -2030,6 +2053,17 @@ function handleSocketMessage(message) {
       }
       votesRevealed[currentStoryIndex] = false;
       resetAllVoteVisuals();
+       // Make sure planning cards are visible
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  
+  if (planningCardsSection) {
+    planningCardsSection.style.display = 'block';
+  }
+  
+  if (statsContainer) {
+    statsContainer.style.display = 'none';
+  }
       break;
 
          case 'storySelected':
