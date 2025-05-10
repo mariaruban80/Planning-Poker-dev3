@@ -224,7 +224,7 @@ const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 if (isHost && socket) {
   socket.emit('votingSystemSelected', { roomId, votingSystem });
 }
-
+  addVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -425,6 +425,224 @@ function addNewLayoutStyles() {
   document.head.appendChild(style);
 }
 
+function createVoteStatisticsDisplay(votes) {
+  // Create container
+  const container = document.createElement('div');
+  container.className = 'vote-statistics-display';
+  
+  // Calculate statistics
+  const voteValues = Object.values(votes).filter(v => !isNaN(parseFloat(v)));
+  const numericValues = voteValues.map(v => parseFloat(v));
+  
+  // Only proceed with calculations if we have numeric votes
+  if (numericValues.length > 0) {
+    const average = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+    const roundedAverage = Math.round(average * 10) / 10; // Round to 1 decimal place
+    
+    // Calculate agreement percentage
+    const highestVote = Math.max(...numericValues);
+    const votesForHighest = numericValues.filter(v => v === highestVote).length;
+    const agreementPercentage = (votesForHighest / numericValues.length) * 100;
+    
+    // Create HTML
+    container.innerHTML = `
+      <div class="vote-chart">
+        <div class="vote-card-box">
+          <div class="vote-value">${highestVote}</div>
+        </div>
+        <div class="vote-count">${numericValues.length} Vote${numericValues.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="vote-stats">
+        <div class="stat-row">
+          <div class="stat-label">Average:</div>
+          <div class="stat-value">${roundedAverage}</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Agreement:</div>
+          <div class="stat-circle" style="background-color: ${getAgreementColor(agreementPercentage)}">
+            <div class="agreement-icon">👍</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    // Handle non-numeric votes like T-shirt sizes
+    const voteCount = Object.values(votes).length;
+    const mostCommon = findMostCommonVote(votes);
+    
+    container.innerHTML = `
+      <div class="vote-chart">
+        <div class="vote-card-box">
+          <div class="vote-value">${mostCommon}</div>
+        </div>
+        <div class="vote-count">${voteCount} Vote${voteCount !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="vote-stats">
+        <div class="stat-row">
+          <div class="stat-label">Most Common:</div>
+          <div class="stat-value">${mostCommon}</div>
+        </div>
+      </div>
+    `;
+  }
+  
+  return container;
+}
+
+// Helper function to find most common vote
+function findMostCommonVote(votes) {
+  const voteValues = Object.values(votes);
+  const counts = {};
+  
+  voteValues.forEach(vote => {
+    counts[vote] = (counts[vote] || 0) + 1;
+  });
+  
+  let maxCount = 0;
+  let mostCommon = '';
+  
+  for (const vote in counts) {
+    if (counts[vote] > maxCount) {
+      maxCount = counts[vote];
+      mostCommon = vote;
+    }
+  }
+  
+  return mostCommon;
+}
+
+// Helper to get color based on agreement percentage
+function getAgreementColor(percentage) {
+  if (percentage === 100) return '#00e676'; // Perfect agreement - green
+  if (percentage >= 75) return '#76ff03';  // Good agreement - light green
+  if (percentage >= 50) return '#ffeb3b';  // Medium agreement - yellow
+  return '#ff9100';  // Low agreement - orange
+}
+function addVoteStatisticsStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .vote-statistics-display {
+      display: flex;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 350px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .vote-chart {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-right: 30px;
+    }
+    
+    .vote-card-box {
+      width: 60px;
+      height: 90px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: white;
+      font-weight: bold;
+    }
+    
+    .vote-value {
+      font-size: 28px;
+      font-weight: bold;
+    }
+    
+    .vote-count {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #555;
+    }
+    
+    .vote-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .stat-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .stat-label {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #111;
+    }
+    
+    .stat-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+    }
+    
+    .agreement-icon {
+      font-size: 20px;
+    }
+  `;
+  document.head.appendChild(style);
+}
+/**
+ * Handle votes revealed event by showing statistics
+ * @param {number} storyIndex - Index of the story
+ * @param {Object} votes - Vote data
+ */
+function handleVotesRevealed(storyIndex, votes) {
+  // Mark this story as having revealed votes
+  votesRevealed[storyIndex] = true;
+  
+  // Get the planning cards container
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  
+  // Create vote statistics display
+  const voteStats = createVoteStatisticsDisplay(votes);
+  
+  // Hide planning cards and show statistics
+  if (planningCardsSection) {
+    // Create container for statistics if it doesn't exist
+    let statsContainer = document.querySelector('.vote-statistics-container');
+    if (!statsContainer) {
+      statsContainer = document.createElement('div');
+      statsContainer.className = 'vote-statistics-container';
+      planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
+    }
+    
+    // Clear any previous stats and add new one
+    statsContainer.innerHTML = '';
+    statsContainer.appendChild(voteStats);
+    
+    // Hide planning cards
+    planningCardsSection.style.display = 'none';
+    
+    // Show statistics
+    statsContainer.style.display = 'block';
+  }
+  
+  // Apply the vote visuals as normal too
+  applyVotesToUI(votes, false);
+}
 /**
  * Setup Add Ticket button
  
@@ -939,6 +1157,18 @@ function selectStory(index, emitToServer = true) {
   if (typeof votesRevealed[index] === 'undefined') {
     votesRevealed[index] = false;
   }
+ // Show planning cards again and hide statistics when changing stories
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  
+  if (planningCardsSection) {
+    planningCardsSection.style.display = 'block';
+  }
+  
+  if (statsContainer) {
+    statsContainer.style.display = 'none';
+  }
+  
   renderCurrentStory();
   
   // Reset or restore vote badges for the current story
@@ -1508,9 +1738,21 @@ function handleSocketMessage(message) {
       
     case 'votesRevealed':
       // Handle votes revealed
+     // votesRevealed[currentStoryIndex] = true;
+     // if (votesPerStory[currentStoryIndex]) {
+       // applyVotesToUI(votesPerStory[currentStoryIndex], false);
+     // }
+      //triggerGlobalEmojiBurst();
+
+      // Handle votes revealed
       votesRevealed[currentStoryIndex] = true;
       if (votesPerStory[currentStoryIndex]) {
-        applyVotesToUI(votesPerStory[currentStoryIndex], false);
+        handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
+      } else {
+        console.log('[WARN] Votes revealed but no votes found for story index:', currentStoryIndex);
+        
+        // If no votes found, still show empty statistics
+        handleVotesRevealed(currentStoryIndex, {});
       }
       triggerGlobalEmojiBurst();
       break;
