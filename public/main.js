@@ -116,6 +116,36 @@ let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 
 
+function fixRevealedVoteFontSizes() {
+  // Target all vote badges in revealed state
+  const voteCards = document.querySelectorAll('.vote-card-space.has-vote .vote-badge');
+  
+  voteCards.forEach(badge => {
+    // Get the text content
+    const text = badge.textContent || '';
+    
+    // Set base size
+    let fontSize = '18px';
+    
+    // Use smaller font for longer text
+    if (text.length >= 2) {
+      fontSize = '16px';
+    }
+    
+    // Even smaller for special cases
+    if (text.includes('XX')) {
+      fontSize = '14px';
+    }
+    
+    // Apply the styles directly
+    badge.style.fontSize = fontSize;
+    badge.style.fontWeight = '600';
+    badge.style.maxWidth = '80%';
+    badge.style.textAlign = 'center';
+    badge.style.display = 'block';
+  });
+}
+
 
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
@@ -850,6 +880,11 @@ function handleVotesRevealed(storyIndex, votes) {
   
   // Apply the vote visuals as normal too
   applyVotesToUI(votes, false);
+    // Add a delay to ensure the DOM is updated before fixing font sizes
+  setTimeout(fixRevealedVoteFontSizes, 100);
+  
+  // Run it again after a bit longer to be sure (sometimes the DOM updates can be delayed)
+  setTimeout(fixRevealedVoteFontSizes, 300);
 }
 /**
  * Setup Add Ticket button
