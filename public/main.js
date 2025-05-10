@@ -125,13 +125,16 @@ function fixRevealedVoteFontSizes() {
     const text = badge.textContent || '';
     
     // Set base size
-    let fontSize = '18px';
+    let fontSize = '16px';
     
     // Use smaller font for longer text
     if (text.length >= 2) {
       fontSize = '16px';
     }
-    
+     // Use smaller font for T-shirt sizes
+    if (text.includes('X')) {
+      fontSize = '16px';
+    }
     // Even smaller for special cases
     if (text.includes('XX')) {
       fontSize = '14px';
@@ -140,9 +143,11 @@ function fixRevealedVoteFontSizes() {
     // Apply the styles directly
     badge.style.fontSize = fontSize;
     badge.style.fontWeight = '600';
-    badge.style.maxWidth = '80%';
+    badge.style.maxWidth = '90%';
     badge.style.textAlign = 'center';
     badge.style.display = 'block';
+     badge.style.overflow = 'hidden';
+    badge.style.textOverflow = 'ellipsis';
   });
 }
 
