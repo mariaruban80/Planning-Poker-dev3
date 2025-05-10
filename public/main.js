@@ -856,14 +856,18 @@ function handleVotesRevealed(storyIndex, votes) {
   
   // Get the planning cards container
   const planningCardsSection = document.querySelector('.planning-cards-section');
-    // Make sure the fixed styles are added
+  
+  // Make sure the fixed styles are added
   addFixedVoteStatisticsStyles();
+  
   // Create vote statistics display
-//  const voteStats = createVoteStatisticsDisplay(votes);
-  // removed the above old function and add the new onw 
   const voteStats = createFixedVoteDisplay(votes);
+  
   // Hide planning cards and show statistics
   if (planningCardsSection) {
+    // Explicitly hide planning cards
+    planningCardsSection.style.display = 'none';
+    
     // Create container for statistics if it doesn't exist
     let statsContainer = document.querySelector('.vote-statistics-container');
     if (!statsContainer) {
@@ -876,21 +880,14 @@ function handleVotesRevealed(storyIndex, votes) {
     statsContainer.innerHTML = '';
     statsContainer.appendChild(voteStats);
     
-    // Hide planning cards
-    planningCardsSection.style.display = 'none';
-    
     // Show statistics
     statsContainer.style.display = 'block';
   }
   
   // Apply the vote visuals as normal too
   applyVotesToUI(votes, false);
-    // Add a delay to ensure the DOM is updated before fixing font sizes
-  setTimeout(fixRevealedVoteFontSizes, 100);
-  
-  // Run it again after a bit longer to be sure (sometimes the DOM updates can be delayed)
-  setTimeout(fixRevealedVoteFontSizes, 300);
 }
+
 /**
  * Setup Add Ticket button
  
@@ -1136,28 +1133,16 @@ function setupRevealResetButtons() {
     revealVotesBtn.addEventListener('click', () => {
       if (socket) {
         socket.emit('revealVotes');
-        // Reset local state
+        votesRevealed[currentStoryIndex] = true;  // FIXED: This should be true on reveal
+        
+        // Update UI if we have votes for this story
         if (votesPerStory[currentStoryIndex]) {
-          votesPerStory[currentStoryIndex] = {};
-        }
-        votesRevealed[currentStoryIndex] = false;
-        // Update UI
-        resetAllVoteVisuals();
-        // Explicitly show planning cards and hide statistics
-        const planningCardsSection = document.querySelector('.planning-cards-section');
-        const statsContainer = document.querySelector('.vote-statistics-container');
-        
-        if (planningCardsSection) {
-          planningCardsSection.style.display = 'block';
-        }
-        
-        if (statsContainer) {
-          statsContainer.style.display = 'none';
+          applyVotesToUI(votesPerStory[currentStoryIndex], false);
         }
       }
-   });
+    });
   }
-} 
+  
   // Set up reset votes button
   const resetVotesBtn = document.getElementById('resetVotesBtn');
   if (resetVotesBtn) {
@@ -1171,18 +1156,33 @@ function setupRevealResetButtons() {
         }
         votesRevealed[currentStoryIndex] = false;
         
-        // Update UI
+        // Update UI - call this first to reset visual indicators
         resetAllVoteVisuals();
+        
+        // IMPORTANT: These lines show planning cards again
+        const planningCardsSection = document.querySelector('.planning-cards-section');
+        if (planningCardsSection) {
+          planningCardsSection.style.display = 'block';
+        }
+        
+        // Hide statistics display
+        const statsContainer = document.querySelector('.vote-statistics-container');
+        if (statsContainer) {
+          statsContainer.style.display = 'none';
+        }
+        
+        // Ensure the cards container itself is visible
+        const cardsContainer = document.getElementById('planningCards');
+        if (cardsContainer) {
+          cardsContainer.style.display = 'flex';
+        }
       }
     });
   }
 }
 
-/**
- * Setup CSV file uploader
- */
-/**
- * Setup CSV file uploader
+
+/ * Setup CSV file uploader
  */
 function setupCSVUploader() {
   const csvInput = document.getElementById('csvInput');
@@ -1494,28 +1494,45 @@ function applyVotesToUI(votes, hideValues) {
 /**
  * Reset all vote visuals
  */
+// Modify the resetAllVoteVisuals function in main.js to explicitly target the planning cards
 function resetAllVoteVisuals() {
+  // Clear vote badges
   document.querySelectorAll('.vote-badge').forEach(badge => {
     badge.textContent = '';
   });
   
+  // Remove "has-vote" class from elements
   document.querySelectorAll('.has-vote').forEach(el => {
     el.classList.remove('has-vote');
   });
   
+  // Remove "has-voted" class from elements
   document.querySelectorAll('.has-voted').forEach(el => {
     el.classList.remove('has-voted');
   });
+  
   // Show planning cards again and hide statistics
   const planningCardsSection = document.querySelector('.planning-cards-section');
   const statsContainer = document.querySelector('.vote-statistics-container');
   
   if (planningCardsSection) {
+    console.log("Making planning cards visible again");
     planningCardsSection.style.display = 'block';
+  } else {
+    console.log("Planning cards section not found!");
   }
   
   if (statsContainer) {
     statsContainer.style.display = 'none';
+  }
+  
+  // Be extra thorough - make sure the cards container is visible
+  const cardsContainer = document.getElementById('planningCards');
+  if (cardsContainer) {
+    cardsContainer.style.display = 'flex';
+    if (cardsContainer.parentElement) {
+      cardsContainer.parentElement.style.display = 'block';
+    }
   }
 }
 
