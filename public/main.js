@@ -634,7 +634,7 @@ function createVoteStatisticsDisplay(votes) {
       <div class="stat-row">
         <div class="stat-label">Agreement:</div>
         <div class="stat-circle" style="background-color: ${getAgreementColor(agreementPercent)}">
-          <div class="agreement-icon">●</div>
+          <div class="agreement-icon">👍</div>
         </div>
       </div>
     </div>
@@ -684,8 +684,9 @@ function addVoteStatisticsStyles()
   style.textContent = `
     .vote-statistics-display {
       display: flex;
-      background-color: #f9f9f9;
+      background-color: white;
       border-radius: 8px;
+      border: white;
       padding: 20px;
       margin: 20px auto;
       max-width: 350px;
