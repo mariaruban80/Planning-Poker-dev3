@@ -481,9 +481,21 @@
     
     /* Show vote values when votes are revealed */
     body.votes-revealed .vote-card-space .vote-badge {
-      color: #333 ;
-     font-size: 14px
+      font-size: 16px !important; /* Base size for revealed votes */
+  max-width: 80% !important;
+  overflow: hidden !important;
+  text-align: center !important;
+  line-height: 1 !important
     }
+     /* Special cases for longer text in revealed votes */
+body.votes-revealed .vote-card-space .vote-badge:contains("XX") {
+  font-size: 14px !important;
+}
+
+body.votes-revealed .vote-card-space .vote-badge:contains("XXL"),
+body.votes-revealed .vote-card-space .vote-badge:contains("XXS") {
+  font-size: 12px !important;
+}
     
     .reveal-button-container {
       margin: 15px 0;
