@@ -470,6 +470,37 @@ function addNewLayoutStyles() {
       text-overflow: ellipsis;
       max-width: 100%;
     }
+    /* Update the card styling to be thinner */
+    .card {
+      width: 45px; /* Reduced from original width */
+      height: 50px; /* Maintain proportion */
+      padding: 10px;
+      background: #cfc6f7; /* Light purple background matching your image */
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 18px;
+      text-align: center;
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 5px;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Make cards properly align and wrap */
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px 0;
+    }
      .vote-card-space {
       width: 60px;
       height: 90px;
@@ -495,9 +526,22 @@ function addNewLayoutStyles() {
     }
     
     .vote-badge {
-      font-size: 22px;
+   font-size: 18px;
       font-weight: bold;
-      color: #673ab7;
+      color: #673ab7 !important; /* Purple color matching your theme */
+      opacity: 1 !important;
+      transition: none; /* Prevent any transitions that might delay visibility */
+    }
+     /* Add styles to ensure visibility in vote card spaces */
+    .vote-card-space .vote-badge {
+      font-size: 24px;
+      visibility: visible !important;
+    }
+    
+    /* Make sure the thumbs up is visible in the has-vote state */
+    .vote-card-space.has-vote .vote-badge {
+      display: block !important;
+      color: #673ab7 !important;
     }
     
     .reveal-button-container {
@@ -1634,6 +1678,8 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
     // Only set content if the user has voted
     if (hasVoted) {
       sidebarBadge.textContent = displayVote;
+      sidebarBadge.style.color = '#673ab7'; // Make sure the text has a visible color
+      sidebarBadge.style.opacity = '1'; // Ensure full opacity
     } else {
       sidebarBadge.textContent = ''; // Empty if no vote
     }
@@ -1647,6 +1693,8 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
       // Only show vote if they've voted
       if (hasVoted) {
         voteBadge.textContent = displayVote;
+        voteBadge.style.color = '#673ab7'; // Make sure the text has a visible color
+        voteBadge.style.opacity = '1'; // Ensure full opacity
       } else {
         voteBadge.textContent = ''; // Empty if no vote
       }
