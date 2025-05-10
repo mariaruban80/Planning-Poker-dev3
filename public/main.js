@@ -516,6 +516,7 @@ function getAgreementColor(percentage) {
   if (percentage === 100) return '#00e676'; // Perfect agreement - green
   if (percentage >= 75) return '#76ff03';  // Good agreement - light green
   if (percentage >= 50) return '#ffeb3b';  // Medium agreement - yellow
+  if (percentage >= 0) return '#FFEB3B';
   return '#ff9100';  // Low agreement - orange
 }
 function addVoteStatisticsStyles() 
@@ -606,6 +607,7 @@ function addVoteStatisticsStyles()
     
     .agreement-icon {
       font-size: 20px;
+      color: white;
     }
   `;
   document.head.appendChild(style);
