@@ -457,6 +457,7 @@
       justify-content: center;
       background-color: white;
       transition: all 0.2s ease;
+      font-size: 14px;
     }
     
     .vote-card-space:hover {
@@ -473,7 +474,7 @@
     /* Updated - Make vote card question marks invisible but still functional */
     .vote-card-space .vote-badge {
      // font-size: 18px;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: bold;
       color: transparent; /* Make question marks invisible */
     }
@@ -481,6 +482,7 @@
     /* Show vote values when votes are revealed */
     body.votes-revealed .vote-card-space .vote-badge {
       color: #333 !important;
+     font-size: 16px
     }
     
     .reveal-button-container {
@@ -489,7 +491,11 @@
       display: flex;
       justify-content: center;
     }
-    
+    /* For T-shirt sizing which tends to have longer text */
+.vote-badge:contains("XXS"), 
+.vote-badge:contains("XXL") {
+  font-size: 14px !important;
+}
     .reveal-votes-button {
       padding: 12px 24px;
       font-size: 16px;
