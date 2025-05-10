@@ -116,6 +116,156 @@ let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 
 
+
+function addFixedVoteStatisticsStyles() {
+  // Remove any existing vote statistics styles to avoid conflicts
+  const existingStyle = document.getElementById('fixed-vote-statistics-styles');
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+  
+  const style = document.createElement('style');
+  style.id = 'fixed-vote-statistics-styles'; // Use a different ID
+  
+  // CSS that exactly matches your image
+  style.textContent = `
+    .fixed-vote-display {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      max-width: 300px;
+      margin: 20px auto;
+      padding: 20px;
+      display: flex;
+      align-items: flex-start;
+    }
+    
+    .fixed-vote-card {
+      border: 2px solid #000;
+      border-radius: 8px;
+      width: 60px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: bold;
+      margin-right: 40px;
+      position: relative;
+    }
+    
+    .fixed-vote-count {
+      position: absolute;
+      bottom: -25px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .fixed-vote-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .fixed-stat-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .fixed-stat-label {
+      font-size: 16px;
+      color: #666;
+    }
+    
+    .fixed-stat-value {
+      font-size: 26px;
+      font-weight: bold;
+    }
+    
+    .fixed-agreement-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #ffeb3b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .fixed-agreement-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: white;
+    }
+  `;
+  
+  document.head.appendChild(style);
+}
+
+// Create a new function to generate the exact HTML structure
+function createFixedVoteDisplay(votes) {
+  // Create container
+  const container = document.createElement('div');
+  container.className = 'fixed-vote-display';
+  
+  // Calculate statistics
+  const voteValues = Object.values(votes);
+  const numericValues = voteValues
+    .filter(v => !isNaN(parseFloat(v)) && v !== null && v !== undefined)
+    .map(v => parseFloat(v));
+  
+  // Default values
+  let mostCommonVote = voteValues.length > 0 ? voteValues[0] : '0';
+  let voteCount = voteValues.length;
+  let averageValue = 0;
+  
+  // Calculate statistics if we have numeric values
+  if (numericValues.length > 0) {
+    // Find most common vote
+    const voteFrequency = {};
+    let maxCount = 0;
+    
+    voteValues.forEach(vote => {
+      voteFrequency[vote] = (voteFrequency[vote] || 0) + 1;
+      if (voteFrequency[vote] > maxCount) {
+        maxCount = voteFrequency[vote];
+        mostCommonVote = vote;
+      }
+    });
+    
+    // Calculate average
+    averageValue = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+    averageValue = Math.round(averageValue * 10) / 10; // Round to 1 decimal place
+  }
+  
+  // Create HTML that exactly matches the image
+  container.innerHTML = `
+    <div class="fixed-vote-card">
+      ${mostCommonVote}
+      <div class="fixed-vote-count">${voteCount} Vote${voteCount !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="fixed-vote-stats">
+      <div class="fixed-stat-group">
+        <div class="fixed-stat-label">Average:</div>
+        <div class="fixed-stat-value">${averageValue}</div>
+      </div>
+      <div class="fixed-stat-group">
+        <div class="fixed-stat-label">Agreement:</div>
+        <div class="fixed-agreement-circle">
+          <div class="fixed-agreement-dot"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  return container;
+}
+
 /**
  * Determines if current user is a guest
  */
@@ -224,7 +374,11 @@ const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 if (isHost && socket) {
   socket.emit('votingSystemSelected', { roomId, votingSystem });
 }
-  addVoteStatisticsStyles();
+
+  
+  // removed this function addVoteStatisticsStyles();
+
+    addFixedVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -623,10 +777,12 @@ function handleVotesRevealed(storyIndex, votes) {
   
   // Get the planning cards container
   const planningCardsSection = document.querySelector('.planning-cards-section');
-  
+    // Make sure the fixed styles are added
+  addFixedVoteStatisticsStyles();
   // Create vote statistics display
-  const voteStats = createVoteStatisticsDisplay(votes);
-  
+//  const voteStats = createVoteStatisticsDisplay(votes);
+  // removed the above old function and add the new onw 
+  const voteStats = createFixedVoteDisplay(votes);
   // Hide planning cards and show statistics
   if (planningCardsSection) {
     // Create container for statistics if it doesn't exist
