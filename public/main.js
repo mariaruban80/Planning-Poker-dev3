@@ -1400,7 +1400,7 @@ function applyVotesToUI(votes, hideValues) {
  */
 function resetAllVoteVisuals() {
   document.querySelectorAll('.vote-badge').forEach(badge => {
-    badge.textContent = '?';
+    badge.textContent = '';
   });
   
   document.querySelectorAll('.has-vote').forEach(el => {
@@ -1436,6 +1436,7 @@ function renderCurrentStory() {
  * Update the user list display with the new layout
  */
 function updateUserList(users) {
+  
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
   
@@ -1453,7 +1454,7 @@ function updateUserList(users) {
     userEntry.innerHTML = `
       <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
       <span class="username">${user.name}</span>
-      <span class="vote-badge">?</span>
+      <span class="vote-badge"></span>
     `;
     userListContainer.appendChild(userEntry);
   });
@@ -1586,7 +1587,7 @@ function createVoteCardSpace(user) {
   // Add vote badge inside the card space
   const voteBadge = document.createElement('span');
   voteBadge.classList.add('vote-badge');
-  voteBadge.textContent = '?';
+  voteBadge.textContent = '';
   voteCard.appendChild(voteBadge);
   
   // Make it a drop target for vote cards
@@ -1628,22 +1629,55 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
   // Update badges in sidebar
   const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
+   if (sidebarBadge) {
+    // Only set content if the user has voted
+    if (hasVoted) {
+      sidebarBadge.textContent = displayVote;
+    } else {
+      sidebarBadge.textContent = ''; // Empty if no vote
+    }
+  }
 //  if (sidebarBadge) sidebarBadge.textContent = vote;
-    if (sidebarBadge) sidebarBadge.textContent = displayVote;
+//    if (sidebarBadge) sidebarBadge.textContent = displayVote;
   
   // Update vote card space
   const voteSpace = document.querySelector(`#vote-space-${userId}`);
   if (voteSpace) {
     const voteBadge = voteSpace.querySelector('.vote-badge');
     if (voteBadge) 
-      voteBadge.textContent = displayVote;
+       // Only show vote if they've voted
+      if (hasVoted) {
+        voteBadge.textContent = displayVote;
+      } else {
+        voteBadge.textContent = ''; // Empty if no vote
+      }
+    }
+     // voteBadge.textContent = displayVote;
       //voteBadge.textContent = votesRevealed[currentStoryIndex] ? vote : '👍';
     
-    if (hasVoted) {
-      voteSpace.classList.add('has-vote');
-    } else {
-      voteSpace.classList.remove('has-vote');
+//    if (hasVoted) {
+  //    voteSpace.classList.add('has-vote');
+    //} else {
+      //voteSpace.classList.remove('has-vote');
+   // }
+  // Update avatar to show they've voted
+  if (hasVoted) {
+    const avatarContainer = document.querySelector(`#user-circle-${userId}`);
+    if (avatarContainer) {
+      avatarContainer.classList.add('has-voted');
+      
+      const avatar = avatarContainer.querySelector('.avatar-circle');
+      if (avatar) {
+        avatar.style.backgroundColor = '#c1e1c1'; // Green background
+      }
     }
+    
+    // Also update sidebar avatar
+    const sidebarAvatar = document.querySelector(`#user-${userId} img.avatar`);
+    if (sidebarAvatar) {
+      sidebarAvatar.style.backgroundColor = '#c1e1c1';
+    }
+  }
   }
 
   // Update avatar to show they've voted
