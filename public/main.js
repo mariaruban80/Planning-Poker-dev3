@@ -115,39 +115,31 @@ let votesRevealed = {};     // Track which stories have revealed votes { storyIn
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 
-
 /**
- * Function to switch between cards view and statistics view
- * @param {boolean} showStats - Whether to show statistics (true) or cards (false)
+ * Function to explicitly show planning cards and hide statistics
+ * This function focuses only on making planning cards visible
  */
-function toggleViewMode(showStats) {
+function showPlanningCardsHideStats() {
+  // Find elements
   const planningCardsSection = document.querySelector('.planning-cards-section');
   const statsContainer = document.querySelector('.vote-statistics-container');
   
+  // Explicitly set display styles
   if (planningCardsSection) {
-    planningCardsSection.style.display = showStats ? 'none' : 'block';
+    console.log('[UI] Making planning cards visible');
+    planningCardsSection.style.display = 'block';
+  } else {
+    console.error('[UI] Planning cards section not found in DOM');
   }
   
+  // Hide statistics container if it exists
   if (statsContainer) {
-    if (showStats) {
-      statsContainer.style.display = 'block';
-    } else {
-      statsContainer.style.display = 'none';
-    }
-  } else if (showStats) {
-    // If showing stats but container doesn't exist, create it
-    const mainSection = document.querySelector('.main');
-    if (mainSection) {
-      const newStatsContainer = document.createElement('div');
-      newStatsContainer.className = 'vote-statistics-container';
-      mainSection.appendChild(newStatsContainer);
-    }
+    console.log('[UI] Hiding statistics container');
+    statsContainer.style.display = 'none';
   }
-  
-  // Debugging logs to help identify issues
-  console.log(`[UI] View mode changed: ${showStats ? 'statistics' : 'planning cards'}`);
-  console.log(`[UI] Planning cards display: ${planningCardsSection ? planningCardsSection.style.display : 'element not found'}`);
 }
+
+
 
 // Adding  this function to main.js to be called whenever votes are revealed
 function fixRevealedVoteFontSizes() {
@@ -878,6 +870,7 @@ function addVoteStatisticsStyles()
  * @param {number} storyIndex - Index of the story
  * @param {Object} votes - Vote data
  */
+
 function handleVotesRevealed(storyIndex, votes) {
   // Mark this story as having revealed votes
   votesRevealed[storyIndex] = true;
@@ -905,8 +898,11 @@ function handleVotesRevealed(storyIndex, votes) {
     statsContainer.innerHTML = '';
     statsContainer.appendChild(voteStats);
     
-    // Toggle to statistics view
-    toggleViewMode(true);
+    // Hide planning cards
+    planningCardsSection.style.display = 'none';
+    
+    // Show statistics
+    statsContainer.style.display = 'block';
   }
   
   // Apply the vote visuals as normal too
@@ -1158,10 +1154,9 @@ function processAllTickets(tickets) {
  */
 function setupRevealResetButtons() {
  // In the setupRevealResetButtons function, modify the resetVotesBtn click handler
-
 const resetVotesBtn = document.getElementById('resetVotesBtn');
 if (resetVotesBtn) {
-  resetVotesBtn.addEventListener('click', () => {
+  resetVotesBtn.addEventListener('click', function() {
     if (socket) {
       socket.emit('resetVotes');
       
@@ -1174,12 +1169,12 @@ if (resetVotesBtn) {
       // Update UI
       resetAllVoteVisuals();
       
-      // Switch to planning cards view
-      toggleViewMode(false);     
-   
+      // Explicitly show planning cards
+      showPlanningCardsHideStats();
     }
   });
 }
+
 }
   
   // Set up reset votes button
@@ -2066,8 +2061,8 @@ function handleSocketMessage(message) {
       }
       votesRevealed[currentStoryIndex] = false;
       resetAllVoteVisuals(); // Show planning cards again and hide statistics
-   // Switch to planning cards view
-      toggleViewMode(false);
+      // Explicitly show planning cards
+      showPlanningCardsHideStats();
       
       break;
 
