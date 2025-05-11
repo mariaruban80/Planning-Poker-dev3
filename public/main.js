@@ -115,6 +115,40 @@ let votesRevealed = {};     // Track which stories have revealed votes { storyIn
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 
+
+/**
+ * Function to switch between cards view and statistics view
+ * @param {boolean} showStats - Whether to show statistics (true) or cards (false)
+ */
+function toggleViewMode(showStats) {
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  
+  if (planningCardsSection) {
+    planningCardsSection.style.display = showStats ? 'none' : 'block';
+  }
+  
+  if (statsContainer) {
+    if (showStats) {
+      statsContainer.style.display = 'block';
+    } else {
+      statsContainer.style.display = 'none';
+    }
+  } else if (showStats) {
+    // If showing stats but container doesn't exist, create it
+    const mainSection = document.querySelector('.main');
+    if (mainSection) {
+      const newStatsContainer = document.createElement('div');
+      newStatsContainer.className = 'vote-statistics-container';
+      mainSection.appendChild(newStatsContainer);
+    }
+  }
+  
+  // Debugging logs to help identify issues
+  console.log(`[UI] View mode changed: ${showStats ? 'statistics' : 'planning cards'}`);
+  console.log(`[UI] Planning cards display: ${planningCardsSection ? planningCardsSection.style.display : 'element not found'}`);
+}
+
 // Adding  this function to main.js to be called whenever votes are revealed
 function fixRevealedVoteFontSizes() {
   // Target all vote badges in revealed state
@@ -850,12 +884,13 @@ function handleVotesRevealed(storyIndex, votes) {
   
   // Get the planning cards container
   const planningCardsSection = document.querySelector('.planning-cards-section');
-    // Make sure the fixed styles are added
+  
+  // Make sure the fixed styles are added
   addFixedVoteStatisticsStyles();
+  
   // Create vote statistics display
-//  const voteStats = createVoteStatisticsDisplay(votes);
-  // removed the above old function and add the new onw 
   const voteStats = createFixedVoteDisplay(votes);
+  
   // Hide planning cards and show statistics
   if (planningCardsSection) {
     // Create container for statistics if it doesn't exist
@@ -870,19 +905,17 @@ function handleVotesRevealed(storyIndex, votes) {
     statsContainer.innerHTML = '';
     statsContainer.appendChild(voteStats);
     
-    // Hide planning cards
-    planningCardsSection.style.display = 'none';
-    
-    // Show statistics
-    statsContainer.style.display = 'block';
+    // Toggle to statistics view
+    toggleViewMode(true);
   }
   
   // Apply the vote visuals as normal too
   applyVotesToUI(votes, false);
-    // Add a delay to ensure the DOM is updated before fixing font sizes
+  
+  // Add a delay to ensure the DOM is updated before fixing font sizes
   setTimeout(fixRevealedVoteFontSizes, 100);
   
-  // Run it again after a bit longer to be sure (sometimes the DOM updates can be delayed)
+  // Run it again after a bit longer to be sure
   setTimeout(fixRevealedVoteFontSizes, 300);
 }
 /**
@@ -1141,17 +1174,9 @@ if (resetVotesBtn) {
       // Update UI
       resetAllVoteVisuals();
       
-      // Show planning cards again and hide statistics
-      const planningCardsSection = document.querySelector('.planning-cards-section');
-      const statsContainer = document.querySelector('.vote-statistics-container');
-      
-      if (planningCardsSection) {
-        planningCardsSection.style.display = 'block';
-      }
-      
-      if (statsContainer) {
-        statsContainer.style.display = 'none';
-      }
+      // Switch to planning cards view
+      toggleViewMode(false);     
+   
     }
   });
 }
@@ -2041,16 +2066,8 @@ function handleSocketMessage(message) {
       }
       votesRevealed[currentStoryIndex] = false;
       resetAllVoteVisuals(); // Show planning cards again and hide statistics
-  const planningCardsSection = document.querySelector('.planning-cards-section');
-  const statsContainer = document.querySelector('.vote-statistics-container');
-  
-  if (planningCardsSection) {
-    planningCardsSection.style.display = 'block';
-  }
-  
-  if (statsContainer) {
-    statsContainer.style.display = 'none';
-  }
+   // Switch to planning cards view
+      toggleViewMode(false);
       
       break;
 
