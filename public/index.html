@@ -817,7 +817,7 @@ body.votes-revealed .vote-card-space .vote-badge:contains("XXS") {
     }    
 /* Add a logout icon before the text */
 #logOffBtn:before {
-  content: "🚪";
+  content: "🏃🚪";
   margin-right: 4px;
   font-size: 14px;
 }
@@ -1080,6 +1080,25 @@ white-space: nowrap;
     padding: 0 5px;
     box-sizing: border-box;
   }
+
+     .card-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  padding: 10px 20px;
+  z-index: 1000;
+}
+
+.card-panel .cards {
+  display: flex;
+  gap: 10px;
+}
+
   
   .vote-card-space {
     width: 55px;
@@ -1222,8 +1241,9 @@ white-space: nowrap;
         No stories available. Please upload or add stories to start voting.
       </div> -->
 <!-- Planning cards -->
-<div class="planning-cards-section">
+<div class="planning-cards-section">     
 <h3>Planning Cards</h3>
+     <div class="card-panel">
 <div class="cards" id="planningCards">
 
 <!--  <div class="card" data-value="0" draggable="true">0</div>
@@ -1232,11 +1252,9 @@ white-space: nowrap;
 <div class="card" data-value="5" draggable="true">5</div>
 <div class="card" data-value="8" draggable="true">8</div>
 <div class="card" data-value="13" draggable="true">13</div>
-<div class="card" data-value="21" draggable="true">21</div> -->
+<div class="card" data-value="21" draggable="true">21</div> -->    
 
-    
-
-    
+</div>    
 </div>
 </div>
 </div>
