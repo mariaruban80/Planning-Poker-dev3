@@ -142,7 +142,7 @@ socket.on('requestAllTickets', () => {
   });
 
   // Handle user votes
-  socket.on('castVote', ({ vote, targetUserId }) => {
+/**  socket.on('castVote', ({ vote, targetUserId }) => {
     const roomId = socket.data.roomId;
     if (roomId && targetUserId != null && rooms[roomId]) {
       const currentStoryIndex = rooms[roomId].selectedIndex;
@@ -162,7 +162,35 @@ socket.on('requestAllTickets', () => {
         storyIndex: currentStoryIndex
       });
     }
-  });
+  }); */
+  socket.on('castVote', ({ vote, targetUserId }) => {
+  const roomId = socket.data.roomId;
+
+  // 🚨 Reject if someone tries to vote for another user
+  if (targetUserId !== socket.id) {
+    console.warn(`[SECURITY] User ${socket.id} tried to vote as ${targetUserId}. Vote rejected.`);
+    return;
+  }
+
+  if (roomId && rooms[roomId]) {
+    const currentStoryIndex = rooms[roomId].selectedIndex;
+
+    if (!rooms[roomId].votesPerStory[currentStoryIndex]) {
+      rooms[roomId].votesPerStory[currentStoryIndex] = {};
+    }
+
+    rooms[roomId].votesPerStory[currentStoryIndex][socket.id] = vote;
+
+    io.to(roomId).emit('voteUpdate', {
+      userId: socket.id,
+      vote,
+      storyIndex: currentStoryIndex
+    });
+
+    console.log(`[VOTE] ${socket.id} voted ${vote} in room ${roomId} for story ${currentStoryIndex}`);
+  }
+});
+
 
   // Handle requests for votes for a specific story
   socket.on('requestStoryVotes', ({ storyIndex }) => {
