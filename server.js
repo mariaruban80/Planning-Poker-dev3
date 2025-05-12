@@ -142,56 +142,33 @@ socket.on('requestAllTickets', () => {
   });
 
   // Handle user votes
-/**  socket.on('castVote', ({ vote, targetUserId }) => {
-    const roomId = socket.data.roomId;
-    if (roomId && targetUserId != null && rooms[roomId]) {
-      const currentStoryIndex = rooms[roomId].selectedIndex;
-
-      // Initialize vote storage for this story if needed
-      if (!rooms[roomId].votesPerStory[currentStoryIndex]) {
-        rooms[roomId].votesPerStory[currentStoryIndex] = {};
-      }
-
-      // Store the vote
-      rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
-
-      // Broadcast vote to all clients in the room
-      io.to(roomId).emit('voteUpdate', {
-        userId: targetUserId,
-        vote,
-        storyIndex: currentStoryIndex
-      });
-    }
-  }); */
-  socket.on('castVote', ({ vote, targetUserId }) => {
+ // In server.js, modify the castVote handler:
+socket.on('castVote', ({ vote, targetUserId }) => {
   const roomId = socket.data.roomId;
-
-  // 🚨 Reject if someone tries to vote for another user
-  if (targetUserId !== socket.id) {
-    console.warn(`[SECURITY] User ${socket.id} tried to vote as ${targetUserId}. Vote rejected.`);
-    return;
-  }
-
-  if (roomId && rooms[roomId]) {
+  
+  // Only allow users to vote for themselves
+  if (roomId && rooms[roomId] && targetUserId === socket.id) {
     const currentStoryIndex = rooms[roomId].selectedIndex;
 
+    // Initialize vote storage for this story if needed
     if (!rooms[roomId].votesPerStory[currentStoryIndex]) {
       rooms[roomId].votesPerStory[currentStoryIndex] = {};
     }
 
-    rooms[roomId].votesPerStory[currentStoryIndex][socket.id] = vote;
+    // Store the vote
+    rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
 
+    // Broadcast vote to all clients in the room
     io.to(roomId).emit('voteUpdate', {
-      userId: socket.id,
+      userId: targetUserId,
       vote,
       storyIndex: currentStoryIndex
     });
-
-    console.log(`[VOTE] ${socket.id} voted ${vote} in room ${roomId} for story ${currentStoryIndex}`);
+  } else {
+    // Optionally notify the user that they can only vote for themselves
+    socket.emit('error', { message: 'You can only vote for yourself' });
   }
 });
-
-
   // Handle requests for votes for a specific story
   socket.on('requestStoryVotes', ({ storyIndex }) => {
     const roomId = socket.data.roomId;
