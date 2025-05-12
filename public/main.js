@@ -412,7 +412,7 @@ if (isHost && socket) {
   setupStoryNavigation();
 //  setupVoteCardsDrag();
   setupPlanningCards(); // generates the cards AND sets up drag listeners
-
+ setupVoteCardRestrictions(); // ✅ Add this right after planning cards are created
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions(); // Add guest mode restrictions
@@ -1964,6 +1964,7 @@ function handleSocketMessage(message) {
       console.log('[DEBUG] Got voting system update:', message.votingSystem);
       sessionStorage.setItem('votingSystem', message.votingSystem);
       setupPlanningCards(); // Regenerate cards
+        setupVoteCardRestrictions(); // ✅ Restrict drag to user's own avatar
       break;
 
 
@@ -2036,6 +2037,7 @@ function handleSocketMessage(message) {
       if (typeof message.storyIndex === 'number') {
       console.log('[SOCKET] Story selected from server:', message.storyIndex);
       selectStory(message.storyIndex, false); // false to avoid re-emitting
+        setupVoteCardRestrictions(); //  Rebind drag-and-drop after story change
       }
       break;
       
@@ -2079,12 +2081,12 @@ function handleSocketMessage(message) {
     console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
     
     // Display CSV data (this will clear CSV stories but preserve manual ones)
-    displayCSVData(csvData);
+    displayCSVData(csvData);  
     
-    // We don't need to re-add manual tickets because displayCSVData now preserves them
     
     // Update UI
     renderCurrentStory();
+     setupVoteCardRestrictions();
   }
   break;
 
@@ -2117,6 +2119,40 @@ function handleSocketMessage(message) {
       break;
   }
 }
+function setupVoteCardRestrictions() {
+  const voteCards = document.querySelectorAll('.card');
+  const avatarContainers = document.querySelectorAll('.avatar-container');
+
+  const currentUserId = window.socket?.id;
+
+  voteCards.forEach(card => {
+    card.setAttribute('title', 'Drag this card to your avatar to vote');
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', card.dataset.value);
+    });
+  });
+
+  avatarContainers.forEach(container => {
+    const userId = container.getAttribute('data-user-id');
+
+    container.addEventListener('dragover', (e) => {
+      if (userId === currentUserId) {
+        e.preventDefault();
+      }
+    });
+
+    container.addEventListener('drop', (e) => {
+      if (userId !== currentUserId) {
+        alert("🚫 You can only vote for yourself.");
+        return;
+      }
+
+      const voteValue = e.dataTransfer.getData('text/plain');
+      emitVote(voteValue, userId);
+    });
+  });
+}
+
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
