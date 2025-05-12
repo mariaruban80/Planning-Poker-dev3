@@ -1628,6 +1628,8 @@ function updateUserList(users) {
       }
     }, 500);
   }
+    // Enforce drag-drop restrictions after avatars are in the DOM
+  setupVoteCardRestrictions();
 }
 
 /**
