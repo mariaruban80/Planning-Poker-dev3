@@ -1628,8 +1628,9 @@ function updateUserList(users) {
       }
     }, 500);
   }
-    // Enforce drag-drop restrictions after avatars are in the DOM
+   setTimeout(() => {
   setupVoteCardRestrictions();
+}, 50); 
 }
 
 /**
