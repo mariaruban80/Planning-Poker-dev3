@@ -385,42 +385,208 @@ function appendRoomIdToURL(roomId) {
 /**
  * Initialize the application
  */
+/**
+ * Initialize the application
+ */
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-//  Guest: Listen for host's voting system
-socket.on('votingSystemUpdate', ({ votingSystem }) => {
-  console.log('[SOCKET] Received voting system from host:', votingSystem);
-  sessionStorage.setItem('votingSystem', votingSystem);
-  setupPlanningCards(); // Dynamically regenerate vote cards
-});
-
-// Host: Emit selected voting system to server
-const isHost = sessionStorage.getItem('isHost') === 'true';
-const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
-
-if (isHost && socket) {
-  socket.emit('votingSystemSelected', { roomId, votingSystem });
-}
-
   
-  // removed this function addVoteStatisticsStyles();
- updateHeaderStyle();
-    addFixedVoteStatisticsStyles();
+  // Detect device type and setup appropriate UI
+  const deviceInfo = detectDeviceType();
+  
+  // Fix iOS viewport height issue
+  fixIOSViewportHeight();
+  window.addEventListener('resize', fixIOSViewportHeight);
+  window.addEventListener('orientationchange', fixIOSViewportHeight);
+  
+  // Guest: Listen for host's voting system
+  socket.on('votingSystemUpdate', ({ votingSystem }) => {
+    console.log('[SOCKET] Received voting system from host:', votingSystem);
+    sessionStorage.setItem('votingSystem', votingSystem);
+    setupPlanningCards(); // Dynamically regenerate vote cards
+  });
+
+  // Host: Emit selected voting system to server
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+
+  if (isHost && socket) {
+    socket.emit('votingSystemSelected', { roomId, votingSystem });
+  }
+  
+  // Check for modern browser capabilities
+  enhanceForModernBrowsers();
+  
+  // Setup touch-specific interactions if needed
+  if (deviceInfo.isTouchDevice) {
+    setupTouchVoting();
+  }
+
+  // Original functionality continues below
+  updateHeaderStyle();
+  addFixedVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
-//  setupVoteCardsDrag();
   setupPlanningCards(); // generates the cards AND sets up drag listeners
 
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions(); // Add guest mode restrictions
-   // Add this line
   setupStoryCardInteractions();
-  // Add CSS for new layout
+  
+  // Add CSS for layout (both original and new responsive styles)
   addNewLayoutStyles();
+  
+  // Add a class to the body to indicate the app is fully initialized
+  document.body.classList.add('app-initialized');
 }
+
+
+/**
+ * Setup touch-friendly voting for mobile devices
+ */
+function setupTouchVoting() {
+  // Set up touch event handling for mobile devices
+  console.log('[UI] Setting up touch voting for mobile devices');
+  
+  // Get all planning cards
+  const planningCards = document.querySelectorAll('.card');
+  
+  // Get all vote spaces
+  const voteSpaces = document.querySelectorAll('.vote-card-space');
+  
+  // Add touch handlers to cards
+  planningCards.forEach(card => {
+    card.addEventListener('touchstart', function(e) {
+      // Select this card on touch
+      document.querySelectorAll('.card').forEach(c => {
+        c.classList.remove('selected-card');
+      });
+      this.classList.add('selected-card');
+      
+      // Store the value
+      window.lastTouchedCardValue = this.getAttribute('data-value');
+      console.log('[UI] Card selected via touch:', window.lastTouchedCardValue);
+    });
+  });
+  
+  // Add touch handlers to vote spaces
+  voteSpaces.forEach(space => {
+    space.addEventListener('touchstart', function(e) {
+      const userId = this.id.replace('vote-space-', '');
+      const currentUserId = socket ? socket.id : null;
+      
+      // Only allow voting in own space
+      if (userId === currentUserId && window.lastTouchedCardValue) {
+        console.log('[UI] Casting vote via touch:', window.lastTouchedCardValue);
+        
+        if (socket) {
+          socket.emit('castVote', { 
+            vote: window.lastTouchedCardValue,
+            targetUserId: userId 
+          });
+        }
+        
+        // Update local state
+        if (!votesPerStory[currentStoryIndex]) {
+          votesPerStory[currentStoryIndex] = {};
+        }
+        votesPerStory[currentStoryIndex][userId] = window.lastTouchedCardValue;
+        
+        // Update UI
+        updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? window.lastTouchedCardValue : '👍', true);
+      }
+    });
+  });
+}
+
+/**
+ * Detect device type and add appropriate classes to body
+ */
+function detectDeviceType() {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isTablet = /iPad|Android(?!.*Mobile)/i.test(navigator.userAgent);
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  document.body.classList.toggle('mobile-device', isMobile && !isTablet);
+  document.body.classList.toggle('tablet-device', isTablet);
+  document.body.classList.toggle('touch-device', isTouchDevice);
+  
+  console.log('[UI] Device detection:', { isMobile, isTablet, isTouchDevice });
+  
+  return { isMobile, isTablet, isTouchDevice };
+}
+
+/**
+ * Fix viewport height calculation for iOS
+ */
+function fixIOSViewportHeight() {
+  // Fix for iOS viewport height issue
+  const vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+
+/**
+ * Setup alternative voting method for devices that don't support drag and drop
+ */
+function setupAlternativeVoting() {
+  console.log('[UI] Setting up alternative voting for devices without drag-and-drop');
+  
+  const planningCards = document.querySelectorAll('.card');
+  planningCards.forEach(card => {
+    // Add click handler as fallback for drag-drop
+    card.addEventListener('click', function(e) {
+      const vote = this.getAttribute('data-value');
+      const userId = socket ? socket.id : null;
+      
+      if (userId && vote) {
+        console.log('[UI] Casting vote via click:', vote);
+        
+        if (socket) {
+          socket.emit('castVote', { 
+            vote: vote,
+            targetUserId: userId 
+          });
+        }
+        
+        // Update local state
+        if (!votesPerStory[currentStoryIndex]) {
+          votesPerStory[currentStoryIndex] = {};
+        }
+        votesPerStory[currentStoryIndex][userId] = vote;
+        
+        // Update UI
+        updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
+      }
+    });
+  });
+}
+
+/**
+ * Check for modern browser capabilities and enhance UI accordingly
+ */
+function enhanceForModernBrowsers() {
+  // Check for modern browser capabilities
+  const supportsGridLayout = window.CSS && CSS.supports('display', 'grid');
+  const supportsFlexbox = window.CSS && CSS.supports('display', 'flex');
+  const supportsDragDrop = 'draggable' in document.createElement('div');
+  
+  // Apply classes based on feature detection
+  document.body.classList.toggle('supports-grid', supportsGridLayout);
+  document.body.classList.toggle('supports-flexbox', supportsFlexbox);
+  document.body.classList.toggle('supports-dragdrop', supportsDragDrop);
+  
+  console.log('[UI] Browser capabilities:', { supportsGridLayout, supportsFlexbox, supportsDragDrop });
+  
+  // Use alternate interaction method if drag-drop not supported
+  if (!supportsDragDrop) {
+    setupAlternativeVoting();
+  }
+}
+
+
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
 }
@@ -677,6 +843,62 @@ own-vote-space {
       font-size: 24px;
       font-weight: bold;
       opacity: 0.8;
+    }
+    // Add mobile-specific styles
+  const mobileStyles = document.createElement('style');
+  mobileStyles.textContent = `
+    /* Mobile user row styles */
+    .mobile-user-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 5px;
+    }
+    
+    /* Selected card styling for touch interfaces */
+    .card.selected-card {
+      transform: translateY(-10px);
+      box-shadow: 0 6px 10px rgba(0,0,0,0.2);
+      border: 2px solid #673ab7;
+    }
+    
+    /* Card panel for mobile */
+    @media (max-width: 768px) {
+      .card-panel {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ffffff;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        padding: 10px 20px;
+        z-index: 1000;
+        width: 90%;
+        max-width: 400px;
+      }
+      
+      .card-panel .cards {
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 5px;
+      }
+      
+      /* Make room for the fixed card panel */
+      .main {
+        margin-bottom: 80px;
+      }
+    }
+    
+    /* Touch device classes */
+    body.touch-device .card {
+      cursor: pointer;
+    }
+    
+    body.mobile-device .poker-table-layout {
+      padding: 10px 5px;
     }
   `;
   document.head.appendChild(style);
@@ -1544,7 +1766,9 @@ function renderCurrentStory() {
 /**
  * Update the user list display with the new layout
  */
-
+/**
+ * Update the user list display with the new layout
+ */
 function updateUserList(users) {
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
@@ -1571,32 +1795,80 @@ function updateUserList(users) {
     userListContainer.appendChild(userEntry);
   });
 
-  // Create new grid layout for center area
+  // Check if we're on mobile
+  const isMobile = window.innerWidth <= 768;
+  
+  // Create layout based on device size
   const gridLayout = document.createElement('div');
   gridLayout.classList.add('poker-table-layout');
 
-  // Split users into two rows
-  const halfPoint = Math.ceil(users.length / 2);
-  const topUsers = users.slice(0, halfPoint);
-  const bottomUsers = users.slice(halfPoint);
-
-  // Create top row of avatars
-  const topAvatarRow = document.createElement('div');
-  topAvatarRow.classList.add('avatar-row');
+  // For mobile, use a single column layout
+  if (isMobile) {
+    // Create single column of avatars and votes
+    users.forEach(user => {
+      const rowContainer = document.createElement('div');
+      rowContainer.classList.add('mobile-user-row');
+      rowContainer.style.display = 'flex';
+      rowContainer.style.alignItems = 'center';
+      rowContainer.style.marginBottom = '15px';
+      
+      const avatarContainer = createAvatarContainer(user);
+      avatarContainer.style.marginRight = '15px';
+      
+      const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+      
+      rowContainer.appendChild(avatarContainer);
+      rowContainer.appendChild(voteCard);
+      gridLayout.appendChild(rowContainer);
+    });
+  } else {
+    // Desktop/tablet layout - split users into two rows
+    const halfPoint = Math.ceil(users.length / 2);
+    const topUsers = users.slice(0, halfPoint);
+    const bottomUsers = users.slice(halfPoint);
   
-  topUsers.forEach(user => {
-    const avatarContainer = createAvatarContainer(user);
-    topAvatarRow.appendChild(avatarContainer);
-  });
+    // Create top row of avatars
+    const topAvatarRow = document.createElement('div');
+    topAvatarRow.classList.add('avatar-row');
+    
+    topUsers.forEach(user => {
+      const avatarContainer = createAvatarContainer(user);
+      topAvatarRow.appendChild(avatarContainer);
+    });
+    
+    // Create top row of vote cards
+    const topVoteRow = document.createElement('div');
+    topVoteRow.classList.add('vote-row');
+    
+    topUsers.forEach(user => {
+      const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+      topVoteRow.appendChild(voteCard);
+    });
   
-  // Create top row of vote cards
-  const topVoteRow = document.createElement('div');
-  topVoteRow.classList.add('vote-row');
+    // Create bottom row of vote cards
+    const bottomVoteRow = document.createElement('div');
+    bottomVoteRow.classList.add('vote-row');
+    
+    bottomUsers.forEach(user => {
+      const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+      bottomVoteRow.appendChild(voteCard);
+    });
   
-  topUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
-    topVoteRow.appendChild(voteCard);
-  });
+    // Create bottom row of avatars
+    const bottomAvatarRow = document.createElement('div');
+    bottomAvatarRow.classList.add('avatar-row');
+    
+    bottomUsers.forEach(user => {
+      const avatarContainer = createAvatarContainer(user);
+      bottomAvatarRow.appendChild(avatarContainer);
+    });
+  
+    // Add rows to grid layout
+    gridLayout.appendChild(topAvatarRow);
+    gridLayout.appendChild(topVoteRow);
+    gridLayout.appendChild(bottomAvatarRow);
+    gridLayout.appendChild(bottomVoteRow);
+  }
 
   // Create reveal button
   const revealButtonContainer = document.createElement('div');
@@ -1624,31 +1896,15 @@ function updateUserList(users) {
   }
   
   revealButtonContainer.appendChild(revealBtn);
-
-  // Create bottom row of vote cards
-  const bottomVoteRow = document.createElement('div');
-  bottomVoteRow.classList.add('vote-row');
   
-  bottomUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
-    bottomVoteRow.appendChild(voteCard);
-  });
-
-  // Create bottom row of avatars
-  const bottomAvatarRow = document.createElement('div');
-  bottomAvatarRow.classList.add('avatar-row');
-  
-  bottomUsers.forEach(user => {
-    const avatarContainer = createAvatarContainer(user);
-    bottomAvatarRow.appendChild(avatarContainer);
-  });
-
-  // Assemble the grid
-  gridLayout.appendChild(topAvatarRow);
-  gridLayout.appendChild(topVoteRow);
-  gridLayout.appendChild(revealButtonContainer);
-  gridLayout.appendChild(bottomVoteRow);
-  gridLayout.appendChild(bottomAvatarRow);
+  // Insert reveal button at the appropriate position
+  if (isMobile) {
+    // For mobile, add at the end
+    gridLayout.appendChild(revealButtonContainer);
+  } else {
+    // For desktop, add in the middle
+    gridLayout.insertBefore(revealButtonContainer, gridLayout.children[2]);
+  }
   
   userCircleContainer.appendChild(gridLayout);
   
