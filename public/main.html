@@ -213,6 +213,67 @@
     #joinSessionBox .action-button {
       margin-top: 10px;
     }
+/* Add these to the style section in main.html */
+@media (max-width: 992px) {
+  main {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .image-container {
+    max-width: 100%;
+    padding: 20px;
+  }
+  
+  .forms-container {
+    padding: 20px;
+  }
+  
+  .session-box {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 576px) {
+  header {
+    flex-direction: column;
+    padding: 10px;
+    height: auto;
+  }
+  
+  .logo {
+    margin-bottom: 10px;
+  }
+  
+  .nav-links {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .session-button {
+    padding: 8px;
+  }
+  
+  .session-box {
+    padding: 20px 15px;
+  }
+}
+
+/* Fix iOS Safari issues */
+input, button, textarea, select {
+  -webkit-appearance: none;
+  border-radius: 6px;
+}
+
+/* Fix iOS height issue */
+main {
+  min-height: calc(100vh - 60px);
+  min-height: calc(var(--vh, 1vh) * 100 - 60px);
+}
+    
   </style>
 </head>
 <body>
@@ -362,6 +423,16 @@
       // Navigate to the room with the provided ID
       window.location.href = `/index.html?roomId=${sessionId}`;
     }
+// Fix for iOS viewport height
+function fixIOSHeight() {
+  const vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+
+window.addEventListener('resize', fixIOSHeight);
+window.addEventListener('orientationchange', fixIOSHeight);
+fixIOSHeight();
+    
   </script>
 </body>
 </html>
