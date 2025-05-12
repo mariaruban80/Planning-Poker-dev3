@@ -412,7 +412,7 @@ if (isHost && socket) {
   setupStoryNavigation();
 //  setupVoteCardsDrag();
   setupPlanningCards(); // generates the cards AND sets up drag listeners
- setupVoteCardRestrictions(); // ✅ Add this right after planning cards are created
+
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions(); // Add guest mode restrictions
@@ -646,6 +646,37 @@ function addNewLayoutStyles() {
     /* Add hide-for-guests class if not already defined in index.html */
     .hide-for-guests {
       display: none !important;
+    }
+own-vote-space {
+      border: 2px dashed #673ab7;
+      position: relative;
+    }
+    
+    .own-vote-space::after {
+      content: 'Your vote';
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: #673ab7;
+      white-space: nowrap;
+    }
+    
+    /* Add styles for the drop-not-allowed state */
+    .vote-card-space.drop-not-allowed {
+      border-color: #f44336;
+      background-color: #ffebee;
+      position: relative;
+    }
+    
+    .vote-card-space.drop-not-allowed::before {
+      content: '✕';
+      position: absolute;
+      color: #f44336;
+      font-size: 24px;
+      font-weight: bold;
+      opacity: 0.8;
     }
   `;
   document.head.appendChild(style);
@@ -1513,8 +1544,8 @@ function renderCurrentStory() {
 /**
  * Update the user list display with the new layout
  */
+
 function updateUserList(users) {
-  
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
   
@@ -1523,6 +1554,9 @@ function updateUserList(users) {
   // Clear existing content
   userListContainer.innerHTML = '';
   userCircleContainer.innerHTML = '';
+
+  // Store the current user's ID for comparison
+  const currentUserId = socket ? socket.id : null;
 
   // Create left sidebar user list
   users.forEach(user => {
@@ -1560,7 +1594,7 @@ function updateUserList(users) {
   topVoteRow.classList.add('vote-row');
   
   topUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
     topVoteRow.appendChild(voteCard);
   });
 
@@ -1596,7 +1630,7 @@ function updateUserList(users) {
   bottomVoteRow.classList.add('vote-row');
   
   bottomUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
     bottomVoteRow.appendChild(voteCard);
   });
 
@@ -1628,10 +1662,8 @@ function updateUserList(users) {
       }
     }, 500);
   }
-   setTimeout(() => {
-  setupVoteCardRestrictions();
-}, 50); 
 }
+
 
 /**
  * Create avatar container for a user
@@ -1660,10 +1692,15 @@ function createAvatarContainer(user) {
 /**
  * Create vote card space for a user
  */
-function createVoteCardSpace(user) {
+function createVoteCardSpace(user, isCurrentUser) {
   const voteCard = document.createElement('div');
   voteCard.classList.add('vote-card-space');
   voteCard.id = `vote-space-${user.id}`;
+  
+  // Add visual indication if this is current user's vote space
+  if (isCurrentUser) {
+    voteCard.classList.add('own-vote-space');
+  }
   
   // Add vote badge inside the card space
   const voteBadge = document.createElement('span');
@@ -1671,26 +1708,35 @@ function createVoteCardSpace(user) {
   voteBadge.textContent = '';
   voteCard.appendChild(voteBadge);
   
-  // Make it a drop target for vote cards
-  voteCard.addEventListener('dragover', (e) => e.preventDefault());
-  voteCard.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const vote = e.dataTransfer.getData('text/plain');
-    const userId = user.id;
+  // Only allow drops on own vote space
+  if (isCurrentUser) {
+    voteCard.addEventListener('dragover', (e) => e.preventDefault());
+    voteCard.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const vote = e.dataTransfer.getData('text/plain');
+      const userId = user.id;
 
-    if (socket && vote) {
-      socket.emit('castVote', { vote, targetUserId: userId });
-    }
+      if (socket && vote) {
+        socket.emit('castVote', { vote, targetUserId: userId });
+      }
 
-    // Store vote locally
-    if (!votesPerStory[currentStoryIndex]) {
-      votesPerStory[currentStoryIndex] = {};
-    }
-    votesPerStory[currentStoryIndex][userId] = vote;
-    
-    // Update UI - show checkmark if votes aren't revealed
-    updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
-  });
+      // Store vote locally
+      if (!votesPerStory[currentStoryIndex]) {
+        votesPerStory[currentStoryIndex] = {};
+      }
+      votesPerStory[currentStoryIndex][userId] = vote;
+      
+      // Update UI - show checkmark if votes aren't revealed
+      updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
+    });
+  } else {
+    // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
+    voteCard.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      voteCard.classList.add('drop-not-allowed');
+      setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
+    });
+  }
   
   // Check if there's an existing vote for this user in the current story
   const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
@@ -1701,6 +1747,9 @@ function createVoteCardSpace(user) {
   
   return voteCard;
 }
+
+
+
 
 /**
  * Update vote visuals for a user
@@ -1967,7 +2016,6 @@ function handleSocketMessage(message) {
       console.log('[DEBUG] Got voting system update:', message.votingSystem);
       sessionStorage.setItem('votingSystem', message.votingSystem);
       setupPlanningCards(); // Regenerate cards
-        setupVoteCardRestrictions(); // ✅ Restrict drag to user's own avatar
       break;
 
 
@@ -2040,7 +2088,6 @@ function handleSocketMessage(message) {
       if (typeof message.storyIndex === 'number') {
       console.log('[SOCKET] Story selected from server:', message.storyIndex);
       selectStory(message.storyIndex, false); // false to avoid re-emitting
-        setupVoteCardRestrictions(); //  Rebind drag-and-drop after story change
       }
       break;
       
@@ -2084,12 +2131,12 @@ function handleSocketMessage(message) {
     console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
     
     // Display CSV data (this will clear CSV stories but preserve manual ones)
-    displayCSVData(csvData);  
+    displayCSVData(csvData);
     
+    // We don't need to re-add manual tickets because displayCSVData now preserves them
     
     // Update UI
     renderCurrentStory();
-     setupVoteCardRestrictions();
   }
   break;
 
@@ -2121,50 +2168,6 @@ function handleSocketMessage(message) {
       }, 500);
       break;
   }
-}
-function setupVoteCardRestrictions() {
-  const voteCards = document.querySelectorAll('.card');
-  const avatarContainers = document.querySelectorAll('.avatar-container');
-  const currentUserId = window.socket?.id;
-
-  console.log("[RESTRICTION] Current user socket ID:", currentUserId);
-
-  // Enable dragging on vote cards
-  voteCards.forEach(card => {
-    card.setAttribute('title', 'Drag this card to your avatar to vote');
-    card.setAttribute('draggable', 'true');
-    card.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', card.dataset.value);
-    });
-  });
-
-  // Restrict dropping to only the current user's avatar
-  avatarContainers.forEach(container => {
-    const userId = container.getAttribute('data-user-id');
-
-    // Clear previous event listeners by resetting handlers (safe way)
-    container.ondragover = null;
-    container.ondrop = null;
-
-    if (userId === currentUserId) {
-      container.addEventListener('dragover', (e) => {
-        e.preventDefault();
-      });
-
-      container.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const voteValue = e.dataTransfer.getData('text/plain');
-        console.log(`[DROP] Vote dropped by ${currentUserId} on ${userId} with value:`, voteValue);
-        emitVote(voteValue, userId);
-      });
-    } else {
-      container.addEventListener('drop', (e) => {
-        e.preventDefault();
-        alert("🚫 You can only vote for yourself.");
-        console.log(`[BLOCKED] ${currentUserId} attempted to drop on ${userId}`);
-      });
-    }
-  });
 }
 
 // Initialize on page load
