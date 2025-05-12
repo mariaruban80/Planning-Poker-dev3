@@ -2128,7 +2128,7 @@ function setupVoteCardRestrictions() {
 
   console.log("[RESTRICTION] Current user socket ID:", currentUserId);
 
-  // Set tooltip and drag
+  // Enable dragging on vote cards
   voteCards.forEach(card => {
     card.setAttribute('title', 'Drag this card to your avatar to vote');
     card.setAttribute('draggable', 'true');
@@ -2137,37 +2137,34 @@ function setupVoteCardRestrictions() {
     });
   });
 
+  // Restrict dropping to only the current user's avatar
   avatarContainers.forEach(container => {
     const userId = container.getAttribute('data-user-id');
 
-    // Remove all previous event listeners by cloning the element
-    const clone = container.cloneNode(true);
-    clone.setAttribute('data-user-id', userId); // Ensure attribute persists
+    // Clear previous event listeners by resetting handlers (safe way)
+    container.ondragover = null;
+    container.ondrop = null;
 
-    // Only allow current user to accept drops
     if (userId === currentUserId) {
-      clone.addEventListener('dragover', (e) => {
+      container.addEventListener('dragover', (e) => {
         e.preventDefault();
       });
 
-      clone.addEventListener('drop', (e) => {
+      container.addEventListener('drop', (e) => {
+        e.preventDefault();
         const voteValue = e.dataTransfer.getData('text/plain');
         console.log(`[DROP] Vote dropped by ${currentUserId} on ${userId} with value:`, voteValue);
         emitVote(voteValue, userId);
       });
     } else {
-      // Block drop on all others explicitly
-      clone.addEventListener('drop', (e) => {
+      container.addEventListener('drop', (e) => {
         e.preventDefault();
         alert("🚫 You can only vote for yourself.");
+        console.log(`[BLOCKED] ${currentUserId} attempted to drop on ${userId}`);
       });
     }
-
-    // Replace the original with the clean clone
-    container.replaceWith(clone);
   });
 }
-
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
