@@ -2124,11 +2124,14 @@ function handleSocketMessage(message) {
 function setupVoteCardRestrictions() {
   const voteCards = document.querySelectorAll('.card');
   const avatarContainers = document.querySelectorAll('.avatar-container');
-
   const currentUserId = window.socket?.id;
 
+  console.log("[RESTRICTION] Current user socket ID:", currentUserId);
+
+  // Set tooltip and drag
   voteCards.forEach(card => {
     card.setAttribute('title', 'Drag this card to your avatar to vote');
+    card.setAttribute('draggable', 'true');
     card.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', card.dataset.value);
     });
@@ -2137,21 +2140,31 @@ function setupVoteCardRestrictions() {
   avatarContainers.forEach(container => {
     const userId = container.getAttribute('data-user-id');
 
-    container.addEventListener('dragover', (e) => {
-      if (userId === currentUserId) {
+    // Remove all previous event listeners by cloning the element
+    const clone = container.cloneNode(true);
+    clone.setAttribute('data-user-id', userId); // Ensure attribute persists
+
+    // Only allow current user to accept drops
+    if (userId === currentUserId) {
+      clone.addEventListener('dragover', (e) => {
         e.preventDefault();
-      }
-    });
+      });
 
-    container.addEventListener('drop', (e) => {
-      if (userId !== currentUserId) {
+      clone.addEventListener('drop', (e) => {
+        const voteValue = e.dataTransfer.getData('text/plain');
+        console.log(`[DROP] Vote dropped by ${currentUserId} on ${userId} with value:`, voteValue);
+        emitVote(voteValue, userId);
+      });
+    } else {
+      // Block drop on all others explicitly
+      clone.addEventListener('drop', (e) => {
+        e.preventDefault();
         alert("🚫 You can only vote for yourself.");
-        return;
-      }
+      });
+    }
 
-      const voteValue = e.dataTransfer.getData('text/plain');
-      emitVote(voteValue, userId);
-    });
+    // Replace the original with the clean clone
+    container.replaceWith(clone);
   });
 }
 
