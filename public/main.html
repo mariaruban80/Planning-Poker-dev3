@@ -423,7 +423,7 @@ main {
       // Navigate to the room with the provided ID
       window.location.href = `/index.html?roomId=${sessionId}`;
     }
-// Fix for iOS viewport height
+/**Fix for iOS viewport height
 function fixIOSHeight() {
   const vh = window.innerHeight * 0.01;
   document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -431,7 +431,7 @@ function fixIOSHeight() {
 
 window.addEventListener('resize', fixIOSHeight);
 window.addEventListener('orientationchange', fixIOSHeight);
-fixIOSHeight();
+fixIOSHeight(); */
     
   </script>
 </body>
