@@ -229,7 +229,15 @@ export function requestExport() {
     socket.emit('exportVotes');
   }
 }
-
+/**
+ * Force synchronization of all votes from server
+ */
+export function syncAllVotes() {
+  if (socket) {
+    console.log('[SOCKET] Requesting synchronization of all votes');
+    socket.emit('syncAllVotes');
+  }
+}
 /**
  * Add a new ticket and sync with other users
  * @param {Object} ticketData - The ticket data {id, text}
