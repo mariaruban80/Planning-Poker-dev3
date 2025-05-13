@@ -98,35 +98,38 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   });
 
   socket.on('votingSystemUpdate', data => {
-    console.log('[SOCKET] Received voting system update:', data.votingSystem);
+ console.log('[SOCKET] Received voting system update:', data.votingSystem);
+  
+  // Check if we have a local override
+  const localOverride = localStorage.getItem('votingSystem') || 
+                        (sessionStorage.getItem('votingSystemLocked') === 'true' && 
+                         sessionStorage.getItem('votingSystem'));
+  
+  if (localOverride) {
+    console.log('[SOCKET] IGNORING server voting system, using local:', localOverride);
     
-    // CRITICAL: Only update if not locked
-    if (!votingSystemLocked) {
-      // Store in session for persistence
-      if (data.votingSystem) {
-        sessionStorage.setItem('votingSystem', data.votingSystem);
-      
-        // Only update if different to avoid UI flickering
-        if (lastVotingSystem !== data.votingSystem) {
-          lastVotingSystem = data.votingSystem;
-          initialVotingSystemReceived = true;
-          handleMessage({ type: 'votingSystemUpdate', ...data });
-        }
+    // Immediately override server's choice with our preference
+    setTimeout(() => {
+      if (socket && socket.connected) {
+        console.log('[SOCKET] Sending override voting system to server:', localOverride);
+        socket.emit('votingSystemSelected', { 
+          roomId, 
+          votingSystem: localOverride 
+        });
       }
-    } else {
-      console.log('[SOCKET] Ignoring server voting system, using locked system:', lastVotingSystem);
-      
-      // Rebroadcast our locked system to ensure server updates
-      setTimeout(() => {
-        if (socket.connected && lastVotingSystem) {
-          socket.emit('votingSystemSelected', { 
-            roomId, 
-            votingSystem: lastVotingSystem 
-          });
-        }
-      }, 500);
-    }
-  });
+    }, 200);
+    
+    // Don't pass the server's message to the handler
+    return;
+  }
+  
+  // Only if no local override, process server's suggestion
+  if (data.votingSystem) {
+    sessionStorage.setItem('votingSystem', data.votingSystem);
+    initialVotingSystemReceived = true;
+    handleMessage({ type: 'votingSystemUpdate', ...data });
+  }
+});
 
   socket.on('syncCSVData', (csvData) => {
     console.log('[SOCKET] Received CSV data:', Array.isArray(csvData) ? csvData.length : 'invalid', 'rows');
@@ -240,16 +243,27 @@ export function requestVotingSystem() {
  * @param {string} system - The voting system to set
  */
 export function setVotingSystem(system) {
-  if (!system) return;
+if (!system) return;
   
-  console.log('[SOCKET] Setting voting system:', system);
-  lastVotingSystem = system;
-  votingSystemLocked = true;
+  console.log('[SOCKET] Hard-setting voting system:', system);
+  
+  // Store in multiple places for redundancy
+  localStorage.setItem('votingSystem', system);
   sessionStorage.setItem('votingSystem', system);
-  window.lastSelectedVotingSystem = system;
+  sessionStorage.setItem('votingSystemLocked', 'true');
   
   if (socket && socket.connected) {
     socket.emit('votingSystemSelected', { roomId, votingSystem: system });
+  }
+}
+
+export function forceUpdateVotingSystem() {
+  const localSystem = localStorage.getItem('votingSystem') || 
+                      sessionStorage.getItem('votingSystem');
+                      
+  if (localSystem && socket && socket.connected) {
+    console.log('[SOCKET] Force updating voting system to:', localSystem);
+    socket.emit('votingSystemSelected', { roomId, votingSystem: localSystem });
   }
 }
 
