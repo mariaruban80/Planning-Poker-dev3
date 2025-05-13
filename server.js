@@ -176,7 +176,9 @@ socket.on('castVote', ({ vote, targetUserId }) => {
     }
 
     // Store the vote
-    rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
+ //   rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
+const voterName = socket.data.userName;
+rooms[roomId].votesPerStory[currentStoryIndex][voterName] = vote;
 
     // Broadcast vote to all clients in the room
     io.to(roomId).emit('voteUpdate', {
