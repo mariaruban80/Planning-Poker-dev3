@@ -9,6 +9,7 @@ let userName = null;
 let initialVotingSystemReceived = false;
 let lastVotingSystem = null;
 let reconnectionAttempts = 0;
+let votingSystemLocked = false; // New flag to prevent overwriting confirmed system
 
 /**
  * Initialize WebSocket connection to server
@@ -28,6 +29,20 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   roomId = roomIdentifier;
   userName = userNameValue;
   
+  // Preserve voting system before connection is established
+  const storedSystem = sessionStorage.getItem('votingSystem');
+  if (storedSystem) {
+    lastVotingSystem = storedSystem;
+    console.log('[SOCKET] Using stored voting system:', storedSystem);
+    
+    // Critical: Lock the voting system if it's already set from main.html
+    // This prevents it from being overwritten by the server's default
+    if (window.lastSelectedVotingSystem) {
+      votingSystemLocked = true;
+      console.log('[SOCKET] Locking voting system to:', window.lastSelectedVotingSystem);
+    }
+  }
+  
   // Initialize socket connection
   socket = io({
     transports: ['websocket'],
@@ -41,23 +56,28 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
+    
+    // Join the room
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
     
     // Reset reconnection attempts on successful connection
     reconnectionAttempts = 0;
     
-    // After connection is established and stable, request vote restoration and voting system
+    // If we have a locked voting system, send it to the server immediately
+    if (votingSystemLocked && lastVotingSystem) {
+      console.log('[SOCKET] Sending locked voting system to server:', lastVotingSystem);
+      socket.emit('votingSystemSelected', { 
+        roomId: roomIdentifier, 
+        votingSystem: lastVotingSystem 
+      });
+    }
+    
+    // After connection is established, request voting system and votes
     setTimeout(() => {
-      if (socket.connected) {
-        console.log('[SOCKET] Requesting data after connection');
-        requestUserVoteRestore();
+      if (!votingSystemLocked) {
         requestVotingSystem();
-        
-        // Also request synchronization of all votes
-        if (typeof syncAllVotes === 'function') {
-          syncAllVotes();
-        }
       }
+      requestUserVoteRestore();
     }, 1000);
     
     handleMessage({ type: 'connect' });
@@ -80,16 +100,31 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   socket.on('votingSystemUpdate', data => {
     console.log('[SOCKET] Received voting system update:', data.votingSystem);
     
-    // Store in session for persistence
-    if (data.votingSystem) {
-      sessionStorage.setItem('votingSystem', data.votingSystem);
-    
-      // Only update if different to avoid UI flickering
-      if (lastVotingSystem !== data.votingSystem) {
-        lastVotingSystem = data.votingSystem;
-        initialVotingSystemReceived = true;
-        handleMessage({ type: 'votingSystemUpdate', ...data });
+    // CRITICAL: Only update if not locked
+    if (!votingSystemLocked) {
+      // Store in session for persistence
+      if (data.votingSystem) {
+        sessionStorage.setItem('votingSystem', data.votingSystem);
+      
+        // Only update if different to avoid UI flickering
+        if (lastVotingSystem !== data.votingSystem) {
+          lastVotingSystem = data.votingSystem;
+          initialVotingSystemReceived = true;
+          handleMessage({ type: 'votingSystemUpdate', ...data });
+        }
       }
+    } else {
+      console.log('[SOCKET] Ignoring server voting system, using locked system:', lastVotingSystem);
+      
+      // Rebroadcast our locked system to ensure server updates
+      setTimeout(() => {
+        if (socket.connected && lastVotingSystem) {
+          socket.emit('votingSystemSelected', { 
+            roomId, 
+            votingSystem: lastVotingSystem 
+          });
+        }
+      }, 500);
     }
   });
 
@@ -101,9 +136,6 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     setTimeout(() => {
       console.log('[SOCKET] Notifying server that CSV data is loaded');
       socket.emit('csvDataLoaded');
-      
-      // Also request voting system after CSV load
-      requestVotingSystem();
     }, 300);
   });
 
@@ -122,16 +154,6 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
 
   socket.on('voteUpdate', ({ userId, vote, storyIndex }) => {
     console.log('[SOCKET] Vote update received for user', userId, 'on story', storyIndex);
-    
-    // Immediately request full vote synchronization to ensure everyone has the latest state
-    if (selectedStoryIndex === parseInt(storyIndex)) {
-      setTimeout(() => {
-        if (socket.connected) {
-          socket.emit('requestStoryVotes', { storyIndex });
-        }
-      }, 300);
-    }
-    
     handleMessage({ type: 'voteUpdate', userId, vote, storyIndex });
   });
 
@@ -169,9 +191,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   });
 
   socket.on('exportData', (data) => {
-    console.log('[SOCKET] Received export data with', 
-      data?.stories ? data.stories.length : 0, 'stories and',
-      data?.votes ? Object.keys(data.votes).length : 0, 'vote sets');
+    console.log('[SOCKET] Received export data');
     handleMessage({ type: 'exportData', data });
   });
 
@@ -207,18 +227,30 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
  * Request the current voting system from the server
  */
 export function requestVotingSystem() {
-  if (socket && socket.connected) {
+  if (socket && socket.connected && !votingSystemLocked) {
     console.log('[SOCKET] Requesting voting system configuration');
     socket.emit('requestVotingSystem');
+  } else if (votingSystemLocked) {
+    console.log('[SOCKET] Not requesting voting system: using locked system');
   }
 }
 
 /**
- * Check if initial voting system was received
- * @returns {boolean} - Whether the voting system was received
+ * Set the voting system and lock it
+ * @param {string} system - The voting system to set
  */
-export function hasReceivedVotingSystem() {
-  return initialVotingSystemReceived;
+export function setVotingSystem(system) {
+  if (!system) return;
+  
+  console.log('[SOCKET] Setting voting system:', system);
+  lastVotingSystem = system;
+  votingSystemLocked = true;
+  sessionStorage.setItem('votingSystem', system);
+  window.lastSelectedVotingSystem = system;
+  
+  if (socket && socket.connected) {
+    socket.emit('votingSystemSelected', { roomId, votingSystem: system });
+  }
 }
 
 /**
@@ -227,6 +259,14 @@ export function hasReceivedVotingSystem() {
  */
 export function getCurrentVotingSystem() {
   return lastVotingSystem || sessionStorage.getItem('votingSystem') || 'fibonacci';
+}
+
+/**
+ * Check if initial voting system was received
+ * @returns {boolean} - Whether the voting system was received
+ */
+export function hasReceivedVotingSystem() {
+  return initialVotingSystemReceived || votingSystemLocked;
 }
 
 /**
@@ -269,11 +309,6 @@ export function emitStorySelected(index) {
     console.log('[SOCKET] Emitting storySelected:', index);
     socket.emit('storySelected', { storyIndex: index });
     selectedStoryIndex = index;
-    
-    // After selecting a story, request votes for it
-    setTimeout(() => {
-      requestStoryVotes(index);
-    }, 300);
   }
 }
 
@@ -375,18 +410,4 @@ export function reconnect() {
   }
   
   return false;
-}
-
-/**
- * Refresh voting system and ensure it's properly set
- */
-export function refreshVotingSystem() {
-  // First try from session storage
-  const storedSystem = sessionStorage.getItem('votingSystem');
-  if (storedSystem) {
-    lastVotingSystem = storedSystem;
-  }
-  
-  // Then request from server
-  requestVotingSystem();
 }
