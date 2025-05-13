@@ -30,7 +30,12 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
-    query: { roomId: roomIdentifier, userName: userNameValue }
+    //query: { roomId: roomIdentifier, userName: userNameValue }
+     query: {
+        roomId: roomIdentifier,
+        userName: userNameValue,
+        userUUID: sessionStorage.getItem('userUUID') || crypto.randomUUID()
+      }      
   });
 
   socket.on('addTicket', ({ ticketData }) => {
