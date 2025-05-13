@@ -100,75 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
     roomId = 'room-' + Math.floor(Math.random() * 10000);
   }
   appendRoomIdToURL(roomId);
-  
-  // First setup planning cards based on stored voting system
-  setupPlanningCards();
-  
-  // Then initialize the app
   initializeApp(roomId);
-  
-  // Add backup initialization
-  setTimeout(() => {
-   if (localStorage.getItem('votingSystem') || 
-        sessionStorage.getItem('votingSystemLocked') === 'true') {
-      console.log('[APP] Applying backup planning cards setup with local settings');
-      setupPlanningCards();
-      
-      // Also inform the server of our preference
-      if (socket && typeof socket.emit === 'function') {
-        const votingSystem = localStorage.getItem('votingSystem') || 
-                            sessionStorage.getItem('votingSystem') || 
-                            'fibonacci';
-        socket.emit('votingSystemSelected', { 
-          roomId: getRoomIdFromURL(),
-          votingSystem: votingSystem 
-        });
-      }
-    }
-  }, 3000);
 });
-
-// And a recurring check to ensure the cards remain correct
-setInterval(() => {
-  // Check if cards are wrong (this is a safety net)
-  const container = document.getElementById('planningCards');
-  if (!container) return;
-  
-  const localVotingSystem = localStorage.getItem('votingSystem') || 
-                           sessionStorage.getItem('votingSystem') || 
-                           'fibonacci';
-  
-  const scales = {
-    fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
-    shortFib: ['0', '½', '1', '2', '3'],
-    tshirt: ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'],
-    tshirtNum: ['XS (1)', 'S (2)', 'M (3)', 'L (5)', 'XL (8)', 'XXL (13)'],
-    custom: ['?', '☕', '∞']
-  };
-  
-  const expectedValues = scales[localVotingSystem] || scales.fibonacci;
-  const actualCards = container.querySelectorAll('.card');
-  
-  // Check if number of cards matches
-  if (actualCards.length !== expectedValues.length) {
-    console.log('[APP] Card count mismatch, reapplying local settings');
-    setupPlanningCards();
-    return;
-  }
-  
-  // Check content of each card
-  let mismatchFound = false;
-  actualCards.forEach((card, index) => {
-    if (card.textContent !== expectedValues[index]) {
-      mismatchFound = true;
-    }
-  });
-  
-  if (mismatchFound) {
-    console.log('[APP] Card content mismatch, reapplying local settings');
-    setupPlanningCards();
-  }
-}, 5000);
 
 // Global state variables
 let pendingStoryIndex = null;
@@ -368,32 +301,11 @@ function isGuestUser() {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
 }
-
-// Adding this function to ensure planning cards are set up properly
-function ensurePlanningCardsSetup() {
-  const container = document.getElementById('planningCards');
-  if (!container || container.children.length === 0) {
-    console.log('[UI] Planning cards missing, setting up...');
-    setupPlanningCards();
-  }
-}
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
-  if (!container) {
-    console.warn('[UI] Planning cards container not found, will retry...');
-    setTimeout(setupPlanningCards, 500);
-    return;
-  }
+  if (!container) return;
 
-  console.log('[UI] Setting up planning cards...');
-  
-  // OVERRIDE: Always use local storage first, then session storage, ignore server
-  // This is the key to preventing the cards from resetting
-  const votingSystem = localStorage.getItem('votingSystem') || 
-                       sessionStorage.getItem('votingSystem') || 
-                       'fibonacci';
-  
-  console.log('[UI] FORCING voting system:', votingSystem);
+  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
   const scales = {
     fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
@@ -404,11 +316,9 @@ function setupPlanningCards() {
   };
 
   const values = scales[votingSystem] || scales.fibonacci;
-  
-  // Always clear and rebuild
-  container.innerHTML = '';
-  
-  // Create the cards
+
+  container.innerHTML = ''; // Clear any existing cards
+
   values.forEach(value => {
     const card = document.createElement('div');
     card.className = 'card';
@@ -417,22 +327,10 @@ function setupPlanningCards() {
     card.textContent = value;
     container.appendChild(card);
   });
-  
-  // Enable drag after cards are added
+
+  // ✅ Enable drag after cards are added
   setupVoteCardsDrag();
-  
-  console.log('[UI] Planning cards setup completed with', values.length, 'cards for system', votingSystem);
-  
-  // Also tell the server about our voting system (but we won't listen to its response)
-  if (socket && typeof socket.emit === 'function') {
-    socket.emit('votingSystemSelected', { 
-      roomId: getRoomIdFromURL(),
-      votingSystem: votingSystem 
-    });
-  }
 }
-
-
 
 
 /**
@@ -487,61 +385,42 @@ function appendRoomIdToURL(roomId) {
 /**
  * Initialize the application
  */
-
- function initializeApp(roomId) {
-  // Add this at the top of the function
-  console.log('[APP] Initializing app with room:', roomId);
-  
-  // Check if we have a locally set voting system
-  const localVotingSystem = localStorage.getItem('votingSystem') || 
-                           sessionStorage.getItem('votingSystem');
-                         
-  if (localVotingSystem) {
-    console.log('[APP] Found local voting system setting:', localVotingSystem);
-  }
-  
-  // Initialize socket
+function initializeApp(roomId) {
+  // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+//  Guest: Listen for host's voting system
+socket.on('votingSystemUpdate', ({ votingSystem }) => {
+  console.log('[SOCKET] Received voting system from host:', votingSystem);
+  sessionStorage.setItem('votingSystem', votingSystem);
+  setupPlanningCards(); // Dynamically regenerate vote cards
+});
+
+// Host: Emit selected voting system to server
+const isHost = sessionStorage.getItem('isHost') === 'true';
+const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+
+if (isHost && socket) {
+  socket.emit('votingSystemSelected', { roomId, votingSystem });
+}
+
   
-  // Setup UI components
-  updateHeaderStyle();
-  addFixedVoteStatisticsStyles();
+  // removed this function addVoteStatisticsStyles();
+ updateHeaderStyle();
+    addFixedVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
-  
-  // IMPORTANT: Set up planning cards BEFORE other components
-  if (localVotingSystem) {
-    // Use our local setting
-    setupPlanningCards();
-  } else {
-    // Use default as fallback
-    setupPlanningCards();
-  }
-  
-  // Rest of initialization...
+//  setupVoteCardsDrag();
+  setupPlanningCards(); // generates the cards AND sets up drag listeners
+
   setupRevealResetButtons();
   setupAddTicketButton();
-  setupGuestModeRestrictions();
+  setupGuestModeRestrictions(); // Add guest mode restrictions
+   // Add this line
   setupStoryCardInteractions();
+  // Add CSS for new layout
   addNewLayoutStyles();
-  
-  // Add multiple backup calls to ensure cards are correct
-  setTimeout(setupPlanningCards, 1000);
-  setTimeout(setupPlanningCards, 3000);
-  
-  // Force our voting system to the server
-  if (localVotingSystem && socket) {
-    setTimeout(() => {
-      if (socket.connected) {
-        console.log('[APP] Forcing local voting system to server:', localVotingSystem);
-        socket.emit('votingSystemSelected', { 
-          roomId, 
-          votingSystem: localVotingSystem 
-        });
-      }
-    }, 2000);
-  }
+}
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
 }
@@ -1532,8 +1411,6 @@ if (isHost) {
  * @param {number} index - Story index to select
  * @param {boolean} emitToServer - Whether to emit to server (default: true)
  */
-// In main.js - modify the selectStory function
-
 function selectStory(index, emitToServer = true) {
   console.log('[UI] Story selected by user:', index);
   
@@ -1549,13 +1426,11 @@ function selectStory(index, emitToServer = true) {
   
   // Update local state
   currentStoryIndex = index;
-  
-  // Ensure vote reveal state is initialized
+  // ✅ Ensure vote reveal state is initialized
   if (typeof votesRevealed[index] === 'undefined') {
     votesRevealed[index] = false;
   }
-  
-  // Show planning cards again and hide statistics when changing stories
+ // Show planning cards again and hide statistics when changing stories
   const planningCardsSection = document.querySelector('.planning-cards-section');
   const statsContainer = document.querySelector('.vote-statistics-container');
   
@@ -1577,28 +1452,24 @@ function selectStory(index, emitToServer = true) {
     console.log('[EMIT] Broadcasting story selection:', index);
     socket.emit('storySelected', { storyIndex: index });
     
-    // Always request votes for this story to ensure we have the latest
-    socket.emit('requestStoryVotes', { storyIndex: index });
+    // Request votes for this story
+    if (typeof requestStoryVotes === 'function') {
+      requestStoryVotes(index);
+    } else {
+      socket.emit('requestStoryVotes', { storyIndex: index });
+    }
   }
 }
 
 /**
  * Reset or restore votes for a story
  */
-// In main.js - replace or modify the resetOrRestoreVotes function
 function resetOrRestoreVotes(index) {
-  // Reset all visual indicators first
   resetAllVoteVisuals();
   
-  // If we have stored votes for this story
-  if (votesPerStory[index]) {
-    // Determine if this story has votes revealed
-    const isRevealed = votesRevealed[index] === true;
-    
-    // Apply votes based on reveal state
-    Object.entries(votesPerStory[index]).forEach(([userId, vote]) => {
-      updateVoteVisuals(userId, isRevealed ? vote : '👍', true);
-    });
+  // If we have stored votes for this story and they've been revealed
+  if (votesPerStory[index] && votesRevealed[index]) {
+    applyVotesToUI(votesPerStory[index], false);
   }
 }
 
@@ -2142,18 +2013,9 @@ function handleSocketMessage(message) {
       }
       break;
      case 'votingSystemUpdate':
-     // CRITICAL: Completely ignore server updates if we have a local selection
-      if (localStorage.getItem('votingSystem') || 
-          sessionStorage.getItem('votingSystemLocked') === 'true') {
-        console.log('[SOCKET] Ignoring server voting system update, using local setting');
-        // Instead of accepting server update, reaffirm our local setting
-        setupPlanningCards();
-      } else {
-        // Only use server setting if we don't have a local preference
-        console.log('[SOCKET] Accepting server voting system:', message.votingSystem);
-        sessionStorage.setItem('votingSystem', message.votingSystem);
-        setupPlanningCards();
-      }
+      console.log('[DEBUG] Got voting system update:', message.votingSystem);
+      sessionStorage.setItem('votingSystem', message.votingSystem);
+      setupPlanningCards(); // Regenerate cards
       break;
 
 
@@ -2173,35 +2035,7 @@ function handleSocketMessage(message) {
     case 'userLeft':
       // Handle user leaving
       break;
-    
-case 'restoreUserVotes':
-  if (message.userVotes) {
-    console.log('[SOCKET] Restoring user votes for', Object.keys(message.userVotes).length, 'stories');
-    
-    // Process each story vote
-    Object.entries(message.userVotes).forEach(([storyIndex, vote]) => {
-      const numericIndex = parseInt(storyIndex);
       
-      // Store in our local vote tracking
-      if (!votesPerStory[numericIndex]) {
-        votesPerStory[numericIndex] = {};
-      }
-      
-      // Store using current socket ID
-      votesPerStory[numericIndex][socket.id] = vote;
-      
-      // If this is the current story, update UI
-      if (numericIndex === currentStoryIndex) {
-        // Show vote based on reveal state
-        if (votesRevealed[currentStoryIndex]) {
-          updateVoteVisuals(socket.id, vote, true);
-        } else {
-          updateVoteVisuals(socket.id, '👍', true);
-        }
-      }
-    });
-  }
-  break; 
     case 'voteReceived':
     case 'voteUpdate':
       // Handle vote received
@@ -2258,29 +2092,12 @@ case 'restoreUserVotes':
       break;
       
     case 'storyVotes':
-// Handle received votes for a specific story
+      // Handle received votes for a specific story
       if (message.storyIndex !== undefined && message.votes) {
-        const storyIndex = message.storyIndex;
-        
-        // Initialize if needed
-        if (!votesPerStory[storyIndex]) {
-          votesPerStory[storyIndex] = {};
-        }
-        
-        // Store all received votes, overwriting any existing votes
-        votesPerStory[storyIndex] = { ...message.votes };
-        
-        // Update UI if this is the current story
-        if (storyIndex === currentStoryIndex) {
-          if (votesRevealed[storyIndex]) {
-            // If votes are revealed, show actual values
-            applyVotesToUI(message.votes, false);
-          } else {
-            // If votes aren't revealed, show who voted
-            Object.keys(message.votes).forEach(userId => {
-              updateVoteVisuals(userId, '👍', true);
-            });
-          }
+        votesPerStory[message.storyIndex] = message.votes;
+        // Update UI if this is the current story and votes are revealed
+        if (message.storyIndex === currentStoryIndex && votesRevealed[currentStoryIndex]) {
+          applyVotesToUI(message.votes, false);
         }
       }
       break;
