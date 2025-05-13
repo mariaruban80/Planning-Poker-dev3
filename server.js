@@ -112,7 +112,12 @@ socket.on('requestAllTickets', () => {
         const storyIndex = rooms[roomId].selectedIndex;
         console.log(`[SERVER] Client ${socket.id} confirmed CSV loaded, sending current story: ${storyIndex}`);
         socket.emit('storySelected', { storyIndex });
-        
+        const votes = rooms[roomId].votesPerStory[storyIndex] || {};
+        socket.emit('storyVotes', { storyIndex, votes });
+
+        if (rooms[roomId].votesRevealed[storyIndex]) {
+          socket.emit('votesRevealed', { storyIndex });
+        }
         // Send votes for the current story if any exist
         const existingVotes = rooms[roomId].votesPerStory[storyIndex] || {};
         if (Object.keys(existingVotes).length > 0) {
