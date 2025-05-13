@@ -2117,10 +2117,10 @@ function handleSocketMessage(message) {
       break;
 
          case 'storySelected':
-    /**  if (typeof message.storyIndex === 'number') {
+    / if (typeof message.storyIndex === 'number') {
       console.log('[SOCKET] Story selected from server:', message.storyIndex);
       selectStory(message.storyIndex, false); // false to avoid re-emitting
-      }*/
+      }
           // Save the selected index
       currentStoryIndex = message.storyIndex;
       // 🆕 Automatically re-request votes for current story
