@@ -27,7 +27,14 @@ const roomVotingSystems = {}; // roomId → voting system
 
 io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
-  
+  const userUUID = socket.handshake.query.userUUID;
+if (!userUUID) {
+  console.log(`[SERVER] Rejected connection without userUUID for socket ${socket.id}`);
+  socket.disconnect();
+  return;
+}
+socket.data.userUUID = userUUID;
+
   // Handle room joining
   socket.on('joinRoom', ({ roomId, userName }) => {
      // Validate username - reject if missing
@@ -54,8 +61,10 @@ io.on('connection', (socket) => {
     }
 
     // Update user list (remove if exists, then add)
-    rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
-    rooms[roomId].users.push({ id: socket.id, name: userName });
+/**    rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
+    rooms[roomId].users.push({ id: socket.id, name: userName });*/
+    rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== userUUID);
+rooms[roomId].users.push({ id: userUUID, name: userName });
     socket.join(roomId);
 // Send the current voting system to the joining user
 const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
@@ -145,9 +154,10 @@ socket.on('requestAllTickets', () => {
  // In server.js, modify the castVote handler:
 socket.on('castVote', ({ vote, targetUserId }) => {
   const roomId = socket.data.roomId;
-  
+  const userUUID = socket.data.userUUID; // ✅ persistently identifies the user
+
   // Only allow users to vote for themselves
-  if (roomId && rooms[roomId] && targetUserId === socket.id) {
+  if (roomId && rooms[roomId] && targetUserId === userUUID) {
     const currentStoryIndex = rooms[roomId].selectedIndex;
 
     // Initialize vote storage for this story if needed
@@ -155,20 +165,20 @@ socket.on('castVote', ({ vote, targetUserId }) => {
       rooms[roomId].votesPerStory[currentStoryIndex] = {};
     }
 
-    // Store the vote
-    rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
+    // ✅ Store the vote using persistent userUUID
+    rooms[roomId].votesPerStory[currentStoryIndex][userUUID] = vote;
 
-    // Broadcast vote to all clients in the room
+    // ✅ Emit vote using userUUID so it's consistent after reconnect
     io.to(roomId).emit('voteUpdate', {
-      userId: targetUserId,
+      userId: userUUID,
       vote,
       storyIndex: currentStoryIndex
     });
   } else {
-    // Optionally notify the user that they can only vote for themselves
     socket.emit('error', { message: 'You can only vote for yourself' });
   }
 });
+
   // Handle requests for votes for a specific story
   socket.on('requestStoryVotes', ({ storyIndex }) => {
     const roomId = socket.data.roomId;
@@ -270,7 +280,7 @@ socket.on('castVote', ({ vote, targetUserId }) => {
       console.log(`[SERVER] Client disconnected: ${socket.id} from room ${roomId}`);
       
       // Remove user from room
-      rooms[roomId].users = rooms[roomId].users.filter(user => user.id !== socket.id);
+rooms[roomId].users = rooms[roomId].users.filter(user => user.id !== userUUID);
       
       // Notify remaining users
       io.to(roomId).emit('userList', rooms[roomId].users);
