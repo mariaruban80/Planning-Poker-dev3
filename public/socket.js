@@ -30,12 +30,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
-    //query: { roomId: roomIdentifier, userName: userNameValue }
-     query: {
-        roomId: roomIdentifier,
-        userName: userNameValue,
-        userUUID: sessionStorage.getItem('userUUID') || crypto.randomUUID()
-      }      
+    query: { roomId: roomIdentifier, userName: userNameValue }
   });
 
   socket.on('addTicket', ({ ticketData }) => {
@@ -49,19 +44,10 @@ socket.on('allTickets', ({ tickets }) => {
 });
 
   // Socket event handlers
- socket.on('connect', () => {
-  console.log('[SOCKET] Reconnected to server with ID:', socket.id);
-  socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
-
-  // ✅ Re-request story votes on reconnect
-  if (selectedStoryIndex !== null) {
-    setTimeout(() => {
-      console.log('[SOCKET] Re-requesting votes after reconnect for story:', selectedStoryIndex);
-      socket.emit('requestStoryVotes', { storyIndex: selectedStoryIndex });
-    }, 500); // short delay to allow room to sync
-  }
-});
-
+  socket.on('connect', () => {
+    console.log('[SOCKET] Connected to server with ID:', socket.id);
+    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+  });
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
@@ -265,7 +251,4 @@ export function reconnect() {
   }
   
   return false;
-}
-export function getUserUUID() {
-  return sessionStorage.getItem('userUUID');
 }
