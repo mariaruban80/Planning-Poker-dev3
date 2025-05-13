@@ -3,81 +3,9 @@ let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
+
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
-// Add this to the top of main.js, just after the global variables
-document.addEventListener('visibilitychange', function() {
-  if (!document.hidden && socket) {
-    // Page is now visible again
-    console.log('[APP] Page visibility restored, checking connection status');
-    
-    if (socket.disconnected) {
-      console.log('[APP] Socket disconnected while page was hidden, reconnecting');
-      if (typeof reconnect === 'function') {
-        reconnect();
-      } else {
-        // Try to reconnect directly
-        socket.connect();
-      }
-    }
-  }
-});
-// Add these functions near the top of main.js
-// Vote persistence functions
-function saveVotesToLocalStorage(roomId) {
-  if (!roomId) return;
-  
-  // Prepare data for storage
-  const voteData = {
-    votesPerStory,
-    votesRevealed, 
-    lastUpdated: new Date().getTime(),
-    currentStoryIndex
-  };
-  
-  // Save to localStorage
-  localStorage.setItem(`planningPoker_votes_${roomId}`, JSON.stringify(voteData));
-  console.log(`[STORAGE] Saved votes for ${Object.keys(votesPerStory).length} stories to localStorage`);
-}
-
-function loadVotesFromLocalStorage(roomId) {
-  if (!roomId) return false;
-  
-  // Get stored vote data
-  const storedData = localStorage.getItem(`planningPoker_votes_${roomId}`);
-  if (!storedData) return false;
-  
-  try {
-    // Parse the stored data
-    const voteData = JSON.parse(storedData);
-    
-    // Check if data is too old (24 hours max retention)
-    const now = new Date().getTime();
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours in ms
-    
-    if (now - voteData.lastUpdated > maxAge) {
-      console.log('[STORAGE] Stored votes are too old, discarding');
-      localStorage.removeItem(`planningPoker_votes_${roomId}`);
-      return false;
-    }
-    
-    // Restore vote data
-    votesPerStory = voteData.votesPerStory || {};
-    votesRevealed = voteData.votesRevealed || {};
-    
-    // Also restore current story index if available
-    if (voteData.currentStoryIndex !== undefined) {
-      currentStoryIndex = voteData.currentStoryIndex;
-    }
-    
-    console.log(`[STORAGE] Restored votes for ${Object.keys(votesPerStory).length} stories from localStorage`);
-    return true;
-  } catch (error) {
-    console.error('[STORAGE] Error loading votes from localStorage:', error);
-    return false;
-  }
-}
-
 
 // Add a window function for index.html to call
 window.notifyStoriesUpdated = function() {
@@ -460,8 +388,6 @@ function appendRoomIdToURL(roomId) {
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-    // Load saved votes if available
-  loadVotesFromLocalStorage(roomId);
 //  Guest: Listen for host's voting system
 socket.on('votingSystemUpdate', ({ votingSystem }) => {
   console.log('[SOCKET] Received voting system from host:', votingSystem);
@@ -1533,8 +1459,6 @@ function selectStory(index, emitToServer = true) {
       socket.emit('requestStoryVotes', { storyIndex: index });
     }
   }
-   // Save votes for the new selected story
-  saveVotesToLocalStorage(roomId);
 }
 
 /**
@@ -2121,32 +2045,22 @@ function handleSocketMessage(message) {
         }
         votesPerStory[currentStoryIndex][message.userId] = message.vote;
         updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
-         // Save votes whenever they change
-        saveVotesToLocalStorage(roomId);
       }
       break;
       
     case 'votesRevealed':
+     
       // Handle votes revealed
-     // votesRevealed[currentStoryIndex] = true;
-     // if (votesPerStory[currentStoryIndex]) {
-       // applyVotesToUI(votesPerStory[currentStoryIndex], false);
-     // }
-      //triggerGlobalEmojiBurst();
+     votesRevealed[message.storyIndex] = true;
 
-      // Handle votes revealed
-      votesRevealed[currentStoryIndex] = true;
-      if (votesPerStory[currentStoryIndex]) {
-        handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
+      // ✅ If we already have the votes, apply them immediately
+      if (votesPerStory[message.storyIndex]) {
+        handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
       } else {
-        console.log('[WARN] Votes revealed but no votes found for story index:', currentStoryIndex);
-        
-        // If no votes found, still show empty statistics
-        handleVotesRevealed(currentStoryIndex, {});
+        // Otherwise show empty stats
+        handleVotesRevealed(message.storyIndex, {});
       }
       triggerGlobalEmojiBurst();
-       // Save votes revealed state
-      saveVotesToLocalStorage(roomId);
       break;
       
     case 'votesReset':
@@ -2156,8 +2070,6 @@ function handleSocketMessage(message) {
       }
       votesRevealed[currentStoryIndex] = false;
       resetAllVoteVisuals();
-       // Save the reset state
-      saveVotesToLocalStorage(roomId);
       // ✅ Hide vote statistics and show planning cards again
   const planningCardsSection = document.querySelector('.planning-cards-section');
   const statsContainer = document.querySelector('.vote-statistics-container');
@@ -2167,38 +2079,26 @@ function handleSocketMessage(message) {
       break;
 
          case 'storySelected':
-      if (typeof message.storyIndex === 'number') {
+    /**  if (typeof message.storyIndex === 'number') {
       console.log('[SOCKET] Story selected from server:', message.storyIndex);
       selectStory(message.storyIndex, false); // false to avoid re-emitting
+      }*/
+          // Save the selected index
+      currentStoryIndex = message.storyIndex;
+      // 🆕 Automatically re-request votes for current story
+      if (typeof requestStoryVotes === 'function') {
+        requestStoryVotes(currentStoryIndex);
       }
       break;
       
     case 'storyVotes':
       // Handle received votes for a specific story
-      if (message.storyIndex !== undefined && message.votes) {
-        votesPerStory[message.storyIndex] = message.votes;
-        // Update UI if this is the current story and votes are revealed
-        if (message.storyIndex === currentStoryIndex && votesRevealed[currentStoryIndex]) {
-          applyVotesToUI(message.votes, false);
-        }
+      votesPerStory[message.storyIndex] = message.votes;
+      if (votesRevealed[message.storyIndex]) {
+        applyVotesToUI(message.votes, false);
       }
       break;
-      case 'reconnected':
-      // Handle reconnection
-      console.log('[APP] Socket reconnected, restoring vote state');
       
-      // Check if we have saved vote state for the current story
-      if (votesPerStory && votesPerStory[currentStoryIndex]) {
-        // Apply stored votes to UI
-        const isRevealed = votesRevealed[currentStoryIndex] || false;
-        applyVotesToUI(votesPerStory[currentStoryIndex], !isRevealed);
-        
-        // If votes were revealed, update the visuals accordingly
-        if (isRevealed) {
-          handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
-        }
-      }
-      break;
     case 'syncCSVData':
        // Handle CSV data sync with improved handling
   if (Array.isArray(message.csvData)) {
@@ -2264,6 +2164,12 @@ function handleSocketMessage(message) {
         }
       }, 500);
       break;
+      case 'disconnect':
+      console.warn('[SOCKET] Disconnected, will try to reconnect...');
+      break;
+
+    default:
+      console.log('[SOCKET] Unhandled message type:', message.type);
   }
 }
 
@@ -2275,17 +2181,4 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   appendRoomIdToURL(roomId);
   initializeApp(roomId);
-});
-// Add a periodic connection check
-setInterval(() => {
-  if (socket && !socket.connected && typeof reconnect === 'function') {
-    console.log('[APP] Detected disconnected socket during interval check, attempting reconnect');
-    reconnect();
-  }
-}, 30000); // Check every 30 seconds
-
-// Set up beforeunload handler to save votes
-window.addEventListener('beforeunload', () => {
-  // Save votes when the page is about to unload
-  saveVotesToLocalStorage(getRoomIdFromURL());
 });
