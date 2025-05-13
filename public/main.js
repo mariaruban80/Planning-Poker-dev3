@@ -328,8 +328,21 @@ function setupPlanningCards() {
     return;
   }
 
-  // Get voting system from session storage - make sure to use the saved value
-  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+  // IMPORTANT: First check for user selected system from main.html
+  let votingSystem;
+  const userSelected = sessionStorage.getItem('userSelectedVoting') === 'true';
+  
+  if (userSelected) {
+    // User explicitly selected a system, use that
+    votingSystem = sessionStorage.getItem('votingSystem');
+    console.log('[UI] Using user-selected voting system:', votingSystem);
+  } else {
+    // Otherwise use current system or default
+    votingSystem = typeof getCurrentVotingSystem === 'function' ? 
+      getCurrentVotingSystem() : 
+      sessionStorage.getItem('votingSystem') || 'fibonacci';
+  }
+
   console.log('[UI] Setting up planning cards with voting system:', votingSystem);
 
   const scales = {
@@ -342,7 +355,7 @@ function setupPlanningCards() {
 
   const values = scales[votingSystem] || scales.fibonacci;
   
-  // Clear container and rebuild cards to ensure consistency
+  // Always rebuild to ensure correct values
   container.innerHTML = '';
   
   values.forEach(value => {
@@ -358,7 +371,15 @@ function setupPlanningCards() {
   setupVoteCardsDrag();
   
   console.log('[UI] Planning cards setup completed with', values.length, 'cards');
+  
+  // If we had a user-selected system, explicitly tell the server
+  if (userSelected && typeof setVotingSystem === 'function') {
+    setVotingSystem(votingSystem);
+  }
 }
+
+
+
 /**
  * Set up guest mode restrictions
  */
@@ -412,6 +433,16 @@ function appendRoomIdToURL(roomId) {
  * Initialize the application
  */
 function initializeApp(roomId) {
+  const userSelected = sessionStorage.getItem('userSelectedVoting') === 'true';
+  const votingSystem = sessionStorage.getItem('votingSystem');
+  
+  if (userSelected && votingSystem) {
+    console.log('[APP] Using user-selected voting system:', votingSystem);
+    // Make sure we keep this system
+    if (typeof setVotingSystem === 'function') {
+      setVotingSystem(votingSystem);
+    }
+  }
  // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
   
