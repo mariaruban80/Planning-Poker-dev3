@@ -7,6 +7,8 @@ let selectedStoryIndex = null;
 let roomId = null;
 let userName = null;
 let initialVotingSystemReceived = false;
+let lastVotingSystem = null;
+let reconnectionAttempts = 0;
 
 /**
  * Initialize WebSocket connection to server
@@ -30,8 +32,9 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   socket = io({
     transports: ['websocket'],
     reconnection: true,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: 10,
     reconnectionDelay: 1000,
+    timeout: 10000,
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
 
@@ -40,10 +43,21 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.log('[SOCKET] Connected to server with ID:', socket.id);
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
     
-    // After connection, request vote restoration and voting system
+    // Reset reconnection attempts on successful connection
+    reconnectionAttempts = 0;
+    
+    // After connection is established and stable, request vote restoration and voting system
     setTimeout(() => {
-      requestUserVoteRestore();
-      requestVotingSystem();
+      if (socket.connected) {
+        console.log('[SOCKET] Requesting data after connection');
+        requestUserVoteRestore();
+        requestVotingSystem();
+        
+        // Also request synchronization of all votes
+        if (typeof syncAllVotes === 'function') {
+          syncAllVotes();
+        }
+      }
     }, 1000);
     
     handleMessage({ type: 'connect' });
@@ -59,14 +73,24 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   });
 
   socket.on('allTickets', ({ tickets }) => {
-    console.log('[SOCKET] Received all tickets:', tickets.length);
+    console.log('[SOCKET] Received all tickets:', tickets?.length);
     handleMessage({ type: 'allTickets', tickets });
   });
 
   socket.on('votingSystemUpdate', data => {
-    console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
-    initialVotingSystemReceived = true;
-    handleMessage({ type: 'votingSystemUpdate', ...data });
+    console.log('[SOCKET] Received voting system update:', data.votingSystem);
+    
+    // Store in session for persistence
+    if (data.votingSystem) {
+      sessionStorage.setItem('votingSystem', data.votingSystem);
+    
+      // Only update if different to avoid UI flickering
+      if (lastVotingSystem !== data.votingSystem) {
+        lastVotingSystem = data.votingSystem;
+        initialVotingSystemReceived = true;
+        handleMessage({ type: 'votingSystemUpdate', ...data });
+      }
+    }
   });
 
   socket.on('syncCSVData', (csvData) => {
@@ -77,22 +101,42 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     setTimeout(() => {
       console.log('[SOCKET] Notifying server that CSV data is loaded');
       socket.emit('csvDataLoaded');
-    }, 100);
+      
+      // Also request voting system after CSV load
+      requestVotingSystem();
+    }, 300);
   });
 
   socket.on('storySelected', ({ storyIndex }) => {
     console.log('[SOCKET] Story selected event received:', storyIndex);
     selectedStoryIndex = storyIndex;
     handleMessage({ type: 'storySelected', storyIndex });
+    
+    // Request votes for this story after receiving story selection
+    setTimeout(() => {
+      if (socket.connected) {
+        requestStoryVotes(storyIndex);
+      }
+    }, 300);
   });
 
   socket.on('voteUpdate', ({ userId, vote, storyIndex }) => {
     console.log('[SOCKET] Vote update received for user', userId, 'on story', storyIndex);
+    
+    // Immediately request full vote synchronization to ensure everyone has the latest state
+    if (selectedStoryIndex === parseInt(storyIndex)) {
+      setTimeout(() => {
+        if (socket.connected) {
+          socket.emit('requestStoryVotes', { storyIndex });
+        }
+      }, 300);
+    }
+    
     handleMessage({ type: 'voteUpdate', userId, vote, storyIndex });
   });
 
   socket.on('storyVotes', ({ storyIndex, votes }) => {
-    console.log('[SOCKET] Received votes for story', storyIndex, ':', Object.keys(votes).length, 'votes');
+    console.log('[SOCKET] Received votes for story', storyIndex, ':', Object.keys(votes || {}).length, 'votes');
     handleMessage({ type: 'storyVotes', storyIndex, votes });
   });
 
@@ -120,24 +164,38 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   });
 
   socket.on('restoreUserVotes', ({ userVotes }) => {
-    console.log('[SOCKET] Received restored votes for user:', Object.keys(userVotes).length, 'stories');
+    console.log('[SOCKET] Received restored votes for user:', Object.keys(userVotes || {}).length, 'stories');
     handleMessage({ type: 'restoreUserVotes', userVotes });
   });
 
   socket.on('exportData', (data) => {
     console.log('[SOCKET] Received export data with', 
-      data.stories ? data.stories.length : 0, 'stories and',
-      data.votes ? Object.keys(data.votes).length : 0, 'vote sets');
+      data?.stories ? data.stories.length : 0, 'stories and',
+      data?.votes ? Object.keys(data.votes).length : 0, 'vote sets');
     handleMessage({ type: 'exportData', data });
   });
 
   socket.on('disconnect', () => {
     console.log('[SOCKET] Disconnected from server');
     handleMessage({ type: 'disconnect' });
+    
+    // Attempt to reconnect automatically
+    if (reconnectionAttempts < 5) {
+      reconnectionAttempts++;
+      setTimeout(() => {
+        console.log(`[SOCKET] Attempting reconnection #${reconnectionAttempts}...`);
+        reconnect();
+      }, 2000);
+    }
   });
 
   socket.on('connect_error', (error) => {
     console.error('[SOCKET] Connection error:', error);
+    handleMessage({ type: 'error', error });
+  });
+
+  socket.on('error', (error) => {
+    console.error('[SOCKET] Socket error:', error);
     handleMessage({ type: 'error', error });
   });
 
@@ -164,10 +222,18 @@ export function hasReceivedVotingSystem() {
 }
 
 /**
+ * Get the currently selected voting system
+ * @returns {string} - The current voting system
+ */
+export function getCurrentVotingSystem() {
+  return lastVotingSystem || sessionStorage.getItem('votingSystem') || 'fibonacci';
+}
+
+/**
  * Force synchronization of all votes from server
  */
 export function syncAllVotes() {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Requesting synchronization of all votes');
     socket.emit('syncAllVotes');
   }
@@ -177,7 +243,7 @@ export function syncAllVotes() {
  * Request restoration of user votes from server
  */
 export function requestUserVoteRestore() {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Requesting to restore user votes');
     socket.emit('requestUserVoteRestore');
   }
@@ -188,8 +254,8 @@ export function requestUserVoteRestore() {
  * @param {Array} data - CSV data to synchronize
  */
 export function emitCSVData(data) {
-  if (socket) {
-    console.log('[SOCKET] Sending CSV data:', data.length, 'rows');
+  if (socket && socket.connected) {
+    console.log('[SOCKET] Sending CSV data:', data?.length, 'rows');
     socket.emit('syncCSVData', data);
   }
 }
@@ -199,10 +265,15 @@ export function emitCSVData(data) {
  * @param {number} index - Index of the selected story
  */
 export function emitStorySelected(index) {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Emitting storySelected:', index);
     socket.emit('storySelected', { storyIndex: index });
     selectedStoryIndex = index;
+    
+    // After selecting a story, request votes for it
+    setTimeout(() => {
+      requestStoryVotes(index);
+    }, 300);
   }
 }
 
@@ -212,7 +283,7 @@ export function emitStorySelected(index) {
  * @param {string} targetUserId - The user ID receiving the vote
  */
 export function emitVote(vote, targetUserId) {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Casting vote for user', targetUserId);
     socket.emit('castVote', { vote, targetUserId });
   }
@@ -223,7 +294,7 @@ export function emitVote(vote, targetUserId) {
  * @param {number} storyIndex - Index of the story
  */
 export function requestStoryVotes(storyIndex) {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Requesting votes for story:', storyIndex);
     socket.emit('requestStoryVotes', { storyIndex });
   }
@@ -234,7 +305,7 @@ export function requestStoryVotes(storyIndex) {
  * Triggers server to broadcast vote values to all clients
  */
 export function revealVotes() {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Requesting to reveal votes');
     socket.emit('revealVotes');
   }
@@ -245,7 +316,7 @@ export function revealVotes() {
  * Clears all votes and resets the reveal state
  */
 export function resetVotes() {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Requesting to reset votes');
     socket.emit('resetVotes');
   }
@@ -255,7 +326,7 @@ export function resetVotes() {
  * Request export of all votes data
  */
 export function requestExport() {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Requesting vote data export');
     socket.emit('exportVotes');
   }
@@ -266,7 +337,7 @@ export function requestExport() {
  * @param {Object} ticketData - The ticket data {id, text}
  */
 export function emitAddTicket(ticketData) {
-  if (socket) {
+  if (socket && socket.connected) {
     console.log('[SOCKET] Adding new ticket:', ticketData);
     socket.emit('addTicket', ticketData);
   }
@@ -304,4 +375,18 @@ export function reconnect() {
   }
   
   return false;
+}
+
+/**
+ * Refresh voting system and ensure it's properly set
+ */
+export function refreshVotingSystem() {
+  // First try from session storage
+  const storedSystem = sessionStorage.getItem('votingSystem');
+  if (storedSystem) {
+    lastVotingSystem = storedSystem;
+  }
+  
+  // Then request from server
+  requestVotingSystem();
 }
