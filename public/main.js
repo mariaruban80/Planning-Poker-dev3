@@ -2035,7 +2035,35 @@ function handleSocketMessage(message) {
     case 'userLeft':
       // Handle user leaving
       break;
+    
+case 'restoreUserVotes':
+  if (message.userVotes) {
+    console.log('[SOCKET] Restoring user votes for', Object.keys(message.userVotes).length, 'stories');
+    
+    // Process each story vote
+    Object.entries(message.userVotes).forEach(([storyIndex, vote]) => {
+      const numericIndex = parseInt(storyIndex);
       
+      // Store in our local vote tracking
+      if (!votesPerStory[numericIndex]) {
+        votesPerStory[numericIndex] = {};
+      }
+      
+      // Store using current socket ID
+      votesPerStory[numericIndex][socket.id] = vote;
+      
+      // If this is the current story, update UI
+      if (numericIndex === currentStoryIndex) {
+        // Show vote based on reveal state
+        if (votesRevealed[currentStoryIndex]) {
+          updateVoteVisuals(socket.id, vote, true);
+        } else {
+          updateVoteVisuals(socket.id, '👍', true);
+        }
+      }
+    });
+  }
+  break; 
     case 'voteReceived':
     case 'voteUpdate':
       // Handle vote received
