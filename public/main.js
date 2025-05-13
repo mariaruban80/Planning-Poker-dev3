@@ -422,8 +422,11 @@ if (isHost && socket) {
   addNewLayoutStyles();
   // Add a slight delay to ensure socket connection is established
   setTimeout(() => {
-    if (socket && socket.connected) {
-      socket.emit('requestUserVoteRestore');
+   // Add a slight delay to ensure socket connection is established
+  setTimeout(() => {
+    if (typeof syncAllVotes === 'function' && socket && socket.connected) {
+      // Force vote sync after connection
+      syncAllVotes();
     }
   }, 1500);
 }
