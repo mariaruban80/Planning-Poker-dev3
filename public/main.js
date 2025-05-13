@@ -1,6 +1,7 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
 // Adding this to ensure a persistent UUID is stored before connecting
+import { getUserUUID } from './socket.js';
 if (!sessionStorage.getItem('userUUID')) {
   sessionStorage.setItem('userUUID', crypto.randomUUID());
 }
@@ -1718,20 +1719,19 @@ function createVoteCardSpace(user, isCurrentUser) {
     voteCard.addEventListener('drop', (e) => {
       e.preventDefault();
       const vote = e.dataTransfer.getData('text/plain');
-      const userId = user.id;
-
+      const userUUID = getUserUUID();
       if (socket && vote) {
-        socket.emit('castVote', { vote, targetUserId: userId });
+        socket.emit('castVote', { vote, targetUserId: userUUID });
       }
-
+      
       // Store vote locally
       if (!votesPerStory[currentStoryIndex]) {
         votesPerStory[currentStoryIndex] = {};
       }
-      votesPerStory[currentStoryIndex][userId] = vote;
+      votesPerStory[currentStoryIndex][userUUID] = vote;
       
-      // Update UI - show checkmark if votes aren't revealed
-      updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
+      updateVoteVisuals(userUUID, votesRevealed[currentStoryIndex] ? vote : '👍', true);
+      
     });
   } else {
     // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
@@ -1743,7 +1743,7 @@ function createVoteCardSpace(user, isCurrentUser) {
   }
   
   // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
+  const existingVote = votesPerStory[currentStoryIndex]?.[getUserUUID()];
   if (existingVote) {
     voteCard.classList.add('has-vote');
     voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '👍';
