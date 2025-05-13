@@ -306,27 +306,8 @@
         document.getElementById("joinSessionBox").style.display = "block";
       });
     });
-    <script>
-function selectVotingSystem(system) {
-  // Store the selection with multiple flags for redundancy
-  localStorage.setItem('votingSystem', system);
-  sessionStorage.setItem('votingSystem', system);
-  sessionStorage.setItem('userSelectedVotingSystem', 'true');
-  sessionStorage.setItem('votingSystemLocked', 'true');
-  
-  console.log('Voting system firmly locked to:', system);
-  
-  // Optional: Make sure any "selected" styling is applied to the correct button
-  document.querySelectorAll('.voting-system-btn').forEach(btn => {
-    btn.classList.remove('selected');
-  });
-  document.querySelector(`[data-system="${system}"]`)?.classList.add('selected');
-}
-      </script>
-  <script>
- 
-  window.createRoom = function() {
-    try {
+    
+    function createRoom() {
       const name = document.getElementById("createNameInput").value.trim();
       const sessionName = document.getElementById("sessionNameInput").value.trim();
       
@@ -341,43 +322,26 @@ function selectVotingSystem(system) {
       }
       
       // Get selected voting system
-      const selectedScaleElement = document.querySelector('input[name="scale"]:checked');
-      
-      if (!selectedScaleElement) {
-        alert("Please select a voting scale.");
-        return;
-      }
-      
-      const selectedScale = selectedScaleElement.value;
-      
+      const selectedScale = document.querySelector('input[name="scale"]:checked').value;
       // Check if members can manage session
       const allowMemberManage = document.getElementById("allowManage").checked;
       
       // Generate room ID
       const roomId = Math.random().toString(36).substring(2, 10); 
       
-      // Store session data in sessionStorage AND localStorage for persistence
+      // Store session data in sessionStorage
       sessionStorage.setItem("userName", name);
       sessionStorage.setItem("sessionName", sessionName);
       sessionStorage.setItem("votingSystem", selectedScale);
-      localStorage.setItem("votingSystem", selectedScale); // Backup in localStorage
-      sessionStorage.setItem("votingSystemLocked", "true"); // Add lock flag
       sessionStorage.setItem("allowMemberManage", allowMemberManage);
       sessionStorage.setItem("isHost", "true");
       
-      console.log("Creating room with ID:", roomId, "and voting system:", selectedScale);
-      
-      // Update URL path to use relative path
-      window.location.href = `index.html?roomId=${roomId}&host=true`;
-    } catch (error) {
-      console.error("Error in createRoom:", error);
-      alert("An error occurred while creating the room. Please try again.");
+      // Navigate to the room with the generated ID
+    //  window.location.href = `/index.html?roomId=${roomId}`;
+      window.location.href = `/index.html?roomId=${roomId}&host=true`;
     }
-  };
-
-  // Join Room Function
-  window.joinRoom = function() {
-    try {
+    
+    function joinRoom() {
       const name = document.getElementById("joinNameInput").value.trim();
       const sessionId = document.getElementById("sessionIdInput").value.trim();
       
@@ -395,55 +359,9 @@ function selectVotingSystem(system) {
       sessionStorage.setItem("userName", name);
       sessionStorage.setItem("isHost", "false");
       
-      // Clear any previous voting system selection since we're joining as a guest
-      sessionStorage.removeItem("votingSystemLocked");
-      
-      console.log("Joining room with ID:", sessionId);
-      
-      // Update URL path to use relative path
-      window.location.href = `index.html?roomId=${sessionId}`;
-    } catch (error) {
-      console.error("Error in joinRoom:", error);
-      alert("An error occurred while joining the room. Please try again.");
+      // Navigate to the room with the provided ID
+      window.location.href = `/index.html?roomId=${sessionId}`;
     }
-  };
-
-  // Initialize the page when it loads
-  window.onload = function() {
-    console.log("Page loaded, initializing...");
-    
-    // Ensure a default voting system is selected
-    const scales = document.querySelectorAll('input[name="scale"]');
-    let hasChecked = false;
-    
-    scales.forEach(scale => {
-      if (scale.checked) {
-        hasChecked = true;
-      }
-    });
-    
-    // If no scale is checked, check the first one
-    if (!hasChecked && scales.length > 0) {
-      scales[0].checked = true;
-      console.log("Default voting scale selected:", scales[0].value);
-    }
-    
-    // Optional: Add event listeners to buttons via JavaScript as a fallback
-    const createButton = document.getElementById("createRoomButton");
-    if (createButton) {
-      createButton.addEventListener("click", window.createRoom);
-      console.log("Added click event to create room button");
-    }
-    
-    const joinButton = document.getElementById("joinRoomButton");
-    if (joinButton) {
-      joinButton.addEventListener("click", window.joinRoom);
-      console.log("Added click event to join room button");
-    }
-  };
-
-  console.log("Room management functions defined and ready");
-</script>
-
+  </script>
 </body>
 </html>
