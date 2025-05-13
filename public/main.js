@@ -1492,12 +1492,14 @@ function resetOrRestoreVotes(index) {
  * Apply votes to UI
  */
 function applyVotesToUI(votes, hideValues) {
- Object.entries(votes).forEach(([userId, vote]) => {
-  updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+// Object.entries(votes).forEach(([userId, vote]) => {
+//  updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+    Object.entries(votes).forEach(([userName, vote]) => {
+  updateVoteVisuals(userName, hideValues ? '👍' : vote, true);
 
   // Mark current user as having voted
   if (userId === window.currentSocketId) {
-    const avatar = document.querySelector(`#user-circle-${userId}`);
+    const avatar = document.querySelector(`#user-circle-${userName}`);
     if (avatar) avatar.classList.add('has-voted');
   }
 });
@@ -1778,7 +1780,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
   
   // Update badges in sidebar
-  const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
+  const sidebarBadge = document.querySelector(`#user-${userName} .vote-badge`);
   if (sidebarBadge) {
     // Only set content if the user has voted
     if (hasVoted) {
@@ -1791,7 +1793,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   }
   
   // Update vote card space
-  const voteSpace = document.querySelector(`#vote-space-${userId}`);
+  const voteSpace = document.querySelector(`#vote-space-${userName}`);
   if (voteSpace) {
     const voteBadge = voteSpace.querySelector('.vote-badge');
     if (voteBadge) {
@@ -1815,7 +1817,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
 
   // Update avatar to show they've voted
   if (hasVoted) {
-    const avatarContainer = document.querySelector(`#user-circle-${userId}`);
+    const avatarContainer = document.querySelector(`#user-circle-${userName}`);
     if (avatarContainer) {
       avatarContainer.classList.add('has-voted');
       
@@ -1826,7 +1828,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
     }
     
     // Also update sidebar avatar
-    const sidebarAvatar = document.querySelector(`#user-${userId} img.avatar`);
+    const sidebarAvatar = document.querySelector(`#user-${userName} img.avatar`);
     if (sidebarAvatar) {
       sidebarAvatar.style.backgroundColor = '#c1e1c1';
     }
@@ -1837,13 +1839,13 @@ if (userId === window.currentSocketId) {
   console.log('[VOTE] This is your own vote:', vote);
 
   // For example: visually emphasize your own vote space
-  const voteSpace = document.querySelector(`#vote-space-${userId}`);
+  const voteSpace = document.querySelector(`#vote-space-${userName}`);
   if (voteSpace) {
     voteSpace.classList.add('own-vote-space'); // optional: already in your styles
   }
 
   // Add your own avatar "has-voted" state just to be extra safe
-  const myAvatar = document.querySelector(`#user-circle-${userId}`);
+  const myAvatar = document.querySelector(`#user-circle-${userName}`);
   if (myAvatar) myAvatar.classList.add('has-voted');
 }
 
