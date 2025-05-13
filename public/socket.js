@@ -266,3 +266,6 @@ export function reconnect() {
   
   return false;
 }
+export function getUserUUID() {
+  return sessionStorage.getItem('userUUID');
+}
