@@ -8,60 +8,39 @@ import { dirname, join } from 'path';
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: '*' },
-  pingTimeout: 60000, // Longer timeout for more stable connections
-  pingInterval: 25000  // More frequent heartbeats
+  cors: { origin: '*' }
 });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// added to call the main.html file
 app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'main.html'));
 });
 app.use(express.static(join(__dirname, 'public')));
 
 // Enhanced room structure with persistent votes
-const rooms = {};
-const roomVotingSystems = {};
-const userNameToSocketId = {};
-const socketIdToUserName = {}; // Reverse lookup
-
-// Debug logging for vote states (helps with troubleshooting)
-function logRoomVotes(roomId, context) {
-  if (!rooms[roomId]) return;
-  
-  const voteInfo = {
-    currentStory: rooms[roomId].selectedIndex,
-    totalStories: Object.keys(rooms[roomId].votesPerStory).length,
-    totalUsers: Object.keys(rooms[roomId].persistentUserVotes || {}).length,
-    revealed: rooms[roomId].votesRevealed[rooms[roomId].selectedIndex] || false
-  };
-  
-  console.log(`[VOTES:${context}] Room ${roomId}:`, JSON.stringify(voteInfo));
-}
+const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed, persistentUserVotes, tickets }
+const roomVotingSystems = {}; // roomId → voting system
+const userNameToSocketId = {}; // userName → socketId mapping for reconnection handling
 
 // Helper function to update vote mappings when a user reconnects with a new socket ID
 function updateUserIdInVotes(roomId, oldUserId, newUserId) {
   if (!rooms[roomId] || !rooms[roomId].votesPerStory) return;
   
-  try {
-    Object.keys(rooms[roomId].votesPerStory).forEach(storyIndex => {
-      const storyVotes = rooms[roomId].votesPerStory[storyIndex];
-      if (storyVotes && storyVotes[oldUserId]) {
-        // Copy the vote to the new ID
-        storyVotes[newUserId] = storyVotes[oldUserId];
-        // Remove the old ID
-        delete storyVotes[oldUserId];
-        console.log(`[SERVER] Updated vote for story ${storyIndex} from ${oldUserId} to ${newUserId}`);
-      }
-    });
-  } catch (error) {
-    console.error(`[SERVER] Error updating user ID in votes:`, error);
-  }
+  Object.keys(rooms[roomId].votesPerStory).forEach(storyIndex => {
+    const storyVotes = rooms[roomId].votesPerStory[storyIndex];
+    if (storyVotes && storyVotes[oldUserId]) {
+      // Copy the vote to the new ID
+      storyVotes[newUserId] = storyVotes[oldUserId];
+      // Remove the old ID
+      delete storyVotes[oldUserId];
+    }
+  });
 }
 
-// Ensure a story's vote storage is properly initialized
+// Ensure story vote storage is properly initialized
 function ensureStoryVoteStorage(roomId, storyIndex) {
   if (!rooms[roomId]) return;
   
@@ -78,68 +57,36 @@ function ensureStoryVoteStorage(roomId, storyIndex) {
   }
 }
 
-// Synchronize all votes for a story to a specific client
+// Synchronize votes for a specific story to a client
 function syncStoryVotesToClient(socket, roomId, storyIndex) {
   if (!rooms[roomId] || !rooms[roomId].votesPerStory || !rooms[roomId].votesPerStory[storyIndex]) {
     return;
   }
   
   const votes = rooms[roomId].votesPerStory[storyIndex];
-  
-  // Only send if there are votes
   if (Object.keys(votes).length > 0) {
-    console.log(`[SERVER] Syncing ${Object.keys(votes).length} votes for story ${storyIndex} to client ${socket.id}`);
     socket.emit('storyVotes', { storyIndex, votes });
     
-    // Also send reveal state
     if (rooms[roomId].votesRevealed[storyIndex]) {
       socket.emit('votesRevealed', { storyIndex });
     }
   }
 }
 
-// Rebuild the votesPerStory structure from the persistent votes
-function rebuildVotesFromPersistent(roomId) {
-  if (!rooms[roomId] || !rooms[roomId].persistentUserVotes) return;
-  
-  try {
-    // Reset votesPerStory to rebuild it
-    rooms[roomId].votesPerStory = {};
-    
-    // Rebuild from persistent votes
-    Object.entries(rooms[roomId].persistentUserVotes).forEach(([userName, userData]) => {
-      const userId = userData.userId;
-      
-      if (!userId || !userData.votes) return;
-      
-      Object.entries(userData.votes).forEach(([storyIndex, vote]) => {
-        ensureStoryVoteStorage(roomId, storyIndex);
-        rooms[roomId].votesPerStory[storyIndex][userId] = vote;
-      });
-    });
-    
-    console.log(`[SERVER] Rebuilt vote structure for room ${roomId}`);
-  } catch (error) {
-    console.error(`[SERVER] Error rebuilding votes:`, error);
-  }
-}
-
 io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
   
-  // Handle room joining with enhanced persistence
+  // Handle room joining
   socket.on('joinRoom', ({ roomId, userName }) => {
-    // Validate username
+    // Validate username - reject if missing
     if (!userName) {
       console.log(`[SERVER] Rejected connection without username for socket ${socket.id}`);
       socket.emit('error', { message: 'Username is required to join a room' });
       return;
     }
     
-    // Store user data for lookup
     socket.data.roomId = roomId;
     socket.data.userName = userName;
-    socketIdToUserName[socket.id] = userName;
 
     // Create room if it doesn't exist
     if (!rooms[roomId]) {
@@ -149,36 +96,34 @@ io.on('connection', (socket) => {
         story: [],
         revealed: false,
         csvData: [],
-        selectedIndex: 0,
+        selectedIndex: 0, // Default to first story
         votesPerStory: {},
         votesRevealed: {},
         persistentUserVotes: {},
         tickets: []
       };
     }
-
-    // Initialize persistent user votes
-    if (!rooms[roomId].persistentUserVotes) {
-      rooms[roomId].persistentUserVotes = {};
-    }
     
     // Check if this user is reconnecting with a new socket ID
     if (userNameToSocketId[userName] && userNameToSocketId[userName] !== socket.id) {
       const oldSocketId = userNameToSocketId[userName];
-      console.log(`[SERVER] User ${userName} reconnecting with new socket ID (${oldSocketId} → ${socket.id})`);
-      
-      // Update vote mappings
+      console.log(`[SERVER] User ${userName} reconnecting with new socket ID, updating vote mappings`);
       updateUserIdInVotes(roomId, oldSocketId, socket.id);
     }
     
     // Record this user's socket ID
     userNameToSocketId[userName] = socket.id;
+
+    // Initialize persistent user votes if not exists
+    if (!rooms[roomId].persistentUserVotes) {
+      rooms[roomId].persistentUserVotes = {};
+    }
     
-    // Associate socket with persistent votes
+    // Associate this socket with the user's previous votes if they exist
     if (!rooms[roomId].persistentUserVotes[userName]) {
       rooms[roomId].persistentUserVotes[userName] = {
         userId: socket.id,
-        votes: {}
+        votes: {} // storyIndex: vote
       };
     } else {
       // Update the socket ID for returning user
@@ -196,7 +141,7 @@ io.on('connection', (socket) => {
       socket.emit('restoreUserVotes', { userVotes });
     }
 
-    // Update user list
+    // Update user list (remove if exists, then add)
     rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
     rooms[roomId].users.push({ id: socket.id, name: userName });
     socket.join(roomId);
@@ -205,24 +150,15 @@ io.on('connection', (socket) => {
     const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
     socket.emit('votingSystemUpdate', { votingSystem });
 
-    // IMPORTANT: Send the current story selection first
+    // Send current story index to the joining user
     const currentStoryIndex = rooms[roomId].selectedIndex;
     socket.emit('storySelected', { storyIndex: currentStoryIndex });
     
-    // Then add a small delay before sending votes to ensure the client is ready
+    // Add small delay before sending votes to ensure the client is ready
     setTimeout(() => {
-      try {
-        // Synchronize current story votes
-        if (rooms[roomId].votesPerStory[currentStoryIndex]) {
-          syncStoryVotesToClient(socket, roomId, currentStoryIndex);
-        }
-      } catch (error) {
-        console.error(`[SERVER] Error syncing votes on join:`, error);
-      }
-      
-      // Log the state for debugging
-      logRoomVotes(roomId, "afterJoin");
-    }, 500); // Give client time to process story selection
+      // Synchronize current story votes
+      syncStoryVotesToClient(socket, roomId, currentStoryIndex);
+    }, 500);
 
     console.log(`[SERVER] User ${userName} (${socket.id}) joined room ${roomId}`);
     
@@ -232,6 +168,26 @@ io.on('connection', (socket) => {
     // Send CSV data if available
     if (rooms[roomId].csvData?.length > 0) {
       socket.emit('syncCSVData', rooms[roomId].csvData);
+    }
+  });
+  
+  // Handle explicit request for the voting system
+  socket.on('requestVotingSystem', () => {
+    const roomId = socket.data.roomId;
+    if (roomId) {
+      const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
+      console.log(`[SERVER] Sending voting system '${votingSystem}' to client ${socket.id}`);
+      socket.emit('votingSystemUpdate', { votingSystem });
+    }
+  });
+  
+  // Handle forced synchronization of all votes
+  socket.on('syncAllVotes', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      // Sync votes for current story
+      const currentStoryIndex = rooms[roomId].selectedIndex;
+      syncStoryVotesToClient(socket, roomId, currentStoryIndex);
     }
   });
   
@@ -252,31 +208,12 @@ io.on('connection', (socket) => {
     }
   });
   
-  // NEW: Handle explicit vote synchronization request
-  socket.on('syncAllVotes', () => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId]) return;
-    
-    try {
-      const currentStoryIndex = rooms[roomId].selectedIndex;
-      
-      // Rebuild the votes structure first to ensure consistency
-      rebuildVotesFromPersistent(roomId);
-      
-      // Then sync votes for the current story
-      syncStoryVotesToClient(socket, roomId, currentStoryIndex);
-      
-      console.log(`[SERVER] Synced all votes for room ${roomId} to client ${socket.id}`);
-    } catch (error) {
-      console.error(`[SERVER] Error in syncAllVotes:`, error);
-    }
-  });
-  
-  // Store the selected voting system for the room
+  // Handle voting system selection
   socket.on('votingSystemSelected', ({ roomId, votingSystem }) => {
     if (roomId && votingSystem) {
       console.log(`[SERVER] Host selected voting system '${votingSystem}' for room ${roomId}`);
       roomVotingSystems[roomId] = votingSystem;
+      // Broadcast to all clients in the room
       io.to(roomId).emit('votingSystemUpdate', { votingSystem });
     }
   });
@@ -290,29 +227,24 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Enhanced request to restore user votes
+  // Handle request to restore user votes
   socket.on('requestUserVoteRestore', () => {
-    try {
-      const roomId = socket.data.roomId;
-      const userName = socket.data.userName;
-      
-      if (!roomId || !rooms[roomId] || !userName) return;
-      
-      // First, restore the user's own votes
-      if (rooms[roomId].persistentUserVotes[userName]) {
-        const userVotes = rooms[roomId].persistentUserVotes[userName].votes;
-        if (Object.keys(userVotes).length > 0) {
-          socket.emit('restoreUserVotes', { userVotes });
-        }
+    const roomId = socket.data.roomId;
+    const userName = socket.data.userName;
+    
+    if (roomId && rooms[roomId] && userName && rooms[roomId].persistentUserVotes) {
+      // Restore user's own votes
+      const persistentVotes = rooms[roomId].persistentUserVotes[userName];
+      if (persistentVotes && Object.keys(persistentVotes.votes).length > 0) {
+        console.log(`[SERVER] Restoring ${Object.keys(persistentVotes.votes).length} votes for user ${userName} in room ${roomId}`);
+        socket.emit('restoreUserVotes', { userVotes: persistentVotes.votes });
       }
       
-      // Then, after a small delay, sync the current story's votes
+      // After a short delay, also send all votes for current story
       setTimeout(() => {
         const currentStoryIndex = rooms[roomId].selectedIndex;
         syncStoryVotesToClient(socket, roomId, currentStoryIndex);
       }, 300);
-    } catch (error) {
-      console.error(`[SERVER] Error restoring votes:`, error);
     }
   });
 
@@ -327,7 +259,7 @@ io.on('connection', (socket) => {
       
       // Add small delay to ensure client has processed story selection
       setTimeout(() => {
-        // Then send votes
+        // Synchronize votes for this story
         syncStoryVotesToClient(socket, roomId, storyIndex);
       }, 300);
     }
@@ -336,118 +268,101 @@ io.on('connection', (socket) => {
   // Handle story selection
   socket.on('storySelected', ({ storyIndex }) => {
     const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId]) return;
-    
-    console.log(`[SERVER] storySelected received from ${socket.id} in room ${roomId}, storyIndex: ${storyIndex}`);
-    
-    // Store the selected index in room state
-    rooms[roomId].selectedIndex = storyIndex;
-    
-    // Ensure vote storage is initialized for this story
-    ensureStoryVoteStorage(roomId, storyIndex);
-    
-    // Broadcast to ALL clients in the room
-    io.to(roomId).emit('storySelected', { storyIndex });
-    
-    // Then sync votes for this story to all clients
-    setTimeout(() => {
-      const votes = rooms[roomId].votesPerStory[storyIndex] || {};
-      if (Object.keys(votes).length > 0) {
-        io.to(roomId).emit('storyVotes', { storyIndex, votes });
-        
-        // If votes are revealed, broadcast that too
-        if (rooms[roomId].votesRevealed[storyIndex]) {
-          io.to(roomId).emit('votesRevealed', { storyIndex });
+    if (roomId && rooms[roomId]) {
+      console.log(`[SERVER] storySelected received from ${socket.id} in room ${roomId}, storyIndex: ${storyIndex}`);
+      
+      // Store the selected index in room state
+      rooms[roomId].selectedIndex = storyIndex;
+      
+      // Ensure vote storage for this story is initialized
+      ensureStoryVoteStorage(roomId, storyIndex);
+      
+      // Broadcast to ALL clients in the room
+      io.to(roomId).emit('storySelected', { storyIndex });
+      
+      // After a short delay, send votes for this story to all clients
+      setTimeout(() => {
+        const votes = rooms[roomId].votesPerStory[storyIndex] || {};
+        if (Object.keys(votes).length > 0) {
+          io.to(roomId).emit('storyVotes', { storyIndex, votes });
+          
+          // If votes are revealed for this story, also broadcast reveal status
+          if (rooms[roomId].votesRevealed[storyIndex]) {
+            io.to(roomId).emit('votesRevealed', { storyIndex });
+          }
         }
-      }
-    }, 300);
+      }, 300);
+    }
   });
 
-  // Enhanced vote handling with persistence
+  // Handle user votes with persistence
   socket.on('castVote', ({ vote, targetUserId }) => {
     const roomId = socket.data.roomId;
     const userName = socket.data.userName;
     
     // Only allow users to vote for themselves
-    if (!roomId || !rooms[roomId] || targetUserId !== socket.id || !userName) {
-      socket.emit('error', { message: 'You can only vote for yourself' });
-      return;
-    }
-    
-    try {
+    if (roomId && rooms[roomId] && targetUserId === socket.id && userName) {
       const currentStoryIndex = rooms[roomId].selectedIndex;
-      
-      // Ensure vote storage structures
+
+      // Ensure vote storage is initialized
       ensureStoryVoteStorage(roomId, currentStoryIndex);
-      
-      // Store the vote
+
+      // Store the vote in the current story
       rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
       
       // Store in persistent user votes
       if (rooms[roomId].persistentUserVotes[userName]) {
         rooms[roomId].persistentUserVotes[userName].votes[currentStoryIndex] = vote;
       }
-      
-      // Broadcast vote to all clients
+
+      // Broadcast vote to all clients in the room
       io.to(roomId).emit('voteUpdate', {
         userId: targetUserId,
         vote,
         storyIndex: currentStoryIndex
       });
-      
-      logRoomVotes(roomId, "afterVote");
-    } catch (error) {
-      console.error(`[SERVER] Error processing vote:`, error);
-      socket.emit('error', { message: 'Error processing vote' });
+    } else {
+      // Notify the user that they can only vote for themselves
+      socket.emit('error', { message: 'You can only vote for yourself' });
     }
   });
   
-  // Enhanced request for votes for a specific story
+  // Handle requests for votes for a specific story
   socket.on('requestStoryVotes', ({ storyIndex }) => {
     const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId]) return;
-    
-    try {
-      // Ensure story vote storage is initialized
+    if (roomId && rooms[roomId]) {
       ensureStoryVoteStorage(roomId, storyIndex);
-      
-      // Synchronize votes for this story
       syncStoryVotesToClient(socket, roomId, storyIndex);
-    } catch (error) {
-      console.error(`[SERVER] Error handling requestStoryVotes:`, error);
     }
   });
 
   // Handle vote revealing
   socket.on('revealVotes', () => {
     const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId]) return;
-    
-    const currentStoryIndex = rooms[roomId].selectedIndex;
-    
-    // Mark this story as having revealed votes
-    rooms[roomId].votesRevealed[currentStoryIndex] = true;
-    
-    // Send the reveal signal to all clients
-    io.to(roomId).emit('votesRevealed', { storyIndex: currentStoryIndex });
-    
-    console.log(`[SERVER] Votes revealed for story ${currentStoryIndex} in room ${roomId}`);
-    logRoomVotes(roomId, "afterReveal");
+    if (roomId && rooms[roomId]) {
+      const currentStoryIndex = rooms[roomId].selectedIndex;
+      
+      // Mark this story as having revealed votes
+      rooms[roomId].votesRevealed[currentStoryIndex] = true;
+      
+      // Send the reveal signal to all clients
+      io.to(roomId).emit('votesRevealed', { storyIndex: currentStoryIndex });
+      
+      console.log(`[SERVER] Votes revealed for story ${currentStoryIndex} in room ${roomId}`);
+    }
   });
 
-  // Enhanced vote reset handling
+  // Handle vote reset with persistence
   socket.on('resetVotes', () => {
     const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId]) return;
-    
-    try {
+    if (roomId && rooms[roomId]) {
       const currentStoryIndex = rooms[roomId].selectedIndex;
       
       // Clear votes for the current story
       if (rooms[roomId].votesPerStory[currentStoryIndex]) {
         rooms[roomId].votesPerStory[currentStoryIndex] = {};
         
-        // Clear from persistent storage for all users
+        // Also clear from persistent storage for all users
         if (rooms[roomId].persistentUserVotes) {
           Object.keys(rooms[roomId].persistentUserVotes).forEach(userName => {
             if (rooms[roomId].persistentUserVotes[userName].votes) {
@@ -462,8 +377,6 @@ io.on('connection', (socket) => {
         console.log(`[SERVER] Votes reset for story ${currentStoryIndex} in room ${roomId}`);
         io.to(roomId).emit('votesReset', { storyIndex: currentStoryIndex });
       }
-    } catch (error) {
-      console.error(`[SERVER] Error resetting votes:`, error);
     }
   });
 
@@ -476,31 +389,30 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle story navigation
+  socket.on('storyNavigation', ({ index }) => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      io.to(roomId).emit('storyNavigation', { index });
+    }
+  });
+
   // Handle CSV data synchronization
   socket.on('syncCSVData', (csvData) => {
     const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId]) return;
-    
-    try {
+    if (roomId && rooms[roomId]) {
       rooms[roomId].csvData = csvData;
       rooms[roomId].selectedIndex = 0; // Reset selected index when new CSV data is loaded
       
       // We don't reset votes to maintain persistence
       io.to(roomId).emit('syncCSVData', csvData);
-    } catch (error) {
-      console.error(`[SERVER] Error syncing CSV data:`, error);
     }
   });
 
   // Export votes data
   socket.on('exportVotes', () => {
     const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId]) return;
-    
-    try {
-      // Rebuild votes structure before exporting to ensure consistency
-      rebuildVotesFromPersistent(roomId);
-      
+    if (roomId && rooms[roomId]) {
       const exportData = {
         room: roomId,
         stories: rooms[roomId].csvData,
@@ -510,52 +422,31 @@ io.on('connection', (socket) => {
       };
       
       socket.emit('exportData', exportData);
-    } catch (error) {
-      console.error(`[SERVER] Error exporting votes:`, error);
     }
   });
 
-  // Enhanced disconnection handling
+  // Handle disconnections
   socket.on('disconnect', () => {
     const roomId = socket.data.roomId;
-    const userName = socket.data.userName || socketIdToUserName[socket.id];
-    
     if (roomId && rooms[roomId]) {
-      console.log(`[SERVER] Client disconnected: ${socket.id} (${userName}) from room ${roomId}`);
+      console.log(`[SERVER] Client disconnected: ${socket.id} from room ${roomId}`);
       
-      // Remove user from room's active users list
+      // Remove user from room
       rooms[roomId].users = rooms[roomId].users.filter(user => user.id !== socket.id);
       
       // Notify remaining users
       io.to(roomId).emit('userList', rooms[roomId].users);
       
-      // Don't delete from userNameToSocketId to maintain the mapping
-      // This allows us to update when they reconnect
+      // We intentionally DON'T remove from userNameToSocketId mapping
+      // This allows us to track users across reconnections
       
-      // Clean up reverse lookup
-      delete socketIdToUserName[socket.id];
-      
-      // Clean up empty rooms after a delay (in case users reconnect)
+      // Clean up empty rooms
       if (rooms[roomId].users.length === 0) {
-        setTimeout(() => {
-          if (rooms[roomId] && rooms[roomId].users.length === 0) {
-            console.log(`[SERVER] Removing empty room: ${roomId}`);
-            delete rooms[roomId];
-            delete roomVotingSystems[roomId];
-          }
-        }, 60000); // 1 minute grace period
+        console.log(`[SERVER] Removing empty room: ${roomId}`);
+        delete rooms[roomId];
       }
     }
   });
-});
-
-// Add error handling for uncaught exceptions to prevent server crashes
-process.on('uncaughtException', (error) => {
-  console.error('[SERVER] Uncaught Exception:', error);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('[SERVER] Unhandled Rejection:', reason);
 });
 
 const PORT = process.env.PORT || 3000;
