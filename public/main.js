@@ -311,6 +311,15 @@ function isGuestUser() {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
 }
+
+// Adding this function to ensure planning cards are set up properly
+function ensurePlanningCardsSetup() {
+  const container = document.getElementById('planningCards');
+  if (!container || container.children.length === 0) {
+    console.log('[UI] Planning cards missing, setting up...');
+    setupPlanningCards();
+  }
+}
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
   if (!container) {
@@ -319,7 +328,7 @@ function setupPlanningCards() {
     return;
   }
 
-  // Get voting system from session storage or default to fibonacci
+  // Get voting system from session storage - make sure to use the saved value
   const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
   console.log('[UI] Setting up planning cards with voting system:', votingSystem);
 
@@ -333,41 +342,23 @@ function setupPlanningCards() {
 
   const values = scales[votingSystem] || scales.fibonacci;
   
-  // Only clear if there are no cards or wrong cards
-  const currentCards = container.querySelectorAll('.card');
-  const needsRefresh = currentCards.length === 0 || 
-                       currentCards.length !== values.length || 
-                       !Array.from(currentCards).every((card, i) => card.textContent.trim() === values[i]);
+  // Clear container and rebuild cards to ensure consistency
+  container.innerHTML = '';
   
-  if (needsRefresh) {
-    console.log('[UI] Planning cards need refresh, updating...');
-    container.innerHTML = ''; // Clear existing cards
-    
-    values.forEach(value => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.setAttribute('data-value', value);
-      card.setAttribute('draggable', 'true');
-      card.textContent = value;
-      container.appendChild(card);
-    });
-    
-    // Enable drag after cards are added
-    setupVoteCardsDrag();
-    console.log('[UI] Planning cards setup completed with', values.length, 'cards');
-  } else {
-    console.log('[UI] Planning cards already correct, skipping refresh');
-  }
+  values.forEach(value => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('data-value', value);
+    card.setAttribute('draggable', 'true');
+    card.textContent = value;
+    container.appendChild(card);
+  });
+  
+  // Enable drag after cards are added
+  setupVoteCardsDrag();
+  
+  console.log('[UI] Planning cards setup completed with', values.length, 'cards');
 }
-// Adding this function to ensure planning cards are set up properly
-function ensurePlanningCardsSetup() {
-  const container = document.getElementById('planningCards');
-  if (!container || container.children.length === 0) {
-    console.log('[UI] Planning cards missing, setting up...');
-    setupPlanningCards();
-  }
-}
-
 /**
  * Set up guest mode restrictions
  */
@@ -421,50 +412,40 @@ function appendRoomIdToURL(roomId) {
  * Initialize the application
  */
 function initializeApp(roomId) {
-// Initialize socket with userName from sessionStorage
+ // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
   
-  // Add CSS styles
+  // Setup UI components
   updateHeaderStyle();
   addFixedVoteStatisticsStyles();
-  
-  // Setup components
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
   
-  // Ensure we set up planning cards right after connecting
-  // but also add a backup to make sure they appear
+  // Explicitly set up planning cards with session storage
   setupPlanningCards();
   
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions();
   setupStoryCardInteractions();
-  
-  // Add CSS for new layout
   addNewLayoutStyles();
   
-  // Add multiple backup attempts to set up planning cards
-  // This ensures they appear even if initial setup fails
-  setTimeout(ensurePlanningCardsSetup, 1000);
-  setTimeout(ensurePlanningCardsSetup, 2000);
-  setTimeout(ensurePlanningCardsSetup, 5000);
+  // Add retry for planning cards in case the initial setup fails
+  setTimeout(setupPlanningCards, 1500);
   
-  // Also request voting system explicitly
-  if (typeof requestVotingSystem === 'function') {
-    setTimeout(requestVotingSystem, 1500);
-  }
-  
-  // Force vote sync after connection is established
+  // Force vote sync and request restoration after connection is established
   setTimeout(() => {
-    if (typeof syncAllVotes === 'function' && socket && socket.connected) {
-      syncAllVotes();
-    }
-    
-    // Request vote restoration
     if (socket && socket.connected) {
-      socket.emit('requestUserVoteRestore');
+      if (typeof syncAllVotes === 'function') {
+        syncAllVotes();
+      }
+      if (typeof requestUserVoteRestore === 'function') {
+        requestUserVoteRestore();
+      }
+      if (typeof requestVotingSystem === 'function') {
+        requestVotingSystem();
+      }
     }
   }, 2000);
 }
@@ -2068,9 +2049,11 @@ function handleSocketMessage(message) {
       }
       break;
      case 'votingSystemUpdate':
-      console.log('[DEBUG] Got voting system update:', message.votingSystem);
+    console.log('[SOCKET] Received voting system update:', message.votingSystem);
+      // Store in session storage for persistence
       sessionStorage.setItem('votingSystem', message.votingSystem);
-      setupPlanningCards(); // Regenerate cards
+      // Immediately set up planning cards when voting system is received
+      setupPlanningCards();
       break;
 
 
@@ -2175,38 +2158,32 @@ case 'restoreUserVotes':
       break;
       
     case 'storyVotes':
-      // Handle received votes for a specific story
-  if (message.storyIndex !== undefined && message.votes) {
-    const storyIndex = message.storyIndex;
-    
-    // Initialize if needed
-    if (!votesPerStory[storyIndex]) {
-      votesPerStory[storyIndex] = {};
-    }
-    
-    // Store all received votes
-    const receivedVotes = message.votes;
-    
-    // First, map the votes to our vote storage
-    Object.entries(receivedVotes).forEach(([userId, vote]) => {
-      votesPerStory[storyIndex][userId] = vote;
-    });
-    
-    // Update UI if this is the current story
-    if (storyIndex === currentStoryIndex) {
-      // Apply votes according to reveal state
-      if (votesRevealed[storyIndex]) {
-        // Votes revealed - show actual values
-        applyVotesToUI(receivedVotes, false);
-      } else {
-        // Votes not revealed - just show who voted
-        Object.keys(receivedVotes).forEach(userId => {
-          updateVoteVisuals(userId, '👍', true);
-        });
+// Handle received votes for a specific story
+      if (message.storyIndex !== undefined && message.votes) {
+        const storyIndex = message.storyIndex;
+        
+        // Initialize if needed
+        if (!votesPerStory[storyIndex]) {
+          votesPerStory[storyIndex] = {};
+        }
+        
+        // Store all received votes, overwriting any existing votes
+        votesPerStory[storyIndex] = { ...message.votes };
+        
+        // Update UI if this is the current story
+        if (storyIndex === currentStoryIndex) {
+          if (votesRevealed[storyIndex]) {
+            // If votes are revealed, show actual values
+            applyVotesToUI(message.votes, false);
+          } else {
+            // If votes aren't revealed, show who voted
+            Object.keys(message.votes).forEach(userId => {
+              updateVoteVisuals(userId, '👍', true);
+            });
+          }
+        }
       }
-    }
-  }
-  break;
+      break;
       
     case 'syncCSVData':
        // Handle CSV data sync with improved handling
