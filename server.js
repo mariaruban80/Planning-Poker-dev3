@@ -14,7 +14,6 @@ const io = new Server(httpServer, {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// added to call the main.html file
 app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'main.html'));
 });
@@ -23,6 +22,7 @@ app.use(express.static(join(__dirname, 'public')));
 // Enhanced room structure with persistent votes
 const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed, persistentUserVotes, tickets }
 const roomVotingSystems = {}; // roomId → voting system
+const persistentVotingSystems = {}; // Store selected systems across server restarts
 const userNameToSocketId = {}; // userName → socketId mapping for reconnection handling
 
 // Helper function to update vote mappings when a user reconnects with a new socket ID
@@ -36,6 +36,7 @@ function updateUserIdInVotes(roomId, oldUserId, newUserId) {
       storyVotes[newUserId] = storyVotes[oldUserId];
       // Remove the old ID
       delete storyVotes[oldUserId];
+      console.log(`[SERVER] Updated vote for story ${storyIndex} from ${oldUserId} to ${newUserId}`);
     }
   });
 }
@@ -65,10 +66,27 @@ function syncStoryVotesToClient(socket, roomId, storyIndex) {
   
   const votes = rooms[roomId].votesPerStory[storyIndex];
   if (Object.keys(votes).length > 0) {
+    console.log(`[SERVER] Syncing ${Object.keys(votes).length} votes for story ${storyIndex} to client ${socket.id}`);
     socket.emit('storyVotes', { storyIndex, votes });
     
     if (rooms[roomId].votesRevealed[storyIndex]) {
       socket.emit('votesRevealed', { storyIndex });
+    }
+  }
+}
+
+// Function to broadcast all votes for a story to all clients in a room
+function broadcastStoryVotes(roomId, storyIndex) {
+  if (!rooms[roomId] || !rooms[roomId].votesPerStory[storyIndex]) return;
+  
+  const votes = rooms[roomId].votesPerStory[storyIndex];
+  if (Object.keys(votes).length > 0) {
+    console.log(`[SERVER] Broadcasting ${Object.keys(votes).length} votes for story ${storyIndex} to room ${roomId}`);
+    io.to(roomId).emit('storyVotes', { storyIndex, votes });
+    
+    // If votes are revealed, broadcast that too
+    if (rooms[roomId].votesRevealed[storyIndex]) {
+      io.to(roomId).emit('votesRevealed', { storyIndex });
     }
   }
 }
@@ -109,6 +127,13 @@ io.on('connection', (socket) => {
       const oldSocketId = userNameToSocketId[userName];
       console.log(`[SERVER] User ${userName} reconnecting with new socket ID, updating vote mappings`);
       updateUserIdInVotes(roomId, oldSocketId, socket.id);
+      
+      // After user reconnects, broadcast all votes for current story to everyone
+      // This ensures everyone sees the latest votes after a refresh
+      setTimeout(() => {
+        const currentStoryIndex = rooms[roomId].selectedIndex;
+        broadcastStoryVotes(roomId, currentStoryIndex);
+      }, 1000);
     }
     
     // Record this user's socket ID
@@ -147,8 +172,13 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     
     // Send the current voting system to the joining user
-    const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
+    const votingSystem = roomVotingSystems[roomId] || persistentVotingSystems[roomId] || 'fibonacci';
     socket.emit('votingSystemUpdate', { votingSystem });
+    
+    // Wait a bit before sending a second confirmation of the voting system
+    setTimeout(() => {
+      socket.emit('votingSystemUpdate', { votingSystem });
+    }, 2000);
 
     // Send current story index to the joining user
     const currentStoryIndex = rooms[roomId].selectedIndex;
@@ -175,7 +205,7 @@ io.on('connection', (socket) => {
   socket.on('requestVotingSystem', () => {
     const roomId = socket.data.roomId;
     if (roomId) {
-      const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
+      const votingSystem = roomVotingSystems[roomId] || persistentVotingSystems[roomId] || 'fibonacci';
       console.log(`[SERVER] Sending voting system '${votingSystem}' to client ${socket.id}`);
       socket.emit('votingSystemUpdate', { votingSystem });
     }
@@ -212,7 +242,11 @@ io.on('connection', (socket) => {
   socket.on('votingSystemSelected', ({ roomId, votingSystem }) => {
     if (roomId && votingSystem) {
       console.log(`[SERVER] Host selected voting system '${votingSystem}' for room ${roomId}`);
+      
+      // Store it in both places to ensure persistence
       roomVotingSystems[roomId] = votingSystem;
+      persistentVotingSystems[roomId] = votingSystem;
+      
       // Broadcast to all clients in the room
       io.to(roomId).emit('votingSystemUpdate', { votingSystem });
     }
@@ -236,15 +270,15 @@ io.on('connection', (socket) => {
       // Restore user's own votes
       const persistentVotes = rooms[roomId].persistentUserVotes[userName];
       if (persistentVotes && Object.keys(persistentVotes.votes).length > 0) {
-        console.log(`[SERVER] Restoring ${Object.keys(persistentVotes.votes).length} votes for user ${userName} in room ${roomId}`);
+        console.log(`[SERVER] Restoring votes for user ${userName} in room ${roomId}`);
         socket.emit('restoreUserVotes', { userVotes: persistentVotes.votes });
       }
       
-      // After a short delay, also send all votes for current story
+      // After a short delay, broadcast all votes for current story to EVERYONE
       setTimeout(() => {
         const currentStoryIndex = rooms[roomId].selectedIndex;
-        syncStoryVotesToClient(socket, roomId, currentStoryIndex);
-      }, 300);
+        broadcastStoryVotes(roomId, currentStoryIndex);
+      }, 1000);
     }
   });
 
@@ -280,17 +314,9 @@ io.on('connection', (socket) => {
       // Broadcast to ALL clients in the room
       io.to(roomId).emit('storySelected', { storyIndex });
       
-      // After a short delay, send votes for this story to all clients
+      // After a short delay, broadcast all votes for this story to all clients
       setTimeout(() => {
-        const votes = rooms[roomId].votesPerStory[storyIndex] || {};
-        if (Object.keys(votes).length > 0) {
-          io.to(roomId).emit('storyVotes', { storyIndex, votes });
-          
-          // If votes are revealed for this story, also broadcast reveal status
-          if (rooms[roomId].votesRevealed[storyIndex]) {
-            io.to(roomId).emit('votesRevealed', { storyIndex });
-          }
-        }
+        broadcastStoryVotes(roomId, storyIndex);
       }, 300);
     }
   });
@@ -332,7 +358,8 @@ io.on('connection', (socket) => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
       ensureStoryVoteStorage(roomId, storyIndex);
-      syncStoryVotesToClient(socket, roomId, storyIndex);
+      // Broadcast to everyone to ensure consistency
+      broadcastStoryVotes(roomId, storyIndex);
     }
   });
 
@@ -444,9 +471,19 @@ io.on('connection', (socket) => {
       if (rooms[roomId].users.length === 0) {
         console.log(`[SERVER] Removing empty room: ${roomId}`);
         delete rooms[roomId];
+        // But keep the voting system preference
       }
     }
   });
+});
+
+// Add error handling for uncaught exceptions to prevent server crashes
+process.on('uncaughtException', (error) => {
+  console.error('[SERVER] Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[SERVER] Unhandled Rejection:', reason);
 });
 
 const PORT = process.env.PORT || 3000;
