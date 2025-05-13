@@ -1,5 +1,9 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
+// Adding this to ensure a persistent UUID is stored before connecting
+if (!sessionStorage.getItem('userUUID')) {
+  sessionStorage.setItem('userUUID', crypto.randomUUID());
+}
 let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
