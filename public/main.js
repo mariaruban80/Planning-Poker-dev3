@@ -381,19 +381,6 @@ function appendRoomIdToURL(roomId) {
     window.history.pushState({ path: newUrl }, '', newUrl);
   }
 }
-/**
- * Ask the server for votes on **every** story we know about.
- * Call this once the story list is on screen.
- */
-function requestAllVotesForStories() {
-  const storyCards = document.querySelectorAll('.story-card');
-  storyCards.forEach(card => {
-    const idx = Number(card.dataset.index);
-    if (!Number.isNaN(idx)) {
-      requestStoryVotes(idx);          // <-- already exported from socket.js
-    }
-  });
-}
 
 /**
  * Initialize the application
@@ -433,8 +420,6 @@ if (isHost && socket) {
   setupStoryCardInteractions();
   // Add CSS for new layout
   addNewLayoutStyles();
-  +  /* ▸ NEW ◂  – give the DOM a tick to finish, then ask for votes */
-+  setTimeout(requestAllVotesForStories, 300);
 }
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
@@ -1492,17 +1477,11 @@ function resetOrRestoreVotes(index) {
  * Apply votes to UI
  */
 function applyVotesToUI(votes, hideValues) {
-// Object.entries(votes).forEach(([userId, vote]) => {
-//  updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
-    Object.entries(votes).forEach(([userName, vote]) => {
-  updateVoteVisuals(userName, hideValues ? '👍' : vote, true);
-
-  // Mark current user as having voted
-  if (userId === window.currentSocketId) {
-    const avatar = document.querySelector(`#user-circle-${userName}`);
-    if (avatar) avatar.classList.add('has-voted');
-  }
-});
+  Object.entries(votes).forEach(([userId, vote]) => {
+  updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+ //     updateVoteVisuals(userId, vote, true);
+  //  showEmojiBurst(userId, vote);
+  });
 }
 
 /** function showEmojiBurst(userId, vote) {
@@ -1780,7 +1759,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
   
   // Update badges in sidebar
-  const sidebarBadge = document.querySelector(`#user-${userName} .vote-badge`);
+  const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
   if (sidebarBadge) {
     // Only set content if the user has voted
     if (hasVoted) {
@@ -1793,7 +1772,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   }
   
   // Update vote card space
-  const voteSpace = document.querySelector(`#vote-space-${userName}`);
+  const voteSpace = document.querySelector(`#vote-space-${userId}`);
   if (voteSpace) {
     const voteBadge = voteSpace.querySelector('.vote-badge');
     if (voteBadge) {
@@ -1817,7 +1796,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
 
   // Update avatar to show they've voted
   if (hasVoted) {
-    const avatarContainer = document.querySelector(`#user-circle-${userName}`);
+    const avatarContainer = document.querySelector(`#user-circle-${userId}`);
     if (avatarContainer) {
       avatarContainer.classList.add('has-voted');
       
@@ -1828,28 +1807,11 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
     }
     
     // Also update sidebar avatar
-    const sidebarAvatar = document.querySelector(`#user-${userName} img.avatar`);
+    const sidebarAvatar = document.querySelector(`#user-${userId} img.avatar`);
     if (sidebarAvatar) {
       sidebarAvatar.style.backgroundColor = '#c1e1c1';
     }
   }
-// If this vote belongs to the current user, reflect it in sessionStorage too
-if (userId === window.currentSocketId) {
-  // You can update anything UI-related or store vote info locally here
-  console.log('[VOTE] This is your own vote:', vote);
-
-  // For example: visually emphasize your own vote space
-  const voteSpace = document.querySelector(`#vote-space-${userName}`);
-  if (voteSpace) {
-    voteSpace.classList.add('own-vote-space'); // optional: already in your styles
-  }
-
-  // Add your own avatar "has-voted" state just to be extra safe
-  const myAvatar = document.querySelector(`#user-circle-${userName}`);
-  if (myAvatar) myAvatar.classList.add('has-voted');
-}
-
-  
 }
 
 /**
