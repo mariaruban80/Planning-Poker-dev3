@@ -14,14 +14,32 @@ const io = new Server(httpServer, {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Added to call the main.html file
 app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'main.html'));
 });
 app.use(express.static(join(__dirname, 'public')));
 
 // Enhanced room structure with persistent votes
-const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed, persistentUserVotes }
+const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed, persistentUserVotes, tickets }
 const roomVotingSystems = {}; // roomId → voting system
+const userNameToSocketId = {}; // userName → latest socketId
+
+// Helper function to update vote mappings when a user reconnects with a new socket ID
+function updateUserIdInVotes(roomId, oldUserId, newUserId) {
+  if (!rooms[roomId] || !rooms[roomId].votesPerStory) return;
+  
+  // For each story's votes
+  Object.keys(rooms[roomId].votesPerStory).forEach(storyIndex => {
+    const storyVotes = rooms[roomId].votesPerStory[storyIndex];
+    if (storyVotes && storyVotes[oldUserId]) {
+      // Copy the vote to the new ID
+      storyVotes[newUserId] = storyVotes[oldUserId];
+      // Remove the old ID
+      delete storyVotes[oldUserId];
+    }
+  });
+}
 
 io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
@@ -46,13 +64,23 @@ io.on('connection', (socket) => {
         story: [],
         revealed: false,
         csvData: [],
-        selectedIndex: 0,
+        selectedIndex: 0, // Default to first story
         votesPerStory: {},
         votesRevealed: {},
         persistentUserVotes: {},
         tickets: []
       };
     }
+
+    // Check if this user is reconnecting with a new socket ID
+    if (userNameToSocketId[userName] && userNameToSocketId[userName] !== socket.id) {
+      const oldSocketId = userNameToSocketId[userName];
+      console.log(`[SERVER] User ${userName} reconnecting with new socket ID, updating mappings`);
+      updateUserIdInVotes(roomId, oldSocketId, socket.id);
+    }
+    
+    // Record this user's socket ID
+    userNameToSocketId[userName] = socket.id;
 
     // Initialize persistent user votes if not exists
     if (!rooms[roomId].persistentUserVotes) {
@@ -92,6 +120,21 @@ io.on('connection', (socket) => {
     const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
     socket.emit('votingSystemUpdate', { votingSystem });
 
+    // If there's a currently selected story, immediately send its votes to the joining user
+    const currentStoryIndex = rooms[roomId].selectedIndex;
+    if (rooms[roomId].votesPerStory[currentStoryIndex] && Object.keys(rooms[roomId].votesPerStory[currentStoryIndex]).length > 0) {
+      // Send all votes for the current story
+      socket.emit('storyVotes', { 
+        storyIndex: currentStoryIndex, 
+        votes: rooms[roomId].votesPerStory[currentStoryIndex]
+      });
+      
+      // If votes have been revealed for the current story, also send that status
+      if (rooms[roomId].votesRevealed[currentStoryIndex]) {
+        socket.emit('votesRevealed', { storyIndex: currentStoryIndex });
+      }
+    }
+
     console.log(`[SERVER] User ${userName} (${socket.id}) joined room ${roomId}`);
     
     // Send user list to everyone in the room
@@ -112,7 +155,7 @@ io.on('connection', (socket) => {
       // Broadcast the new ticket to everyone in the room EXCEPT sender
       socket.broadcast.to(roomId).emit('addTicket', { ticketData });
       
-      // Keep track of tickets on the server
+      // Keep track of tickets on the server (optional)
       if (!rooms[roomId].tickets) {
         rooms[roomId].tickets = [];
       }
@@ -120,7 +163,7 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Handle voting system selection
+  // Store the selected voting system for the room
   socket.on('votingSystemSelected', ({ roomId, votingSystem }) => {
     if (roomId && votingSystem) {
       console.log(`[SERVER] Host selected voting system '${votingSystem}' for room ${roomId}`);
@@ -205,7 +248,7 @@ io.on('connection', (socket) => {
         rooms[roomId].votesPerStory[currentStoryIndex] = {};
       }
 
-      // Store the vote in the story votes
+      // Store the vote
       rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
       
       // Store in persistent user votes
@@ -256,7 +299,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle vote reset with persistence
+  // Handle vote reset
   socket.on('resetVotes', () => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
@@ -293,6 +336,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle story navigation
+  socket.on('storyNavigation', ({ index }) => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      io.to(roomId).emit('storyNavigation', { index });
+    }
+  });
+
   // Handle CSV data synchronization
   socket.on('syncCSVData', (csvData) => {
     const roomId = socket.data.roomId;
@@ -300,14 +351,12 @@ io.on('connection', (socket) => {
       rooms[roomId].csvData = csvData;
       rooms[roomId].selectedIndex = 0; // Reset selected index when new CSV data is loaded
       
-      // Note: We don't reset votes when new CSV is loaded to maintain persistence
-      // We should only reset the selection
-      
+      // We don't reset votes when new CSV is loaded to maintain persistence
       io.to(roomId).emit('syncCSVData', csvData);
     }
   });
 
-  // Export votes data
+  // Export votes data (optional feature)
   socket.on('exportVotes', () => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
@@ -329,7 +378,7 @@ io.on('connection', (socket) => {
     if (roomId && rooms[roomId]) {
       console.log(`[SERVER] Client disconnected: ${socket.id} from room ${roomId}`);
       
-      // Remove user from room's active users list
+      // Remove user from room
       rooms[roomId].users = rooms[roomId].users.filter(user => user.id !== socket.id);
       
       // Notify remaining users
@@ -339,7 +388,6 @@ io.on('connection', (socket) => {
       if (rooms[roomId].users.length === 0) {
         console.log(`[SERVER] Removing empty room: ${roomId}`);
         delete rooms[roomId];
-        delete roomVotingSystems[roomId];
       }
     }
   });
