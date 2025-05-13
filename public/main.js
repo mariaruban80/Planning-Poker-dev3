@@ -1,10 +1,5 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
-// Adding this to ensure a persistent UUID is stored before connecting
-import { getUserUUID } from './socket.js';
-if (!sessionStorage.getItem('userUUID')) {
-  sessionStorage.setItem('userUUID', crypto.randomUUID());
-}
 let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
@@ -1599,8 +1594,7 @@ function updateUserList(users) {
   topVoteRow.classList.add('vote-row');
   
   topUsers.forEach(user => {
-    const isCurrentUser = user.id === getUserUUID();
-    const voteCard = createVoteCardSpace(user, isCurrentUser);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
     topVoteRow.appendChild(voteCard);
   });
 
@@ -1636,8 +1630,7 @@ function updateUserList(users) {
   bottomVoteRow.classList.add('vote-row');
   
   bottomUsers.forEach(user => {
-    const isCurrentUser = user.id === getUserUUID();
-    const voteCard = createVoteCardSpace(user, isCurrentUser);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
     bottomVoteRow.appendChild(voteCard);
   });
 
@@ -1721,19 +1714,20 @@ function createVoteCardSpace(user, isCurrentUser) {
     voteCard.addEventListener('drop', (e) => {
       e.preventDefault();
       const vote = e.dataTransfer.getData('text/plain');
-      const userUUID = getUserUUID();
+      const userId = user.id;
+
       if (socket && vote) {
-        socket.emit('castVote', { vote, targetUserId: userUUID });
+        socket.emit('castVote', { vote, targetUserId: userId });
       }
-      
+
       // Store vote locally
       if (!votesPerStory[currentStoryIndex]) {
         votesPerStory[currentStoryIndex] = {};
       }
-      votesPerStory[currentStoryIndex][userUUID] = vote;
+      votesPerStory[currentStoryIndex][userId] = vote;
       
-      updateVoteVisuals(userUUID, votesRevealed[currentStoryIndex] ? vote : '👍', true);
-      
+      // Update UI - show checkmark if votes aren't revealed
+      updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
     });
   } else {
     // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
@@ -1745,7 +1739,7 @@ function createVoteCardSpace(user, isCurrentUser) {
   }
   
   // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryIndex]?.[getUserUUID()];
+  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
   if (existingVote) {
     voteCard.classList.add('has-vote');
     voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '👍';
@@ -1851,39 +1845,7 @@ function setupStoryNavigation() {
 
   const newNextButton = document.getElementById('nextStory');
   const newPrevButton = document.getElementById('prevStory');
-  newNextButton.addEventListener('click', () => {
-    const cards = document.querySelectorAll('.story-card');
-    if (cards.length === 0) return;
 
-    const currentIndex = getCurrentStoryIndex();
-    const nextIndex = (currentIndex + 1) % cards.length;
-
-    console.log(`[NAV] Next from ${currentIndex} → ${nextIndex}`);
-    
-    // Make sure to emit to server with true flag
-    selectStory(nextIndex, true);
-  });
-
-  newPrevButton.addEventListener('click', () => {
-    const cards = document.querySelectorAll('.story-card');
-    if (cards.length === 0) return;
-
-    const currentIndex = getCurrentStoryIndex();
-    const prevIndex = (currentIndex - 1 + cards.length) % cards.length;
-
-    console.log(`[NAV] Previous from ${currentIndex} → ${prevIndex}`);
-    
-    // Make sure to emit to server with true flag
-    selectStory(prevIndex, true);
-  });
-}
-// Helper to get current selected story index
-function getCurrentStoryIndex() {
-  const selectedCard = document.querySelector('.story-card.selected');
-  if (!selectedCard) return 0;
-  
-  return parseInt(selectedCard.dataset.index || 0);
-}
   function getOrderedCards() {
     return [...document.querySelectorAll('.story-card')];
   }
@@ -1948,7 +1910,7 @@ function setupStoryCardInteractions() {
       });
     }
   });
-
+}
 
 
 /**
@@ -2087,16 +2049,22 @@ function handleSocketMessage(message) {
       break;
       
     case 'votesRevealed':
-     
       // Handle votes revealed
-     votesRevealed[message.storyIndex] = true;
+     // votesRevealed[currentStoryIndex] = true;
+     // if (votesPerStory[currentStoryIndex]) {
+       // applyVotesToUI(votesPerStory[currentStoryIndex], false);
+     // }
+      //triggerGlobalEmojiBurst();
 
-      // ✅ If we already have the votes, apply them immediately
-      if (votesPerStory[message.storyIndex]) {
-        handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
+      // Handle votes revealed
+      votesRevealed[currentStoryIndex] = true;
+      if (votesPerStory[currentStoryIndex]) {
+        handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
       } else {
-        // Otherwise show empty stats
-        handleVotesRevealed(message.storyIndex, {});
+        console.log('[WARN] Votes revealed but no votes found for story index:', currentStoryIndex);
+        
+        // If no votes found, still show empty statistics
+        handleVotesRevealed(currentStoryIndex, {});
       }
       triggerGlobalEmojiBurst();
       break;
@@ -2117,23 +2085,20 @@ function handleSocketMessage(message) {
       break;
 
          case 'storySelected':
-    / if (typeof message.storyIndex === 'number') {
+      if (typeof message.storyIndex === 'number') {
       console.log('[SOCKET] Story selected from server:', message.storyIndex);
       selectStory(message.storyIndex, false); // false to avoid re-emitting
-      }
-          // Save the selected index
-      currentStoryIndex = message.storyIndex;
-      // 🆕 Automatically re-request votes for current story
-      if (typeof requestStoryVotes === 'function') {
-        requestStoryVotes(currentStoryIndex);
       }
       break;
       
     case 'storyVotes':
       // Handle received votes for a specific story
-      votesPerStory[message.storyIndex] = message.votes;
-      if (votesRevealed[message.storyIndex]) {
-        applyVotesToUI(message.votes, false);
+      if (message.storyIndex !== undefined && message.votes) {
+        votesPerStory[message.storyIndex] = message.votes;
+        // Update UI if this is the current story and votes are revealed
+        if (message.storyIndex === currentStoryIndex && votesRevealed[currentStoryIndex]) {
+          applyVotesToUI(message.votes, false);
+        }
       }
       break;
       
@@ -2202,12 +2167,6 @@ function handleSocketMessage(message) {
         }
       }, 500);
       break;
-      case 'disconnect':
-      console.warn('[SOCKET] Disconnected, will try to reconnect...');
-      break;
-
-    default:
-      console.log('[SOCKET] Unhandled message type:', message.type);
   }
 }
 
