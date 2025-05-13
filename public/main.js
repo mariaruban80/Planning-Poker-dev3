@@ -381,6 +381,19 @@ function appendRoomIdToURL(roomId) {
     window.history.pushState({ path: newUrl }, '', newUrl);
   }
 }
+/**
+ * Ask the server for votes on **every** story we know about.
+ * Call this once the story list is on screen.
+ */
+function requestAllVotesForStories() {
+  const storyCards = document.querySelectorAll('.story-card');
+  storyCards.forEach(card => {
+    const idx = Number(card.dataset.index);
+    if (!Number.isNaN(idx)) {
+      requestStoryVotes(idx);          // <-- already exported from socket.js
+    }
+  });
+}
 
 /**
  * Initialize the application
@@ -420,6 +433,8 @@ if (isHost && socket) {
   setupStoryCardInteractions();
   // Add CSS for new layout
   addNewLayoutStyles();
+  +  /* ▸ NEW ◂  – give the DOM a tick to finish, then ask for votes */
++  setTimeout(requestAllVotesForStories, 300);
 }
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
