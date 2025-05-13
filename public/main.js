@@ -100,7 +100,17 @@ document.addEventListener('DOMContentLoaded', () => {
     roomId = 'room-' + Math.floor(Math.random() * 10000);
   }
   appendRoomIdToURL(roomId);
+  
+  // First setup planning cards based on stored voting system
+  setupPlanningCards();
+  
+  // Then initialize the app
   initializeApp(roomId);
+  
+  // Add backup initialization
+  setTimeout(() => {
+    ensurePlanningCardsSetup();
+  }, 1000);
 });
 
 // Global state variables
@@ -303,9 +313,15 @@ function isGuestUser() {
 }
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
-  if (!container) return;
+  if (!container) {
+    console.warn('[UI] Planning cards container not found, will retry...');
+    setTimeout(setupPlanningCards, 500);
+    return;
+  }
 
+  // Get voting system from session storage or default to fibonacci
   const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+  console.log('[UI] Setting up planning cards with voting system:', votingSystem);
 
   const scales = {
     fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
@@ -316,22 +332,41 @@ function setupPlanningCards() {
   };
 
   const values = scales[votingSystem] || scales.fibonacci;
-
-  container.innerHTML = ''; // Clear any existing cards
-
-  values.forEach(value => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.setAttribute('data-value', value);
-    card.setAttribute('draggable', 'true');
-    card.textContent = value;
-    container.appendChild(card);
-  });
-
-  // ✅ Enable drag after cards are added
-  setupVoteCardsDrag();
+  
+  // Only clear if there are no cards or wrong cards
+  const currentCards = container.querySelectorAll('.card');
+  const needsRefresh = currentCards.length === 0 || 
+                       currentCards.length !== values.length || 
+                       !Array.from(currentCards).every((card, i) => card.textContent.trim() === values[i]);
+  
+  if (needsRefresh) {
+    console.log('[UI] Planning cards need refresh, updating...');
+    container.innerHTML = ''; // Clear existing cards
+    
+    values.forEach(value => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.setAttribute('data-value', value);
+      card.setAttribute('draggable', 'true');
+      card.textContent = value;
+      container.appendChild(card);
+    });
+    
+    // Enable drag after cards are added
+    setupVoteCardsDrag();
+    console.log('[UI] Planning cards setup completed with', values.length, 'cards');
+  } else {
+    console.log('[UI] Planning cards already correct, skipping refresh');
+  }
 }
-
+// Adding this function to ensure planning cards are set up properly
+function ensurePlanningCardsSetup() {
+  const container = document.getElementById('planningCards');
+  if (!container || container.children.length === 0) {
+    console.log('[UI] Planning cards missing, setting up...');
+    setupPlanningCards();
+  }
+}
 
 /**
  * Set up guest mode restrictions
@@ -386,49 +421,52 @@ function appendRoomIdToURL(roomId) {
  * Initialize the application
  */
 function initializeApp(roomId) {
-  // Initialize socket with userName from sessionStorage
+// Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-//  Guest: Listen for host's voting system
-socket.on('votingSystemUpdate', ({ votingSystem }) => {
-  console.log('[SOCKET] Received voting system from host:', votingSystem);
-  sessionStorage.setItem('votingSystem', votingSystem);
-  setupPlanningCards(); // Dynamically regenerate vote cards
-});
-
-// Host: Emit selected voting system to server
-const isHost = sessionStorage.getItem('isHost') === 'true';
-const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
-
-if (isHost && socket) {
-  socket.emit('votingSystemSelected', { roomId, votingSystem });
-}
-
   
-  // removed this function addVoteStatisticsStyles();
- updateHeaderStyle();
-    addFixedVoteStatisticsStyles();
+  // Add CSS styles
+  updateHeaderStyle();
+  addFixedVoteStatisticsStyles();
+  
+  // Setup components
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
-//  setupVoteCardsDrag();
-  setupPlanningCards(); // generates the cards AND sets up drag listeners
-
+  
+  // Ensure we set up planning cards right after connecting
+  // but also add a backup to make sure they appear
+  setupPlanningCards();
+  
   setupRevealResetButtons();
   setupAddTicketButton();
-  setupGuestModeRestrictions(); // Add guest mode restrictions
-   // Add this line
+  setupGuestModeRestrictions();
   setupStoryCardInteractions();
+  
   // Add CSS for new layout
   addNewLayoutStyles();
-  // Add a slight delay to ensure socket connection is established
-  setTimeout(() => {
-   // Add a slight delay to ensure socket connection is established
+  
+  // Add multiple backup attempts to set up planning cards
+  // This ensures they appear even if initial setup fails
+  setTimeout(ensurePlanningCardsSetup, 1000);
+  setTimeout(ensurePlanningCardsSetup, 2000);
+  setTimeout(ensurePlanningCardsSetup, 5000);
+  
+  // Also request voting system explicitly
+  if (typeof requestVotingSystem === 'function') {
+    setTimeout(requestVotingSystem, 1500);
+  }
+  
+  // Force vote sync after connection is established
   setTimeout(() => {
     if (typeof syncAllVotes === 'function' && socket && socket.connected) {
-      // Force vote sync after connection
       syncAllVotes();
     }
-  }, 1500);
+    
+    // Request vote restoration
+    if (socket && socket.connected) {
+      socket.emit('requestUserVoteRestore');
+    }
+  }, 2000);
 }
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
