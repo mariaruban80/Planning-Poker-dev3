@@ -46,9 +46,10 @@ socket.on('allTickets', ({ tickets }) => {
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
+     window.currentSocketId = socket.id;
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
        // save socket ID globally so UI knows who "I" am
-  window.currentSocketId = socket.id;
+  
   });
 
   socket.on('userList', (users) => {
