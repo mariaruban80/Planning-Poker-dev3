@@ -1492,11 +1492,15 @@ function resetOrRestoreVotes(index) {
  * Apply votes to UI
  */
 function applyVotesToUI(votes, hideValues) {
-  Object.entries(votes).forEach(([userId, vote]) => {
+ Object.entries(votes).forEach(([userId, vote]) => {
   updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
- //     updateVoteVisuals(userId, vote, true);
-  //  showEmojiBurst(userId, vote);
-  });
+
+  // Mark current user as having voted
+  if (userId === window.currentSocketId) {
+    const avatar = document.querySelector(`#user-circle-${userId}`);
+    if (avatar) avatar.classList.add('has-voted');
+  }
+});
 }
 
 /** function showEmojiBurst(userId, vote) {
@@ -1827,6 +1831,23 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
       sidebarAvatar.style.backgroundColor = '#c1e1c1';
     }
   }
+// If this vote belongs to the current user, reflect it in sessionStorage too
+if (userId === window.currentSocketId) {
+  // You can update anything UI-related or store vote info locally here
+  console.log('[VOTE] This is your own vote:', vote);
+
+  // For example: visually emphasize your own vote space
+  const voteSpace = document.querySelector(`#vote-space-${userId}`);
+  if (voteSpace) {
+    voteSpace.classList.add('own-vote-space'); // optional: already in your styles
+  }
+
+  // Add your own avatar "has-voted" state just to be extra safe
+  const myAvatar = document.querySelector(`#user-circle-${userId}`);
+  if (myAvatar) myAvatar.classList.add('has-voted');
+}
+
+  
 }
 
 /**
