@@ -306,7 +306,18 @@
         document.getElementById("joinSessionBox").style.display = "block";
       });
     });
-    
+    function selectVotingSystem(system) {
+  // Store the selection in session storage
+  sessionStorage.setItem('votingSystem', system);
+  
+  // Also store in window for cross-page communication
+  window.lastSelectedVotingSystem = system;
+  
+  // Set a flag to indicate this was explicitly selected by the user
+  sessionStorage.setItem('userSelectedVoting', 'true');
+  
+  console.log('Voting system selected:', system);
+}
     function createRoom() {
       const name = document.getElementById("createNameInput").value.trim();
       const sessionName = document.getElementById("sessionNameInput").value.trim();
