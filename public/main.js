@@ -1851,7 +1851,39 @@ function setupStoryNavigation() {
 
   const newNextButton = document.getElementById('nextStory');
   const newPrevButton = document.getElementById('prevStory');
+  newNextButton.addEventListener('click', () => {
+    const cards = document.querySelectorAll('.story-card');
+    if (cards.length === 0) return;
 
+    const currentIndex = getCurrentStoryIndex();
+    const nextIndex = (currentIndex + 1) % cards.length;
+
+    console.log(`[NAV] Next from ${currentIndex} → ${nextIndex}`);
+    
+    // Make sure to emit to server with true flag
+    selectStory(nextIndex, true);
+  });
+
+  newPrevButton.addEventListener('click', () => {
+    const cards = document.querySelectorAll('.story-card');
+    if (cards.length === 0) return;
+
+    const currentIndex = getCurrentStoryIndex();
+    const prevIndex = (currentIndex - 1 + cards.length) % cards.length;
+
+    console.log(`[NAV] Previous from ${currentIndex} → ${prevIndex}`);
+    
+    // Make sure to emit to server with true flag
+    selectStory(prevIndex, true);
+  });
+}
+// Helper to get current selected story index
+function getCurrentStoryIndex() {
+  const selectedCard = document.querySelector('.story-card.selected');
+  if (!selectedCard) return 0;
+  
+  return parseInt(selectedCard.dataset.index || 0);
+}
   function getOrderedCards() {
     return [...document.querySelectorAll('.story-card')];
   }
@@ -1916,7 +1948,7 @@ function setupStoryCardInteractions() {
       });
     }
   });
-}
+
 
 
 /**
