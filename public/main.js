@@ -109,9 +109,66 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Add backup initialization
   setTimeout(() => {
-    ensurePlanningCardsSetup();
-  }, 1000);
+   if (localStorage.getItem('votingSystem') || 
+        sessionStorage.getItem('votingSystemLocked') === 'true') {
+      console.log('[APP] Applying backup planning cards setup with local settings');
+      setupPlanningCards();
+      
+      // Also inform the server of our preference
+      if (socket && typeof socket.emit === 'function') {
+        const votingSystem = localStorage.getItem('votingSystem') || 
+                            sessionStorage.getItem('votingSystem') || 
+                            'fibonacci';
+        socket.emit('votingSystemSelected', { 
+          roomId: getRoomIdFromURL(),
+          votingSystem: votingSystem 
+        });
+      }
+    }
+  }, 3000);
 });
+
+// And a recurring check to ensure the cards remain correct
+setInterval(() => {
+  // Check if cards are wrong (this is a safety net)
+  const container = document.getElementById('planningCards');
+  if (!container) return;
+  
+  const localVotingSystem = localStorage.getItem('votingSystem') || 
+                           sessionStorage.getItem('votingSystem') || 
+                           'fibonacci';
+  
+  const scales = {
+    fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
+    shortFib: ['0', '½', '1', '2', '3'],
+    tshirt: ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    tshirtNum: ['XS (1)', 'S (2)', 'M (3)', 'L (5)', 'XL (8)', 'XXL (13)'],
+    custom: ['?', '☕', '∞']
+  };
+  
+  const expectedValues = scales[localVotingSystem] || scales.fibonacci;
+  const actualCards = container.querySelectorAll('.card');
+  
+  // Check if number of cards matches
+  if (actualCards.length !== expectedValues.length) {
+    console.log('[APP] Card count mismatch, reapplying local settings');
+    setupPlanningCards();
+    return;
+  }
+  
+  // Check content of each card
+  let mismatchFound = false;
+  actualCards.forEach((card, index) => {
+    if (card.textContent !== expectedValues[index]) {
+      mismatchFound = true;
+    }
+  });
+  
+  if (mismatchFound) {
+    console.log('[APP] Card content mismatch, reapplying local settings');
+    setupPlanningCards();
+  }
+}, 5000);
 
 // Global state variables
 let pendingStoryIndex = null;
@@ -328,22 +385,15 @@ function setupPlanningCards() {
     return;
   }
 
-  // IMPORTANT: First check for user selected system from main.html
-  let votingSystem;
-  const userSelected = sessionStorage.getItem('userSelectedVoting') === 'true';
+  console.log('[UI] Setting up planning cards...');
   
-  if (userSelected) {
-    // User explicitly selected a system, use that
-    votingSystem = sessionStorage.getItem('votingSystem');
-    console.log('[UI] Using user-selected voting system:', votingSystem);
-  } else {
-    // Otherwise use current system or default
-    votingSystem = typeof getCurrentVotingSystem === 'function' ? 
-      getCurrentVotingSystem() : 
-      sessionStorage.getItem('votingSystem') || 'fibonacci';
-  }
-
-  console.log('[UI] Setting up planning cards with voting system:', votingSystem);
+  // OVERRIDE: Always use local storage first, then session storage, ignore server
+  // This is the key to preventing the cards from resetting
+  const votingSystem = localStorage.getItem('votingSystem') || 
+                       sessionStorage.getItem('votingSystem') || 
+                       'fibonacci';
+  
+  console.log('[UI] FORCING voting system:', votingSystem);
 
   const scales = {
     fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
@@ -355,9 +405,10 @@ function setupPlanningCards() {
 
   const values = scales[votingSystem] || scales.fibonacci;
   
-  // Always rebuild to ensure correct values
+  // Always clear and rebuild
   container.innerHTML = '';
   
+  // Create the cards
   values.forEach(value => {
     const card = document.createElement('div');
     card.className = 'card';
@@ -370,13 +421,17 @@ function setupPlanningCards() {
   // Enable drag after cards are added
   setupVoteCardsDrag();
   
-  console.log('[UI] Planning cards setup completed with', values.length, 'cards');
+  console.log('[UI] Planning cards setup completed with', values.length, 'cards for system', votingSystem);
   
-  // If we had a user-selected system, explicitly tell the server
-  if (userSelected && typeof setVotingSystem === 'function') {
-    setVotingSystem(votingSystem);
+  // Also tell the server about our voting system (but we won't listen to its response)
+  if (socket && typeof socket.emit === 'function') {
+    socket.emit('votingSystemSelected', { 
+      roomId: getRoomIdFromURL(),
+      votingSystem: votingSystem 
+    });
   }
 }
+
 
 
 
@@ -432,18 +487,20 @@ function appendRoomIdToURL(roomId) {
 /**
  * Initialize the application
  */
-function initializeApp(roomId) {
-  const userSelected = sessionStorage.getItem('userSelectedVoting') === 'true';
-  const votingSystem = sessionStorage.getItem('votingSystem');
+
+ function initializeApp(roomId) {
+  // Add this at the top of the function
+  console.log('[APP] Initializing app with room:', roomId);
   
-  if (userSelected && votingSystem) {
-    console.log('[APP] Using user-selected voting system:', votingSystem);
-    // Make sure we keep this system
-    if (typeof setVotingSystem === 'function') {
-      setVotingSystem(votingSystem);
-    }
+  // Check if we have a locally set voting system
+  const localVotingSystem = localStorage.getItem('votingSystem') || 
+                           sessionStorage.getItem('votingSystem');
+                         
+  if (localVotingSystem) {
+    console.log('[APP] Found local voting system setting:', localVotingSystem);
   }
- // Initialize socket with userName from sessionStorage
+  
+  // Initialize socket
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
   
   // Setup UI components
@@ -453,33 +510,38 @@ function initializeApp(roomId) {
   setupInviteButton();
   setupStoryNavigation();
   
-  // Explicitly set up planning cards with session storage
-  setupPlanningCards();
+  // IMPORTANT: Set up planning cards BEFORE other components
+  if (localVotingSystem) {
+    // Use our local setting
+    setupPlanningCards();
+  } else {
+    // Use default as fallback
+    setupPlanningCards();
+  }
   
+  // Rest of initialization...
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions();
   setupStoryCardInteractions();
   addNewLayoutStyles();
   
-  // Add retry for planning cards in case the initial setup fails
-  setTimeout(setupPlanningCards, 1500);
+  // Add multiple backup calls to ensure cards are correct
+  setTimeout(setupPlanningCards, 1000);
+  setTimeout(setupPlanningCards, 3000);
   
-  // Force vote sync and request restoration after connection is established
-  setTimeout(() => {
-    if (socket && socket.connected) {
-      if (typeof syncAllVotes === 'function') {
-        syncAllVotes();
+  // Force our voting system to the server
+  if (localVotingSystem && socket) {
+    setTimeout(() => {
+      if (socket.connected) {
+        console.log('[APP] Forcing local voting system to server:', localVotingSystem);
+        socket.emit('votingSystemSelected', { 
+          roomId, 
+          votingSystem: localVotingSystem 
+        });
       }
-      if (typeof requestUserVoteRestore === 'function') {
-        requestUserVoteRestore();
-      }
-      if (typeof requestVotingSystem === 'function') {
-        requestVotingSystem();
-      }
-    }
-  }, 2000);
-}
+    }, 2000);
+  }
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
 }
@@ -2080,11 +2142,18 @@ function handleSocketMessage(message) {
       }
       break;
      case 'votingSystemUpdate':
-    console.log('[SOCKET] Received voting system update:', message.votingSystem);
-      // Store in session storage for persistence
-      sessionStorage.setItem('votingSystem', message.votingSystem);
-      // Immediately set up planning cards when voting system is received
-      setupPlanningCards();
+     // CRITICAL: Completely ignore server updates if we have a local selection
+      if (localStorage.getItem('votingSystem') || 
+          sessionStorage.getItem('votingSystemLocked') === 'true') {
+        console.log('[SOCKET] Ignoring server voting system update, using local setting');
+        // Instead of accepting server update, reaffirm our local setting
+        setupPlanningCards();
+      } else {
+        // Only use server setting if we don't have a local preference
+        console.log('[SOCKET] Accepting server voting system:', message.votingSystem);
+        sessionStorage.setItem('votingSystem', message.votingSystem);
+        setupPlanningCards();
+      }
       break;
 
 
