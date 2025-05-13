@@ -15,11 +15,12 @@ let userName = null;
  * @returns {Object} - Socket instance for external reference
  */
 export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage) {
-   // First verify that we have a valid username
+  // First verify that we have a valid username
   if (!userNameValue) {
     console.error('[SOCKET] Cannot initialize without a username');
     return null;
   }
+  
   // Store params for potential reconnection
   roomId = roomIdentifier;
   userName = userNameValue;
@@ -33,29 +34,35 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
 
-  socket.on('addTicket', ({ ticketData }) => {
-  console.log('[SOCKET] Received new ticket from another user:', ticketData);
-  handleMessage({ type: 'addTicket', ticketData });
-});
-
-socket.on('allTickets', ({ tickets }) => {
-  console.log('[SOCKET] Received all tickets:', tickets.length);
-  handleMessage({ type: 'allTickets', tickets });
-});
-
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+    
+    // After connection, request vote restoration
+    setTimeout(() => {
+      requestUserVoteRestore();
+    }, 1000);
+    
+    handleMessage({ type: 'connect' });
   });
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
   });
-   // ADD THE NEW HANDLER RIGHT HERE, among the other socket.on handlers
+
+  socket.on('addTicket', ({ ticketData }) => {
+    console.log('[SOCKET] Received new ticket from another user:', ticketData);
+    handleMessage({ type: 'addTicket', ticketData });
+  });
+
+  socket.on('allTickets', ({ tickets }) => {
+    console.log('[SOCKET] Received all tickets:', tickets.length);
+    handleMessage({ type: 'allTickets', tickets });
+  });
+
   socket.on('votingSystemUpdate', data => {
     console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
-    // Forward this to the handler
     handleMessage({ type: 'votingSystemUpdate', ...data });
   });
 
@@ -109,6 +116,11 @@ socket.on('allTickets', ({ tickets }) => {
     handleMessage({ type: 'storyNavigation', index });
   });
 
+  socket.on('restoreUserVotes', ({ userVotes }) => {
+    console.log('[SOCKET] Received restored votes for user:', Object.keys(userVotes).length, 'stories');
+    handleMessage({ type: 'restoreUserVotes', userVotes });
+  });
+
   socket.on('exportData', (data) => {
     console.log('[SOCKET] Received export data with', 
       data.stories ? data.stories.length : 0, 'stories and',
@@ -128,6 +140,16 @@ socket.on('allTickets', ({ tickets }) => {
 
   // Return socket for external operations if needed
   return socket;
+}
+
+/**
+ * Request restoration of user votes from server
+ */
+export function requestUserVoteRestore() {
+  if (socket) {
+    console.log('[SOCKET] Requesting to restore user votes');
+    socket.emit('requestUserVoteRestore');
+  }
 }
 
 /**
@@ -209,6 +231,17 @@ export function requestExport() {
 }
 
 /**
+ * Add a new ticket and sync with other users
+ * @param {Object} ticketData - The ticket data {id, text}
+ */
+export function emitAddTicket(ticketData) {
+  if (socket) {
+    console.log('[SOCKET] Adding new ticket:', ticketData);
+    socket.emit('addTicket', ticketData);
+  }
+}
+
+/**
  * Get the currently selected story index
  * @returns {number|null} - Selected story index or null if none selected
  */
@@ -222,17 +255,6 @@ export function getCurrentStoryIndex() {
  */
 export function isConnected() {
   return socket && socket.connected;
-}
-
-/**
- * Add a new ticket and sync with other users
- * @param {Object} ticketData - The ticket data {id, text}
- */
-export function emitAddTicket(ticketData) {
-  if (socket) {
-    console.log('[SOCKET] Adding new ticket:', ticketData);
-    socket.emit('addTicket', ticketData);
-  }
 }
 
 /**
