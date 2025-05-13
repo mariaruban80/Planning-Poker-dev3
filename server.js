@@ -29,63 +29,48 @@ io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
   
   // Handle room joining
-socket.on('joinRoom', ({ roomId, userName }) => {
+  socket.on('joinRoom', ({ roomId, userName }) => {
+     // Validate username - reject if missing
   if (!userName) {
     console.log(`[SERVER] Rejected connection without username for socket ${socket.id}`);
     socket.emit('error', { message: 'Username is required to join a room' });
     return;
   }
+    socket.data.roomId = roomId;
+    socket.data.userName = userName;
 
-  socket.data.roomId = roomId;
-  socket.data.userName = userName;
+    // Create room if it doesn't exist
+    if (!rooms[roomId]) {
+      rooms[roomId] = {
+        users: [],
+        votes: {},
+        story: [],
+        revealed: false,
+        csvData: [],
+        selectedIndex: 0, // Default to first story
+        votesPerStory: {},
+        votesRevealed: {} // Track which stories have revealed votes
+      };
+    }
 
-  // Create room if it doesn't exist
-  if (!rooms[roomId]) {
-    rooms[roomId] = {
-      users: [],
-      votes: {},
-      story: [],
-      revealed: false,
-      csvData: [],
-      selectedIndex: 0,
-      votesPerStory: {},
-      votesRevealed: {}
-    };
-  }
+    // Update user list (remove if exists, then add)
+    rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
+    rooms[roomId].users.push({ id: socket.id, name: userName });
+    socket.join(roomId);
+// Send the current voting system to the joining user
+const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
+socket.emit('votingSystemUpdate', { votingSystem });
 
-  // Add user to room
-  rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
-  rooms[roomId].users.push({ id: socket.id, name: userName });
-  socket.join(roomId);
+    console.log(`[SERVER] User ${userName} (${socket.id}) joined room ${roomId}`);
+    
+    // Send user list to everyone in the room
+    io.to(roomId).emit('userList', rooms[roomId].users);
 
-  // Send the current voting system to the joining user
-  const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
-  socket.emit('votingSystemUpdate', { votingSystem });
-
-  console.log(`[SERVER] User ${userName} (${socket.id}) joined room ${roomId}`);
-
-  // Send user list to all
-  io.to(roomId).emit('userList', rooms[roomId].users);
-
-  // Send CSV data if it exists
-  if (rooms[roomId].csvData?.length > 0) {
-    socket.emit('syncCSVData', rooms[roomId].csvData);
-  }
-
-  // ✅ NEW: Always send the selected story + votes
-  const selectedIndex = rooms[roomId].selectedIndex || 0;
-  const votes = rooms[roomId].votesPerStory[selectedIndex] || {};
-  const revealed = rooms[roomId].votesRevealed[selectedIndex] || false;
-
-  socket.emit('storySelected', { storyIndex: selectedIndex });
-  socket.emit('storyVotes', { storyIndex: selectedIndex, votes });
-
-  if (revealed) {
-    socket.emit('votesRevealed', { storyIndex: selectedIndex });
-  }
-});
-
-  
+    // Send CSV data if available
+    if (rooms[roomId].csvData?.length > 0) {
+      socket.emit('syncCSVData', rooms[roomId].csvData);
+    }
+  });
 // Handle ticket synchronization - add THIS inside the connection handler
   socket.on('addTicket', (ticketData) => {
   const roomId = socket.data.roomId;
@@ -127,12 +112,7 @@ socket.on('requestAllTickets', () => {
         const storyIndex = rooms[roomId].selectedIndex;
         console.log(`[SERVER] Client ${socket.id} confirmed CSV loaded, sending current story: ${storyIndex}`);
         socket.emit('storySelected', { storyIndex });
-        const votes = rooms[roomId].votesPerStory[storyIndex] || {};
-        socket.emit('storyVotes', { storyIndex, votes });
-
-        if (rooms[roomId].votesRevealed[storyIndex]) {
-          socket.emit('votesRevealed', { storyIndex });
-        }
+        
         // Send votes for the current story if any exist
         const existingVotes = rooms[roomId].votesPerStory[storyIndex] || {};
         if (Object.keys(existingVotes).length > 0) {
@@ -176,9 +156,7 @@ socket.on('castVote', ({ vote, targetUserId }) => {
     }
 
     // Store the vote
- //   rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
-const voterName = socket.data.userName;
-rooms[roomId].votesPerStory[currentStoryIndex][voterName] = vote;
+    rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
 
     // Broadcast vote to all clients in the room
     io.to(roomId).emit('voteUpdate', {
