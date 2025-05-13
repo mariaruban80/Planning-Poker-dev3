@@ -44,10 +44,43 @@ socket.on('allTickets', ({ tickets }) => {
 });
 
   // Socket event handlers
-  socket.on('connect', () => {
+/**  socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+  });*/
+   socket.on('connect', () => {
+  console.log('[SOCKET] Connected to server with ID:', socket.id);
+  
+  // If this is a reconnection, add a flag
+  const isReconnection = socket._reconnecting || false;
+  socket._reconnecting = false; // Reset the flag
+  
+  // Join room with additional info on reconnection status
+  socket.emit('joinRoom', { 
+    roomId: roomIdentifier, 
+    userName: userNameValue,
+    isReconnection
   });
+  
+  // If this was a reconnection, request vote data
+  if (isReconnection) {
+    setTimeout(() => {
+      console.log('[SOCKET] Reconnected, requesting current story votes');
+      
+      // Request current story data (will trigger loading votes for that story)
+      socket.emit('requestCurrentStory');
+      
+      // Signal to the main app that we've reconnected
+      handleMessage({ type: 'reconnected' });
+    }, 500);
+  }
+});
+
+socket.on('disconnect', () => {
+  console.log('[SOCKET] Disconnected from server');
+  socket._reconnecting = true; // Mark that we're going to reconnect
+  handleMessage({ type: 'disconnect' });
+});
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
