@@ -306,18 +306,24 @@
         document.getElementById("joinSessionBox").style.display = "block";
       });
     });
-    function selectVotingSystem(system) {
-  // Store the selection in session storage
+    <script>
+function selectVotingSystem(system) {
+  // Store the selection with multiple flags for redundancy
+  localStorage.setItem('votingSystem', system);
   sessionStorage.setItem('votingSystem', system);
+  sessionStorage.setItem('userSelectedVotingSystem', 'true');
+  sessionStorage.setItem('votingSystemLocked', 'true');
   
-  // Also store in window for cross-page communication
-  window.lastSelectedVotingSystem = system;
+  console.log('Voting system firmly locked to:', system);
   
-  // Set a flag to indicate this was explicitly selected by the user
-  sessionStorage.setItem('userSelectedVoting', 'true');
-  
-  console.log('Voting system selected:', system);
+  // Optional: Make sure any "selected" styling is applied to the correct button
+  document.querySelectorAll('.voting-system-btn').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  document.querySelector(`[data-system="${system}"]`)?.classList.add('selected');
 }
+
+</script>
     function createRoom() {
       const name = document.getElementById("createNameInput").value.trim();
       const sessionName = document.getElementById("sessionNameInput").value.trim();
