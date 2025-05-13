@@ -1417,6 +1417,8 @@ if (isHost) {
  * @param {number} index - Story index to select
  * @param {boolean} emitToServer - Whether to emit to server (default: true)
  */
+// In main.js - modify the selectStory function
+
 function selectStory(index, emitToServer = true) {
   console.log('[UI] Story selected by user:', index);
   
@@ -1432,11 +1434,13 @@ function selectStory(index, emitToServer = true) {
   
   // Update local state
   currentStoryIndex = index;
-  // ✅ Ensure vote reveal state is initialized
+  
+  // Ensure vote reveal state is initialized
   if (typeof votesRevealed[index] === 'undefined') {
     votesRevealed[index] = false;
   }
- // Show planning cards again and hide statistics when changing stories
+  
+  // Show planning cards again and hide statistics when changing stories
   const planningCardsSection = document.querySelector('.planning-cards-section');
   const statsContainer = document.querySelector('.vote-statistics-container');
   
@@ -1458,12 +1462,8 @@ function selectStory(index, emitToServer = true) {
     console.log('[EMIT] Broadcasting story selection:', index);
     socket.emit('storySelected', { storyIndex: index });
     
-    // Request votes for this story
-    if (typeof requestStoryVotes === 'function') {
-      requestStoryVotes(index);
-    } else {
-      socket.emit('requestStoryVotes', { storyIndex: index });
-    }
+    // Always request votes for this story to ensure we have the latest
+    socket.emit('requestStoryVotes', { storyIndex: index });
   }
 }
 
@@ -2135,14 +2135,37 @@ case 'restoreUserVotes':
       
     case 'storyVotes':
       // Handle received votes for a specific story
-      if (message.storyIndex !== undefined && message.votes) {
-        votesPerStory[message.storyIndex] = message.votes;
-        // Update UI if this is the current story and votes are revealed
-        if (message.storyIndex === currentStoryIndex && votesRevealed[currentStoryIndex]) {
-          applyVotesToUI(message.votes, false);
-        }
+  if (message.storyIndex !== undefined && message.votes) {
+    const storyIndex = message.storyIndex;
+    
+    // Initialize if needed
+    if (!votesPerStory[storyIndex]) {
+      votesPerStory[storyIndex] = {};
+    }
+    
+    // Store all received votes
+    const receivedVotes = message.votes;
+    
+    // First, map the votes to our vote storage
+    Object.entries(receivedVotes).forEach(([userId, vote]) => {
+      votesPerStory[storyIndex][userId] = vote;
+    });
+    
+    // Update UI if this is the current story
+    if (storyIndex === currentStoryIndex) {
+      // Apply votes according to reveal state
+      if (votesRevealed[storyIndex]) {
+        // Votes revealed - show actual values
+        applyVotesToUI(receivedVotes, false);
+      } else {
+        // Votes not revealed - just show who voted
+        Object.keys(receivedVotes).forEach(userId => {
+          updateVoteVisuals(userId, '👍', true);
+        });
       }
-      break;
+    }
+  }
+  break;
       
     case 'syncCSVData':
        // Handle CSV data sync with improved handling
