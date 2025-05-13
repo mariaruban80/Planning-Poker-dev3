@@ -6,6 +6,7 @@ let socket = null;
 let selectedStoryIndex = null;
 let roomId = null;
 let userName = null;
+let initialVotingSystemReceived = false;
 
 /**
  * Initialize WebSocket connection to server
@@ -39,9 +40,10 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.log('[SOCKET] Connected to server with ID:', socket.id);
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
     
-    // After connection, request vote restoration
+    // After connection, request vote restoration and voting system
     setTimeout(() => {
       requestUserVoteRestore();
+      requestVotingSystem();
     }, 1000);
     
     handleMessage({ type: 'connect' });
@@ -63,6 +65,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
 
   socket.on('votingSystemUpdate', data => {
     console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
+    initialVotingSystemReceived = true;
     handleMessage({ type: 'votingSystemUpdate', ...data });
   });
 
@@ -140,6 +143,34 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
 
   // Return socket for external operations if needed
   return socket;
+}
+
+/**
+ * Request the current voting system from the server
+ */
+export function requestVotingSystem() {
+  if (socket && socket.connected) {
+    console.log('[SOCKET] Requesting voting system configuration');
+    socket.emit('requestVotingSystem');
+  }
+}
+
+/**
+ * Check if initial voting system was received
+ * @returns {boolean} - Whether the voting system was received
+ */
+export function hasReceivedVotingSystem() {
+  return initialVotingSystemReceived;
+}
+
+/**
+ * Force synchronization of all votes from server
+ */
+export function syncAllVotes() {
+  if (socket) {
+    console.log('[SOCKET] Requesting synchronization of all votes');
+    socket.emit('syncAllVotes');
+  }
 }
 
 /**
@@ -229,15 +260,7 @@ export function requestExport() {
     socket.emit('exportVotes');
   }
 }
-/**
- * Force synchronization of all votes from server
- */
-export function syncAllVotes() {
-  if (socket) {
-    console.log('[SOCKET] Requesting synchronization of all votes');
-    socket.emit('syncAllVotes');
-  }
-}
+
 /**
  * Add a new ticket and sync with other users
  * @param {Object} ticketData - The ticket data {id, text}
