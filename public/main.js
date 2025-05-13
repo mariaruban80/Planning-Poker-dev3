@@ -1599,7 +1599,8 @@ function updateUserList(users) {
   topVoteRow.classList.add('vote-row');
   
   topUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+    const isCurrentUser = user.id === getUserUUID();
+    const voteCard = createVoteCardSpace(user, isCurrentUser);
     topVoteRow.appendChild(voteCard);
   });
 
@@ -1635,7 +1636,8 @@ function updateUserList(users) {
   bottomVoteRow.classList.add('vote-row');
   
   bottomUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+    const isCurrentUser = user.id === getUserUUID();
+    const voteCard = createVoteCardSpace(user, isCurrentUser);
     bottomVoteRow.appendChild(voteCard);
   });
 
