@@ -44,43 +44,19 @@ socket.on('allTickets', ({ tickets }) => {
 });
 
   // Socket event handlers
-/**  socket.on('connect', () => {
-    console.log('[SOCKET] Connected to server with ID:', socket.id);
-    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
-  });*/
-   socket.on('connect', () => {
-  console.log('[SOCKET] Connected to server with ID:', socket.id);
-  
-  // If this is a reconnection, add a flag
-  const isReconnection = socket._reconnecting || false;
-  socket._reconnecting = false; // Reset the flag
-  
-  // Join room with additional info on reconnection status
-  socket.emit('joinRoom', { 
-    roomId: roomIdentifier, 
-    userName: userNameValue,
-    isReconnection
-  });
-  
-  // If this was a reconnection, request vote data
-  if (isReconnection) {
+ socket.on('connect', () => {
+  console.log('[SOCKET] Reconnected to server with ID:', socket.id);
+  socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+
+  // ✅ Re-request story votes on reconnect
+  if (selectedStoryIndex !== null) {
     setTimeout(() => {
-      console.log('[SOCKET] Reconnected, requesting current story votes');
-      
-      // Request current story data (will trigger loading votes for that story)
-      socket.emit('requestCurrentStory');
-      
-      // Signal to the main app that we've reconnected
-      handleMessage({ type: 'reconnected' });
-    }, 500);
+      console.log('[SOCKET] Re-requesting votes after reconnect for story:', selectedStoryIndex);
+      socket.emit('requestStoryVotes', { storyIndex: selectedStoryIndex });
+    }, 500); // short delay to allow room to sync
   }
 });
 
-socket.on('disconnect', () => {
-  console.log('[SOCKET] Disconnected from server');
-  socket._reconnecting = true; // Mark that we're going to reconnect
-  handleMessage({ type: 'disconnect' });
-});
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
