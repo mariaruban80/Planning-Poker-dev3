@@ -420,6 +420,12 @@ if (isHost && socket) {
   setupStoryCardInteractions();
   // Add CSS for new layout
   addNewLayoutStyles();
+  // Add a slight delay to ensure socket connection is established
+  setTimeout(() => {
+    if (socket && socket.connected) {
+      socket.emit('requestUserVoteRestore');
+    }
+  }, 1500);
 }
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
@@ -1464,12 +1470,20 @@ function selectStory(index, emitToServer = true) {
 /**
  * Reset or restore votes for a story
  */
+// In main.js - replace or modify the resetOrRestoreVotes function
 function resetOrRestoreVotes(index) {
+  // Reset all visual indicators first
   resetAllVoteVisuals();
   
-  // If we have stored votes for this story and they've been revealed
-  if (votesPerStory[index] && votesRevealed[index]) {
-    applyVotesToUI(votesPerStory[index], false);
+  // If we have stored votes for this story
+  if (votesPerStory[index]) {
+    // Determine if this story has votes revealed
+    const isRevealed = votesRevealed[index] === true;
+    
+    // Apply votes based on reveal state
+    Object.entries(votesPerStory[index]).forEach(([userId, vote]) => {
+      updateVoteVisuals(userId, isRevealed ? vote : '👍', true);
+    });
   }
 }
 
