@@ -1562,7 +1562,8 @@ function updateUserList(users) {
   userCircleContainer.innerHTML = '';
 
   // Store the current user's ID for comparison
-  const currentUserId = socket ? socket.id : null;
+ // const currentUserId = socket ? socket.id : null;
+const currentUserId = userId;
 
   // Create left sidebar user list
   users.forEach(user => {
@@ -1720,7 +1721,7 @@ function createVoteCardSpace(user, isCurrentUser) {
     voteCard.addEventListener('drop', (e) => {
       e.preventDefault();
       const vote = e.dataTransfer.getData('text/plain');
-      const userId = user.id;
+      const userId = userId;
 
       if (socket && vote) {
         socket.emit('castVote', { vote, targetUserId: userId });
