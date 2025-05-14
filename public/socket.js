@@ -15,7 +15,7 @@ let userName = null;
  * @returns {Object} - Socket instance for external reference
  */
 export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage) {
-   // First verify that we have a valid username
+  // First verify that we have a valid username
   if (!userNameValue) {
     console.error('[SOCKET] Cannot initialize without a username');
     return null;
@@ -34,25 +34,28 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   });
 
   socket.on('addTicket', ({ ticketData }) => {
-  console.log('[SOCKET] Received new ticket from another user:', ticketData);
-  handleMessage({ type: 'addTicket', ticketData });
-});
+    console.log('[SOCKET] Received new ticket from another user:', ticketData);
+    handleMessage({ type: 'addTicket', ticketData });
+  });
 
-socket.on('allTickets', ({ tickets }) => {
-  console.log('[SOCKET] Received all tickets:', tickets.length);
-  handleMessage({ type: 'allTickets', tickets });
-});
+  socket.on('allTickets', ({ tickets }) => {
+    console.log('[SOCKET] Received all tickets:', tickets.length);
+    handleMessage({ type: 'allTickets', tickets });
+  });
 
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+    
+    // Notify handler about connection
+    handleMessage({ type: 'connect' });
   });
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
   });
-   // ADD THE NEW HANDLER RIGHT HERE, among the other socket.on handlers
+
   socket.on('votingSystemUpdate', data => {
     console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
     // Forward this to the handler
@@ -99,6 +102,13 @@ socket.on('allTickets', ({ tickets }) => {
   socket.on('revealVotes', (votes) => {
     console.log('[SOCKET] Reveal votes event received (legacy)');
     handleMessage({ type: 'revealVotes', votes });
+  });
+
+  // NEW: Handle restored votes for returning user
+  socket.on('restoreUserVotes', ({ votes }) => {
+    console.log('[SOCKET] Received restored votes for current user:', 
+      votes ? Object.keys(votes).length : 0, 'stories');
+    handleMessage({ type: 'restoreUserVotes', votes });
   });
 
   socket.on('storyChange', ({ story }) => {
@@ -251,4 +261,15 @@ export function reconnect() {
   }
   
   return false;
+}
+
+/**
+ * Request all previous votes for the current user
+ * This can be called after reconnection to restore state
+ */
+export function requestUserVotes() {
+  if (socket && socket.connected) {
+    console.log('[SOCKET] Requesting user votes restoration');
+    socket.emit('requestUserVotes');
+  }
 }
