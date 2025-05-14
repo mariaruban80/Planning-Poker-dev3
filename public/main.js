@@ -651,7 +651,7 @@ own-vote-space {
       border: 2px dashed #673ab7;
       position: relative;
     }
-    
+   /* Comment out or remove this section to hide the "Your vote" text 
     .own-vote-space::after {
       content: 'Your vote';
       position: absolute;
@@ -661,7 +661,7 @@ own-vote-space {
       font-size: 10px;
       color: #673ab7;
       white-space: nowrap;
-    }
+    } */
     
     /* Add styles for the drop-not-allowed state */
     .vote-card-space.drop-not-allowed {
