@@ -1,5 +1,11 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
+let userId = localStorage.getItem('userId');
+if (!userId) {
+  userId = crypto.randomUUID(); // or use Date.now() + Math.random() as a fallback
+  localStorage.setItem('userId', userId);
+}
+
 let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
