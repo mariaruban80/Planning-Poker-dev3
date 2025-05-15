@@ -4,20 +4,31 @@ let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket } from './socket.js'; 
 
+// Global state variables
+let pendingStoryIndex = null;
+let csvData = [];
+let currentStoryIndex = 0;
+let userVotes = {};
+let socket = null;
+let csvDataLoaded = false;
+let votesPerStory = {};     // Track votes for each story { storyIndex: { userId: vote, ... }, ... }
+let votesRevealed = {};     // Track which stories have revealed votes { storyIndex: boolean }
+let manuallyAddedTickets = []; // Track tickets added manually
+let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
 
 // Handle socket messages
-// Function to handle all socket message types
 function handleSocketMessage(message) {
   const eventType = message.type;
   
-  // console.log(`[SOCKET] Received ${eventType}:`, message);
+  console.log(`[SOCKET] Received ${eventType}:`, message);
   
   switch(eventType) {
     case 'userList':
       // Update the user list when server sends an updated list
       if (Array.isArray(message.users)) {
+        console.log('[APP] Received userList update with', message.users.length, 'users');
         updateUserList(message.users);
       }
       break;
@@ -182,7 +193,7 @@ function handleSocketMessage(message) {
   }
 }
 // Flag to track manually added tickets that need to be preserved
-let preservedManualTickets = [];
+//let preservedManualTickets = [];
 
 // Add a window function for index.html to call
 window.notifyStoriesUpdated = function() {
