@@ -1668,58 +1668,60 @@ function updateUserList(users) {
  * Create avatar container for a user
  */
 function createAvatarContainer(user) {
+  const safeId = sanitizeId(user.name); // ✅ define safeId
+  const userName = user.name;
+
   const avatarContainer = document.createElement('div');
   avatarContainer.classList.add('avatar-container');
-//  avatarContainer.id = `user-circle-${user.id}`;
-  avatarContainer.id = `user-circle-${safeId}`;
+  avatarContainer.id = `user-circle-${safeId}`; // ✅ safe, consistent DOM ID
 
   avatarContainer.innerHTML = `
-    <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
-    <div class="user-name">${user.name}</div>
+    <img src="${generateAvatarUrl(userName)}" class="avatar-circle" alt="${userName}" />
+    <div class="user-name">${userName}</div>
   `;
-  
-  avatarContainer.setAttribute('data-user-id', user.id);
-  
+
+  // You can keep this for analytics, debugging, or targeting
+  avatarContainer.setAttribute('data-user-id', userName);
+
   // Check if there's an existing vote for this user in the current story
- // const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.name];
+  const existingVote = votesPerStory[currentStoryIndex]?.[userName];
   if (existingVote) {
     avatarContainer.classList.add('has-voted');
   }
-  
+
   return avatarContainer;
 }
+
 
 /**
  * Create vote card space for a user
  */
 function createVoteCardSpace(user, isCurrentUser) {
   const safeId = sanitizeId(user.name);
+  const userName = user.name;
+
   const voteCard = document.createElement('div');
   voteCard.classList.add('vote-card-space');
- // voteCard.id = `vote-space-${user.id}`;
   voteCard.id = `vote-space-${safeId}`;
 
-  
-  // Add visual indication if this is current user's vote space
+  // Visual indicator for the current user
   if (isCurrentUser) {
     voteCard.classList.add('own-vote-space');
   }
-  
-  // Add vote badge inside the card space
+
+  // Add vote badge
   const voteBadge = document.createElement('span');
   voteBadge.classList.add('vote-badge');
   voteBadge.textContent = '';
   voteCard.appendChild(voteBadge);
-  
-  // Only allow drops on own vote space
+
+  // Only allow vote drops for the current user
   if (isCurrentUser) {
     voteCard.addEventListener('dragover', (e) => e.preventDefault());
+
     voteCard.addEventListener('drop', (e) => {
       e.preventDefault();
       const vote = e.dataTransfer.getData('text/plain');
-    //  const userId = user.id;
-      const userName = user.name;
 
       if (socket && vote) {
         socket.emit('castVote', { vote, targetUserId: userName });
@@ -1730,31 +1732,28 @@ function createVoteCardSpace(user, isCurrentUser) {
         votesPerStory[currentStoryIndex] = {};
       }
       votesPerStory[currentStoryIndex][userName] = vote;
-      
-      // Update UI - show checkmark if votes aren't revealed
+
+      // Update UI immediately
       updateVoteVisuals(userName, votesRevealed[currentStoryIndex] ? vote : '👍', true);
     });
   } else {
-    // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
+    // Disallow drop on other users' cards
     voteCard.addEventListener('dragover', (e) => {
       e.preventDefault();
       voteCard.classList.add('drop-not-allowed');
       setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
     });
   }
-  
-  // Check if there's an existing vote for this user in the current story
-  //const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.name];
+
+  // Pre-fill existing vote if it exists
+  const existingVote = votesPerStory[currentStoryIndex]?.[userName];
   if (existingVote) {
     voteCard.classList.add('has-vote');
     voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '👍';
   }
-  
+
   return voteCard;
 }
-
-
 
 
 /**
