@@ -1548,26 +1548,28 @@ function renderCurrentStory() {
  * Update the user list display with the new layout
  */
 
+function sanitizeId(name) {
+  return name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
+}
+
 function updateUserList(users) {
-  const safeId = sanitizeId(user.name);
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
-  
+
   if (!userListContainer || !userCircleContainer) return;
 
   // Clear existing content
   userListContainer.innerHTML = '';
   userCircleContainer.innerHTML = '';
 
-  // Store the current user's ID for comparison
-  const currentUserId = socket ? socket.id : null;
+  const currentUserName = sessionStorage.getItem('userName');
 
-  // Create left sidebar user list
+  // Build user list in sidebar
   users.forEach(user => {
+    const safeId = sanitizeId(user.name);
     const userEntry = document.createElement('div');
-    userEntry.classList.add('user-entry');
-    // userEntry.id = `user-${user.id}`;
     userEntry.id = `user-${safeId}`;
+    userEntry.classList.add('user-entry');
     userEntry.innerHTML = `
       <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
       <span class="username">${user.name}</span>
@@ -1576,42 +1578,35 @@ function updateUserList(users) {
     userListContainer.appendChild(userEntry);
   });
 
-  // Create new grid layout for center area
-  const gridLayout = document.createElement('div');
-  gridLayout.classList.add('poker-table-layout');
-
-  // Split users into two rows
+  // Split users into top/bottom layout
   const halfPoint = Math.ceil(users.length / 2);
   const topUsers = users.slice(0, halfPoint);
   const bottomUsers = users.slice(halfPoint);
 
-  // Create top row of avatars
   const topAvatarRow = document.createElement('div');
   topAvatarRow.classList.add('avatar-row');
-  
+
   topUsers.forEach(user => {
     const avatarContainer = createAvatarContainer(user);
     topAvatarRow.appendChild(avatarContainer);
   });
-  
-  // Create top row of vote cards
+
   const topVoteRow = document.createElement('div');
   topVoteRow.classList.add('vote-row');
-  
+
   topUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+    const isCurrentUser = user.name === currentUserName;
+    const voteCard = createVoteCardSpace(user, isCurrentUser);
     topVoteRow.appendChild(voteCard);
   });
 
-  // Create reveal button
   const revealButtonContainer = document.createElement('div');
   revealButtonContainer.classList.add('reveal-button-container');
-  
+
   const revealBtn = document.createElement('button');
   revealBtn.textContent = 'REVEAL VOTES';
   revealBtn.classList.add('reveal-votes-button');
-  
-  // Handle guest mode for the reveal button
+
   if (isGuestUser()) {
     revealBtn.classList.add('hide-for-guests');
   } else {
@@ -1619,45 +1614,44 @@ function updateUserList(users) {
       if (socket) {
         socket.emit('revealVotes');
         votesRevealed[currentStoryIndex] = true;
-        
-        // Update UI if we have votes for this story
+
         if (votesPerStory[currentStoryIndex]) {
           applyVotesToUI(votesPerStory[currentStoryIndex], false);
         }
       }
     };
   }
-  
+
   revealButtonContainer.appendChild(revealBtn);
 
-  // Create bottom row of vote cards
   const bottomVoteRow = document.createElement('div');
   bottomVoteRow.classList.add('vote-row');
-  
+
   bottomUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+    const isCurrentUser = user.name === currentUserName;
+    const voteCard = createVoteCardSpace(user, isCurrentUser);
     bottomVoteRow.appendChild(voteCard);
   });
 
-  // Create bottom row of avatars
   const bottomAvatarRow = document.createElement('div');
   bottomAvatarRow.classList.add('avatar-row');
-  
+
   bottomUsers.forEach(user => {
     const avatarContainer = createAvatarContainer(user);
     bottomAvatarRow.appendChild(avatarContainer);
   });
 
-  // Assemble the grid
+  const gridLayout = document.createElement('div');
+  gridLayout.classList.add('poker-table-layout');
   gridLayout.appendChild(topAvatarRow);
   gridLayout.appendChild(topVoteRow);
   gridLayout.appendChild(revealButtonContainer);
   gridLayout.appendChild(bottomVoteRow);
   gridLayout.appendChild(bottomAvatarRow);
-  
+
   userCircleContainer.appendChild(gridLayout);
-  
-  // After updating users, check if we need to request tickets
+
+  // Optional: request tickets after list builds
   if (!hasRequestedTickets && users.length > 0) {
     setTimeout(() => {
       if (socket && socket.connected) {
