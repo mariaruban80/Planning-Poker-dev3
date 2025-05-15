@@ -2,11 +2,13 @@
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
 // Import socket functionality
-import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
-/**
- * Handle socket messages
- * Define this function before using it in initializeApp()
- */
+import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket } from './socket.js'; 
+
+// Flag to track manually added tickets that need to be preserved
+let preservedManualTickets = [];
+
+// Handle socket messages
+// Function to handle all socket message types
 function handleSocketMessage(message) {
   const eventType = message.type;
   
@@ -26,7 +28,7 @@ function handleSocketMessage(message) {
         console.log('[SOCKET] New ticket received:', message.ticketData);
         // Add ticket to UI without selecting it (to avoid loops)
         addTicketToUI(message.ticketData, false);
-         applyGuestRestrictions();
+        applyGuestRestrictions();
       }
       break;
     
