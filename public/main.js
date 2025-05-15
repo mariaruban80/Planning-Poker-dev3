@@ -2108,15 +2108,7 @@ function handleSocketMessage(message) {
          case 'storySelected':
      if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
-
-    // Defer selection until DOM is likely ready
-    setTimeout(() => {
-      selectStory(message.storyIndex, false); // highlight the correct story
-
-      // ✅ Ensure vote cards are recreated and drag/drop is active
-      setupPlanningCards();     // regenerates vote cards based on system
-      setupVoteCardsDrag();     // re-enables drag-and-drop
-    }, 100);
+    selectStory(message.storyIndex, false); // false to avoid re-emitting
   }
   break;
       
