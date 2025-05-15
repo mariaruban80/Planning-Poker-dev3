@@ -145,9 +145,7 @@ function fixRevealedVoteFontSizes() {
     badge.style.display = 'block';
   });
 }
-function sanitizeId(name) {
-  return name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
-}
+ 
 
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
@@ -1544,13 +1542,14 @@ function renderCurrentStory() {
   }
 }
 
-/**
- * Update the user list display with the new layout
- */
 
 function sanitizeId(name) {
   return name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
 }
+/**
+ * Update the user list display with the new layout
+ */
+
 
 function updateUserList(users) {
   const userListContainer = document.getElementById('userList');
