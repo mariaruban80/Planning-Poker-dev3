@@ -1,18 +1,5 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
-if (!userName) {
-  userName = prompt("Enter your name to join the room:");
-  if (userName) {
-    sessionStorage.setItem('userName', userName);
-  }
-}
-
-let userId = localStorage.getItem('userId');
-if (!userId) {
-  userId = crypto.randomUUID(); // or use Date.now() + Math.random() as a fallback
-  localStorage.setItem('userId', userId);
-}
-
 let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
@@ -84,7 +71,7 @@ window.initializeSocketWithName = function(roomId, name) {
   userName = name;
   
   // Initialize socket with the name
-  socket = initializeWebSocket(roomId, name,userId, handleSocketMessage);
+  socket = initializeWebSocket(roomId, name, handleSocketMessage);
   
   // Continue with other initialization steps
   setupCSVUploader();
@@ -98,6 +85,23 @@ window.initializeSocketWithName = function(roomId, name) {
   // Add CSS for new layout
   addNewLayoutStyles();
 };
+
+// Modify the existing DOMContentLoaded event handler to check if username is ready
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if we're waiting for a username (joining via invite)
+  if (window.userNameReady === false) {
+    console.log('[APP] Waiting for username before initializing app');
+    return; // Exit early, we'll initialize after username is provided
+  }
+  
+  // Normal initialization for users who already have a name
+  let roomId = getRoomIdFromURL();
+  if (!roomId) {
+    roomId = 'room-' + Math.floor(Math.random() * 10000);
+  }
+  appendRoomIdToURL(roomId);
+  initializeApp(roomId);
+});
 
 // Global state variables
 let pendingStoryIndex = null;
@@ -382,10 +386,8 @@ function appendRoomIdToURL(roomId) {
  * Initialize the application
  */
 function initializeApp(roomId) {
-  const userName = sessionStorage.getItem('userName');
-const userId = localStorage.getItem('userId');
   // Initialize socket with userName from sessionStorage
-  socket = initializeWebSocket(roomId, userName,userId, handleSocketMessage);
+  socket = initializeWebSocket(roomId, userName, handleSocketMessage);
 //  Guest: Listen for host's voting system
 socket.on('votingSystemUpdate', ({ votingSystem }) => {
   console.log('[SOCKET] Received voting system from host:', votingSystem);
@@ -649,7 +651,7 @@ own-vote-space {
       border: 2px dashed #673ab7;
       position: relative;
     }
-   /* Comment out or remove this section to hide the "Your vote" text 
+    
     .own-vote-space::after {
       content: 'Your vote';
       position: absolute;
@@ -659,7 +661,7 @@ own-vote-space {
       font-size: 10px;
       color: #673ab7;
       white-space: nowrap;
-    } */
+    }
     
     /* Add styles for the drop-not-allowed state */
     .vote-card-space.drop-not-allowed {
@@ -1554,14 +1556,13 @@ function updateUserList(users) {
   userCircleContainer.innerHTML = '';
 
   // Store the current user's ID for comparison
- // const currentUserId = socket ? socket.id : null;
-const currentUserId = userId;
+  const currentUserId = socket ? socket.id : null;
 
   // Create left sidebar user list
   users.forEach(user => {
     const userEntry = document.createElement('div');
     userEntry.classList.add('user-entry');
-    userEntry.id = `user-${user.userId}`;
+    userEntry.id = `user-${user.id}`;
     userEntry.innerHTML = `
       <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
       <span class="username">${user.name}</span>
@@ -1593,7 +1594,7 @@ const currentUserId = userId;
   topVoteRow.classList.add('vote-row');
   
   topUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.userId);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
     topVoteRow.appendChild(voteCard);
   });
 
@@ -1629,7 +1630,7 @@ const currentUserId = userId;
   bottomVoteRow.classList.add('vote-row');
   
   bottomUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.userId);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
     bottomVoteRow.appendChild(voteCard);
   });
 
@@ -1670,17 +1671,17 @@ const currentUserId = userId;
 function createAvatarContainer(user) {
   const avatarContainer = document.createElement('div');
   avatarContainer.classList.add('avatar-container');
-  avatarContainer.id = `user-circle-${user.userId}`;
+  avatarContainer.id = `user-circle-${user.id}`;
   
   avatarContainer.innerHTML = `
     <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
     <div class="user-name">${user.name}</div>
   `;
   
-  avatarContainer.setAttribute('data-user-id', user.userId);
+  avatarContainer.setAttribute('data-user-id', user.id);
   
   // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.userId];
+  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
   if (existingVote) {
     avatarContainer.classList.add('has-voted');
   }
@@ -1694,7 +1695,7 @@ function createAvatarContainer(user) {
 function createVoteCardSpace(user, isCurrentUser) {
   const voteCard = document.createElement('div');
   voteCard.classList.add('vote-card-space');
-  voteCard.id = `vote-space-${user.userId}`;
+  voteCard.id = `vote-space-${user.id}`;
   
   // Add visual indication if this is current user's vote space
   if (isCurrentUser) {
@@ -1713,7 +1714,7 @@ function createVoteCardSpace(user, isCurrentUser) {
     voteCard.addEventListener('drop', (e) => {
       e.preventDefault();
       const vote = e.dataTransfer.getData('text/plain');
-      const userId = userId;
+      const userId = user.id;
 
       if (socket && vote) {
         socket.emit('castVote', { vote, targetUserId: userId });
@@ -1738,7 +1739,7 @@ function createVoteCardSpace(user, isCurrentUser) {
   }
   
   // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.userId];
+  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
   if (existingVote) {
     voteCard.classList.add('has-vote');
     voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '👍';
@@ -2171,31 +2172,10 @@ function handleSocketMessage(message) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-  let userName = sessionStorage.getItem('userName');
-
-  if (!userName) {
-    userName = prompt("Enter your name to join the room:");
-    if (userName) {
-      sessionStorage.setItem('userName', userName);
-      window.userNameReady = true;
-    } else {
-      console.warn('[APP] Username is required to join the room.');
-      return;
-    }
-  } else {
-    window.userNameReady = true;
+  let roomId = getRoomIdFromURL();
+  if (!roomId) {
+    roomId = 'room-' + Math.floor(Math.random() * 10000);
   }
-
-  if (window.userNameReady) {
-    console.log('[APP] Username is:', userName);
-
-    let roomId = getRoomIdFromURL();
-    if (!roomId) {
-      roomId = 'room-' + Math.floor(Math.random() * 10000);
-    }
-
-    appendRoomIdToURL(roomId);
-    initializeApp(roomId); // This should use userName + userId from storage
-  }
+  appendRoomIdToURL(roomId);
+  initializeApp(roomId);
 });
-
