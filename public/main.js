@@ -453,7 +453,7 @@ function isGuestUser() {
 /**
  * Update header style 
  */
-function updateHeaderStyle() {
+/* function updateHeaderStyle() {
   const header = document.querySelector('header');
   if (header) {
     header.style.backgroundColor = '#673ab7';
@@ -461,7 +461,7 @@ function updateHeaderStyle() {
     header.style.padding = '10px 0';
     header.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
   }
-}
+} */
 
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
@@ -569,7 +569,7 @@ function initializeApp(roomId) {
     socket.emit('votingSystemSelected', { roomId, votingSystem });
   }
 
-  updateHeaderStyle();
+//  updateHeaderStyle();
   addFixedVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
