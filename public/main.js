@@ -291,18 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeApp(roomId);
 });
 
-// Global state variables
-let pendingStoryIndex = null;
-let csvData = [];
-let currentStoryIndex = 0;
-let userVotes = {};
-let socket = null;
-let csvDataLoaded = false;
-let votesPerStory = {};     // Track votes for each story { storyIndex: { userId: vote, ... }, ... }
-let votesRevealed = {};     // Track which stories have revealed votes { storyIndex: boolean }
-let manuallyAddedTickets = []; // Track tickets added manually
-let hasRequestedTickets = false; // Flag to track if we've already requested tickets
-
 // Adding this function to main.js to be called whenever votes are revealed
 function fixRevealedVoteFontSizes() {
   // Target all vote badges in revealed state
