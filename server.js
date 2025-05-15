@@ -56,26 +56,29 @@ socket.on('joinRoom', ({ roomId, userName }) => {
       selectedIndex: 0, // Default to first story
       votesPerStory: {},
       votesRevealed: {}, // Track which stories have revealed votes
-      nameToId: {} // Map usernames to their socket IDs
+      nameToId: {}, // Map usernames to their socket IDs
+      tickets: []
     };
   }
 
-  // Key enhancement: Check if this user previously voted and reconnecting
-  const previousId = rooms[roomId].nameToId[userName];
-  if (previousId && previousId !== socket.id) {
-    console.log(`[SERVER] User ${userName} reconnected with new socket ID (old: ${previousId}, new: ${socket.id})`);
-    
-    // Update all vote records to use the new socket ID
-    Object.keys(rooms[roomId].votesPerStory).forEach(storyIndex => {
-      if (rooms[roomId].votesPerStory[storyIndex][previousId]) {
-        const previousVote = rooms[roomId].votesPerStory[storyIndex][previousId];
-        rooms[roomId].votesPerStory[storyIndex][socket.id] = previousVote;
-        delete rooms[roomId].votesPerStory[storyIndex][previousId];
-        console.log(`[SERVER] Transferred vote for story ${storyIndex} from old socket to new socket`);
-      }
-    });
-  }
 
+// Check if this user previously voted and reconnecting
+const previousId = rooms[roomId].nameToId[userName];
+if (previousId && previousId !== socket.id) {
+  console.log(`[SERVER] User ${userName} reconnected with new socket ID (old: ${previousId}, new: ${socket.id})`);
+  
+  // Update all vote records to use the new socket ID
+  Object.keys(rooms[roomId].votesPerStory).forEach(storyIndex => {
+    if (rooms[roomId].votesPerStory[storyIndex] && 
+        rooms[roomId].votesPerStory[storyIndex][previousId]) {
+      const previousVote = rooms[roomId].votesPerStory[storyIndex][previousId];
+      rooms[roomId].votesPerStory[storyIndex][socket.id] = previousVote;
+      delete rooms[roomId].votesPerStory[storyIndex][previousId];
+      console.log(`[SERVER] Transferred vote for story ${storyIndex} from old socket to new socket`);
+    }
+  });
+}
+  
   // Update nameToId mapping
   rooms[roomId].nameToId[userName] = socket.id;
 
