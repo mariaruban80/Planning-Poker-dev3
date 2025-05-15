@@ -236,43 +236,45 @@ function addFixedVoteStatisticsStyles() {
   document.head.appendChild(style);
 }
 
-// Create a new function to generate the exact HTML structure
 function createFixedVoteDisplay(votes) {
-  // Create container
   const container = document.createElement('div');
   container.className = 'fixed-vote-display';
-  
-  // Calculate statistics
+
   const voteValues = Object.values(votes);
   const numericValues = voteValues
     .filter(v => !isNaN(parseFloat(v)) && v !== null && v !== undefined)
     .map(v => parseFloat(v));
-  
-  // Default values
-  let mostCommonVote = voteValues.length > 0 ? voteValues[0] : '0';
-  let voteCount = voteValues.length;
+
+  const voteCount = voteValues.length;
   let averageValue = 0;
-  
-  // Calculate statistics if we have numeric values
+
+  const voteFrequency = {};
+  let highestCount = 0;
+  let majorityVotes = [];
+
+  // Build frequency map
+  voteValues.forEach(vote => {
+    voteFrequency[vote] = (voteFrequency[vote] || 0) + 1;
+    const count = voteFrequency[vote];
+
+    if (count > highestCount) {
+      highestCount = count;
+      majorityVotes = [vote];
+    } else if (count === highestCount && !majorityVotes.includes(vote)) {
+      majorityVotes.push(vote);
+    }
+  });
+
+  const isTie = majorityVotes.length > 1;
+  const mostCommonVote = !isTie ? majorityVotes[0] : '—';
+
+  // Calculate average
   if (numericValues.length > 0) {
-    // Find most common vote
-    const voteFrequency = {};
-    let maxCount = 0;
-    
-    voteValues.forEach(vote => {
-      voteFrequency[vote] = (voteFrequency[vote] || 0) + 1;
-      if (voteFrequency[vote] > maxCount) {
-        maxCount = voteFrequency[vote];
-        mostCommonVote = vote;
-      }
-    });
-    
-    // Calculate average
     averageValue = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
-    averageValue = Math.round(averageValue * 10) / 10; // Round to 1 decimal place
+    averageValue = Math.round(averageValue * 10) / 10;
   }
-  
-  // Create HTML that exactly matches the image
+
+  // Create updated HTML
   container.innerHTML = `
     <div class="fixed-vote-card">
       ${mostCommonVote}
@@ -286,14 +288,17 @@ function createFixedVoteDisplay(votes) {
       <div class="fixed-stat-group">
         <div class="fixed-stat-label">Agreement:</div>
         <div class="fixed-agreement-circle">
-       <div class="agreement-icon">👍</div>
+          <div class="agreement-icon">${isTie ? '⚠️' : '👍'}</div>
         </div>
       </div>
     </div>
   `;
-  
+
   return container;
 }
+
+
+
 
 /**
  * Determines if current user is a guest
