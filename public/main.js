@@ -2151,8 +2151,6 @@ window.addTicketFromModal = function(ticketData) {
 /**
  * Initialize socket with a specific name (used when joining via invite)
  */
-// Add this to the top of main.js with other global variables
-let reconnecting = false;
 
 // Enhance socket initialization to handle reconnection
 window.initializeSocketWithName = function(roomId, name) {
