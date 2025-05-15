@@ -29,16 +29,15 @@ io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
   
   // Handle room joining
-  socket.on('joinRoom', ({ roomId, userName ,userId }) => {
+  socket.on('joinRoom', ({ roomId, userName }) => {
      // Validate username - reject if missing
-  if (!userName || !userId) {
+  if (!userName) {
     console.log(`[SERVER] Rejected connection without username for socket ${socket.id}`);
     socket.emit('error', { message: 'Username is required to join a room' });
     return;
   }
     socket.data.roomId = roomId;
     socket.data.userName = userName;
-     socket.data.userId = userId;
 
     // Create room if it doesn't exist
     if (!rooms[roomId]) {
@@ -55,11 +54,8 @@ io.on('connection', (socket) => {
     }
 
     // Update user list (remove if exists, then add)
-  //  rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
-    // rooms[roomId].users.push({ id: socket.id, name: userName });
-
-      rooms[roomId].users = rooms[roomId].users.filter(u => u.userId !== userId);
-  rooms[roomId].users.push({ id: socket.id, name: userName, userId });
+    rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
+    rooms[roomId].users.push({ id: socket.id, name: userName });
     socket.join(roomId);
 // Send the current voting system to the joining user
 const votingSystem = roomVotingSystems[roomId] || 'fibonacci';
@@ -146,29 +142,33 @@ socket.on('requestAllTickets', () => {
   });
 
   // Handle user votes
+ // In server.js, modify the castVote handler:
 socket.on('castVote', ({ vote, targetUserId }) => {
   const roomId = socket.data.roomId;
-  const userId = socket.data.userId;
-
-  if (roomId && rooms[roomId] && targetUserId === userId) {
+  
+  // Only allow users to vote for themselves
+  if (roomId && rooms[roomId] && targetUserId === socket.id) {
     const currentStoryIndex = rooms[roomId].selectedIndex;
 
+    // Initialize vote storage for this story if needed
     if (!rooms[roomId].votesPerStory[currentStoryIndex]) {
       rooms[roomId].votesPerStory[currentStoryIndex] = {};
     }
 
-    rooms[roomId].votesPerStory[currentStoryIndex][userId] = vote;
+    // Store the vote
+    rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
 
+    // Broadcast vote to all clients in the room
     io.to(roomId).emit('voteUpdate', {
-      userId,
+      userId: targetUserId,
       vote,
       storyIndex: currentStoryIndex
     });
   } else {
+    // Optionally notify the user that they can only vote for themselves
     socket.emit('error', { message: 'You can only vote for yourself' });
   }
 });
-
   // Handle requests for votes for a specific story
   socket.on('requestStoryVotes', ({ storyIndex }) => {
     const roomId = socket.data.roomId;
