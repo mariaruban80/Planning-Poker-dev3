@@ -3,7 +3,7 @@ let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
-**
+/**
  * Handle socket messages
  * Define this function before using it in initializeApp()
  */
@@ -325,12 +325,12 @@ function fixRevealedVoteFontSizes() {
  */
 function updateHeaderStyle() {
   const header = document.querySelector('header');
-  if (header) {
-    header.style.backgroundColor = '#673ab7'; // Purple background
-    header.style.color = 'white';
-    header.style.padding = '10px 0';
-    header.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-  }
+  if (!header) return;
+  
+  header.style.backgroundColor = '#673ab7';
+  header.style.color = 'white';
+  header.style.padding = '10px 0';
+  header.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
 }
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
@@ -490,9 +490,13 @@ function isGuestUser() {
 
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
-  if (!container) return;
+  if (!container) {
+    console.warn('[APP] Planning cards container not found');
+    return;
+  }
 
   const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+  console.log('[APP] Setting up planning cards with voting system:', votingSystem);
 
   const scales = {
     fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
@@ -515,8 +519,9 @@ function setupPlanningCards() {
     container.appendChild(card);
   });
 
-  // ✅ Enable drag after cards are added
+  // Enable drag after cards are added
   setupVoteCardsDrag();
+  console.log('[APP] Planning cards setup complete, cards created:', values.length);
 }
 
 
@@ -573,24 +578,39 @@ function appendRoomIdToURL(roomId) {
  * Initialize the application
  */
 function initializeApp(roomId) {
+  // Make sure userName is available
+  if (!userName) {
+    userName = sessionStorage.getItem('userName') || 'Anonymous';
+    console.log('[APP] Using username from sessionStorage:', userName);
+  }
+
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
   
+  // Add debugging
+  console.log('[APP] Socket initialized with roomId:', roomId, 'and userName:', userName);
+  
   // Guest: Listen for host's voting system
-  socket.on('votingSystemUpdate', ({ votingSystem }) => {
-    console.log('[SOCKET] Received voting system from host:', votingSystem);
-    sessionStorage.setItem('votingSystem', votingSystem);
-    setupPlanningCards(); // Dynamically regenerate vote cards
-  });
+  if (socket) {
+    socket.on('votingSystemUpdate', ({ votingSystem }) => {
+      console.log('[SOCKET] Received voting system from host:', votingSystem);
+      sessionStorage.setItem('votingSystem', votingSystem);
+      setupPlanningCards(); // Dynamically regenerate vote cards
+    });
 
-  // Host: Emit selected voting system to server
-  const isHost = sessionStorage.getItem('isHost') === 'true';
-  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+    // Host: Emit selected voting system to server
+    const isHost = sessionStorage.getItem('isHost') === 'true';
+    const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
-  if (isHost && socket) {
-    socket.emit('votingSystemSelected', { roomId, votingSystem });
+    if (isHost) {
+      console.log('[APP] Emitting selected voting system:', votingSystem);
+      socket.emit('votingSystemSelected', { roomId, votingSystem });
+    }
+  } else {
+    console.error('[APP] Failed to initialize socket!');
   }
 
+  // Setup UI components
   updateHeaderStyle();
   addFixedVoteStatisticsStyles();
   setupCSVUploader();
@@ -599,8 +619,9 @@ function initializeApp(roomId) {
   setupPlanningCards(); // generates the cards AND sets up drag listeners
   setupRevealResetButtons();
   setupAddTicketButton();
-  setupGuestModeRestrictions(); // Add guest mode restrictions
+  setupGuestModeRestrictions(); 
   setupStoryCardInteractions();
+  
   // Add CSS for new layout
   addNewLayoutStyles();
 }
@@ -1686,10 +1707,15 @@ function renderCurrentStory() {
  * Update the user list display with the new layout
  */
 function updateUserList(users) {
+  console.log('[APP] Updating user list with users:', users);
+  
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
   
-  if (!userListContainer || !userCircleContainer) return;
+  if (!userListContainer || !userCircleContainer) {
+    console.warn('[APP] User list containers not found');
+    return;
+  }
 
   // Clear existing content
   userListContainer.innerHTML = '';
@@ -1697,6 +1723,11 @@ function updateUserList(users) {
 
   // Store the current user's ID for comparison
   const currentUserId = socket ? socket.id : null;
+  
+  if (!users || users.length === 0) {
+    console.warn('[APP] No users to display in user list');
+    return;
+  }
 
   // Create left sidebar user list
   users.forEach(user => {
@@ -1808,6 +1839,8 @@ function updateUserList(users) {
     const hideValues = !votesRevealed[currentStoryIndex];
     applyVotesToUI(votesPerStory[currentStoryIndex], hideValues);
   }
+  
+  console.log('[APP] User list updated with', users.length, 'users');
 }
 
 /**
