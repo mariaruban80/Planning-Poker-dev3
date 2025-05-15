@@ -2106,11 +2106,15 @@ function handleSocketMessage(message) {
       break;
 
          case 'storySelected':
-      if (typeof message.storyIndex === 'number') {
-      console.log('[SOCKET] Story selected from server:', message.storyIndex);
+     if (typeof message.storyIndex === 'number') {
+    console.log('[SOCKET] Story selected from server:', message.storyIndex);
+    
+    // Delay the call slightly to allow the UI to be ready
+    setTimeout(() => {
       selectStory(message.storyIndex, false); // false to avoid re-emitting
-      }
-      break;
+    }, 100);
+  }
+  break;
       
     case 'storyVotes':
       // Handle received votes for a specific story
