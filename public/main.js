@@ -2227,99 +2227,214 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Update initializeApp to handle reconnection
-function initializeApp(roomId, isReconnecting) {
-  // Inject emergency CSS to ensure visibility
-  injectEmergencyCSS();
+// At the top of your main.js file (with the existing globals):
+let reconnecting = false;
+
+// Update the initializeApp function to ensure it doesn't break user list display:
+function initializeApp(roomId, isReconnecting = false) {
+  console.log(`[APP] Initializing app with roomId: ${roomId}, userName: ${userName || 'unknown'}`);
   
-  console.log(`[APP] Initializing app with roomId: ${roomId}, userName: ${userName}, reconnecting: ${isReconnecting}`);
+  // Store userName in sessionStorage for reconnection
+  if (userName) {
+    sessionStorage.setItem('userName', userName);
+    sessionStorage.setItem('lastRoomId', roomId);
+  }
+  
+  // Ensure planning cards container exists
+  const planningCardsContainer = document.getElementById('planningCards');
+  if (!planningCardsContainer) {
+    console.error('[APP] Planning cards container not found!');
+  } else {
+    console.log('[APP] Planning cards container found');
+  }
+  
+  // Ensure user list container exists
+  const userListContainer = document.getElementById('userList');
+  if (!userListContainer) {
+    console.error('[APP] User list container not found!');
+  } else {
+    console.log('[APP] User list container found');
+  }
+  
+  // Emergency styles to ensure visibility
+  injectEmergencyCSS();
   
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+  if (!socket) {
+    console.error('[APP] Failed to initialize WebSocket!');
+    return;
+  }
   
-  // Store reconnecting state
-  reconnecting = isReconnecting;
-  
-  // Guest: Listen for host's voting system
+  // Listen for voting system updates
   socket.on('votingSystemUpdate', ({ votingSystem }) => {
     console.log('[SOCKET] Received voting system from host:', votingSystem);
     sessionStorage.setItem('votingSystem', votingSystem);
     setupPlanningCards(); // Dynamically regenerate vote cards
   });
 
-  // Host: Emit selected voting system to server
-  const isHost = sessionStorage.getItem('isHost') === 'true';
-  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
-
-  if (isHost && socket) {
-    socket.emit('votingSystemSelected', { roomId, votingSystem });
-  }
-
+  // Setup UI components
   updateHeaderStyle();
   addFixedVoteStatisticsStyles();
+  
+  // Setup functional components
   setupCSVUploader();
   setupInviteButton();
+  setupVoteCardsDrag(); // Setup drag before setting up planning cards
+  setupPlanningCards(); // Setup planning cards
   setupStoryNavigation();
-  setupPlanningCards(); // generates the cards AND sets up drag listeners
   setupRevealResetButtons();
   setupAddTicketButton();
-  setupGuestModeRestrictions(); 
+  setupGuestModeRestrictions();
   setupStoryCardInteractions();
   
-  // Add CSS for new layout
+  // Add CSS for layout
   addNewLayoutStyles();
   
-  // Force redraw of UI elements after a delay
+  // Force redraw UI elements after delay
   setTimeout(() => {
+    console.log('[APP] Forcing redraw of planning cards and user list');
     forceRedrawPlanningCards();
     forceRedrawUserList();
   }, 500);
 }
 
-/**
- * Initialize the application
- */
-function initializeApp(roomId) {
-  // Inject emergency CSS to ensure visibility
-  injectEmergencyCSS();
+// Update DOMContentLoaded to handle reconnection
+document.addEventListener('DOMContentLoaded', () => {
+  // Check for username waiting (for invite flow)
+  if (window.userNameReady === false) {
+    console.log('[APP] Waiting for username before initializing app');
+    return; 
+  }
   
-  // Initialize socket with userName from sessionStorage
-  socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+  // Check for stored session data (for reconnection)
+  const storedUserName = sessionStorage.getItem('userName');
+  const lastRoomId = sessionStorage.getItem('lastRoomId');
   
-  // Guest: Listen for host's voting system
-  socket.on('votingSystemUpdate', ({ votingSystem }) => {
-    console.log('[SOCKET] Received voting system from host:', votingSystem);
-    sessionStorage.setItem('votingSystem', votingSystem);
-    setupPlanningCards(); // Dynamically regenerate vote cards
+  if (storedUserName) {
+    userName = storedUserName;
+    console.log(`[APP] Using stored username: ${userName}`);
+  }
+  
+  // Get roomId from URL or stored value
+  let roomId = getRoomIdFromURL();
+  if (!roomId && lastRoomId) {
+    roomId = lastRoomId;
+    console.log(`[APP] Using stored room ID: ${roomId}`);
+  } else if (!roomId) {
+    roomId = 'room-' + Math.floor(Math.random() * 10000);
+    console.log(`[APP] Generated new room ID: ${roomId}`);
+  }
+  
+  // Ensure roomId is in URL
+  appendRoomIdToURL(roomId);
+  
+  // Initialize with reconnection flag if we have stored data
+  const isReconnecting = !!(storedUserName && lastRoomId);
+  initializeApp(roomId, isReconnecting);
+});
+
+// Fix setupPlanningCards to always properly create cards
+function setupPlanningCards() {
+  console.log('[APP] Setting up planning cards');
+  const container = document.getElementById('planningCards');
+  
+  if (!container) {
+    console.error('[APP] Planning cards container not found!');
+    return;
+  }
+
+  // Clear any existing content
+  container.innerHTML = '';
+  
+  // Ensure container is visible
+  container.style.display = 'flex';
+  container.style.flexWrap = 'wrap';
+  container.style.justifyContent = 'center';
+  container.style.gap = '10px';
+  container.style.margin = '20px 0';
+  
+  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+  console.log('[APP] Using voting system:', votingSystem);
+
+  const scales = {
+    fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21'],
+    shortFib: ['0', '½', '1', '2', '3'],
+    tshirt: ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    tshirtNum: ['XS (1)', 'S (2)', 'M (3)', 'L (5)', 'XL (8)', 'XXL (13)'],
+    custom: ['?', '☕', '∞']
+  };
+
+  const values = scales[votingSystem] || scales.fibonacci;
+
+  values.forEach(value => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('data-value', value);
+    card.setAttribute('draggable', 'true');
+    card.textContent = value;
+    
+    // Apply inline styles to ensure visibility
+    card.style.width = '45px';
+    card.style.height = '50px';
+    card.style.padding = '10px';
+    card.style.background = '#cfc6f7';
+    card.style.borderRadius = '8px';
+    card.style.cursor = 'grab';
+    card.style.fontWeight = 'bold';
+    card.style.fontSize = '18px';
+    card.style.display = 'flex';
+    card.style.alignItems = 'center';
+    card.style.justifyContent = 'center';
+    card.style.margin = '5px';
+    
+    container.appendChild(card);
   });
-
-  // Host: Emit selected voting system to server
-  const isHost = sessionStorage.getItem('isHost') === 'true';
-  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
-
-  if (isHost && socket) {
-    socket.emit('votingSystemSelected', { roomId, votingSystem });
-  }
-
-  updateHeaderStyle();
-  addFixedVoteStatisticsStyles();
-  setupCSVUploader();
-  setupInviteButton();
-  setupStoryNavigation();
-  setupPlanningCards(); // generates the cards AND sets up drag listeners
-  setupRevealResetButtons();
-  setupAddTicketButton();
-  setupGuestModeRestrictions(); 
-  setupStoryCardInteractions();
   
-  // Add CSS for new layout
-  addNewLayoutStyles();
-  
-  // Force redraw of UI elements after a delay
-  setTimeout(() => {
-    forceRedrawPlanningCards();
-    forceRedrawUserList();
-  }, 500);
+  console.log(`[APP] Created ${values.length} planning cards`);
+
+  // Re-enable drag functionality  
+  setupVoteCardsDrag();
 }
+
+// Force redraw of user list with improved error handling
+function forceRedrawUserList() {
+  console.log('[APP] Forcing redraw of user list');
+  
+  // Create fallback user entry for the current user
+  const userListContainer = document.getElementById('userList');
+  if (!userListContainer) {
+    console.error('[APP] Cannot redraw user list - container not found');
+    return;
+  }
+  
+  // Request user list from server if connected
+  if (socket && socket.connected) {
+    console.log('[APP] Requesting updated user list from server');
+    socket.emit('requestUserList');
+  } else {
+    console.warn('[APP] Cannot request user list - socket not connected');
+    
+    // Add a fallback entry for just the current user
+    if (userName) {
+      console.log('[APP] Adding fallback user entry for', userName);
+      
+      // Clear and rebuild
+      userListContainer.innerHTML = '';
+      
+      const userEntry = document.createElement('div');
+      userEntry.classList.add('user-entry');
+      userEntry.id = `user-self`;
+      userEntry.innerHTML = `
+        <img src="${generateAvatarUrl(userName)}" class="avatar" alt="${userName}">
+        <span class="username">${userName}</span>
+        <span class="vote-badge"></span>
+      `;
+      userListContainer.appendChild(userEntry);
+    }
+  }
+}
+
 
 // Modify the existing DOMContentLoaded event handler to check if username is ready
 document.addEventListener('DOMContentLoaded', () => {
