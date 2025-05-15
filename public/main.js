@@ -320,7 +320,18 @@ function fixRevealedVoteFontSizes() {
     badge.style.display = 'block';
   });
 }
-
+/**
+ * Update header style
+ */
+function updateHeaderStyle() {
+  const header = document.querySelector('header');
+  if (header) {
+    header.style.backgroundColor = '#673ab7'; // Purple background
+    header.style.color = 'white';
+    header.style.padding = '10px 0';
+    header.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+  }
+}
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
   const existingStyle = document.getElementById('fixed-vote-statistics-styles');
