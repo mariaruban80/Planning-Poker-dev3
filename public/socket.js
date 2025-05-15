@@ -20,7 +20,6 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.error('[SOCKET] Cannot initialize without a username');
     return null;
   }
-     console.log('[SOCKET] Initializing with roomId:', roomIdentifier, 'userName:', userNameValue);
   // Store params for potential reconnection
   roomId = roomIdentifier;
   userName = userNameValue;
@@ -33,41 +32,27 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     reconnectionDelay: 1000,
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
- // Socket event handlers with better logging
+
+  socket.on('addTicket', ({ ticketData }) => {
+  console.log('[SOCKET] Received new ticket from another user:', ticketData);
+  handleMessage({ type: 'addTicket', ticketData });
+});
+
+socket.on('allTickets', ({ tickets }) => {
+  console.log('[SOCKET] Received all tickets:', tickets.length);
+  handleMessage({ type: 'allTickets', tickets });
+});
+
+  // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
-    
-    // Important: Make sure to pass the username when joining
-    socket.emit('joinRoom', { 
-      roomId: roomIdentifier, 
-      userName: userNameValue
-    });
-      // If we previously had a story selected, request its votes
-    if (selectedStoryIndex !== null) {
-      setTimeout(() => {
-        console.log('[SOCKET] Requesting votes for current story after reconnection');
-        socket.emit('requestStoryVotes', { storyIndex: selectedStoryIndex });
-      }, 500);
-    }
-    
-    // Notify handler that we're connected
-    handleMessage({ type: 'connect' });
-  });
-  socket.on('addTicket', ({ ticketData }) => {
-    console.log('[SOCKET] Received new ticket from another user:', ticketData);
-    handleMessage({ type: 'addTicket', ticketData });
-  });
-
-  socket.on('allTickets', ({ tickets }) => {
-    console.log('[SOCKET] Received all tickets:', tickets.length);
-    handleMessage({ type: 'allTickets', tickets });
+    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
   });
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
   });
-  
-  // Voting system updates
+   // ADD THE NEW HANDLER RIGHT HERE, among the other socket.on handlers
   socket.on('votingSystemUpdate', data => {
     console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
     // Forward this to the handler
@@ -89,11 +74,6 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.log('[SOCKET] Story selected event received:', storyIndex);
     selectedStoryIndex = storyIndex;
     handleMessage({ type: 'storySelected', storyIndex });
-    
-    // After story selection, request votes for this story
-    setTimeout(() => {
-      requestStoryVotes(storyIndex);
-    }, 100);
   });
 
   socket.on('voteUpdate', ({ userId, vote, storyIndex }) => {
@@ -103,12 +83,6 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
 
   socket.on('storyVotes', ({ storyIndex, votes }) => {
     console.log('[SOCKET] Received votes for story', storyIndex, ':', Object.keys(votes).length, 'votes');
-    
-    // Store the story index immediately
-    if (selectedStoryIndex === null) {
-      selectedStoryIndex = storyIndex;
-    }
-    
     handleMessage({ type: 'storyVotes', storyIndex, votes });
   });
 
@@ -187,7 +161,9 @@ export function emitStorySelected(index) {
 export function emitVote(vote, targetUserId) {
   if (socket) {
     console.log('[SOCKET] Casting vote for user', targetUserId);
-    socket.emit('castVote', { vote, targetUserId });
+//    socket.emit('castVote', { vote, targetUserId });
+     socket.emit('castVote', { vote, targetUserId }); // where targetUserId is now the `userName`
+
   }
 }
 
@@ -196,14 +172,9 @@ export function emitVote(vote, targetUserId) {
  * @param {number} storyIndex - Index of the story
  */
 export function requestStoryVotes(storyIndex) {
-  if (socket && socket.connected) {
+  if (socket) {
     console.log('[SOCKET] Requesting votes for story:', storyIndex);
     socket.emit('requestStoryVotes', { storyIndex });
-    
-    // Update selected story index for reconnection purposes
-    selectedStoryIndex = storyIndex;
-  } else {
-    console.warn('[SOCKET] Cannot request votes - socket not connected');
   }
 }
 
