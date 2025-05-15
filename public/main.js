@@ -77,7 +77,7 @@ window.initializeSocketWithName = function(roomId, name) {
   userName = name;
   
   // Initialize socket with the name
-  socket = initializeWebSocket(roomId, name, handleSocketMessage);
+  socket = initializeWebSocket(roomId, name,userId, handleSocketMessage);
   
   // Continue with other initialization steps
   setupCSVUploader();
@@ -393,7 +393,7 @@ function appendRoomIdToURL(roomId) {
  */
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
-  socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+  socket = initializeWebSocket(roomId, userName,userId, handleSocketMessage);
 //  Guest: Listen for host's voting system
 socket.on('votingSystemUpdate', ({ votingSystem }) => {
   console.log('[SOCKET] Received voting system from host:', votingSystem);
@@ -1569,7 +1569,7 @@ const currentUserId = userId;
   users.forEach(user => {
     const userEntry = document.createElement('div');
     userEntry.classList.add('user-entry');
-    userEntry.id = `user-${user.id}`;
+    userEntry.id = `user-${user.userId}`;
     userEntry.innerHTML = `
       <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
       <span class="username">${user.name}</span>
@@ -1601,7 +1601,7 @@ const currentUserId = userId;
   topVoteRow.classList.add('vote-row');
   
   topUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.userId);
     topVoteRow.appendChild(voteCard);
   });
 
@@ -1637,7 +1637,7 @@ const currentUserId = userId;
   bottomVoteRow.classList.add('vote-row');
   
   bottomUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.userId);
     bottomVoteRow.appendChild(voteCard);
   });
 
@@ -1678,17 +1678,17 @@ const currentUserId = userId;
 function createAvatarContainer(user) {
   const avatarContainer = document.createElement('div');
   avatarContainer.classList.add('avatar-container');
-  avatarContainer.id = `user-circle-${user.id}`;
+  avatarContainer.id = `user-circle-${user.userId}`;
   
   avatarContainer.innerHTML = `
     <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
     <div class="user-name">${user.name}</div>
   `;
   
-  avatarContainer.setAttribute('data-user-id', user.id);
+  avatarContainer.setAttribute('data-user-id', user.userId);
   
   // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
+  const existingVote = votesPerStory[currentStoryIndex]?.[user.userId];
   if (existingVote) {
     avatarContainer.classList.add('has-voted');
   }
@@ -1702,7 +1702,7 @@ function createAvatarContainer(user) {
 function createVoteCardSpace(user, isCurrentUser) {
   const voteCard = document.createElement('div');
   voteCard.classList.add('vote-card-space');
-  voteCard.id = `vote-space-${user.id}`;
+  voteCard.id = `vote-space-${user.userId}`;
   
   // Add visual indication if this is current user's vote space
   if (isCurrentUser) {
@@ -1746,7 +1746,7 @@ function createVoteCardSpace(user, isCurrentUser) {
   }
   
   // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
+  const existingVote = votesPerStory[currentStoryIndex]?.[user.userId];
   if (existingVote) {
     voteCard.classList.add('has-vote');
     voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '👍';
