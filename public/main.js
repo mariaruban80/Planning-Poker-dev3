@@ -1,6 +1,7 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
+let reconnecting = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket } from './socket.js'; 
 
@@ -2150,6 +2151,10 @@ window.addTicketFromModal = function(ticketData) {
 /**
  * Initialize socket with a specific name (used when joining via invite)
  */
+// Add this to the top of main.js with other global variables
+let reconnecting = false;
+
+// Enhance socket initialization to handle reconnection
 window.initializeSocketWithName = function(roomId, name) {
   if (!roomId || !name) return;
   
@@ -2157,6 +2162,10 @@ window.initializeSocketWithName = function(roomId, name) {
   
   // Set username in the module scope
   userName = name;
+  
+  // Store in sessionStorage to persist across page refreshes
+  sessionStorage.setItem('userName', name);
+  sessionStorage.setItem('lastRoomId', roomId);
   
   // Initialize socket with the name
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
@@ -2180,6 +2189,93 @@ window.initializeSocketWithName = function(roomId, name) {
     forceRedrawUserList();
   }, 500);
 };
+
+// Modify the DOMContentLoaded handler to check for previous session
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if we're waiting for a username (joining via invite)
+  if (window.userNameReady === false) {
+    console.log('[APP] Waiting for username before initializing app');
+    return; // Exit early, we'll initialize after username is provided
+  }
+  
+  // Check if we're reconnecting from a previous session
+  const lastRoomId = sessionStorage.getItem('lastRoomId');
+  const storedUserName = sessionStorage.getItem('userName');
+  
+  if (lastRoomId && storedUserName) {
+    // We have previous session info, try to reconnect
+    reconnecting = true;
+    console.log(`[APP] Reconnecting to previous session: ${storedUserName} in room ${lastRoomId}`);
+    
+    // Grab the room ID from URL if present, otherwise use stored one
+    let roomId = getRoomIdFromURL() || lastRoomId;
+    appendRoomIdToURL(roomId);
+    
+    // Use stored username
+    userName = storedUserName;
+    
+    // Initialize with reconnection flag
+    initializeApp(roomId, true);
+    return;
+  }
+  
+  // Normal initialization for users who haven't joined before
+  let roomId = getRoomIdFromURL();
+  if (!roomId) {
+    roomId = 'room-' + Math.floor(Math.random() * 10000);
+  }
+  appendRoomIdToURL(roomId);
+  initializeApp(roomId, false);
+});
+
+// Update initializeApp to handle reconnection
+function initializeApp(roomId, isReconnecting) {
+  // Inject emergency CSS to ensure visibility
+  injectEmergencyCSS();
+  
+  console.log(`[APP] Initializing app with roomId: ${roomId}, userName: ${userName}, reconnecting: ${isReconnecting}`);
+  
+  // Initialize socket with userName from sessionStorage
+  socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+  
+  // Store reconnecting state
+  reconnecting = isReconnecting;
+  
+  // Guest: Listen for host's voting system
+  socket.on('votingSystemUpdate', ({ votingSystem }) => {
+    console.log('[SOCKET] Received voting system from host:', votingSystem);
+    sessionStorage.setItem('votingSystem', votingSystem);
+    setupPlanningCards(); // Dynamically regenerate vote cards
+  });
+
+  // Host: Emit selected voting system to server
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+
+  if (isHost && socket) {
+    socket.emit('votingSystemSelected', { roomId, votingSystem });
+  }
+
+  updateHeaderStyle();
+  addFixedVoteStatisticsStyles();
+  setupCSVUploader();
+  setupInviteButton();
+  setupStoryNavigation();
+  setupPlanningCards(); // generates the cards AND sets up drag listeners
+  setupRevealResetButtons();
+  setupAddTicketButton();
+  setupGuestModeRestrictions(); 
+  setupStoryCardInteractions();
+  
+  // Add CSS for new layout
+  addNewLayoutStyles();
+  
+  // Force redraw of UI elements after a delay
+  setTimeout(() => {
+    forceRedrawPlanningCards();
+    forceRedrawUserList();
+  }, 500);
+}
 
 /**
  * Initialize the application
