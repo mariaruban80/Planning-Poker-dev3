@@ -1,5 +1,12 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
+if (!userName) {
+  userName = prompt("Enter your name to join the room:");
+  if (userName) {
+    sessionStorage.setItem('userName', userName);
+  }
+}
+
 let userId = localStorage.getItem('userId');
 if (!userId) {
   userId = crypto.randomUUID(); // or use Date.now() + Math.random() as a fallback
@@ -91,23 +98,6 @@ window.initializeSocketWithName = function(roomId, name) {
   // Add CSS for new layout
   addNewLayoutStyles();
 };
-
-// Modify the existing DOMContentLoaded event handler to check if username is ready
-document.addEventListener('DOMContentLoaded', () => {
-  // Check if we're waiting for a username (joining via invite)
-  if (window.userNameReady === false) {
-    console.log('[APP] Waiting for username before initializing app');
-    return; // Exit early, we'll initialize after username is provided
-  }
-  
-  // Normal initialization for users who already have a name
-  let roomId = getRoomIdFromURL();
-  if (!roomId) {
-    roomId = 'room-' + Math.floor(Math.random() * 10000);
-  }
-  appendRoomIdToURL(roomId);
-  initializeApp(roomId);
-});
 
 // Global state variables
 let pendingStoryIndex = null;
@@ -392,6 +382,8 @@ function appendRoomIdToURL(roomId) {
  * Initialize the application
  */
 function initializeApp(roomId) {
+  const userName = sessionStorage.getItem('userName');
+const userId = localStorage.getItem('userId');
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName,userId, handleSocketMessage);
 //  Guest: Listen for host's voting system
@@ -2179,10 +2171,31 @@ function handleSocketMessage(message) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-  let roomId = getRoomIdFromURL();
-  if (!roomId) {
-    roomId = 'room-' + Math.floor(Math.random() * 10000);
+  let userName = sessionStorage.getItem('userName');
+
+  if (!userName) {
+    userName = prompt("Enter your name to join the room:");
+    if (userName) {
+      sessionStorage.setItem('userName', userName);
+      window.userNameReady = true;
+    } else {
+      console.warn('[APP] Username is required to join the room.');
+      return;
+    }
+  } else {
+    window.userNameReady = true;
   }
-  appendRoomIdToURL(roomId);
-  initializeApp(roomId);
+
+  if (window.userNameReady) {
+    console.log('[APP] Username is:', userName);
+
+    let roomId = getRoomIdFromURL();
+    if (!roomId) {
+      roomId = 'room-' + Math.floor(Math.random() * 10000);
+    }
+
+    appendRoomIdToURL(roomId);
+    initializeApp(roomId); // This should use userName + userId from storage
+  }
 });
+
