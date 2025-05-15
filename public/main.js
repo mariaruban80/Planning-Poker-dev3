@@ -3,7 +3,182 @@ let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
+**
+ * Handle socket messages
+ * Define this function before using it in initializeApp()
+ */
+function handleSocketMessage(message) {
+  const eventType = message.type;
+  
+  // console.log(`[SOCKET] Received ${eventType}:`, message);
+  
+  switch(eventType) {
+    case 'userList':
+      // Update the user list when server sends an updated list
+      if (Array.isArray(message.users)) {
+        updateUserList(message.users);
+      }
+      break;
 
+    case 'addTicket':
+      // Handle ticket added by another user
+      if (message.ticketData) {
+        console.log('[SOCKET] New ticket received:', message.ticketData);
+        // Add ticket to UI without selecting it (to avoid loops)
+        addTicketToUI(message.ticketData, false);
+         applyGuestRestrictions();
+      }
+      break;
+    
+    case 'votingSystemUpdate':
+      console.log('[DEBUG] Got voting system update:', message.votingSystem);
+      sessionStorage.setItem('votingSystem', message.votingSystem);
+      setupPlanningCards(); // Regenerate cards
+      break;
+
+    case 'allTickets':
+      // Handle receiving all tickets (used when joining a room)
+      if (Array.isArray(message.tickets)) {
+        console.log('[SOCKET] Received all tickets:', message.tickets.length);
+        processAllTickets(message.tickets);
+         applyGuestRestrictions();
+      }
+      break;
+      
+    case 'userJoined':
+      // Individual user joined - could update existing list
+      break;
+      
+    case 'userLeft':
+      // Handle user leaving
+      break;
+      
+    case 'voteReceived':
+    case 'voteUpdate':
+      // Handle vote received
+      if (message.userId && message.vote) {
+        if (!votesPerStory[currentStoryIndex]) {
+          votesPerStory[currentStoryIndex] = {};
+        }
+        votesPerStory[currentStoryIndex][message.userId] = message.vote;
+        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
+      }
+      break;
+      
+    case 'votesRevealed':
+      // Handle votes revealed
+      votesRevealed[currentStoryIndex] = true;
+      if (votesPerStory[currentStoryIndex]) {
+        handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
+      } else {
+        console.log('[WARN] Votes revealed but no votes found for story index:', currentStoryIndex);
+        
+        // If no votes found, still show empty statistics
+        handleVotesRevealed(currentStoryIndex, {});
+      }
+      triggerGlobalEmojiBurst();
+      break;
+      
+    case 'votesReset':
+      // Handle votes reset
+      if (votesPerStory[currentStoryIndex]) {
+        votesPerStory[currentStoryIndex] = {};
+      }
+      votesRevealed[currentStoryIndex] = false;
+      resetAllVoteVisuals();
+      // ✅ Hide vote statistics and show planning cards again
+      const planningCardsSection = document.querySelector('.planning-cards-section');
+      const statsContainer = document.querySelector('.vote-statistics-container');
+      
+      if (planningCardsSection) planningCardsSection.style.display = 'block';
+      if (statsContainer) statsContainer.style.display = 'none';
+      break;
+
+    case 'storySelected':
+      if (typeof message.storyIndex === 'number') {
+        console.log('[SOCKET] Story selected from server:', message.storyIndex);
+        selectStory(message.storyIndex, false); // false to avoid re-emitting
+      }
+      break;
+      
+    case 'storyVotes':
+      // Handle received votes for a specific story
+      if (message.storyIndex !== undefined && message.votes) {
+        votesPerStory[message.storyIndex] = message.votes;
+        // Update UI if this is the current story and votes are revealed
+        if (message.storyIndex === currentStoryIndex && votesRevealed[currentStoryIndex]) {
+          applyVotesToUI(message.votes, false);
+        }
+      }
+      break;
+      
+    case 'syncCSVData':
+      // Handle CSV data sync with improved handling
+      if (Array.isArray(message.csvData)) {
+        console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
+        
+        // Store the CSV data
+        csvData = message.csvData;
+        csvDataLoaded = true;
+        
+        // Temporarily save manually added tickets to preserve them
+        const storyList = document.getElementById('storyList');
+        const manualTickets = [];
+        
+        if (storyList) {
+          const manualStoryCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+          manualStoryCards.forEach(card => {
+            const title = card.querySelector('.story-title');
+            if (title) {
+              manualTickets.push({
+                id: card.id,
+                text: title.textContent
+              });
+            }
+          });
+        }
+        
+        console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
+        
+        // Display CSV data (this will clear CSV stories but preserve manual ones)
+        displayCSVData(csvData);
+        
+        // We don't need to re-add manual tickets because displayCSVData now preserves them
+        
+        // Update UI
+        renderCurrentStory();
+      }
+      break;
+
+    case 'addTicket':
+      // Handle new ticket added by another user
+      if (message.ticketData) {
+        console.log('[SOCKET] New ticket received:', message.ticketData);
+        // Add ticket to UI without selecting it (to avoid loops)
+        addTicketToUI(message.ticketData, false);
+      }
+      break;
+      
+    case 'allTickets':
+      // Handle receiving all tickets (used when joining a room)
+      if (Array.isArray(message.tickets)) {
+        console.log('[SOCKET] Received all tickets:', message.tickets.length);
+        processAllTickets(message.tickets);
+      }
+      break;
+      
+    case 'connect':
+      // When connection is established, request tickets
+      setTimeout(() => {
+        if (socket && socket.connected && !hasRequestedTickets) {
+          console.log('[SOCKET] Connected, requesting all tickets');
+          socket.emit('requestAllTickets');
+          hasRequestedTickets = true;
+        }
+      }, 500);
+      break;
+  }
+}
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
 
