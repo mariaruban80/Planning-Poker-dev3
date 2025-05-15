@@ -2331,7 +2331,15 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
     }
   }, { once: true });
 </script>
-    
+   <script>
+  // Helper function to hide all original modals
+  function hideAllOriginalModals() {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+      modal.style.display = 'none';
+    });
+  }
+</script> 
   
     <script type="module" src="main.js"></script>
 </body>
