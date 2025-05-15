@@ -1549,6 +1549,7 @@ function renderCurrentStory() {
  */
 
 function updateUserList(users) {
+  const safeId = sanitizeId(user.name);
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
   
@@ -1771,7 +1772,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
   
   // Update badges in sidebar
-  const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
+  const sidebarBadge = document.querySelector(`#user-${safeId} .vote-badge`);
   if (sidebarBadge) {
     // Only set content if the user has voted
     if (hasVoted) {
