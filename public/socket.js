@@ -14,7 +14,7 @@ let userName = null;
  * @param {Function} handleMessage - Callback to handle incoming messages
  * @returns {Object} - Socket instance for external reference
  */
-export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage) {
+export function initializeWebSocket(roomIdentifier, userNameValue,userId, handleMessage) {
    // First verify that we have a valid username
   if (!userNameValue) {
     console.error('[SOCKET] Cannot initialize without a username');
@@ -46,7 +46,7 @@ socket.on('allTickets', ({ tickets }) => {
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
-    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue, userId });
   });
 
   socket.on('userList', (users) => {
