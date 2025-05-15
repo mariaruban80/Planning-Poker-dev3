@@ -20,6 +20,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.error('[SOCKET] Cannot initialize without a username');
     return null;
   }
+     console.log('[SOCKET] Initializing with roomId:', roomIdentifier, 'userName:', userNameValue);
   // Store params for potential reconnection
   roomId = roomIdentifier;
   userName = userNameValue;
@@ -32,23 +33,16 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     reconnectionDelay: 1000,
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
-
-  socket.on('addTicket', ({ ticketData }) => {
-    console.log('[SOCKET] Received new ticket from another user:', ticketData);
-    handleMessage({ type: 'addTicket', ticketData });
-  });
-
-  socket.on('allTickets', ({ tickets }) => {
-    console.log('[SOCKET] Received all tickets:', tickets.length);
-    handleMessage({ type: 'allTickets', tickets });
-  });
-
-  // Socket event handlers
+ // Socket event handlers with better logging
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
-    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
     
-    // Request votes for current story if one is selected
+    // Important: Make sure to pass the username when joining
+    socket.emit('joinRoom', { 
+      roomId: roomIdentifier, 
+      userName: userNameValue
+    });
+      // If we previously had a story selected, request its votes
     if (selectedStoryIndex !== null) {
       setTimeout(() => {
         console.log('[SOCKET] Requesting votes for current story after reconnection');
@@ -58,6 +52,15 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     
     // Notify handler that we're connected
     handleMessage({ type: 'connect' });
+  });
+  socket.on('addTicket', ({ ticketData }) => {
+    console.log('[SOCKET] Received new ticket from another user:', ticketData);
+    handleMessage({ type: 'addTicket', ticketData });
+  });
+
+  socket.on('allTickets', ({ tickets }) => {
+    console.log('[SOCKET] Received all tickets:', tickets.length);
+    handleMessage({ type: 'allTickets', tickets });
   });
 
   socket.on('userList', (users) => {
