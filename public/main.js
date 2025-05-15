@@ -2105,23 +2105,64 @@ function handleSocketMessage(message) {
   if (statsContainer) statsContainer.style.display = 'none';
       break;
 
-         case 'storySelected':
+   /*      case 'storySelected':
      if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
     selectStory(message.storyIndex, false); // false to avoid re-emitting
   }
+  break; */
+case 'storySelected':
+  if (typeof message.storyIndex === 'number') {
+    console.log('[SOCKET] Story selected from server:', message.storyIndex);
+    
+    currentStoryIndex = message.storyIndex;
+
+    // Delay to ensure DOM (story cards) are ready
+    setTimeout(() => {
+      selectStory(message.storyIndex, false); // false = don't emit back to server
+      setupPlanningCards();     // recreate vote cards
+      setupVoteCardsDrag();     // re-enable drag-and-drop
+    }, 100);
+  }
   break;
+
+     case 'votesRevealed':
+  if (typeof message.storyIndex === 'number') {
+    console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
+    votesRevealed[message.storyIndex] = true;
+
+    // Re-apply vote visuals if it's the currently selected story
+    if (message.storyIndex === currentStoryIndex) {
+      const currentVotes = votesPerStory[message.storyIndex] || {};
+      applyVotesToUI(currentVotes, false); // false = don't hide values
+    }
+  }
+  break;
+ 
       
     case 'storyVotes':
+
+      if (typeof message.storyIndex === 'number') {
+    console.log('[SOCKET] Received votes for story:', message.storyIndex);
+
+    // Store the votes
+    votesPerStory[message.storyIndex] = message.votes;
+
+    // Apply to UI only if it's the currently selected story
+    if (message.storyIndex === currentStoryIndex) {
+      applyVotesToUI(message.votes, !votesRevealed[message.storyIndex]);
+    }
+  }
+         break;
       // Handle received votes for a specific story
-      if (message.storyIndex !== undefined && message.votes) {
+ /*     if (message.storyIndex !== undefined && message.votes) {
         votesPerStory[message.storyIndex] = message.votes;
         // Update UI if this is the current story and votes are revealed
         if (message.storyIndex === currentStoryIndex && votesRevealed[currentStoryIndex]) {
           applyVotesToUI(message.votes, false);
         }
       }
-      break;
+      break; */
       
     case 'syncCSVData':
        // Handle CSV data sync with improved handling
