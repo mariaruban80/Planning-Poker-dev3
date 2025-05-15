@@ -145,6 +145,9 @@ function fixRevealedVoteFontSizes() {
     badge.style.display = 'block';
   });
 }
+function sanitizeId(name) {
+  return name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
+}
 
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
@@ -1563,7 +1566,7 @@ function updateUserList(users) {
     const userEntry = document.createElement('div');
     userEntry.classList.add('user-entry');
     // userEntry.id = `user-${user.id}`;
-    userEntry.id = `user-${user.name}`;
+    userEntry.id = `user-${safeId}`;
     userEntry.innerHTML = `
       <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
       <span class="username">${user.name}</span>
@@ -1673,7 +1676,7 @@ function createAvatarContainer(user) {
   const avatarContainer = document.createElement('div');
   avatarContainer.classList.add('avatar-container');
 //  avatarContainer.id = `user-circle-${user.id}`;
-  avatarContainer.id = `user-circle-${user.name}`;
+  avatarContainer.id = `user-circle-${safeId}`;
 
   avatarContainer.innerHTML = `
     <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
@@ -1696,10 +1699,11 @@ function createAvatarContainer(user) {
  * Create vote card space for a user
  */
 function createVoteCardSpace(user, isCurrentUser) {
+  const safeId = sanitizeId(user.name);
   const voteCard = document.createElement('div');
   voteCard.classList.add('vote-card-space');
  // voteCard.id = `vote-space-${user.id}`;
-  voteCard.id = `vote-space-${user.name}`;
+  voteCard.id = `vote-space-${safeId}`;
 
   
   // Add visual indication if this is current user's vote space
@@ -1762,6 +1766,7 @@ function createVoteCardSpace(user, isCurrentUser) {
  * Update vote visuals for a user
  */
 function updateVoteVisuals(userId, vote, hasVoted = false) {
+  const safeId = sanitizeId(userId);
   // Determine what to show based on reveal state
   const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
   
@@ -1779,7 +1784,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   }
   
   // Update vote card space
-  const voteSpace = document.querySelector(`#vote-space-${userId}`);
+  const voteSpace = document.querySelector(`#vote-space-${safeId}`);
   if (voteSpace) {
     const voteBadge = voteSpace.querySelector('.vote-badge');
     if (voteBadge) {
@@ -1803,7 +1808,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
 
   // Update avatar to show they've voted
   if (hasVoted) {
-    const avatarContainer = document.querySelector(`#user-circle-${userId}`);
+    const avatarContainer = document.querySelector(`#user-circle-${safeId}`);
     if (avatarContainer) {
       avatarContainer.classList.add('has-voted');
       
@@ -1814,7 +1819,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
     }
     
     // Also update sidebar avatar
-    const sidebarAvatar = document.querySelector(`#user-${userId} img.avatar`);
+    const sidebarAvatar = document.querySelector(`#user-${safeId} img.avatar`);
     if (sidebarAvatar) {
       sidebarAvatar.style.backgroundColor = '#c1e1c1';
     }
