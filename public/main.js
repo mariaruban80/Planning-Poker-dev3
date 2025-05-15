@@ -1414,53 +1414,53 @@ if (isHost) {
  */
 function selectStory(index, emitToServer = true) {
   console.log('[UI] Story selected by user:', index);
-  
-  // Update UI first for responsiveness
+
+  // Update story card highlight
   document.querySelectorAll('.story-card').forEach(card => {
     card.classList.remove('selected', 'active');
   });
-  
+
   const storyCard = document.querySelector(`.story-card[data-index="${index}"]`);
   if (storyCard) {
     storyCard.classList.add('selected', 'active');
   }
-  
-  // Update local state
+
+  // Update state
   currentStoryIndex = index;
-  // ✅ Ensure vote reveal state is initialized
+
+  // Ensure reveal state is initialized
   if (typeof votesRevealed[index] === 'undefined') {
     votesRevealed[index] = false;
   }
- // Show planning cards again and hide statistics when changing stories
+
+  // Show planning cards or stats depending on reveal state
   const planningCardsSection = document.querySelector('.planning-cards-section');
   const statsContainer = document.querySelector('.vote-statistics-container');
-  
-  if (planningCardsSection) {
-    planningCardsSection.style.display = 'block';
+
+  if (votesRevealed[index]) {
+    handleVotesRevealed(index, votesPerStory[index] || {});
+  } else {
+    if (planningCardsSection) planningCardsSection.style.display = 'block';
+    if (statsContainer) statsContainer.style.display = 'none';
   }
-  
-  if (statsContainer) {
-    statsContainer.style.display = 'none';
-  }
-  
+
   renderCurrentStory();
-  
-  // Reset or restore vote badges for the current story
   resetOrRestoreVotes(index);
-  
-  // Notify server about selection if requested
+
+  // ✅ Always request votes, even if we're not emitting selection
+  if (typeof requestStoryVotes === 'function') {
+    requestStoryVotes(index);
+  } else if (socket) {
+    socket.emit('requestStoryVotes', { storyIndex: index });
+  }
+
+  // Only emit selection event if requested
   if (emitToServer && socket) {
     console.log('[EMIT] Broadcasting story selection:', index);
     socket.emit('storySelected', { storyIndex: index });
-    
-    // Request votes for this story
-    if (typeof requestStoryVotes === 'function') {
-      requestStoryVotes(index);
-    } else {
-      socket.emit('requestStoryVotes', { storyIndex: index });
-    }
   }
 }
+
 
 /**
  * Reset or restore votes for a story
@@ -2110,16 +2110,21 @@ function handleSocketMessage(message) {
   }
   break; */
 case 'storySelected':
-  if (typeof message.storyIndex === 'number') {
+ if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
-    
+
     currentStoryIndex = message.storyIndex;
 
-    // Delay to ensure DOM (story cards) are ready
+    // Delay to ensure DOM is ready
     setTimeout(() => {
-      selectStory(message.storyIndex, false); // false = don't emit back to server
-      setupPlanningCards();     // recreate vote cards
-      setupVoteCardsDrag();     // re-enable drag-and-drop
+      selectStory(message.storyIndex, false); // Don't re-emit
+      setupPlanningCards();                   // Rebuild vote cards
+      setupVoteCardsDrag();                   // Enable drag and drop
+
+      // ✅ Request votes for this story
+      if (socket) {
+        socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
+      }
     }, 100);
   }
   break;
