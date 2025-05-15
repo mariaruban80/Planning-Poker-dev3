@@ -297,6 +297,14 @@ io.on('connection', (socket) => {
     }
   });
 
+socket.on('requestUserList', () => {
+  const roomId = socket.data.roomId;
+  if (roomId && rooms[roomId]) {
+    console.log(`[SERVER] Client ${socket.id} requested user list for room ${roomId}`);
+    socket.emit('userList', rooms[roomId].users);
+  }
+});
+  
   // Handle disconnections
   socket.on('disconnect', () => {
     const roomId = socket.data.roomId;
