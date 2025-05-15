@@ -1562,7 +1562,8 @@ function updateUserList(users) {
   users.forEach(user => {
     const userEntry = document.createElement('div');
     userEntry.classList.add('user-entry');
-    userEntry.id = `user-${user.id}`;
+    // userEntry.id = `user-${user.id}`;
+    userEntry.id = `user-${user.name}`;
     userEntry.innerHTML = `
       <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
       <span class="username">${user.name}</span>
@@ -1671,8 +1672,9 @@ function updateUserList(users) {
 function createAvatarContainer(user) {
   const avatarContainer = document.createElement('div');
   avatarContainer.classList.add('avatar-container');
-  avatarContainer.id = `user-circle-${user.id}`;
-  
+//  avatarContainer.id = `user-circle-${user.id}`;
+  avatarContainer.id = `user-circle-${user.name}`;
+
   avatarContainer.innerHTML = `
     <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
     <div class="user-name">${user.name}</div>
@@ -1717,20 +1719,21 @@ function createVoteCardSpace(user, isCurrentUser) {
     voteCard.addEventListener('drop', (e) => {
       e.preventDefault();
       const vote = e.dataTransfer.getData('text/plain');
-      const userId = user.id;
+    //  const userId = user.id;
+      const userName = user.name;
 
       if (socket && vote) {
-        socket.emit('castVote', { vote, targetUserId: userId });
+        socket.emit('castVote', { vote, targetUserId: userName });
       }
 
       // Store vote locally
       if (!votesPerStory[currentStoryIndex]) {
         votesPerStory[currentStoryIndex] = {};
       }
-      votesPerStory[currentStoryIndex][userId] = vote;
+      votesPerStory[currentStoryIndex][userName] = vote;
       
       // Update UI - show checkmark if votes aren't revealed
-      updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
+      updateVoteVisuals(userName, votesRevealed[currentStoryIndex] ? vote : '👍', true);
     });
   } else {
     // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
