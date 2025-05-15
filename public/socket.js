@@ -26,12 +26,19 @@ export function initializeWebSocket(roomIdentifier, userNameValue,userId, handle
   userName = userNameValue;
   
   // Initialize socket connection
-  socket = io({
-    transports: ['websocket'],
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
-    query: { roomId: roomIdentifier, userName: userNameValue }
+ socket = io({
+  transports: ['websocket'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  query: { roomId: roomIdentifier, userName: userNameValue }
+});
+
+   // Socket event handlers
+   
+  socket.on('connect', () => {
+    console.log('[SOCKET] Connected to server with ID:', socket.id);
+    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue, userId });
   });
 
   socket.on('addTicket', ({ ticketData }) => {
@@ -44,12 +51,7 @@ socket.on('allTickets', ({ tickets }) => {
   handleMessage({ type: 'allTickets', tickets });
 });
 
-  // Socket event handlers
-   const socket = io(SERVER_URL);
-  socket.on('connect', () => {
-    console.log('[SOCKET] Connected to server with ID:', socket.id);
-    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue, userId });
-  });
+
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
