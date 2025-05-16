@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Planning Poker Interactive</title>
 <style>
      body {
@@ -482,21 +481,20 @@
     /* Show vote values when votes are revealed */
     body.votes-revealed .vote-card-space .vote-badge {
       font-size: 16px !important; /* Base size for revealed votes */
-  max-width: 80% !important;
-  overflow: hidden !important;
-  text-align: center !important;
-  line-height: 1 !important;
+      max-width: 80% !important;
+      overflow: hidden !important;
+      text-align: center !important;
+      line-height: 1 !important;
     }
      /* Special cases for longer text in revealed votes */
-body.votes-revealed .vote-card-space .vote-badge:contains("XX")
-  {    
-  font-size: 14px !important;
-}
+    body.votes-revealed .vote-card-space .vote-badge:contains("XX") {    
+      font-size: 14px !important;
+    }
 
-body.votes-revealed .vote-card-space .vote-badge:contains("XXL"),
-body.votes-revealed .vote-card-space .vote-badge:contains("XXS") {
-  font-size: 12px !important;
-}
+    body.votes-revealed .vote-card-space .vote-badge:contains("XXL"),
+    body.votes-revealed .vote-card-space .vote-badge:contains("XXS") {
+      font-size: 12px !important;
+    }
     
     .reveal-button-container {
       margin: 15px 0;
@@ -505,10 +503,10 @@ body.votes-revealed .vote-card-space .vote-badge:contains("XXS") {
       justify-content: center;
     }
     /* For T-shirt sizing which tends to have longer text */
-.vote-badge:contains("XXS"), 
-.vote-badge:contains("XXL") {
-  font-size: 14px !important;
-}
+    .vote-badge:contains("XXS"), 
+    .vote-badge:contains("XXL") {
+      font-size: 14px !important;
+    }
     .reveal-votes-button {
       padding: 12px 24px;
       font-size: 16px;
@@ -1081,29 +1079,42 @@ white-space: nowrap;
     box-sizing: border-box;
   }
 
-     .card-panel {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ffffff;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  padding: 10px 20px;
-  z-index: 1000;
-}
+  .card-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    border-top: 1px solid #ddd;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    padding: 10px 5px;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+  }
 
-.card-panel .cards {
-  display: flex;
-  gap: 10px;
-}
-
+  .card-panel .cards {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 5px 0;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 5px;
+  }
+  
+  .card-panel .cards::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  .card-panel .cards::-webkit-scrollbar-thumb {
+    background: #673ab7;
+    border-radius: 2px;
+  }
   
   .vote-card-space {
-    width: 55px;
-    height: 85px;
-    min-width: 55px;
+    width: 45px;
+    height: 70px;
+    min-width: 45px;
     margin: 3px;
   }
   
@@ -1115,9 +1126,112 @@ white-space: nowrap;
   body.votes-revealed .vote-card-space .vote-badge:contains("XX") {
     font-size: 12px !important;
   }
+  
+  /* Container layout for mobile */
+  .container {
+    flex-direction: column;
+    height: auto;
+    padding-bottom: 70px; /* Space for fixed card panel */
+  }
+  
+  .sidebar, .rightbar {
+    width: 100%;
+    max-width: 100%;
+    padding: 15px;
+    border: none;
+  }
+  
+  /* Mobile header adjustments */
+  header {
+    padding: 8px 15px;
+  }
+  
+  .logo span {
+    font-size: 16px;
+  }
+  
+  /* Collapsible sections for mobile */
+  .mobile-toggle-button {
+    display: flex;
+    width: 100%;
+    padding: 12px;
+    background: #f5f5f5;
+    border: none;
+    text-align: left;
+    font-weight: bold;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    align-items: center;
+  }
+  
+  .mobile-toggle-button:after {
+    content: "▼";
+    margin-left: auto;
+    transition: transform 0.2s;
+  }
+  
+  .mobile-toggle-button.active:after {
+    transform: rotate(180deg);
+  }
+  
+  .mobile-collapsible {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  
+  .mobile-collapsible.active {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  
+  /* Improved touch targets */
+  .button, .invite-button, .file-button, .story-card {
+    min-height: 44px; /* Apple's recommended minimum touch target size */
+  }
+  
+  .card {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+    margin: 3px;
+  }
+  
+  /* Modals on mobile */
+  #loginModalCustom .modal-content,
+  #inviteModalCustom .modal-content,
+  #addTicketModalCustom .modal-content {
+    width: 90%;
+    padding: 20px;
+    max-width: 320px;
+  }
+  
+  /* Selected-card feedback */
+  .selected-card {
+    transform: scale(1.1);
+    border: 2px solid #673ab7;
+    background-color: #e8f0fe;
+    box-shadow: 0 0 8px rgba(103, 58, 183, 0.5);
+  }
+  
+  /* Fix user circle display on mobile */
+  #userCircle {
+    margin-bottom: 80px;
+    padding: 10px 5px;
+  }
+  
+  /* Fix alignment on mobile */
+  .avatar-container {
+    width: 60px;
+  }
+  
+  .avatar-circle {
+    width: 50px;
+    height: 50px;
+  }
 }
 
-/* Smaller mobile screens */
+/* Smaller mobile phones */
 @media (max-width: 480px) {
   .container {
     flex-direction: column;
@@ -1126,13 +1240,72 @@ white-space: nowrap;
   .sidebar, .rightbar {
     width: 100%;
     max-width: 100%;
+    padding: 10px;
   }
   
   .vote-card-space {
-    width: 45px;
-    height: 70px;
-    min-width: 45px;
+    width: 40px;
+    height: 60px;
+    min-width: 40px;
   }
+  
+  .card {
+    width: 35px;
+    height: 35px;
+    font-size: 11px;
+  }
+  
+  .avatar-container {
+    width: 50px;
+  }
+  
+  .avatar-circle {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .reveal-votes-button {
+    padding: 10px 16px;
+    font-size: 14px;
+    min-width: 160px;
+  }
+  
+  .user-name {
+    font-size: 10px;
+  }
+  
+  /* Fixed-width buttons get smaller */
+  .invite-button, .file-button {
+    width: 100px;
+  }
+  
+  .navigation-buttons .button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  /* Fix header in tight spaces */
+  #headerUsername {
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Emoji burst animation */
+.global-emoji-burst {
+  position: fixed;
+  font-size: 2rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.5) translateY(0);
+  transition: transform 0.8s ease-out, opacity 0.8s ease-out;
+  z-index: 9999;
+}
+
+.global-emoji-burst.burst-go {
+  opacity: 1;
+  transform: scale(1.5) translateY(-100px);
 }
 
 /* Add input shake animation for validation if not already present */
@@ -1144,8 +1317,40 @@ white-space: nowrap;
 
 .shake {
   animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-}   
-    
+}
+
+/* Own vote space styling */
+.own-vote-space {
+  border: 2px dashed #673ab7;
+  position: relative;
+}
+
+.own-vote-space::after {
+  content: 'Your vote';
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #673ab7;
+  white-space: nowrap;
+}
+
+/* Add styles for the drop-not-allowed state */
+.vote-card-space.drop-not-allowed {
+  border-color: #f44336;
+  background-color: #ffebee;
+  position: relative;
+}
+
+.vote-card-space.drop-not-allowed::before {
+  content: '✕';
+  position: absolute;
+  color: #f44336;
+  font-size: 24px;
+  font-weight: bold;
+  opacity: 0.8;
+}
   </style>
 </head>
 <body>
@@ -1245,7 +1450,6 @@ white-space: nowrap;
 <h3>Planning Cards</h3>
      <div class="card-panel">
 <div class="cards" id="planningCards">
-
 <!--  <div class="card" data-value="0" draggable="true">0</div>
 <div class="card" data-value="1" draggable="true">1</div>
 <div class="card" data-value="3" draggable="true">3</div>
@@ -1253,7 +1457,6 @@ white-space: nowrap;
 <div class="card" data-value="8" draggable="true">8</div>
 <div class="card" data-value="13" draggable="true">13</div>
 <div class="card" data-value="21" draggable="true">21</div> -->    
-
 </div>    
 </div>
 </div>
@@ -1431,6 +1634,100 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+  
+  // Setup mobile layout features
+  setupMobileLayout();
+});
+
+// Setup mobile-specific features
+function setupMobileLayout() {
+  // Only run on mobile devices
+  if (window.innerWidth <= 768) {
+    console.log("Setting up mobile layout");
+    
+    // Create toggle buttons for mobile sections
+    const userListSection = document.getElementById('userList');
+    if (userListSection && userListSection.parentNode) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'mobile-toggle-button';
+      toggleBtn.textContent = 'Current Members';
+      toggleBtn.onclick = () => toggleMobileSection(userListSection);
+      
+      userListSection.parentNode.insertBefore(toggleBtn, userListSection);
+      userListSection.classList.add('mobile-collapsible');
+    }
+    
+    // Create toggle for story list container
+    const storyListContainer = document.getElementById('storyList');
+    if (storyListContainer && storyListContainer.parentNode) {
+      const storyToggle = document.createElement('button');
+      storyToggle.className = 'mobile-toggle-button';
+      storyToggle.textContent = 'Story List';
+      storyToggle.onclick = () => toggleMobileSection(storyListContainer);
+      
+      storyListContainer.parentNode.insertBefore(storyToggle, storyListContainer);
+      storyListContainer.classList.add('mobile-collapsible');
+    }
+    
+    // Enable touch for card selection
+    setupMobileCardSelection();
+  }
+}
+
+function toggleMobileSection(element) {
+  element.classList.toggle('active');
+  const button = element.previousElementSibling;
+  if (button && button.classList.contains('mobile-toggle-button')) {
+    button.classList.toggle('active');
+  }
+}
+
+function setupMobileCardSelection() {
+  document.querySelectorAll('#planningCards .card').forEach(card => {
+    // Remove any existing handlers by cloning
+    const newCard = card.cloneNode(true);
+    if (card.parentNode) {
+      card.parentNode.replaceChild(newCard, card);
+    }
+    
+    // Add touch handler
+    newCard.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      
+      // Get current user's vote space
+      const userName = sessionStorage.getItem('userName');
+      if (!userName) return;
+      
+      const safeId = userName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
+      const voteSpace = document.getElementById(`vote-space-${safeId}`);
+      
+      if (voteSpace) {
+        const vote = this.getAttribute('data-value');
+        
+        // Clear selections and add to this card
+        document.querySelectorAll('#planningCards .card').forEach(c => {
+          c.classList.remove('selected-card');
+        });
+        this.classList.add('selected-card');
+        
+        // Use the emitVote function if available
+        if (typeof window.emitVote === 'function') {
+          window.emitVote(vote, userName);
+        } else if (typeof window.socket !== 'undefined') {
+          window.socket.emit('castVote', { vote, targetUserId: userName });
+        }
+      }
+    });
+  });
+}
+
+// Listen for orientation changes to fix layout
+window.addEventListener('orientationchange', function() {
+  setTimeout(() => {
+    if (typeof window.fixRevealedVoteFontSizes === 'function') {
+      window.fixRevealedVoteFontSizes();
+    }
+  }, 300);
 });
 
 // Update existing handleLoginSubmit function to call our header update
@@ -1598,8 +1895,7 @@ window.showAddTicketModal = showAddTicketModal;
         const resetVotesBtn = document.getElementById('resetVotesBtn');
         if (revealVotesBtn) revealVotesBtn.classList.add('hide-for-guests');
         if (resetVotesBtn) resetVotesBtn.classList.add('hide-for-guests');
-        
-        // Hide upload ticket button
+                // Hide upload ticket button
         const fileInputContainer = document.getElementById('fileInputContainer');
         if (fileInputContainer) fileInputContainer.classList.add('hide-for-guests');
         
@@ -1918,41 +2214,6 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
   
   reader.readAsText(file);
 });
-    
-   /** 
-   // Add ticket button functionality - removed to avoid duplicate handlers
-// This is now handled in main.js    
-    // Add ticket button functionality
-    const addTicketBtn = document.getElementById('addTicketBtn');
-    if (addTicketBtn) {
-     
-        if (window.ticketHandlerAttached !== true) {
-         const storyText = prompt("Enter the story details:");
-        
-        if (storyText && storyText.trim()) {
-          const storyList = document.getElementById('storyList');
-          
-          const storyCard = document.createElement('div');
-          storyCard.className = 'story-card';
-          storyCard.id = `story_${Date.now()}`;
-          
-          const storyTitle = document.createElement('div');
-          storyTitle.className = 'story-title';
-          storyTitle.textContent = storyText.trim();
-          
-          storyCard.appendChild(storyTitle);
-          storyList.appendChild(storyCard);
-          
-          // Check for stories after adding a story
-          checkForStories();
-          
-          // If this is the first story, select it
-          if (storyList.querySelectorAll('.story-card').length === 1) {
-            storyCard.classList.add('selected');
-          }
-        }
-      });
-    } */
     
     // Story selection functionality
     document.addEventListener('click', function(e) {
@@ -2339,8 +2600,51 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
       modal.style.display = 'none';
     });
   }
+
+  // Mobile-specific card functions
+  window.fixRevealedVoteFontSizes = function() {
+    const voteCards = document.querySelectorAll('.vote-card-space.has-vote .vote-badge');
+    const isMobile = window.innerWidth <= 768;
+    
+    voteCards.forEach(badge => {
+      const text = badge.textContent || '';
+      let fontSize = isMobile ? '14px' : '18px'; // Smaller base size on mobile
+      
+      if (text.length >= 2) {
+        fontSize = isMobile ? '12px' : '16px';
+      }
+      
+      if (text.includes('XX')) {
+        fontSize = isMobile ? '10px' : '14px';
+      }
+      
+      badge.style.fontSize = fontSize;
+      badge.style.maxWidth = '80%';
+      badge.style.textAlign = 'center';
+      badge.style.lineHeight = '1';
+      badge.style.overflow = 'hidden';
+    });
+  };
+  
+  // Make emitVote function available for mobile use
+  window.emitVote = function(vote, targetUserId) {
+    if (window.socket) {
+      window.socket.emit('castVote', { vote, targetUserId });
+      
+      // Show selection feedback
+      const cards = document.querySelectorAll('#planningCards .card');
+      cards.forEach(card => {
+        card.classList.remove('selected-card');
+        if (card.getAttribute('data-value') === vote) {
+          card.classList.add('selected-card');
+        }
+      });
+    }
+  };
 </script> 
   
     <script type="module" src="main.js"></script>
 </body>
 </html>
+        
+             
