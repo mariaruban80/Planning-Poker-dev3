@@ -7,6 +7,14 @@ let selectedStoryIndex = null;
 let roomId = null;
 let userName = null;
 
+// Connection reliability enhancements
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 10;
+let pingInterval = null;
+let savedVotingSystem = null;
+let lastPongTime = Date.now();
+let connectionMonitorInterval = null;
+
 /**
  * Initialize WebSocket connection to server
  * @param {string} roomIdentifier - ID of the room to join
@@ -15,47 +23,81 @@ let userName = null;
  * @returns {Object} - Socket instance for external reference
  */
 export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage) {
-   // First verify that we have a valid username
+  // First verify that we have a valid username
   if (!userNameValue) {
     console.error('[SOCKET] Cannot initialize without a username');
     return null;
   }
+  
   // Store params for potential reconnection
   roomId = roomIdentifier;
   userName = userNameValue;
   
-  // Initialize socket connection
+  // Remember voting system preference for reconnection
+  savedVotingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+  
+  // Initialize socket connection with improved reliability settings
   socket = io({
     transports: ['websocket'],
     reconnection: true,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: maxReconnectAttempts,
     reconnectionDelay: 1000,
+    timeout: 20000, // Increased timeout
+    pingTimeout: 30000, // Increased ping timeout
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
 
-  socket.on('addTicket', ({ ticketData }) => {
-  console.log('[SOCKET] Received new ticket from another user:', ticketData);
-  handleMessage({ type: 'addTicket', ticketData });
-});
+  // Setup ping/pong to keep connection alive
+  setupPingPong();
+  
+  // Monitor connection health
+  setupConnectionMonitor(handleMessage);
 
-socket.on('allTickets', ({ tickets }) => {
-  console.log('[SOCKET] Received all tickets:', tickets.length);
-  handleMessage({ type: 'allTickets', tickets });
-});
+  socket.on('addTicket', ({ ticketData }) => {
+    console.log('[SOCKET] Received new ticket from another user:', ticketData);
+    handleMessage({ type: 'addTicket', ticketData });
+  });
+
+  socket.on('allTickets', ({ tickets }) => {
+    console.log('[SOCKET] Received all tickets:', tickets.length);
+    handleMessage({ type: 'allTickets', tickets });
+  });
 
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
-    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+    
+    // Reset reconnect attempts on successful connection
+    reconnectAttempts = 0;
+    
+    // Join room with voting system preference
+    socket.emit('joinRoom', { 
+      roomId: roomIdentifier, 
+      userName: userNameValue,
+      votingSystem: savedVotingSystem
+    });
+    
+    // Notify handler about connection
+    handleMessage({ type: 'connect' });
+    
+    // Update connection status indicator if exists
+    if (typeof updateConnectionStatus === 'function') {
+      updateConnectionStatus('connected');
+    }
   });
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
   });
-   // ADD THE NEW HANDLER RIGHT HERE, among the other socket.on handlers
+  
+  // Handle voting system updates
   socket.on('votingSystemUpdate', data => {
     console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
-    // Forward this to the handler
+    // Store in session storage for reconnection
+    if (data.votingSystem) {
+      savedVotingSystem = data.votingSystem;
+      sessionStorage.setItem('votingSystem', data.votingSystem);
+    }
     handleMessage({ type: 'votingSystemUpdate', ...data });
   });
 
@@ -115,19 +157,129 @@ socket.on('allTickets', ({ tickets }) => {
       data.votes ? Object.keys(data.votes).length : 0, 'vote sets');
     handleMessage({ type: 'exportData', data });
   });
+  
+  // Listen for pong responses to track connection health
+  socket.on('pong', () => {
+    lastPongTime = Date.now();
+    // console.log('[SOCKET] Received pong from server');
+  });
 
-  socket.on('disconnect', () => {
-    console.log('[SOCKET] Disconnected from server');
-    handleMessage({ type: 'disconnect' });
+  socket.on('disconnect', (reason) => {
+    console.log('[SOCKET] Disconnected from server. Reason:', reason);
+    
+    // Clear ping interval on disconnect
+    if (pingInterval) {
+      clearInterval(pingInterval);
+      pingInterval = null;
+    }
+    
+    // Update connection status indicator if exists
+    if (typeof updateConnectionStatus === 'function') {
+      updateConnectionStatus('disconnected');
+    }
+    
+    handleMessage({ type: 'disconnect', reason });
+    
+    // Attempt automatic reconnection for certain disconnect reasons
+    if (reason === 'io server disconnect' || reason === 'transport close' || reason === 'ping timeout') {
+      if (reconnectAttempts < maxReconnectAttempts) {
+        reconnectAttempts++;
+        console.log(`[SOCKET] Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+        
+        if (typeof updateConnectionStatus === 'function') {
+          updateConnectionStatus('connecting');
+        }
+        
+        // Wait a moment before reconnecting
+        setTimeout(() => {
+          if (socket && !socket.connected) {
+            socket.connect();
+          }
+        }, 2000);
+      }
+    }
   });
 
   socket.on('connect_error', (error) => {
     console.error('[SOCKET] Connection error:', error);
+    
+    if (reconnectAttempts < maxReconnectAttempts) {
+      reconnectAttempts++;
+      console.log(`[SOCKET] Connection failed, retry attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
+    } else {
+      console.error('[SOCKET] Maximum reconnection attempts reached');
+    }
+    
+    // Update connection status indicator if exists
+    if (typeof updateConnectionStatus === 'function') {
+      updateConnectionStatus('connecting');
+    }
+    
     handleMessage({ type: 'error', error });
   });
 
   // Return socket for external operations if needed
   return socket;
+}
+
+/**
+ * Setup ping/pong to keep connection alive during inactivity
+ */
+function setupPingPong() {
+  // Clear any existing ping interval
+  if (pingInterval) {
+    clearInterval(pingInterval);
+  }
+  
+  // Set up ping every 20 seconds to keep connection alive
+  pingInterval = setInterval(() => {
+    if (socket && socket.connected) {
+      // console.log('[SOCKET] Sending ping to keep connection alive');
+      socket.emit('ping');
+    } else {
+      console.warn('[SOCKET] Cannot ping, socket not connected');
+      
+      // Try to reconnect if not connected
+      reconnect();
+    }
+  }, 20000); // Send ping every 20 seconds
+}
+
+/**
+ * Setup connection monitor to detect stale connections
+ */
+function setupConnectionMonitor(handleMessage) {
+  if (connectionMonitorInterval) {
+    clearInterval(connectionMonitorInterval);
+  }
+  
+  connectionMonitorInterval = setInterval(() => {
+    const now = Date.now();
+    const timeSinceLastPong = now - lastPongTime;
+    
+    // If we haven't received any server response in 2 minutes
+    if (timeSinceLastPong > 120000) { // 2 minutes
+      console.warn('[SOCKET] No server response for 2 minutes, connection may be stale');
+      
+      if (socket && socket.connected) {
+        // Try to ping the server
+        socket.emit('ping');
+        
+        // If still no response after another 10 seconds, force reconnect
+        setTimeout(() => {
+          if (Date.now() - lastPongTime > 130000) { // Original 2 min + 10 sec
+            console.error('[SOCKET] Confirmed stale connection, forcing reconnect');
+            reconnect();
+            
+            // Notify handler about reconnection attempt
+            handleMessage({ type: 'reconnecting' });
+          }
+        }, 10000);
+      } else {
+        reconnect();
+      }
+    }
+  }, 30000); // Check every 30 seconds
 }
 
 /**
@@ -161,9 +313,7 @@ export function emitStorySelected(index) {
 export function emitVote(vote, targetUserId) {
   if (socket) {
     console.log('[SOCKET] Casting vote for user', targetUserId);
-//    socket.emit('castVote', { vote, targetUserId });
-     socket.emit('castVote', { vote, targetUserId }); // where targetUserId is now the `userName`
-
+    socket.emit('castVote', { vote, targetUserId }); // where targetUserId is now the `userName`
   }
 }
 
@@ -246,11 +396,47 @@ export function reconnect() {
     console.warn('[SOCKET] Cannot reconnect: no socket instance');
     return false;
   }   
+  
   if (!socket.connected && roomId && userName) {
     console.log('[SOCKET] Attempting to reconnect...');
-    socket.connect();
+    
+    // Remember voting system before reconnection
+    savedVotingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+    
+    // Update connection status indicator if exists
+    if (typeof updateConnectionStatus === 'function') {
+      updateConnectionStatus('connecting');
+    }
+    
+    // Disconnect and reconnect
+    socket.disconnect();
+    
+    setTimeout(() => {
+      socket.connect();
+      
+      // Reset ping/pong mechanism
+      setupPingPong();
+    }, 1000);
+    
     return true;
   }
   
   return false;
+}
+
+// Export reconnect function to window for monitoring script
+if (typeof window !== 'undefined') {
+  window.socketReconnect = reconnect;
+}
+
+// Listen for page visibility changes to detect when app is in background
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      console.log('[SOCKET] Page visible, checking connection');
+      if (socket && !socket.connected) {
+        reconnect();
+      }
+    }
+  });
 }
