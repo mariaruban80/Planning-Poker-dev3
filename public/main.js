@@ -1,78 +1,38 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
+// Add this to fix roomId issue
+let roomId = new URLSearchParams(window.location.search).get('roomId') || '';
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, emitVote } from './socket.js'; 
 
-(function() {
-  // Get roomId from URL 
-  function getRoomIdFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('roomId') || '';
-  }
+// Flag to track if username is ready for socket initialization
+window.userNameReady = !!userName;
+
+// Add a window function for index.html to call when joining via invite
+window.initializeSocketWithName = function(roomId, name) {
+  if (!roomId || !name) return;
   
-  // Override saveAppState to use URL roomId
-  window.saveAppState = function() {
-    try {
-      // Use roomId from URL instead of undefined variable
-      const roomIdFromURL = getRoomIdFromURL();
-      
-      const currentState = {
-        votingSystem: sessionStorage.getItem('votingSystem') || 'fibonacci',
-        currentStoryIndex: typeof currentStoryIndex !== 'undefined' ? currentStoryIndex : 0,
-        userName: sessionStorage.getItem('userName') || '',
-        roomId: roomIdFromURL,
-        isHost: sessionStorage.getItem('isHost')
-      };
-      
-      sessionStorage.setItem('appState', JSON.stringify(currentState));
-    } catch (error) {
-      console.error('[APP] Error saving app state:', error);
-    }
-  };
+  console.log(`[APP] Initializing socket with name: ${name} for room: ${roomId}`);
   
-  // Also fix the checkActivity function to handle errors gracefully
-  const originalCheckActivity = window.checkActivity;
-  window.checkActivity = function() {
-    try {
-      const now = Date.now();
-      const lastActivityTime = window.lastActivityTime || now;
-      const activityTimeout = window.activityTimeout || (5 * 60 * 1000);
-      
-      const timeSinceActivity = now - lastActivityTime;
-      
-      if (timeSinceActivity > activityTimeout) {
-        console.log('[APP] User inactive for more than 5 minutes, refreshing connection');
-        
-        // Save current state (using our fixed function)
-        window.saveAppState();
-        
-        // Reconnect socket with error handling
-        if (typeof window.reconnect === 'function') {
-          window.reconnect();
-        } else if (window.socket) {
-          try {
-            if (typeof window.socket.disconnect === 'function' && 
-                typeof window.socket.connect === 'function') {
-              window.socket.disconnect().connect();
-            }
-          } catch(e) {
-            console.error('[APP] Error reconnecting socket:', e);
-          }
-        }
-        
-        // Reset activity timestamp
-        if (typeof window.updateActivityTimestamp === 'function') {
-          window.updateActivityTimestamp();
-        } else {
-          window.lastActivityTime = Date.now();
-        }
-      }
-    } catch (error) {
-      console.error('[APP] Error in checkActivity:', error);
-    }
-  };
-})();
+  // Set username in the module scope
+  userName = name;
+  
+  // Initialize socket with the name
+  socket = initializeWebSocket(roomId, name, handleSocketMessage);
+  
+  // Continue with other initialization steps
+  setupCSVUploader();
+  setupInviteButton();
+  setupStoryNavigation();
+  setupVoteCardsDrag();
+  setupRevealResetButtons();
+  setupAddTicketButton();
+  setupGuestModeRestrictions();
+  
+  // Add CSS for new layout
+  addNewLayoutStyles();
+};
 
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
@@ -101,7 +61,7 @@ function saveAppState() {
     votingSystem: sessionStorage.getItem('votingSystem') || 'fibonacci',
     currentStoryIndex: currentStoryIndex,
     userName: userName,
-    roomId: roomId,
+    roomId: roomId, // This now uses the global variable defined at the top
     isHost: sessionStorage.getItem('isHost')
   };
   
@@ -139,6 +99,7 @@ function checkActivity() {
     updateActivityTimestamp();
   }
 }
+
 // Add recovery function to handle reconnection
 function recoverAppState() {
   try {
@@ -211,36 +172,6 @@ window.addTicketFromModal = function(ticketData) {
   
   // Store in manually added tickets
   manuallyAddedTickets.push(ticketData);
-};
-
-
-/**
- * Initialize socket with a specific name (used when joining via invite)
- * @param {string} roomId - Room ID to join 
- * @param {string} name - Username to use
- */
-window.initializeSocketWithName = function(roomId, name) {
-  if (!roomId || !name) return;
-  
-  console.log(`[APP] Initializing socket with name: ${name} for room: ${roomId}`);
-  
-  // Set username in the module scope
-  userName = name;
-  
-  // Initialize socket with the name
-  socket = initializeWebSocket(roomId, name, handleSocketMessage);
-  
-  // Continue with other initialization steps
-  setupCSVUploader();
-  setupInviteButton();
-  setupStoryNavigation();
-  setupVoteCardsDrag();
-  setupRevealResetButtons();
-  setupAddTicketButton();
-  setupGuestModeRestrictions();
-  
-  // Add CSS for new layout
-  addNewLayoutStyles();
 };
 
 // Modify the existing DOMContentLoaded event handler to check if username is ready
@@ -548,8 +479,21 @@ function appendRoomIdToURL(roomId) {
  * Initialize the application
  */
 function initializeApp(roomId) {
+  // Check if we're waiting for a username (joining via invite)
+  if (window.userNameReady === false) {
+    console.log('[APP] Waiting for username before initializing socket');
+    return; // Exit early, we'll initialize after username is provided
+  }
+
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+  
+  // Only continue if socket initialization was successful
+  if (!socket) {
+    console.error('[APP] Failed to initialize socket - missing username or room ID');
+    return;
+  }
+  
 //  Guest: Listen for host's voting system
 socket.on('votingSystemUpdate', ({ votingSystem }) => {
   console.log('[SOCKET] Received voting system from host:', votingSystem);
@@ -1080,38 +1024,6 @@ function handleVotesRevealed(storyIndex, votes) {
 }
 /**
  * Setup Add Ticket button
- 
-function setupAddTicketButton() {
-  const addTicketBtn = document.getElementById('addTicketBtn');
-  if (addTicketBtn) {
-      // Set flag to prevent double handling
-    window.ticketHandlerAttached = true;
-    addTicketBtn.addEventListener('click', () => {
-      const storyText = prompt("Enter the story details:");
-      if (storyText && storyText.trim()) {
-        // Create ticket data
-        const ticketData = {
-          id: `story_${Date.now()}`,
-          text: storyText.trim()
-        };
-        
-        // Emit to server for synchronization
-         emitAddTicket(ticketData);
-       // if (socket) {
-          //socket.emit('addTicket', ticketData);
-        //}
-        
-        // Add ticket locally
-        addTicketToUI(ticketData, true);
-        
-        // Store in manually added tickets
-        manuallyAddedTickets.push(ticketData);
-      }
-    });
-  }
-} */
-/**
- * Setup Add Ticket button
  */
 function setupAddTicketButton() {
   const addTicketBtn = document.getElementById('addTicketBtn');
@@ -1353,9 +1265,6 @@ function setupRevealResetButtons() {
   }
 }
 
-/**
- * Setup CSV file uploader
- */
 /**
  * Setup CSV file uploader
  */
@@ -1646,26 +1555,6 @@ function applyVotesToUI(votes, hideValues) {
   });
 }
 
-/** function showEmojiBurst(userId, vote) {
-  const voteSpace = document.getElementById(`vote-space-${userId}`);
-  if (!voteSpace) return;
-
-  const burst = document.createElement('div');
-  burst.className = 'emoji-burst';
-  burst.textContent = getVoteEmoji(vote); // 🎯 customizable emoji
-
-  voteSpace.appendChild(burst);
-
-  // Animate and remove after
-  setTimeout(() => {
-    burst.classList.add('burst-animate');
-  }, 10); // allow DOM insert
-
-  setTimeout(() => {
-    burst.remove();
-  }, 1000); // remove after animation
-} */
-
 /**
  * Reset all vote visuals
  */
@@ -1904,7 +1793,6 @@ function createVoteCardSpace(user, isCurrentUser) {
       setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
     });
   }
-
   // Pre-fill existing vote if it exists
   const existingVote = votesPerStory[currentStoryIndex]?.[userName];
   if (existingVote) {
@@ -2268,12 +2156,6 @@ function handleSocketMessage(message) {
   if (statsContainer) statsContainer.style.display = 'none';
       break;
 
-   /*      case 'storySelected':
-     if (typeof message.storyIndex === 'number') {
-    console.log('[SOCKET] Story selected from server:', message.storyIndex);
-    selectStory(message.storyIndex, false); // false to avoid re-emitting
-  }
-  break; */
 case 'storySelected':
  if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
@@ -2322,15 +2204,6 @@ case 'storySelected':
     }
   }
          break;
-      // Handle received votes for a specific story
- /*     if (message.storyIndex !== undefined && message.votes) {
-        votesPerStory[message.storyIndex] = message.votes;
-        // Update UI if this is the current story and votes are revealed
-        if (message.storyIndex === currentStoryIndex && votesRevealed[currentStoryIndex]) {
-          applyVotesToUI(message.votes, false);
-        }
-      }
-      break; */
       
     case 'syncCSVData':
        // Handle CSV data sync with improved handling
@@ -2402,6 +2275,13 @@ case 'storySelected':
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+  // Check if we're waiting for a username (joining via invite)
+  if (window.userNameReady === false) {
+    console.log('[APP] Waiting for username before initializing app');
+    return; // Exit early, we'll initialize after username is provided
+  }
+  
+  // Normal initialization for users who already have a name
   let roomId = getRoomIdFromURL();
   if (!roomId) {
     roomId = 'room-' + Math.floor(Math.random() * 10000);
@@ -2409,3 +2289,4 @@ document.addEventListener('DOMContentLoaded', () => {
   appendRoomIdToURL(roomId);
   initializeApp(roomId);
 });
+  
