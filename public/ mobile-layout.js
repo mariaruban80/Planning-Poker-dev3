@@ -1,70 +1,109 @@
-// mobile-layout.js
-// Script to optimize Planning Poker layout for mobile devices
-
+<script>
+// Mobile layout script to match desktop view
 document.addEventListener('DOMContentLoaded', function() {
-  // Only apply on mobile devices
+  // Check if mobile
   const isMobile = window.innerWidth <= 1024;
   if (isMobile) {
-    applyMobileLayout();
+    applyDesktopLayoutToMobile();
   }
   
-  // Also handle window resizes
+  // Handle resizes
   window.addEventListener('resize', function() {
-    const isMobile = window.innerWidth <= 1024;
-    if (isMobile && !document.getElementById('mobile-layout-style')) {
-      applyMobileLayout();
+    const isMobileNow = window.innerWidth <= 1024;
+    if (isMobileNow && !document.getElementById('desktop-mobile-style')) {
+      applyDesktopLayoutToMobile();
     }
   });
   
-  function applyMobileLayout() {
-    console.log("Applying mobile layout to match desktop view");
+  function applyDesktopLayoutToMobile() {
+    console.log('Applying desktop layout to mobile device');
     
-    // Create style element for mobile layout
+    // Create style element
     const style = document.createElement('style');
-    style.id = 'mobile-layout-style';
+    style.id = 'desktop-mobile-style';
     style.textContent = `
-      /* Mobile layout CSS to match desktop */
+      /* Desktop layout for mobile devices */
       @media (max-width: 1024px) {
-        /* Container layout */
+        /* Basic resets */
+        body {
+          overflow-x: hidden;
+          margin: 0;
+          padding: 0;
+        }
+        
+        /* Main container setup */
         .container {
           display: flex !important;
           flex-direction: row !important;
           overflow-x: auto !important;
           -webkit-overflow-scrolling: touch !important;
-          scroll-snap-type: x mandatory !important;
           min-height: calc(100vh - 120px) !important;
+          padding-bottom: 0 !important;
+          width: 100% !important;
         }
         
-        /* Sidebar with current members */
+        /* Header styling */
+        header {
+          display: flex !important;
+          justify-content: space-between !important;
+          align-items: center !important;
+          padding: 15px 20px !important;
+          background: white !important;
+          border-bottom: 1px solid #f0f0f0 !important;
+          position: sticky !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          z-index: 1000 !important;
+          box-sizing: border-box !important;
+        }
+        
+        /* Upload section */
+        .upload-section {
+          display: flex !important;
+          justify-content: flex-end !important;
+          padding: 10px 20px !important;
+          background: white !important;
+          border-bottom: 1px solid #f0f0f0 !important;
+          position: sticky !important;
+          top: 60px !important;
+          left: 0 !important;
+          width: 100% !important;
+          z-index: 999 !important;
+          box-sizing: border-box !important;
+        }
+        
+        /* Left sidebar */
         .sidebar {
           min-width: 300px !important;
           width: 300px !important;
-          flex-shrink: 0 !important;
-          scroll-snap-align: start !important;
           padding: 15px 20px !important;
+          box-sizing: border-box !important;
           background: white !important;
-          border-right: 1px solid #eee !important;
+          border-right: 1px solid #f5f5f5 !important;
+          flex-shrink: 0 !important;
         }
         
         .sidebar h3 {
           color: #673ab7 !important;
+          font-size: 15px !important;
           text-transform: uppercase !important;
           font-weight: 600 !important;
-          font-size: 14px !important;
-          margin: 10px 0 20px 0 !important;
+          margin-top: 0 !important;
+          margin-bottom: 15px !important;
         }
         
         #userList {
           display: flex !important;
           flex-direction: column !important;
-          gap: 15px !important;
+          gap: 12px !important;
         }
         
         .user-entry {
           display: flex !important;
           align-items: center !important;
           justify-content: space-between !important;
-          padding-bottom: 10px !important;
+          padding: 10px 0 !important;
           border-bottom: 1px solid #f5f5f5 !important;
         }
         
@@ -72,19 +111,13 @@ document.addEventListener('DOMContentLoaded', function() {
           width: 40px !important;
           height: 40px !important;
           border-radius: 50% !important;
-          margin-right: 10px !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
-          font-size: 16px !important;
           font-weight: bold !important;
+          font-size: 16px !important;
           color: white !important;
-        }
-        
-        .username {
-          flex: 1 !important;
-          font-weight: 500 !important;
-          font-size: 14px !important;
+          margin-right: 12px !important;
         }
         
         .vote-badge {
@@ -93,42 +126,43 @@ document.addEventListener('DOMContentLoaded', function() {
           color: #673ab7 !important;
         }
         
+        /* Control buttons */
         .controls-section {
           margin-top: 20px !important;
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 10px !important;
         }
         
-        .controls-section .button {
+        .button {
           border-radius: 30px !important;
-        }
-        
-        /* Main voting area */
-        .main {
-          min-width: 600px !important;
-          flex: 1 !important;
-          scroll-snap-align: start !important;
-          padding: 20px !important;
           background: white !important;
-          display: flex !important;
-          flex-direction: column !important;
-          align-items: center !important;
+          color: #673ab7 !important;
+          border: 1px solid #673ab7 !important;
         }
         
+        /* Main section */
+        .main {
+          flex: 1 !important;
+          min-width: 600px !important;
+          padding: 20px !important;
+          box-sizing: border-box !important;
+          background: white !important;
+        }
+        
+        /* User circle & voting area */
         #userCircle {
           width: 100% !important;
+          max-width: 100% !important;
           padding: 0 !important;
-          margin-bottom: 30px !important;
+          margin-bottom: 20px !important;
         }
         
         .poker-table-layout {
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
+          gap: 20px !important;
           width: 100% !important;
-          max-width: 600px !important;
-          gap: 30px !important;
+          max-width: 700px !important;
+          margin: 0 auto !important;
         }
         
         .avatar-row, .vote-row {
@@ -150,24 +184,18 @@ document.addEventListener('DOMContentLoaded', function() {
           height: 70px !important;
           border-radius: 50% !important;
           background-color: #f6ad55 !important;
+          color: white !important;
+          font-size: 24px !important;
+          font-weight: bold !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
-          font-size: 24px !important;
-          font-weight: bold !important;
-          color: white !important;
-          margin-bottom: 5px !important;
-        }
-        
-        .user-name {
-          font-size: 14px !important;
-          font-weight: 500 !important;
-          text-align: center !important;
+          margin-bottom: 10px !important;
         }
         
         .vote-card-space {
           width: 60px !important;
-          height: 90px !important;
+          height: 85px !important;
           border: 1px dashed #ccc !important;
           border-radius: 8px !important;
           display: flex !important;
@@ -177,11 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         .vote-card-space.has-vote {
           border: 1px solid #673ab7 !important;
-        }
-        
-        .vote-card-space .vote-badge {
-          font-size: 20px !important;
-          color: #673ab7 !important;
+          background-color: white !important;
         }
         
         .reveal-button-container {
@@ -190,37 +214,32 @@ document.addEventListener('DOMContentLoaded', function() {
         
         .reveal-votes-button {
           text-transform: uppercase !important;
-          font-weight: bold !important;
+          padding: 12px 30px !important;
           background: white !important;
           color: #673ab7 !important;
           border: 2px solid #673ab7 !important;
           border-radius: 4px !important;
-          padding: 12px 24px !important;
-        }
-        
-        /* Stats display */
-        .fixed-vote-display, .vote-statistics-display {
-          margin: 20px auto !important;
-          background: white !important;
-          border: none !important;
-          box-shadow: none !important;
+          font-weight: bold !important;
+          font-size: 16px !important;
         }
         
         /* Planning cards */
         .planning-cards-section {
           width: 100% !important;
           max-width: 500px !important;
-          margin-top: 30px !important;
+          margin: 30px auto 0 auto !important;
+          padding: 10px !important;
+          box-sizing: border-box !important;
           background: white !important;
         }
         
         .planning-cards-section h3 {
           color: #673ab7 !important;
-          font-size: 14px !important;
-          font-weight: 600 !important;
+          font-size: 16px !important;
           text-transform: uppercase !important;
+          font-weight: 600 !important;
           text-align: center !important;
-          margin-bottom: 15px !important;
+          margin-bottom: 20px !important;
         }
         
         .cards {
@@ -228,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
           flex-wrap: wrap !important;
           justify-content: flex-end !important;
           gap: 10px !important;
-          padding: 0 20px 20px 20px !important;
+          padding: 10px !important;
         }
         
         .card {
@@ -241,8 +260,8 @@ document.addEventListener('DOMContentLoaded', function() {
           justify-content: center !important;
           font-size: 18px !important;
           font-weight: bold !important;
-          color: #333 !important;
           margin: 0 !important;
+          color: #333 !important;
         }
         
         .card:hover, .card.selected-card {
@@ -250,15 +269,15 @@ document.addEventListener('DOMContentLoaded', function() {
           box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
         }
         
-        /* Right sidebar with stories */
+        /* Right sidebar with story list */
         .rightbar {
           min-width: 350px !important;
           width: 350px !important;
-          flex-shrink: 0 !important;
-          scroll-snap-align: start !important;
           padding: 15px 20px !important;
+          box-sizing: border-box !important;
           background: white !important;
-          border-left: 1px solid #eee !important;
+          border-left: 1px solid #f5f5f5 !important;
+          flex-shrink: 0 !important;
         }
         
         .add-ticket-btn {
@@ -266,11 +285,11 @@ document.addEventListener('DOMContentLoaded', function() {
           align-items: center !important;
           justify-content: center !important;
           width: 100% !important;
-          padding: 10px !important;
           background: white !important;
           color: #673ab7 !important;
           border: 1px solid #673ab7 !important;
           border-radius: 30px !important;
+          padding: 12px !important;
           font-weight: 600 !important;
           font-size: 14px !important;
           margin-bottom: 20px !important;
@@ -280,14 +299,17 @@ document.addEventListener('DOMContentLoaded', function() {
           display: flex !important;
           flex-direction: column !important;
           gap: 10px !important;
+          max-height: 60vh !important;
+          overflow-y: auto !important;
         }
         
         .story-card {
           padding: 15px !important;
-          margin-bottom: 10px !important;
           background: white !important;
           border: 1px solid #e0e0e0 !important;
           border-radius: 8px !important;
+          margin-bottom: 10px !important;
+          cursor: pointer !important;
         }
         
         .story-card.selected {
@@ -298,41 +320,76 @@ document.addEventListener('DOMContentLoaded', function() {
         .story-title {
           font-size: 14px !important;
           line-height: 1.4 !important;
+          color: #333 !important;
         }
         
         .navigation-buttons {
+          margin-top: 20px !important;
           display: flex !important;
           gap: 10px !important;
-          margin-top: 20px !important;
         }
         
         .navigation-buttons .button {
+          flex: 1 !important;
           border-radius: 30px !important;
+          padding: 10px !important;
+          border-color: #673ab7 !important;
+          color: #673ab7 !important;
         }
         
-        /* Fix stacking context for fixed elements */
-        header {
-          z-index: 1001 !important;
+        /* Fix revealed votes display */
+        .vote-statistics-container, .fixed-vote-display {
+          margin: 20px auto !important;
         }
         
-        .upload-section {
-          z-index: 1000 !important;
+        .fixed-vote-display {
+          background: white !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        
+        /* Add card selection indicator */
+        .selected-card {
+          transform: translateY(-3px) !important;
+          background-color: #d6bcfa !important;
+          border: 1px solid #673ab7 !important;
+        }
+        
+        /* Stats area */
+        .fixed-vote-card {
+          background-color: white !important;
+          color: #333 !important;
+          border: 1px solid #000 !important;
+        }
+        
+        /* Own vote indicator */
+        .own-vote-space {
+          border: 2px dashed #673ab7 !important;
+        }
+        
+        .own-vote-space::after {
+          font-size: 12px !important;
+          bottom: -18px !important;
+        }
+        
+        /* Fix any overlapping content */
+        body.votes-revealed .vote-badge {
+          color: #673ab7 !important;
+          font-size: 18px !important;
         }
       }
     `;
     
     document.head.appendChild(style);
     
-    // Set up touch interactions for mobile
+    // Setup touch interactions
     setupTouchInteractions();
-    
-    console.log("Mobile layout applied successfully");
   }
   
   function setupTouchInteractions() {
-    // Handle planning card touch events
+    // Handle planning card touch
     document.querySelectorAll('.card').forEach(card => {
-      // Remove existing handlers by cloning the element
+      // Remove any existing handlers
       const newCard = card.cloneNode(true);
       if (card.parentNode) {
         card.parentNode.replaceChild(newCard, card);
@@ -342,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
       newCard.addEventListener('touchend', function(e) {
         e.preventDefault();
         
-        // Remove selection from all cards
+        // Clear selection from all cards
         document.querySelectorAll('.card').forEach(c => {
           c.classList.remove('selected-card');
         });
@@ -365,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
           // Mark as voted
           voteSpace.classList.add('has-vote');
           
-          // Emit vote
+          // Send vote
           if (typeof window.emitVote === 'function') {
             window.emitVote(vote, userName);
           } else if (window.socket) {
@@ -375,14 +432,15 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
     
-    // Handle story card touch events
+    // Setup story card touch
     document.querySelectorAll('.story-card').forEach(card => {
       card.addEventListener('touchend', function(e) {
+        // Skip if touching a button
         if (e.target.tagName.toLowerCase() === 'button') return;
         
         e.preventDefault();
         
-        // Remove selection from all stories
+        // Clear selection from all stories
         document.querySelectorAll('.story-card').forEach(c => {
           c.classList.remove('selected');
         });
@@ -393,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get story index
         const index = parseInt(this.dataset.index || '0', 10);
         
-        // Emit story selection
+        // Send to server
         if (window.socket) {
           window.socket.emit('storySelected', { storyIndex: index });
         }
@@ -401,3 +459,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+</script>
