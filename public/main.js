@@ -4,6 +4,79 @@ let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, emitVote } from './socket.js'; 
 
+// Fix for roomId not defined error
+(function() {
+  // Function to safely get roomId from URL
+  function getRoomIdFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('roomId') || '';
+  }
+  
+  // Override the saveAppState function to use roomId from URL
+  const originalSaveAppState = window.saveAppState;
+  window.saveAppState = function() {
+    try {
+      // Get roomId from URL instead of using the undefined variable
+      const roomIdFromURL = getRoomIdFromURL();
+      
+      const currentState = {
+        votingSystem: sessionStorage.getItem('votingSystem') || 'fibonacci',
+        currentStoryIndex: typeof window.currentStoryIndex !== 'undefined' ? window.currentStoryIndex : 0,
+        userName: sessionStorage.getItem('userName') || '',
+        roomId: roomIdFromURL,
+        isHost: sessionStorage.getItem('isHost')
+      };
+      
+      sessionStorage.setItem('appState', JSON.stringify(currentState));
+      console.log('[APP] State saved successfully');
+    } catch (error) {
+      console.error('[APP] Error saving app state:', error);
+    }
+  };
+  
+  // Also fix the checkActivity function to handle errors gracefully
+  const originalCheckActivity = window.checkActivity;
+  window.checkActivity = function() {
+    try {
+      const now = Date.now();
+      const lastActivityTime = window.lastActivityTime || now;
+      const activityTimeout = window.activityTimeout || (5 * 60 * 1000);
+      
+      const timeSinceActivity = now - lastActivityTime;
+      
+      if (timeSinceActivity > activityTimeout) {
+        console.log('[APP] User inactive for more than 5 minutes, refreshing connection');
+        
+        // Save current state (using our fixed function)
+        window.saveAppState();
+        
+        // Reconnect socket with error handling
+        if (typeof window.reconnect === 'function') {
+          window.reconnect();
+        } else if (window.socket) {
+          try {
+            if (typeof window.socket.disconnect === 'function' && 
+                typeof window.socket.connect === 'function') {
+              window.socket.disconnect().connect();
+            }
+          } catch(e) {
+            console.error('[APP] Error reconnecting socket:', e);
+          }
+        }
+        
+        // Reset activity timestamp
+        if (typeof window.updateActivityTimestamp === 'function') {
+          window.updateActivityTimestamp();
+        } else {
+          window.lastActivityTime = Date.now();
+        }
+      }
+    } catch (error) {
+      console.error('[APP] Error in checkActivity:', error);
+    }
+  };
+})();
+
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
 
