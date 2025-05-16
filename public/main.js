@@ -30,7 +30,6 @@ import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, emi
       console.error('[APP] Error saving app state:', error);
     }
   };
-})();
   
   // Also fix the checkActivity function to handle errors gracefully
   const originalCheckActivity = window.checkActivity;
@@ -140,7 +139,6 @@ function checkActivity() {
     updateActivityTimestamp();
   }
 }
-
 // Add recovery function to handle reconnection
 function recoverAppState() {
   try {
