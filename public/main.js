@@ -7,6 +7,94 @@ import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, emi
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
 
+//Save app state on page visibility change or before unload
+document.addEventListener('visibilitychange', saveAppState);
+window.addEventListener('beforeunload', saveAppState);
+
+// Keep track of last activity time
+let lastActivityTime = Date.now();
+const activityTimeout = 5 * 60 * 1000; // 5 minutes
+
+// Update activity timestamp on user interaction
+document.addEventListener('click', updateActivityTimestamp);
+document.addEventListener('keypress', updateActivityTimestamp);
+document.addEventListener('touchstart', updateActivityTimestamp);
+
+// Check activity periodically
+setInterval(checkActivity, 60000); // Check every minute
+
+/**
+ * Save current app state to sessionStorage
+ */
+function saveAppState() {
+  const currentState = {
+    votingSystem: sessionStorage.getItem('votingSystem') || 'fibonacci',
+    currentStoryIndex: currentStoryIndex,
+    userName: userName,
+    roomId: roomId,
+    isHost: sessionStorage.getItem('isHost')
+  };
+  
+  sessionStorage.setItem('appState', JSON.stringify(currentState));
+}
+
+/**
+ * Update last activity timestamp
+ */
+function updateActivityTimestamp() {
+  lastActivityTime = Date.now();
+}
+
+/**
+ * Check if user has been inactive and refresh connection if needed
+ */
+function checkActivity() {
+  const now = Date.now();
+  const timeSinceActivity = now - lastActivityTime;
+  
+  if (timeSinceActivity > activityTimeout) {
+    console.log('[APP] User inactive for more than 5 minutes, refreshing connection');
+    
+    // Save current state
+    saveAppState();
+    
+    // Reconnect socket
+    if (typeof reconnect === 'function') {
+      reconnect();
+    } else if (socket) {
+      socket.disconnect().connect();
+    }
+    
+    // Reset activity timestamp
+    updateActivityTimestamp();
+  }
+}
+
+// Add recovery function to handle reconnection
+function recoverAppState() {
+  try {
+    const savedState = sessionStorage.getItem('appState');
+    if (savedState) {
+      const state = JSON.parse(savedState);
+      
+      // Restore voting system
+      if (state.votingSystem) {
+        sessionStorage.setItem('votingSystem', state.votingSystem);
+        setupPlanningCards(); // Regenerate cards with saved system
+      }
+      
+      // Restore story selection if possible
+      if (typeof state.currentStoryIndex === 'number' && 
+          document.querySelectorAll('.story-card').length > state.currentStoryIndex) {
+        setTimeout(() => selectStory(state.currentStoryIndex, false), 500);
+      }
+    }
+  } catch (err) {
+    console.error('[APP] Error recovering app state:', err);
+  }
+}
+
+
 // Add a window function for index.html to call
 window.notifyStoriesUpdated = function() {
   const storyList = document.getElementById('storyList');
@@ -2060,6 +2148,10 @@ function handleSocketMessage(message) {
       break;
       
     case 'voteReceived':
+    case 'connect':
+    // When connection is established or reestablished, try to recover state
+    recoverAppState();
+    break;
     case 'voteUpdate':
       // Handle vote received
       if (message.userId && message.vote) {
