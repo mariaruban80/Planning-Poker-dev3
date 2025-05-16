@@ -1351,6 +1351,62 @@ white-space: nowrap;
   font-weight: bold;
   opacity: 0.8;
 }
+     
+  @media (max-width: 767px) {
+    /* Fix positioning for mobile */
+    .avatar-row, .vote-row {
+      gap: 15px !important;
+    }
+    
+    /* Make sure the user vote card is highlighted */
+    .own-vote-space {
+      border: 2px dashed #673ab7 !important;
+    }
+    
+    /* Properly show vote values */
+    body.votes-revealed .vote-badge {
+      color: #673ab7 !important;
+      opacity: 1 !important;
+    }
+    
+    /* Fix the header for small screens */
+    #headerUsername {
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* Fix story list display */
+    .story-title {
+      font-size: 13px;
+      -webkit-line-clamp: 2;
+    }
+    
+    /* Improve fixed card panel */
+    .card-panel {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+    }
+    
+    /* Add proper spacing to main container */
+    .container {
+      padding-top: 10px !important;
+    }
+    
+    /* Make sure buttons have consistent styling */
+    .button, .invite-button, .file-button {
+      min-height: 42px;
+    }
+    
+    /* Make modals more mobile-friendly */
+    .modal-content {
+      max-width: 90% !important;
+      width: 320px !important;
+      padding: 20px !important;
+    }
+  }
+
   </style>
 </head>
 <body>
@@ -2641,6 +2697,263 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
       });
     }
   };
+        <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Only run on mobile/tablet devices
+  if (window.innerWidth <= 1024) {
+    applyExactMobileLayout();
+  }
+  
+  // Also apply when window is resized
+  window.addEventListener('resize', function() {
+    if (window.innerWidth <= 1024) {
+      applyExactMobileLayout();
+    }
+  });
+  
+  function applyExactMobileLayout() {
+    console.log("Applying exact mobile layout from reference image");
+    
+    // Create style element for the exact mobile layout
+    const mobileStyle = document.createElement('style');
+    mobileStyle.id = 'exact-mobile-layout';
+    mobileStyle.textContent = `
+      /* Reset container layout */
+      .container {
+        display: block !important;
+        padding-bottom: 100px !important;
+        background: white !important;
+      }
+      
+      /* Header styling */
+      header {
+        padding: 12px 20px !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+      }
+      
+      /* Hide sidebar on mobile and show as a collapsible section */
+      .sidebar {
+        width: 100% !important;
+        padding: 15px 20px !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      
+      /* Hide redundant elements */
+      .upload-section, .planning-cards-section h3 {
+        display: none !important;
+      }
+      
+      /* Main content area */
+      .main {
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        order: 2 !important;
+      }
+      
+      /* Right sidebar styling */
+      .rightbar {
+        width: 100% !important;
+        padding: 15px 20px !important;
+        border: none !important;
+        max-height: 300px !important;
+        overflow-y: auto !important;
+      }
+      
+      /* Story cards */
+      .story-card {
+        margin-bottom: 8px !important;
+        border: 1px solid #e0e0e0 !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+      }
+      
+      /* Avatar styling */
+      #userCircle {
+        padding: 15px 5px !important;
+        margin-bottom: 60px !important;
+      }
+      
+      .avatar-circle {
+        width: 60px !important;
+        height: 60px !important;
+        font-size: 24px !important;
+        background-color: #f5ba55 !important;
+        color: white !important;
+        border: none !important;
+      }
+      
+      /* Vote card space */
+      .vote-card-space {
+        width: 60px !important;
+        height: 80px !important;
+        border: 2px dashed #ccc !important;
+        background-color: white !important;
+        border-radius: 8px !important;
+      }
+      
+      /* Reveal votes button */
+      .reveal-votes-button {
+        background-color: white !important;
+        color: #673ab7 !important;
+        border: 2px solid #673ab7 !important;
+        text-transform: uppercase !important;
+        font-weight: bold !important;
+        border-radius: 30px !important;
+        padding: 10px 20px !important;
+      }
+      
+      /* Fixed card panel at bottom */
+      .card-panel {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        background: white !important;
+        border-top: 1px solid #e0e0e0 !important;
+        padding: 10px 5px !important;
+        box-shadow: 0 -2px 5px rgba(0,0,0,0.1) !important;
+        display: flex !important;
+        justify-content: center !important;
+        z-index: 1000 !important;
+      }
+      
+      /* Planning cards styling to match design */
+      .cards {
+        display: flex !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        padding: 8px 0 !important;
+      }
+      
+      .card {
+        width: 50px !important;
+        height: 50px !important;
+        background-color: #e1d4f9 !important;
+        color: #333 !important;
+        font-weight: bold !important;
+        font-size: 16px !important;
+        border-radius: 8px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+      }
+      
+      /* Add exact colors from reference */
+      .button, #revealVotesBtn, #resetVotesBtn {
+        color: #673ab7 !important;
+        border-color: #673ab7 !important;
+        border-radius: 30px !important;
+      }
+      
+      /* Make invite and upload buttons match design */
+      .invite-button, .file-button {
+        border-radius: 30px !important;
+        min-width: 120px !important;
+      }
+      
+      /* Exact alignment for navigation buttons */
+      .navigation-buttons {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 0 10px !important;
+        margin: 15px 0 !important;
+      }
+      
+      /* Enhance add ticket button */
+      .add-ticket-btn {
+        border-radius: 30px !important;
+        color: #673ab7 !important;
+        border-color: #673ab7 !important;
+        font-weight: bold !important;
+        margin-bottom: 15px !important;
+      }
+    `;
+    document.head.appendChild(mobileStyle);
+    
+    // Move the planning cards to the bottom in a fixed panel
+    const planningCards = document.querySelector('#planningCards');
+    if (planningCards && !document.querySelector('.mobile-card-panel')) {
+      const cardPanel = document.createElement('div');
+      cardPanel.className = 'card-panel mobile-card-panel';
+      
+      // Add PLANNING CARDS heading above the cards
+      const cardsHeading = document.createElement('div');
+      cardsHeading.textContent = 'PLANNING CARDS';
+      cardsHeading.style.cssText = 'color:#673ab7; font-size:14px; font-weight:600; margin-bottom:5px; text-align:center; width:100%; text-transform:uppercase;';
+      
+      // Move cards to the panel
+      cardPanel.appendChild(cardsHeading);
+      cardPanel.appendChild(planningCards);
+      document.body.appendChild(cardPanel);
+    }
+    
+    // Add Upload Ticket and Invite Others buttons at the top
+    const header = document.querySelector('header');
+    if (header && !document.querySelector('.mobile-action-buttons')) {
+      const actionButtons = document.createElement('div');
+      actionButtons.className = 'mobile-action-buttons';
+      actionButtons.style.cssText = 'display:flex; gap:10px; justify-content:flex-end; padding:10px 20px; border-bottom:1px solid #f0f0f0;';
+      
+      const uploadButton = document.createElement('button');
+      uploadButton.textContent = 'Upload Ticket';
+      uploadButton.className = 'invite-button';
+      uploadButton.onclick = function() {
+        document.getElementById('csvInput').click();
+      };
+      
+      const inviteButton = document.createElement('button');
+      inviteButton.textContent = 'Invite Others';
+      inviteButton.className = 'invite-button';
+      inviteButton.onclick = function() {
+        window.showInviteModalCustom();
+      };
+      
+      actionButtons.appendChild(uploadButton);
+      actionButtons.appendChild(inviteButton);
+      
+      header.insertAdjacentElement('afterend', actionButtons);
+    }
+    
+    // Enhance user voting area
+    setupMobileCardSelection();
+  }
+  
+  function setupMobileCardSelection() {
+    document.querySelectorAll('#planningCards .card').forEach(card => {
+      card.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        
+        // Get current user's vote space
+        const userName = sessionStorage.getItem('userName');
+        if (!userName) return;
+        
+        const safeId = userName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
+        const voteSpace = document.getElementById(`vote-space-${safeId}`);
+        
+        if (voteSpace) {
+          const vote = this.getAttribute('data-value');
+          
+          // Clear selections and add to this card
+          document.querySelectorAll('#planningCards .card').forEach(c => {
+            c.classList.remove('selected-card');
+          });
+          this.classList.add('selected-card');
+          
+          // Use the emitVote function if available
+          if (typeof window.emitVote === 'function') {
+            window.emitVote(vote, userName);
+          } else if (typeof window.socket !== 'undefined') {
+            window.socket.emit('castVote', { vote, targetUserId: userName });
+          }
+        }
+      });
+    });
+  }
+});
+</script>
 </script> 
   
     <script type="module" src="main.js"></script>
