@@ -4,35 +4,33 @@ let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, emitVote } from './socket.js'; 
 
-// Fix for roomId not defined error
 (function() {
-  // Function to safely get roomId from URL
+  // Get roomId from URL 
   function getRoomIdFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('roomId') || '';
   }
   
-  // Override the saveAppState function to use roomId from URL
-  const originalSaveAppState = window.saveAppState;
+  // Override saveAppState to use URL roomId
   window.saveAppState = function() {
     try {
-      // Get roomId from URL instead of using the undefined variable
+      // Use roomId from URL instead of undefined variable
       const roomIdFromURL = getRoomIdFromURL();
       
       const currentState = {
         votingSystem: sessionStorage.getItem('votingSystem') || 'fibonacci',
-        currentStoryIndex: typeof window.currentStoryIndex !== 'undefined' ? window.currentStoryIndex : 0,
+        currentStoryIndex: typeof currentStoryIndex !== 'undefined' ? currentStoryIndex : 0,
         userName: sessionStorage.getItem('userName') || '',
         roomId: roomIdFromURL,
         isHost: sessionStorage.getItem('isHost')
       };
       
       sessionStorage.setItem('appState', JSON.stringify(currentState));
-      console.log('[APP] State saved successfully');
     } catch (error) {
       console.error('[APP] Error saving app state:', error);
     }
   };
+})();
   
   // Also fix the checkActivity function to handle errors gracefully
   const originalCheckActivity = window.checkActivity;
