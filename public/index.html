@@ -125,6 +125,33 @@
       min-width: 140px; /* Minimum width to ensure buttons look good */
       box-shadow: none;
     }
+
+     .connection-status {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #4CAF50; /* Green = connected */
+  transition: background-color 0.3s;
+  z-index: 1000;
+}
+
+.connection-status.connecting {
+  background-color: #FFC107; /* Yellow = connecting */
+  animation: pulse 1.5s infinite;
+}
+
+.connection-status.disconnected {
+  background-color: #F44336; /* Red = disconnected */
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
     
     .button:hover { 
       background-color: #f0e6ff; /* Lighter purple background on hover */
@@ -1423,6 +1450,7 @@ white-space: nowrap;
       <span id="headerUsername">User</span>
     </div>
     <button id="logOffBtn" class="btn btn-danger join-session">🏃LOG OFF</button>   
+    <div class="connection-status" id="connectionStatus" title="Connected"></div>   
     
   </div>
 </header>
@@ -2638,7 +2666,7 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
     }
   });
 </script>
-    <!-- Add this before the closing </body> tag 
+ <!-- Add this before the closing </body> tag 
 <script src="userlist-fix.js"></script> -->
 <script>
   // Force user list fix on page interaction
@@ -2697,7 +2725,7 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
       });
     }
   };
-        <script>
+        
 document.addEventListener('DOMContentLoaded', function() {
   // Only run on mobile/tablet devices
   if (window.innerWidth <= 1024) {
@@ -2953,8 +2981,42 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Connection status indicator
+const statusIndicator = document.getElementById('connectionStatus');
+
+function updateConnectionStatus(status) {
+  if (!statusIndicator) return;
+  
+  switch(status) {
+    case 'connected':
+      statusIndicator.className = 'connection-status';
+      statusIndicator.title = 'Connected';
+      break;
+    case 'connecting':
+      statusIndicator.className = 'connection-status connecting';
+      statusIndicator.title = 'Connecting...';
+      break;
+    case 'disconnected':
+      statusIndicator.className = 'connection-status disconnected';
+      statusIndicator.title = 'Disconnected';
+      break;
+  }
+}
+
+// Update status when socket events occur
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.socket) {
+    window.socket.on('connect', () => updateConnectionStatus('connected'));
+    window.socket.on('disconnect', () => updateConnectionStatus('disconnected'));
+    window.socket.on('connecting', () => updateConnectionStatus('connecting'));
+    window.socket.on('reconnecting', () => updateConnectionStatus('connecting'));
+  }
+});
+
+        
 </script>
-</script> 
+
   
     <script type="module" src="main.js"></script>
 </body>
