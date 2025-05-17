@@ -1045,46 +1045,39 @@ function addVoteStatisticsStyles()
  * @param {Object} votes - Vote data
  */
 function handleVotesRevealed(storyIndex, votes) {
-  // Mark this story as having revealed votes
+  console.log(`[UI] handleVotesRevealed → storyIndex: ${storyIndex}, votes:`, votes);
+
   votesRevealed[storyIndex] = true;
-  
-  // Get the planning cards container
-  const planningCardsSection = document.querySelector('.planning-cards-section');
-    // Make sure the fixed styles are added
-  addFixedVoteStatisticsStyles();
-  // Create vote statistics display
-//  const voteStats = createVoteStatisticsDisplay(votes);
-  // removed the above old function and add the new onw 
-  const voteStats = createFixedVoteDisplay(votes);
-  // Hide planning cards and show statistics
-  if (planningCardsSection) {
-    // Create container for statistics if it doesn't exist
-    let statsContainer = document.querySelector('.vote-statistics-container');
-    if (!statsContainer) {
-      statsContainer = document.createElement('div');
-      statsContainer.className = 'vote-statistics-container';
-      planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
-    }
-    
-    // Clear any previous stats and add new one
-    statsContainer.innerHTML = '';
-    statsContainer.appendChild(voteStats);
-    
-    // Hide planning cards
-    planningCardsSection.style.display = 'none';
-    
-    // Show statistics
-    statsContainer.style.display = 'block';
-  }
-  
-  // Apply the vote visuals as normal too
+
+  // Apply real votes to the UI (not thumbs-up anymore)
   applyVotesToUI(votes, false);
-    // Add a delay to ensure the DOM is updated before fixing font sizes
+
+  // Create and display the vote statistics section
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  addFixedVoteStatisticsStyles();
+  const voteStats = createFixedVoteDisplay(votes);
+
+  let statsContainer = document.querySelector('.vote-statistics-container');
+  if (!statsContainer) {
+    statsContainer = document.createElement('div');
+    statsContainer.className = 'vote-statistics-container';
+    planningCardsSection?.parentNode?.insertBefore(statsContainer, planningCardsSection.nextSibling);
+  }
+
+  statsContainer.innerHTML = '';
+  statsContainer.appendChild(voteStats);
+  statsContainer.style.display = 'block';
+
+  // Hide planning cards during result display
+  if (planningCardsSection) planningCardsSection.style.display = 'none';
+
+  // Fix vote badge font sizes after DOM update
   setTimeout(fixRevealedVoteFontSizes, 100);
-  
-  // Run it again after a bit longer to be sure (sometimes the DOM updates can be delayed)
   setTimeout(fixRevealedVoteFontSizes, 300);
 }
+
+
+
 /**
  * Setup Add Ticket button
  */
@@ -1668,13 +1661,14 @@ function resetOrRestoreVotes(index) {
 /**
  * Apply votes to UI
  */
-function applyVotesToUI(votes, hideValues) {
+function applyVotesToUI(votes, hideValues, storyIndex = currentStoryIndex) {
   Object.entries(votes).forEach(([userId, vote]) => {
-  updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
- //     updateVoteVisuals(userId, vote, true);
-  //  showEmojiBurst(userId, vote);
+    const displayValue = hideValues ? '👍' : vote;
+    updateVoteVisuals(userId, vote, true, storyIndex);
+    // Optionally: showEmojiBurst(userId, vote); // if using emoji feedback
   });
 }
+
 
 /**
  * Reset all vote visuals
