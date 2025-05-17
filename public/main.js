@@ -1214,7 +1214,15 @@ function removeStory(storyId) {
 
   normalizeStoryIndexes();
 
-  // Re-select a story if the selected one was deleted
+  const remainingCards = document.querySelectorAll('.story-card');
+  if (remainingCards.length === 0) {
+    resetAllVotingVisuals();  // Reset UI
+    currentStoryIndex = null;
+    votesPerStory = {};
+    votesRevealed = {};
+  }
+
+  // Re-select story if necessary
   const selected = document.querySelector('.story-card.selected');
   if (!selected) {
     const first = document.querySelector('.story-card');
