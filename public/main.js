@@ -256,6 +256,15 @@ function addFixedVoteStatisticsStyles() {
       display: flex;
       align-items: flex-start;
     }
+
+    .story-delete-btn {
+    float: right;
+    cursor: pointer;
+    margin-left: 10px;
+    color: #d32f2f;
+    font-size: 14px;
+  }
+
     
     .fixed-vote-card {
       border: 2px solid #000;
@@ -1096,41 +1105,83 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   const storyTitle = document.createElement('div');
   storyTitle.className = 'story-title';
   storyTitle.textContent = ticketData.text;
-  
-  // Add to DOM
   storyCard.appendChild(storyTitle);
+
+  // ✅ Add delete button for non-guests
+  if (!isGuestUser()) {
+    const deleteBtn = document.createElement('span');
+    deleteBtn.className = 'story-delete-btn';
+    deleteBtn.textContent = '❌';
+    deleteBtn.title = 'Remove this story';
+
+    // Prevent click from triggering story selection
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Are you sure you want to delete this story?')) {
+        removeStory(ticketData.id);
+      }
+    });
+
+    storyCard.appendChild(deleteBtn);
+  }
+
+  // Add to DOM
   storyList.appendChild(storyCard);
-  
-  // Check if user is guest and handle accordingly
+
+  // Handle guest restrictions
   if (isGuestUser()) {
     storyCard.classList.add('disabled-story');
   } else {
-    // Add click event listener only for hosts
     storyCard.addEventListener('click', () => {
       selectStory(newIndex);
     });
   }
-  
-  // Select the new story if requested (only for hosts)
+
+  // Auto-select if requested
   if (selectAfterAdd && !isGuestUser()) {
     selectStory(newIndex);
   }
-  
-  // Rest of your existing code...
-  
-  // Check for stories message
+
+  // Hide "no stories" message
   const noStoriesMessage = document.getElementById('noStoriesMessage');
   if (noStoriesMessage) {
     noStoriesMessage.style.display = 'none';
   }
-  
-  // Enable planning cards if they were disabled
+
+  // Enable planning cards
   document.querySelectorAll('#planningCards .card').forEach(card => {
     card.classList.remove('disabled');
     card.setAttribute('draggable', 'true');
   });
+
   normalizeStoryIndexes();
 }
+
+/** function to remove selected story  */
+function removeStory(storyId) {
+  const card = document.getElementById(storyId);
+  if (card) {
+    card.remove();
+  }
+
+  // Notify server if host
+  if (!isGuestUser() && socket) {
+    socket.emit('removeTicket', { storyId });
+  }
+
+  normalizeStoryIndexes();
+
+  // Re-select a story if the selected one was deleted
+  const selected = document.querySelector('.story-card.selected');
+  if (!selected) {
+    const first = document.querySelector('.story-card');
+    if (first) {
+      const index = parseInt(first.dataset.index, 10);
+      selectStory(index);
+    }
+  }
+}
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
@@ -2079,6 +2130,25 @@ function handleSocketMessage(message) {
     }
   }
    break;
+  case 'ticketRemoved':
+  if (message.storyId) {
+    const card = document.getElementById(message.storyId);
+    if (card) {
+      card.remove();
+      normalizeStoryIndexes();
+
+      const selected = document.querySelector('.story-card.selected');
+      if (!selected) {
+        const first = document.querySelector('.story-card');
+        if (first) {
+          const index = parseInt(first.dataset.index, 10);
+          selectStory(index);
+        }
+      }
+    }
+  }
+  break;
+
 
     case 'addTicket':
       // Handle ticket added by another user
