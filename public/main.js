@@ -551,6 +551,17 @@ socket.on('votingSystemUpdate', ({ votingSystem }) => {
   console.log('[SOCKET] Received voting system from host:', votingSystem);
   sessionStorage.setItem('votingSystem', votingSystem);
   setupPlanningCards(); // Dynamically regenerate vote cards
+  
+// Listen for server-side signal that all stories have been cleared
+socket.on('allStoriesCleared', () => {
+  console.log('[SOCKET] All stories cleared – resetting voting UI');
+  resetAllVotingVisuals();
+  votesPerStory = {};
+  votesRevealed = {};
+  currentStoryIndex = null;
+});
+
+  
 });
 
 // Host: Emit selected voting system to server
