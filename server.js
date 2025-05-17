@@ -152,11 +152,19 @@ io.on('connection', (socket) => {
     if (rooms[roomId].csvData?.length > 0) {
       socket.emit('syncCSVData', rooms[roomId].csvData);
     }
+
+    setTimeout(() => {
+  const index = rooms[roomId].selectedIndex;
+  if (typeof index === 'number') {
+    console.log(`[SERVER] Sending selected story index ${index} to ${userName}`);
+    socket.emit('storySelected', { storyIndex: index });
+  }
+}, 300);// small delay to ensure selection is processed
     
-    // If room has selected story, send that info
+  /**  // If room has selected story, send that info
     if (typeof rooms[roomId].selectedIndex === 'number') {
       socket.emit('storySelected', { storyIndex: rooms[roomId].selectedIndex });
-    }
+    } */
   });
 
   // Handle ticket synchronization
