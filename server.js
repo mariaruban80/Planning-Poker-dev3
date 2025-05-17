@@ -95,13 +95,34 @@ socket.on('removeTicket', ({ storyId }) => {
     const room = rooms[roomId];
     const originalCount = room.tickets.length;
 
+    // Find index of the ticket being removed
+    const storyIndex = room.tickets.findIndex(ticket => ticket.id === storyId);
+
+    // Remove the ticket
     room.tickets = room.tickets.filter(ticket => ticket.id !== storyId);
 
     console.log(`[SERVER] Removed ticket ${storyId} from room ${roomId}. ${originalCount} → ${room.tickets.length}`);
 
+    // Clean up votes for the removed story
+    if (storyIndex !== -1) {
+      delete room.votesPerStory[storyIndex];
+      delete room.votesRevealed[storyIndex];
+    }
+
+    // Reset selectedIndex if no stories remain
+    if (room.tickets.length === 0) {
+      room.selectedIndex = null;
+      io.to(roomId).emit('allStoriesCleared'); // Notify clients
+    } else if (storyIndex === room.selectedIndex) {
+      room.selectedIndex = 0; // Fallback to first story
+      io.to(roomId).emit('storySelected', { storyIndex: 0 });
+    }
+
     io.to(roomId).emit('ticketRemoved', { storyId });
+    io.to(roomId).emit('votesReset', { storyIndex }); // Force reset visuals
   }
 });
+
 
   
   
