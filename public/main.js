@@ -1226,14 +1226,21 @@ function removeStory(storyId) {
   normalizeStoryIndexes();
 
   const remainingCards = document.querySelectorAll('.story-card');
+
   if (remainingCards.length === 0) {
-    resetAllVotingVisuals();  // Reset UI
+    resetAllVotingVisuals();
     currentStoryIndex = null;
     votesPerStory = {};
     votesRevealed = {};
+  } else {
+    // 👇 Force reset local vote state for new current story (likely 0)
+    currentStoryIndex = 0;
+    votesPerStory[currentStoryIndex] = {};
+    votesRevealed[currentStoryIndex] = false;
+    resetAllVoteVisuals(); // <--- THIS updates DOM
   }
 
-  // Re-select story if necessary
+  // Auto-select first story if none selected
   const selected = document.querySelector('.story-card.selected');
   if (!selected) {
     const first = document.querySelector('.story-card');
@@ -1243,6 +1250,7 @@ function removeStory(storyId) {
     }
   }
 }
+
 
 
 /**
@@ -1672,18 +1680,27 @@ function applyVotesToUI(votes, hideValues) {
  * Reset all vote visuals
  */
 function resetAllVoteVisuals() {
-  document.querySelectorAll('.vote-badge').forEach(badge => {
-    badge.textContent = '';
-  });
-  
-  document.querySelectorAll('.has-vote').forEach(el => {
+  // Remove all vote badges entirely
+  document.querySelectorAll('.vote-badge').forEach(el => el.remove());
+
+  // Remove 'has-vote' from vote card areas
+  document.querySelectorAll('.vote-card-space').forEach(el => {
     el.classList.remove('has-vote');
   });
-  
-  document.querySelectorAll('.has-voted').forEach(el => {
+
+  // Remove 'has-voted' highlight from avatars
+  document.querySelectorAll('.avatar-container').forEach(el => {
     el.classList.remove('has-voted');
   });
+
+  // Hide and clear vote statistics UI if it exists
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  if (statsContainer) {
+    statsContainer.style.display = 'none';
+    statsContainer.innerHTML = '';
+  }
 }
+
 
 /**
  * Render the current story
