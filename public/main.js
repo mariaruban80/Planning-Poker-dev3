@@ -2166,22 +2166,34 @@ function handleSocketMessage(message) {
       break;
 
 case 'storySelected':
- if (typeof message.storyIndex === 'number') {
+if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
-
     currentStoryIndex = message.storyIndex;
 
-    // Delay to ensure DOM is ready
-    setTimeout(() => {
-      selectStory(message.storyIndex, false); // Don't re-emit
-      setupPlanningCards();                   // Rebuild vote cards
-      setupVoteCardsDrag();                   // Enable drag and drop
+    //  Wait until story cards are ready
+    let attempts = 0;
+    const maxAttempts = 10;
 
-      // ✅ Request votes for this story
-      if (socket) {
-        socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
+    const waitForStoryCard = setInterval(() => {
+      const card = document.querySelector(`.story-card[data-index="${message.storyIndex}"]`);
+      if (card || attempts >= maxAttempts) {
+        clearInterval(waitForStoryCard);
+
+        if (card) {
+          console.log('[SOCKET] Selecting story after cards ready');
+          selectStory(message.storyIndex, false);
+          setupPlanningCards();
+          setupVoteCardsDrag();
+
+          if (socket) {
+            socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
+          }
+        } else {
+          console.warn('[SOCKET] Story card not found after waiting');
+        }
       }
-    }, 100);
+      attempts++;
+    }, 200); // check every 200ms
   }
   break;
 
