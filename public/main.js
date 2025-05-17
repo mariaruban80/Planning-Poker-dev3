@@ -2256,37 +2256,39 @@ case 'ticketRemoved':
     // When connection is established or reestablished, try to recover state
     recoverAppState();
     break;
-    case 'voteUpdate':
-      // Handle vote received
-      if (message.userId && message.vote) {
-        if (!votesPerStory[currentStoryIndex]) {
-          votesPerStory[currentStoryIndex] = {};
-        }
-        votesPerStory[currentStoryIndex][message.userId] = message.vote;
-        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
-      }
-      break;
-      
-    case 'votesRevealed':
-      // Handle votes revealed
-     // votesRevealed[currentStoryIndex] = true;
-     // if (votesPerStory[currentStoryIndex]) {
-       // applyVotesToUI(votesPerStory[currentStoryIndex], false);
-     // }
-      //triggerGlobalEmojiBurst();
+ case 'voteUpdate':
+  if (message.userId && message.vote !== undefined && message.storyIndex !== undefined) {
+    const index = message.storyIndex;
 
-      // Handle votes revealed
-      votesRevealed[currentStoryIndex] = true;
-      if (votesPerStory[currentStoryIndex]) {
-        handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
-      } else {
-        console.log('[WARN] Votes revealed but no votes found for story index:', currentStoryIndex);
-        
-        // If no votes found, still show empty statistics
-        handleVotesRevealed(currentStoryIndex, {});
-      }
-      triggerGlobalEmojiBurst();
-      break;
+    // Ensure we have a votes object for that story index
+    if (!votesPerStory[index]) {
+      votesPerStory[index] = {};
+    }
+
+    // Store the vote
+    votesPerStory[index][message.userId] = message.vote;
+
+    // Display vote – anonymized if not revealed
+    const displayValue = votesRevealed[index] ? message.vote : '👍';
+    updateVoteVisuals(message.userId, displayValue, true);
+  }
+  break;
+
+      
+   case 'votesRevealed':
+  const revealedIndex = message.storyIndex;
+  votesRevealed[revealedIndex] = true;
+
+  if (votesPerStory[revealedIndex]) {
+    handleVotesRevealed(revealedIndex, votesPerStory[revealedIndex]);
+  } else {
+    console.log('[WARN] Votes revealed but no votes found for story index:', revealedIndex);
+    handleVotesRevealed(revealedIndex, {});
+  }
+
+  triggerGlobalEmojiBurst();
+  break;
+
       
     case 'votesReset':
       // Handle votes reset
