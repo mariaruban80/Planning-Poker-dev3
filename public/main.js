@@ -2060,16 +2060,25 @@ function triggerGlobalEmojiBurst() {
  */
 function handleSocketMessage(message) {
   const eventType = message.type;
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+
   
   // console.log(`[SOCKET] Received ${eventType}:`, message);
   
   switch(eventType) {
     case 'userList':
       // Update the user list when server sends an updated list
-      if (Array.isArray(message.users)) {
-        updateUserList(message.users);
-      }
-      break;
+    if (Array.isArray(message.users)) {
+    updateUserList(message.users);
+
+    // ✅ If host, re-emit current story to sync for new users
+    if (isHost && typeof emitStorySelected === 'function') {
+      const currentIndex = getCurrentStoryIndex?.() ?? 0;
+      console.log('[HOST] Re-emitting current story index for guests:', currentIndex);
+      emitStorySelected(currentIndex);
+    }
+  }
+   break;
 
     case 'addTicket':
       // Handle ticket added by another user
