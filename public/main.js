@@ -69,41 +69,41 @@ function saveAppState() {
 }
 /** to reset votes when the stories are deleted */
 function resetAllVotingVisuals() {
-  console.log('[UI] Resetting all voting visuals');
+  console.log('[UI] FORCE RESET: clearing badges, avatars, stats');
 
-  // ✅ Remove vote badges directly
-  document.querySelectorAll('.vote-badge').forEach(badge => {
+  // Force remove all vote badges from anywhere in DOM
+  const allBadges = document.querySelectorAll('.vote-badge');
+  allBadges.forEach(badge => {
     badge.remove();
   });
 
-  // ✅ Remove has-vote class from vote-card-space
-  document.querySelectorAll('.vote-card-space.has-vote').forEach(space => {
+  // Remove has-vote from vote card spaces
+  document.querySelectorAll('.vote-card-space').forEach(space => {
     space.classList.remove('has-vote');
   });
 
-  // ✅ Remove has-voted from avatars
-  document.querySelectorAll('.avatar-container.has-voted').forEach(container => {
-    container.classList.remove('has-voted');
+  // Remove has-voted from all avatars
+  document.querySelectorAll('.avatar-container').forEach(avatar => {
+    avatar.classList.remove('has-voted');
   });
 
-  // ✅ Hide planning cards section
+  // Hide planning cards and stats
   const planningCardsSection = document.querySelector('.planning-cards-section');
   if (planningCardsSection) planningCardsSection.style.display = 'none';
 
-  // ✅ Hide and clear vote statistics
   const statsContainer = document.querySelector('.vote-statistics-container');
   if (statsContainer) {
     statsContainer.style.display = 'none';
     statsContainer.innerHTML = '';
   }
 
-  // ✅ Optional: disable planning cards
+  // Disable drag
   document.querySelectorAll('#planningCards .card').forEach(card => {
     card.classList.add('disabled');
     card.setAttribute('draggable', 'false');
   });
 
-  // ✅ Show "no stories" message if you use it
+  // Show no stories message
   const noStoriesMessage = document.getElementById('noStoriesMessage');
   if (noStoriesMessage) {
     noStoriesMessage.style.display = 'block';
@@ -2182,22 +2182,28 @@ case 'ticketRemoved':
 
       const remainingStories = document.querySelectorAll('.story-card');
       if (remainingStories.length === 0) {
-        console.log('[SOCKET] All stories deleted — clearing vote state');
-        
-        // ✅ Clear vote UI + data
+        console.log('[SOCKET] All stories removed, resetting UI');
+
+        // Reset immediately, then again after a delay
         resetAllVotingVisuals();
+        setTimeout(resetAllVotingVisuals, 200); // re-clear any delayed DOM updates
+
         votesPerStory = {};
         votesRevealed = {};
         currentStoryIndex = 0;
 
-        // ✅ Optional: disable cards if still draggable
-        document.querySelectorAll('#planningCards .card').forEach(card => {
-          card.classList.add('disabled');
-          card.setAttribute('draggable', 'false');
-        });
-
         break;
       }
+
+      // If selected story was removed, pick first
+      const selected = document.querySelector('.story-card.selected');
+      if (!selected && remainingStories.length > 0) {
+        const index = parseInt(remainingStories[0].dataset.index, 10);
+        selectStory(index);
+      }
+    }
+  }
+  break;
 
       // Select next available story if selected was removed
       const selected = document.querySelector('.story-card.selected');
