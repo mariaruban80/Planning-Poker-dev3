@@ -1937,15 +1937,18 @@ function updateVoteVisuals(userId, vote, _hasVoted = false, storyIndex = current
   const hasVoted = vote !== undefined && vote !== null && vote !== '';
   const displayVote = isRevealed ? vote : (hasVoted ? '👍' : '');
 
+  console.log(`[DEBUG] updateVoteVisuals for ${userId}:`, { vote, displayVote, storyIndex, isRevealed });
+
   // Sidebar badge
   const sidebarBadge = document.querySelector(`#user-${safeId} .vote-badge`);
   if (sidebarBadge) {
     sidebarBadge.textContent = displayVote;
     sidebarBadge.style.color = '#673ab7';
     sidebarBadge.style.opacity = displayVote ? '1' : '0';
+    sidebarBadge.style.display = 'block'; // <-- important
   }
 
-  // Vote space badge
+  // Vote card space
   const voteSpace = document.querySelector(`#vote-space-${safeId}`);
   if (voteSpace) {
     let voteBadge = voteSpace.querySelector('.vote-badge');
@@ -1953,11 +1956,13 @@ function updateVoteVisuals(userId, vote, _hasVoted = false, storyIndex = current
       voteBadge = document.createElement('div');
       voteBadge.className = 'vote-badge';
       voteSpace.appendChild(voteBadge);
+      console.log(`[DEBUG] Created vote-badge for ${userId}`);
     }
 
     voteBadge.textContent = displayVote;
     voteBadge.style.color = '#673ab7';
     voteBadge.style.opacity = displayVote ? '1' : '0';
+    voteBadge.style.display = 'block'; // <-- important
 
     voteSpace.classList.toggle('has-vote', hasVoted);
   }
@@ -1970,6 +1975,7 @@ function updateVoteVisuals(userId, vote, _hasVoted = false, storyIndex = current
     if (avatar) avatar.style.backgroundColor = '#c1e1c1';
   }
 }
+
 
 
 
