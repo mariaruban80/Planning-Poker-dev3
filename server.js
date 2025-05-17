@@ -88,6 +88,22 @@ io.on('connection', (socket) => {
       userConnections[userId].lastPing = Date.now();
     }
   });
+// removing ticket
+socket.on('removeTicket', ({ storyId }) => {
+  const roomId = socket.data.roomId;
+  if (roomId && rooms[roomId]) {
+    const room = rooms[roomId];
+    const originalCount = room.tickets.length;
+
+    room.tickets = room.tickets.filter(ticket => ticket.id !== storyId);
+
+    console.log(`[SERVER] Removed ticket ${storyId} from room ${roomId}. ${originalCount} → ${room.tickets.length}`);
+
+    io.to(roomId).emit('ticketRemoved', { storyId });
+  }
+});
+
+  
   
   // Handle room joining
   socket.on('joinRoom', ({ roomId, userName, votingSystem }) => {
