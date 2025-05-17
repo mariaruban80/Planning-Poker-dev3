@@ -1663,11 +1663,10 @@ function resetOrRestoreVotes(index) {
  */
 function applyVotesToUI(votes, hideValues, storyIndex = currentStoryIndex) {
   Object.entries(votes).forEach(([userId, vote]) => {
-    const displayValue = hideValues ? '👍' : vote;
     updateVoteVisuals(userId, vote, true, storyIndex);
-    // Optionally: showEmojiBurst(userId, vote); // if using emoji feedback
   });
 }
+
 
 
 /**
