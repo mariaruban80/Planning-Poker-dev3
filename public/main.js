@@ -67,6 +67,36 @@ function saveAppState() {
   
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
+/** to reset votes when the stories are deleted */
+
+function resetAllVotingVisuals() {
+  console.log('[UI] Resetting all voting visuals');
+
+  // Remove vote badges
+  document.querySelectorAll('.vote-card-space.has-vote').forEach(space => {
+    space.classList.remove('has-vote');
+    const badge = space.querySelector('.vote-badge');
+    if (badge) badge.remove();
+  });
+
+  // Remove "has-voted" highlight from avatars
+  document.querySelectorAll('.avatar-container.has-voted').forEach(container => {
+    container.classList.remove('has-voted');
+  });
+
+  // Hide planning cards
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  if (planningCardsSection) planningCardsSection.style.display = 'none';
+
+  // Hide vote statistics
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  if (statsContainer) statsContainer.style.display = 'none';
+
+  // Optionally show "no stories" message if it's part of your UI
+  const noStoriesMessage = document.getElementById('noStoriesMessage');
+  if (noStoriesMessage) noStoriesMessage.style.display = 'block';
+}
+
 
 /**
  * Update last activity timestamp
@@ -2130,16 +2160,27 @@ function handleSocketMessage(message) {
     }
   }
    break;
-  case 'ticketRemoved':
+case 'ticketRemoved':
   if (message.storyId) {
     const card = document.getElementById(message.storyId);
     if (card) {
       card.remove();
       normalizeStoryIndexes();
 
+      // If all stories are now deleted
+      const remainingStories = document.querySelectorAll('.story-card');
+      if (remainingStories.length === 0) {
+        resetAllVotingVisuals();
+        votesPerStory = {};
+        votesRevealed = {};
+        currentStoryIndex = 0;
+        break;
+      }
+
+      // If selected story was removed, select first available one
       const selected = document.querySelector('.story-card.selected');
       if (!selected) {
-        const first = document.querySelector('.story-card');
+        const first = remainingStories[0];
         if (first) {
           const index = parseInt(first.dataset.index, 10);
           selectStory(index);
@@ -2148,6 +2189,7 @@ function handleSocketMessage(message) {
     }
   }
   break;
+
      case 'votingSystemUpdate':
       console.log('[DEBUG] Got voting system update:', message.votingSystem);
       sessionStorage.setItem('votingSystem', message.votingSystem);
