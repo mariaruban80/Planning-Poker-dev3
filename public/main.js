@@ -69,40 +69,42 @@ function saveAppState() {
 }
 /** to reset votes when the stories are deleted */
 function resetAllVotingVisuals() {
-  console.log('[UI] Resetting all vote visuals');
+  console.log('[UI] Resetting all voting visuals');
 
-  // Remove all vote badges
-  document.querySelectorAll('.vote-badge').forEach(badge => badge.remove());
-
-  // Remove vote highlight from vote card spaces
+  // Remove all vote badges from vote-card spaces
   document.querySelectorAll('.vote-card-space').forEach(space => {
     space.classList.remove('has-vote');
+    const badge = space.querySelector('.vote-badge');
+    if (badge) {
+      badge.remove();
+    }
   });
 
-  // Remove .has-voted from all avatars
+  // Remove has-voted from all avatars
   document.querySelectorAll('.avatar-container').forEach(container => {
     container.classList.remove('has-voted');
   });
 
-  // Hide planning cards section
+  // Hide planning cards
   const planningCardsSection = document.querySelector('.planning-cards-section');
   if (planningCardsSection) {
     planningCardsSection.style.display = 'none';
   }
 
-  // Hide vote statistics
+  // Hide and clear vote stats
   const statsContainer = document.querySelector('.vote-statistics-container');
   if (statsContainer) {
     statsContainer.style.display = 'none';
     statsContainer.innerHTML = '';
   }
 
-  // Show "no stories" message if present
+  // Show "no stories" message if defined
   const noStoriesMessage = document.getElementById('noStoriesMessage');
   if (noStoriesMessage) {
     noStoriesMessage.style.display = 'block';
   }
 }
+
 
 
 /**
@@ -2176,16 +2178,24 @@ case 'ticketRemoved':
 
       const remainingStories = document.querySelectorAll('.story-card');
       if (remainingStories.length === 0) {
-        // ✅ Reset voting state if no stories left
-        console.log('[SOCKET] All stories deleted. Resetting vote state.');
-        resetAllVotingVisuals(); // Clears badges, avatars, stats
+        console.log('[SOCKET] All stories deleted — clearing vote state');
+        
+        // ✅ Clear vote UI + data
+        resetAllVotingVisuals();
         votesPerStory = {};
         votesRevealed = {};
         currentStoryIndex = 0;
-        break; // Exit the switch case
+
+        // ✅ Optional: disable cards if still draggable
+        document.querySelectorAll('#planningCards .card').forEach(card => {
+          card.classList.add('disabled');
+          card.setAttribute('draggable', 'false');
+        });
+
+        break;
       }
 
-      // If deleted story was selected, select first remaining one
+      // Select next available story if selected was removed
       const selected = document.querySelector('.story-card.selected');
       if (!selected) {
         const first = remainingStories[0];
