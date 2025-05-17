@@ -160,23 +160,30 @@ io.on('connection', (socket) => {
   });
 
   // Handle ticket synchronization
-  socket.on('addTicket', (ticketData) => {
-    const roomId = socket.data.roomId;
-    if (roomId && rooms[roomId]) {
-      console.log(`[SERVER] New ticket added to room ${roomId}`);
-      updateRoomActivity(roomId);
-      
-      // Broadcast the new ticket to everyone in the room EXCEPT sender
-      socket.broadcast.to(roomId).emit('addTicket', { ticketData });
-      
-      // Keep track of tickets on the server
-      if (!rooms[roomId].tickets) {
-        rooms[roomId].tickets = [];
-      }
-      rooms[roomId].tickets.push(ticketData);
-    }
-  });
+socket.on('addTicket', (ticketData) => {
+  const roomId = socket.data.roomId;
+  if (roomId && rooms[roomId]) {
+    console.log(`[SERVER] New ticket added to room ${roomId}`);
+    updateRoomActivity(roomId);
+    
+    // Broadcast the new ticket to everyone in the room EXCEPT sender
+    socket.broadcast.to(roomId).emit('addTicket', { ticketData });
 
+    // Keep track of tickets on the server
+    if (!rooms[roomId].tickets) {
+      rooms[roomId].tickets = [];
+    }
+
+    rooms[roomId].tickets.push(ticketData);
+
+    // If this is the first ticket or explicitly mark it as selected, update selectedIndex
+    const isFirstTicket = rooms[roomId].tickets.length === 1;
+    if (isFirstTicket) {
+      rooms[roomId].selectedIndex = 0;
+      io.to(roomId).emit('storySelected', { storyIndex: 0 });
+    }
+  }
+});
   // Store the selected voting system for the room
   socket.on('votingSystemSelected', ({ roomId, votingSystem }) => {
     if (roomId && votingSystem) {
