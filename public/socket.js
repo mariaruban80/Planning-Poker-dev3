@@ -57,7 +57,10 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.log('[SOCKET] Received new ticket from another user:', ticketData);
     handleMessage({ type: 'addTicket', ticketData });
   });
-
+socket.on('ticketRemoved', ({ storyId }) => {
+  console.log('[SOCKET] Ticket removed received from server:', storyId);
+  handleMessage({ type: 'ticketRemoved', storyId });
+});
   socket.on('allTickets', ({ tickets }) => {
     console.log('[SOCKET] Received all tickets:', tickets.length);
     handleMessage({ type: 'allTickets', tickets });
