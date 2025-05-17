@@ -2187,32 +2187,15 @@ case 'ticketRemoved':
         // Reset immediately, then again after a delay
         resetAllVotingVisuals();
         setTimeout(resetAllVotingVisuals, 200); // re-clear any delayed DOM updates
-
         votesPerStory = {};
         votesRevealed = {};
         currentStoryIndex = 0;
-
-        break;
       }
-
       // If selected story was removed, pick first
       const selected = document.querySelector('.story-card.selected');
       if (!selected && remainingStories.length > 0) {
         const index = parseInt(remainingStories[0].dataset.index, 10);
         selectStory(index);
-      }
-    }
-  }
-  break;
-
-      // Select next available story if selected was removed
-      const selected = document.querySelector('.story-card.selected');
-      if (!selected) {
-        const first = remainingStories[0];
-        if (first) {
-          const index = parseInt(first.dataset.index, 10);
-          selectStory(index);
-        }
       }
     }
   }
