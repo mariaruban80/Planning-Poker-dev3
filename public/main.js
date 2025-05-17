@@ -1937,10 +1937,14 @@ function createVoteCardSpace(user, isCurrentUser) {
 /**
  * Update vote visuals for a user
  */
-function updateVoteVisuals(userId, vote, hasVoted = false) {
+
+  function updateVoteVisuals(userId, vote, hasVoted = false, storyIndex = currentStoryIndex)
+  
   const safeId = sanitizeId(userId);
   // Determine what to show based on reveal state
-  const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
+//  const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
+const displayVote = votesRevealed[storyIndex] ? vote : '👍';
+
   
   // Update badges in sidebar
   const sidebarBadge = document.querySelector(`#user-${safeId} .vote-badge`);
@@ -2270,7 +2274,9 @@ case 'ticketRemoved':
 
     // Display vote – anonymized if not revealed
     const displayValue = votesRevealed[index] ? message.vote : '👍';
-    updateVoteVisuals(message.userId, displayValue, true);
+   // updateVoteVisuals(message.userId, displayValue, true);
+    updateVoteVisuals(message.userId, message.vote, true, message.storyIndex);
+
   }
   break;
 
