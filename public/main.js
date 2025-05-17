@@ -68,33 +68,40 @@ function saveAppState() {
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
 /** to reset votes when the stories are deleted */
-
 function resetAllVotingVisuals() {
-  console.log('[UI] Resetting all voting visuals');
+  console.log('[UI] Resetting all vote visuals');
 
-  // Remove vote badges
-  document.querySelectorAll('.vote-card-space.has-vote').forEach(space => {
+  // Remove all vote badges
+  document.querySelectorAll('.vote-badge').forEach(badge => badge.remove());
+
+  // Remove vote highlight from vote card spaces
+  document.querySelectorAll('.vote-card-space').forEach(space => {
     space.classList.remove('has-vote');
-    const badge = space.querySelector('.vote-badge');
-    if (badge) badge.remove();
   });
 
-  // Remove "has-voted" highlight from avatars
-  document.querySelectorAll('.avatar-container.has-voted').forEach(container => {
+  // Remove .has-voted from all avatars
+  document.querySelectorAll('.avatar-container').forEach(container => {
     container.classList.remove('has-voted');
   });
 
-  // Hide planning cards
+  // Hide planning cards section
   const planningCardsSection = document.querySelector('.planning-cards-section');
-  if (planningCardsSection) planningCardsSection.style.display = 'none';
+  if (planningCardsSection) {
+    planningCardsSection.style.display = 'none';
+  }
 
   // Hide vote statistics
   const statsContainer = document.querySelector('.vote-statistics-container');
-  if (statsContainer) statsContainer.style.display = 'none';
+  if (statsContainer) {
+    statsContainer.style.display = 'none';
+    statsContainer.innerHTML = '';
+  }
 
-  // Optionally show "no stories" message if it's part of your UI
+  // Show "no stories" message if present
   const noStoriesMessage = document.getElementById('noStoriesMessage');
-  if (noStoriesMessage) noStoriesMessage.style.display = 'block';
+  if (noStoriesMessage) {
+    noStoriesMessage.style.display = 'block';
+  }
 }
 
 
@@ -2167,17 +2174,18 @@ case 'ticketRemoved':
       card.remove();
       normalizeStoryIndexes();
 
-      // If all stories are now deleted
       const remainingStories = document.querySelectorAll('.story-card');
       if (remainingStories.length === 0) {
-        resetAllVotingVisuals();
+        // ✅ Reset voting state if no stories left
+        console.log('[SOCKET] All stories deleted. Resetting vote state.');
+        resetAllVotingVisuals(); // Clears badges, avatars, stats
         votesPerStory = {};
         votesRevealed = {};
         currentStoryIndex = 0;
-        break;
+        break; // Exit the switch case
       }
 
-      // If selected story was removed, select first available one
+      // If deleted story was selected, select first remaining one
       const selected = document.querySelector('.story-card.selected');
       if (!selected) {
         const first = remainingStories[0];
