@@ -71,40 +71,44 @@ function saveAppState() {
 function resetAllVotingVisuals() {
   console.log('[UI] Resetting all voting visuals');
 
-  // Remove all vote badges from vote-card spaces
-  document.querySelectorAll('.vote-card-space').forEach(space => {
-    space.classList.remove('has-vote');
-    const badge = space.querySelector('.vote-badge');
-    if (badge) {
-      badge.remove();
-    }
+  // ✅ Remove vote badges directly
+  document.querySelectorAll('.vote-badge').forEach(badge => {
+    badge.remove();
   });
 
-  // Remove has-voted from all avatars
-  document.querySelectorAll('.avatar-container').forEach(container => {
+  // ✅ Remove has-vote class from vote-card-space
+  document.querySelectorAll('.vote-card-space.has-vote').forEach(space => {
+    space.classList.remove('has-vote');
+  });
+
+  // ✅ Remove has-voted from avatars
+  document.querySelectorAll('.avatar-container.has-voted').forEach(container => {
     container.classList.remove('has-voted');
   });
 
-  // Hide planning cards
+  // ✅ Hide planning cards section
   const planningCardsSection = document.querySelector('.planning-cards-section');
-  if (planningCardsSection) {
-    planningCardsSection.style.display = 'none';
-  }
+  if (planningCardsSection) planningCardsSection.style.display = 'none';
 
-  // Hide and clear vote stats
+  // ✅ Hide and clear vote statistics
   const statsContainer = document.querySelector('.vote-statistics-container');
   if (statsContainer) {
     statsContainer.style.display = 'none';
     statsContainer.innerHTML = '';
   }
 
-  // Show "no stories" message if defined
+  // ✅ Optional: disable planning cards
+  document.querySelectorAll('#planningCards .card').forEach(card => {
+    card.classList.add('disabled');
+    card.setAttribute('draggable', 'false');
+  });
+
+  // ✅ Show "no stories" message if you use it
   const noStoriesMessage = document.getElementById('noStoriesMessage');
   if (noStoriesMessage) {
     noStoriesMessage.style.display = 'block';
   }
 }
-
 
 
 /**
