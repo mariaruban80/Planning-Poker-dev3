@@ -1938,69 +1938,63 @@ function createVoteCardSpace(user, isCurrentUser) {
  * Update vote visuals for a user
  */
 
-  function updateVoteVisuals(userId, vote, hasVoted = false, storyIndex = currentStoryIndex)
-  
+function updateVoteVisuals(userId, vote, hasVoted = false, storyIndex = currentStoryIndex) {
   const safeId = sanitizeId(userId);
-  // Determine what to show based on reveal state
-//  const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
-const displayVote = votesRevealed[storyIndex] ? vote : '👍';
+  const displayVote = votesRevealed[storyIndex] ? vote : '👍';
 
-  
+  console.log(`[UI] updateVoteVisuals → user: ${userId}, vote: ${vote}, storyIndex: ${storyIndex}, revealed: ${votesRevealed[storyIndex]}`);
+
   // Update badges in sidebar
   const sidebarBadge = document.querySelector(`#user-${safeId} .vote-badge`);
   if (sidebarBadge) {
-    // Only set content if the user has voted
     if (hasVoted) {
       sidebarBadge.textContent = displayVote;
-      sidebarBadge.style.color = '#673ab7'; // Make sure the text has a visible color
-      sidebarBadge.style.opacity = '1'; // Ensure full opacity
+      sidebarBadge.style.color = '#673ab7';
+      sidebarBadge.style.opacity = '1';
     } else {
-      sidebarBadge.textContent = ''; // Empty if no vote
-    }
-  }
-  
-  // Update vote card space
-  const voteSpace = document.querySelector(`#vote-space-${safeId}`);
-  if (voteSpace) {
-    const voteBadge = voteSpace.querySelector('.vote-badge');
-    if (voteBadge) {
-      // Only show vote if they've voted
-      if (hasVoted) {
-        voteBadge.textContent = displayVote;
-        voteBadge.style.color = '#673ab7'; // Make sure the text has a visible color
-        voteBadge.style.opacity = '1'; // Ensure full opacity
-      } else {
-        voteBadge.textContent = ''; // Empty if no vote
-      }
-    }
-    
-    // Update vote space class
-    if (hasVoted) {
-      voteSpace.classList.add('has-vote');
-    } else {
-      voteSpace.classList.remove('has-vote');
+      sidebarBadge.textContent = '';
     }
   }
 
-  // Update avatar to show they've voted
+  // Update vote card space
+  const voteSpace = document.querySelector(`#vote-space-${safeId}`);
+  if (voteSpace) {
+    let voteBadge = voteSpace.querySelector('.vote-badge');
+    if (!voteBadge) {
+      voteBadge = document.createElement('div');
+      voteBadge.className = 'vote-badge';
+      voteSpace.appendChild(voteBadge);
+    }
+
+    if (hasVoted) {
+      voteBadge.textContent = displayVote;
+      voteBadge.style.color = '#673ab7';
+      voteBadge.style.opacity = '1';
+    } else {
+      voteBadge.textContent = '';
+    }
+
+    voteSpace.classList.toggle('has-vote', hasVoted);
+  }
+
+  // Update avatar
   if (hasVoted) {
     const avatarContainer = document.querySelector(`#user-circle-${safeId}`);
     if (avatarContainer) {
       avatarContainer.classList.add('has-voted');
-      
+
       const avatar = avatarContainer.querySelector('.avatar-circle');
-      if (avatar) {
-        avatar.style.backgroundColor = '#c1e1c1'; // Green background
-      }
+      if (avatar) avatar.style.backgroundColor = '#c1e1c1';
     }
-    
-    // Also update sidebar avatar
+
     const sidebarAvatar = document.querySelector(`#user-${safeId} img.avatar`);
     if (sidebarAvatar) {
       sidebarAvatar.style.backgroundColor = '#c1e1c1';
     }
   }
 }
+
+
 
 /**
  * Update story title
@@ -2261,22 +2255,17 @@ case 'ticketRemoved':
     recoverAppState();
     break;
  case 'voteUpdate':
-  if (message.userId && message.vote !== undefined && message.storyIndex !== undefined) {
-    const index = message.storyIndex;
+  const { userId, vote, storyIndex } = message;
 
-    // Ensure we have a votes object for that story index
-    if (!votesPerStory[index]) {
-      votesPerStory[index] = {};
+  if (userId && vote !== undefined && storyIndex !== undefined) {
+    if (!votesPerStory[storyIndex]) {
+      votesPerStory[storyIndex] = {};
     }
 
-    // Store the vote
-    votesPerStory[index][message.userId] = message.vote;
+    votesPerStory[storyIndex][userId] = vote;
 
-    // Display vote – anonymized if not revealed
-    const displayValue = votesRevealed[index] ? message.vote : '👍';
-   // updateVoteVisuals(message.userId, displayValue, true);
-    updateVoteVisuals(message.userId, message.vote, true, message.storyIndex);
-
+    // Show as thumbs if not revealed yet
+    updateVoteVisuals(userId, vote, true, storyIndex);
   }
   break;
 
