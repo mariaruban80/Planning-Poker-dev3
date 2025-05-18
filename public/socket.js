@@ -53,9 +53,26 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   // Monitor connection health
   setupConnectionMonitor(handleMessage);
 
-  socket.on('addTicket', ({ ticketData }) => {
-    console.log('[SOCKET] Received new ticket from another user:', ticketData);
-    handleMessage({ type: 'addTicket', ticketData });
+  socket.on('addTicket', (ticketData) => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData);
+
+      if (!rooms[roomId].tickets) {
+        rooms[roomId].tickets = [];
+      }
+
+      rooms[roomId].tickets.push(ticketData);
+      console.log(`[SERVER] Total tickets in room after add:`, rooms[roomId].tickets.map(t => t.id));
+
+      socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+
+      const isFirstTicket = rooms[roomId].tickets.length === 1;
+      if (isFirstTicket) {
+        rooms[roomId].selectedIndex = 0;
+        io.to(roomId).emit('storySelected', { storyIndex: 0 });
+      }
+    }
   });
 socket.on('ticketRemoved', ({ storyId }) => {
   console.log('[SOCKET] Ticket removed received from server:', storyId);
