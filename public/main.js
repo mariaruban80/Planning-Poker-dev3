@@ -1190,7 +1190,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   if (!isGuestUser()) {
     const deleteBtn = document.createElement('span');
     deleteBtn.className = 'story-delete-btn';
-    deleteBtn.textContent = '❌';
+    deleteBtn.textContent = '🗑';
     deleteBtn.title = 'Remove this story';
 
     // Prevent click from triggering story selection
