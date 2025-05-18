@@ -68,13 +68,10 @@ function saveAppState() {
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
 
-
 function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
   card.className = 'story-card';
   card.dataset.index = index;
-
-  // Assign ID depending on CSV/manual
   card.id = isCSV ? `story_csv_${index}` : story.id;
 
   const title = document.createElement('div');
@@ -82,31 +79,21 @@ function createStoryCard(story, index, isCSV = false) {
   title.textContent = story.text || story.title || `Story ${index + 1}`;
   card.appendChild(title);
 
-  // Add delete button for all cards
+  // ✅ Add delete button for all cards
   const removeBtn = document.createElement('span');
   removeBtn.className = 'remove-story';
   removeBtn.innerHTML = '&times;';
   removeBtn.title = 'Remove story';
-  
-  // Ensure click event is properly isolated and configured
-   removeBtn.onclick = (e) => {
+  removeBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to remove this story?')) {
       removeStory(card.id);
     }
-  };
-    
+  });
   card.appendChild(removeBtn);
 
   return card;
 }
-
-
-
-
-
-
-
 
 /** to reset votes when the stories are deleted */
 function resetAllVotingVisuals() {
@@ -1248,14 +1235,13 @@ function removeStory(storyId) {
     card.remove();
   }
 
-  // Notify server if host
   if (!isGuestUser() && socket) {
+    console.log('[CLIENT] Emitting removeTicket for:', storyId);
     socket.emit('removeTicket', { storyId });
   }
 
   normalizeStoryIndexes();
 
-  // Re-select a story if the selected one was deleted
   const selected = document.querySelector('.story-card.selected');
   if (!selected) {
     const first = document.querySelector('.story-card');
