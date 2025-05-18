@@ -89,15 +89,13 @@ function createStoryCard(story, index, isCSV = false) {
   removeBtn.title = 'Remove story';
   
   // Ensure click event is properly isolated and configured
-  removeBtn.onclick = (e) => {
+   removeBtn.onclick = (e) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to remove this story?')) {
-      if (socket) {
-        socket.emit('removeTicket', { storyId: card.id });
-      }
+      removeStory(card.id);
     }
   };
-  
+    
   card.appendChild(removeBtn);
 
   return card;
