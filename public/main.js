@@ -1442,6 +1442,13 @@ function setupCSVUploader() {
       
       // Display CSV data - this will clear and rebuild the story list
       displayCSVData(csvData);
+
+      // Emit each uploaded CSV story to the server so deletion works
+      csvData.forEach((ticket) => {
+        if (ticket && ticket.id && ticket.text) {
+          emitAddTicket(ticket); // Send to server
+        }
+      });
       
       // Re-add the preserved manual tickets
       existingTickets.forEach((ticket, index) => {
