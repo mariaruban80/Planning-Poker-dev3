@@ -392,6 +392,14 @@ function addFixedVoteStatisticsStyles() {
       align-items: center;
       justify-content: center;
     }
+    .remove-story {
+      cursor: pointer;
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 18px;
+      z-index: 10;
+    }
     
     .fixed-agreement-dot {
       width: 8px;
