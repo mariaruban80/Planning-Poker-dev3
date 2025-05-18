@@ -67,6 +67,45 @@ function saveAppState() {
   
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
+
+function createStoryCard(story, index, isCSV = false) {
+  const card = document.createElement('div');
+  card.className = 'story-card';
+  card.dataset.index = index;
+
+  // Assign ID depending on CSV/manual
+  card.id = isCSV ? `story_csv_${index}` : story.id;
+
+  const title = document.createElement('div');
+  title.className = 'story-title';
+  title.textContent = story.text || story.title || `Story ${index + 1}`;
+  card.appendChild(title);
+
+  // ✅ Add delete button for all cards
+  const removeBtn = document.createElement('span');
+  removeBtn.className = 'remove-story';
+  removeBtn.innerHTML = '&times;';
+  removeBtn.title = 'Remove story';
+  removeBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to remove this story?')) {
+      if (socket) {
+        socket.emit('removeTicket', { storyId: card.id });
+      }
+    }
+  };
+  card.appendChild(removeBtn);
+
+  return card;
+}
+
+
+
+
+
+
+
+
 /** to reset votes when the stories are deleted */
 function resetAllVotingVisuals() {
   console.log('[UI] FORCE RESET: clearing badges, avatars, stats');
@@ -1517,23 +1556,15 @@ if (isHost) {
     
     // Then add CSV data
     let startIndex = existingStories.length;
-    data.forEach((row, index) => {
-      const storyItem = document.createElement('div');
-      storyItem.classList.add('story-card');
-      storyItem.id = `story_csv_${index}`;
-      storyItem.dataset.index = startIndex + index;
-      
-      const storyTitle = document.createElement('div');
-      storyTitle.classList.add('story-title');
-      storyTitle.textContent = row.join(' | ');
-      
-      storyItem.appendChild(storyTitle);
-      storyListContainer.appendChild(storyItem);
-      
-      storyItem.addEventListener('click', () => {
-        selectStory(startIndex + index);
-      });
-    });
+  data.forEach((row, index) => {
+  const ticketData = {
+    id: `story_csv_${index}`,
+    text: row.join(' | ')
+  };
+
+  addTicketToUI(ticketData, false);
+});
+
     
     // Update preserved tickets list
     preservedManualTickets = existingStories;
