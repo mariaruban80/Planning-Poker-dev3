@@ -1405,7 +1405,6 @@ function setupRevealResetButtons() {
 /**
  * Setup CSV file uploader
  */
-
 function setupCSVUploader() {
   const csvInput = document.getElementById('csvInput');
   if (!csvInput) return;
@@ -1416,7 +1415,6 @@ function setupCSVUploader() {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      // Save existing manually added tickets before processing CSV
       const storyList = document.getElementById('storyList');
       const existingTickets = [];
 
@@ -1425,40 +1423,34 @@ function setupCSVUploader() {
         manualTickets.forEach(card => {
           const title = card.querySelector('.story-title');
           if (title) {
-            existingTickets.push({
-              id: card.id,
-              text: title.textContent
-            });
+            existingTickets.push({ id: card.id, text: title.textContent });
           }
         });
       }
 
       console.log(`[CSV] Saved ${existingTickets.length} manual tickets before processing upload`);
 
-      // Parse the CSV data
       const parsedData = parseCSV(e.target.result);
-
-      // Store in module state
       csvData = parsedData;
-
-      // Display CSV data in the UI
       displayCSVData(csvData);
 
-      // ✅ Emit each uploaded CSV story to the server so they can be removed
-      csvData.forEach((ticket) => {
-        if (ticket && ticket.id && ticket.text) {
+      // Emit each uploaded story and ensure IDs are valid
+      csvData.forEach((ticket, index) => {
+        if (ticket && ticket.text) {
+          if (!ticket.id) {
+            ticket.id = `story_csv_${Date.now()}_${index}`;
+          }
+          console.log('[CLIENT] Emitting uploaded ticket to server:', ticket);
           emitAddTicket(ticket);
         }
       });
 
-      // Re-add preserved manual tickets
       existingTickets.forEach((ticket, index) => {
         if (ticket && ticket.id && ticket.text) {
           addTicketToUI(ticket, false);
         }
       });
 
-      // Re-normalize indexes
       normalizeStoryIndexes();
     };
 
