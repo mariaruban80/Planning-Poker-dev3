@@ -68,6 +68,7 @@ function saveAppState() {
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
 
+
 function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
   card.className = 'story-card';
@@ -81,11 +82,13 @@ function createStoryCard(story, index, isCSV = false) {
   title.textContent = story.text || story.title || `Story ${index + 1}`;
   card.appendChild(title);
 
-  // ✅ Add delete button for all cards
+  // Add delete button for all cards
   const removeBtn = document.createElement('span');
   removeBtn.className = 'remove-story';
   removeBtn.innerHTML = '&times;';
   removeBtn.title = 'Remove story';
+  
+  // Ensure click event is properly isolated and configured
   removeBtn.onclick = (e) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to remove this story?')) {
@@ -94,6 +97,7 @@ function createStoryCard(story, index, isCSV = false) {
       }
     }
   };
+  
   card.appendChild(removeBtn);
 
   return card;
