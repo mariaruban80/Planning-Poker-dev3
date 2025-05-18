@@ -401,16 +401,23 @@ socket.on('addTicket', (ticketData) => {
 
   // Handle CSV data synchronization
   socket.on('syncCSVData', (csvData) => {
-    const roomId = socket.data.roomId;
-    if (roomId && rooms[roomId]) {
-      rooms[roomId].csvData = csvData;
-      rooms[roomId].selectedIndex = 0; // Reset selected index when new CSV data is loaded
-      rooms[roomId].votesPerStory = {}; // Reset all votes when new CSV data is loaded
-      rooms[roomId].votesRevealed = {}; // Reset all reveal states when new CSV data is loaded
-      updateRoomActivity(roomId);
-      io.to(roomId).emit('syncCSVData', csvData);
-    }
-  });
+  const roomId = socket.data.roomId;
+  if (roomId && rooms[roomId]) {
+    rooms[roomId].csvData = csvData;
+    rooms[roomId].selectedIndex = 0;
+    rooms[roomId].votesPerStory = {};
+    rooms[roomId].votesRevealed = {};
+    updateRoomActivity(roomId);
+
+    // ✅ Store each CSV story as a ticket so it can be removed
+    rooms[roomId].tickets = csvData.map((row, index) => ({
+      id: `story_csv_${index}`,
+      text: Array.isArray(row) ? row.join(' | ') : String(row)
+    }));
+
+    io.to(roomId).emit('syncCSVData', csvData);
+  }
+});
 
   // Export votes data (optional feature)
   socket.on('exportVotes', () => {
