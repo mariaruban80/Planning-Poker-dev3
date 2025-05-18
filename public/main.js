@@ -1405,6 +1405,7 @@ function setupRevealResetButtons() {
 /**
  * Setup CSV file uploader
  */
+
 function setupCSVUploader() {
   const csvInput = document.getElementById('csvInput');
   if (!csvInput) return;
@@ -1418,65 +1419,56 @@ function setupCSVUploader() {
       // Save existing manually added tickets before processing CSV
       const storyList = document.getElementById('storyList');
       const existingTickets = [];
-      
+
       if (storyList) {
         const manualTickets = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
         manualTickets.forEach(card => {
           const title = card.querySelector('.story-title');
           if (title) {
             existingTickets.push({
-              id: card.id, 
+              id: card.id,
               text: title.textContent
             });
           }
         });
       }
-      
+
       console.log(`[CSV] Saved ${existingTickets.length} manual tickets before processing upload`);
-      
+
       // Parse the CSV data
       const parsedData = parseCSV(e.target.result);
-      
-      // Store in the module state
+
+      // Store in module state
       csvData = parsedData;
-      
-      // Display CSV data - this will clear and rebuild the story list
+
+      // Display CSV data in the UI
       displayCSVData(csvData);
 
-      // Emit each uploaded CSV story to the server so deletion works
+      // ✅ Emit each uploaded CSV story to the server so they can be removed
       csvData.forEach((ticket) => {
         if (ticket && ticket.id && ticket.text) {
-          emitAddTicket(ticket); // Send to server
+          emitAddTicket(ticket);
         }
       });
-      
-      // Re-add the preserved manual tickets
+
+      // Re-add preserved manual tickets
       existingTickets.forEach((ticket, index) => {
-        // Make sure this ticket isn't already in the list to avoid duplicates
-        if (!document.getElementById(ticket.id)) {
+        if (ticket && ticket.id && ticket.text) {
           addTicketToUI(ticket, false);
         }
       });
-      
-      // Store these for future preservation
-      preservedManualTickets = [...existingTickets];
-      
-      // Emit the CSV data to server AFTER ensuring all UI is updated
-      emitCSVData(parsedData);
-      
-      // Reset voting state for new data
-      votesPerStory = {};
-      votesRevealed = {};
-      
-      // Reset current story index only if no stories were selected before
-      if (!document.querySelector('.story-card.selected')) {
-        currentStoryIndex = 0;
-        renderCurrentStory();
-      }
+
+      // Re-normalize indexes
+      normalizeStoryIndexes();
     };
+
     reader.readAsText(file);
   });
 }
+
+
+
+
 /**
  * Parse CSV text into array structure
  */
