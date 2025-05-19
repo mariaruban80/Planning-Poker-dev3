@@ -413,6 +413,7 @@ function addFixedVoteStatisticsStyles() {
   .remove-story {
       cursor: pointer;
       position: absolute;
+      color: #FFFFFF;
       top: 5px;
       right: 5px;
       font-size: 18px;
@@ -422,7 +423,10 @@ function addFixedVoteStatisticsStyles() {
     .remove-story:hover {
       opacity: 1;
     }
-
+   .story-card {
+      position: relative;
+      /* Keep your existing story-card styles */
+    }
   `;
   
   document.head.appendChild(style);
