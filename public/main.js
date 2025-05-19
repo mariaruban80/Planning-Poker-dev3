@@ -67,6 +67,7 @@ function saveAppState() {
   
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
+
 function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
   card.className = 'story-card';
@@ -75,32 +76,27 @@ function createStoryCard(story, index, isCSV = false) {
 
   const title = document.createElement('div');
   title.className = 'story-title';
-  title.textContent = story.text;
+  title.textContent = story.text || story.title || `Story ${index + 1}`;
   card.appendChild(title);
 
-  // Add delete button for host users
-  if (isCurrentUserHost()) {
+  // Add delete button for non-guests
+  if (!isGuestUser()) {
     const removeBtn = document.createElement('span');
     removeBtn.className = 'remove-story';
-    removeBtn.innerHTML = '🗑';  // Use × symbol
+    removeBtn.innerHTML = '&times;';
     removeBtn.title = 'Remove story';
-    
-    // Ensure critical styles are applied inline as a fallback
-    removeBtn.style.position = 'absolute';
-    removeBtn.style.top = '5px';
-    removeBtn.style.right = '5px';
-    removeBtn.style.cursor = 'pointer';
-    removeBtn.style.color = '#d32f2f';
-    removeBtn.style.fontSize = '18px';
-    removeBtn.style.fontWeight = 'bold';
-    
     removeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (confirm('Are you sure you want to remove this story?')) {
-        removeStory(story.id);
+        removeStory(card.id);
       }
     });
     card.appendChild(removeBtn);
+  }
+
+  // Add disabled class for guests
+  if (isGuestUser()) {
+    card.classList.add('disabled-story');
   }
 
   return card;
@@ -537,6 +533,7 @@ function setupPlanningCards() {
 /**
  * Set up guest mode restrictions
  */
+
 function setupGuestModeRestrictions() {
   if (isGuestUser()) {
     // Hide sidebar control buttons
@@ -554,8 +551,12 @@ function setupGuestModeRestrictions() {
     if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
     
     console.log('Guest mode activated - voting controls restricted');
+    
+    // Apply restrictions to story cards
+    setupStoryCardInteractions();
   }
 }
+
 
 /**
  * Extract room ID from URL parameters
@@ -586,6 +587,7 @@ function appendRoomIdToURL(roomId) {
 /**
  * Initialize the application
  */
+
 function initializeApp(roomId) {
   // Check if we're waiting for a username (joining via invite)
   if (window.userNameReady === false) {
@@ -601,43 +603,43 @@ function initializeApp(roomId) {
     console.error('[APP] Failed to initialize socket - missing username or room ID');
     return;
   }
+
+  // Guest: Listen for host's voting system
+  socket.on('votingSystemUpdate', ({ votingSystem }) => {
+    console.log('[SOCKET] Received voting system from host:', votingSystem);
+    sessionStorage.setItem('votingSystem', votingSystem);
+    setupPlanningCards(); // Dynamically regenerate vote cards
+  });
+
+  // Host: Emit selected voting system to server
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+
+  if (isHost && socket) {
+    socket.emit('votingSystemSelected', { roomId, votingSystem });
+  }
   
-//  Guest: Listen for host's voting system
-socket.on('votingSystemUpdate', ({ votingSystem }) => {
-  console.log('[SOCKET] Received voting system from host:', votingSystem);
-  sessionStorage.setItem('votingSystem', votingSystem);
-  setupPlanningCards(); // Dynamically regenerate vote cards
-});
-
-// Host: Emit selected voting system to server
-const isHost = sessionStorage.getItem('isHost') === 'true';
-const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
-
-if (isHost && socket) {
-  socket.emit('votingSystemSelected', { roomId, votingSystem });
-}
-
-  
-  // removed this function addVoteStatisticsStyles();
- updateHeaderStyle();
-    addFixedVoteStatisticsStyles();
+  updateHeaderStyle();
+  addFixedVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
-//  setupVoteCardsDrag();
   setupPlanningCards(); // generates the cards AND sets up drag listeners
 
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions(); // Add guest mode restrictions
-   // Add this line
-  setupStoryCardInteractions();
+  setupStoryCardInteractions(); // Add this line to ensure restrictions are applied
+  
   // Add CSS for new layout
   addNewLayoutStyles();
 }
+
+
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
 }
+
 /**
  * Add CSS styles for the new layout
  */
@@ -1181,31 +1183,65 @@ function getVoteEmoji(vote) {
  * @param {Object} ticketData - Ticket data { id, text }
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
+
 function addTicketToUI(ticketData, selectAfterAdd = false) {
   if (!ticketData || !ticketData.id || !ticketData.text) return;
   
   const storyList = document.getElementById('storyList');
   if (!storyList) return;
   
-  // Check if this ticket already exists
+  // Check if this ticket already exists (to avoid duplicates)
   const existingTicket = document.getElementById(ticketData.id);
   if (existingTicket) return;
   
-  // Get current index for the new card
+  // Create new story card
+  const storyCard = document.createElement('div');
+  storyCard.className = 'story-card';
+  storyCard.id = ticketData.id;
+  
+  // Set data index attribute (for selection)
   const newIndex = storyList.children.length;
+  storyCard.dataset.index = newIndex;
   
-  // Create story card using our helper function
-  const isCSV = ticketData.id.includes('csv');
-  const storyCard = createStoryCard(ticketData, newIndex, isCSV);
-  
+  // Create the story title element
+  const storyTitle = document.createElement('div');
+  storyTitle.className = 'story-title';
+  storyTitle.textContent = ticketData.text;
+  storyCard.appendChild(storyTitle);
+
+  // Add delete button for non-guests
+  if (!isGuestUser()) {
+    const deleteBtn = document.createElement('span');
+    deleteBtn.className = 'remove-story';
+    deleteBtn.innerHTML = '&times;';
+    deleteBtn.title = 'Remove this story';
+
+    // Prevent click from triggering story selection
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Are you sure you want to remove this story?')) {
+        removeStory(ticketData.id);
+      }
+    });
+
+    storyCard.appendChild(deleteBtn);
+  }
+
   // Add to DOM
   storyList.appendChild(storyCard);
 
-  // Add click event handler for hosts
-  if (isCurrentUserHost()) {
+  // Handle guest restrictions
+  if (isGuestUser()) {
+    storyCard.classList.add('disabled-story');
+  } else {
     storyCard.addEventListener('click', () => {
       selectStory(newIndex);
     });
+  }
+
+  // Auto-select if requested
+  if (selectAfterAdd && !isGuestUser()) {
+    selectStory(newIndex);
   }
 
   // Hide "no stories" message
@@ -1220,14 +1256,13 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.setAttribute('draggable', 'true');
   });
 
-  // Auto-select if requested
-  if (selectAfterAdd && isCurrentUserHost()) {
-    selectStory(newIndex);
-  }
-
   normalizeStoryIndexes();
 }
+
+
+
 /** function to remove selected story  */
+
 function removeStory(storyId) {
   const card = document.getElementById(storyId);
   if (!card) return;
@@ -1241,7 +1276,6 @@ function removeStory(storyId) {
   
   // Clear votes for this story index from local tracking
   if (votesPerStory[storyIndex]) {
-    console.log(`[UI] Clearing votes for removed story #${storyIndex}`);
     delete votesPerStory[storyIndex];
   }
   
@@ -1249,14 +1283,14 @@ function removeStory(storyId) {
   if (votesRevealed[storyIndex]) {
     delete votesRevealed[storyIndex];
   }
-  
+
   // Notify server if we're the host
-  if (isCurrentUserHost() && socket) {
+  if (!isGuestUser() && socket) {
     console.log('[CLIENT] Emitting removeTicket for:', storyId);
     socket.emit('removeTicket', { storyId, storyIndex });
   }
-  
-  // Fix the indexes of remaining stories
+
+  // Fix the indexes
   normalizeStoryIndexes();
   
   // Reset vote visuals
@@ -1273,7 +1307,7 @@ function removeStory(storyId) {
   if (planningCardsSection) {
     planningCardsSection.style.display = 'block';
   }
-  
+
   // Select another story if available
   const selected = document.querySelector('.story-card.selected');
   if (!selected) {
@@ -1284,6 +1318,8 @@ function removeStory(storyId) {
     }
   }
 }
+
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
@@ -1342,6 +1378,7 @@ function applyGuestRestrictions() {
  * Process multiple tickets at once (used when receiving all tickets from server)
  * @param {Array} tickets - Array of ticket data objects
  */
+
 function processAllTickets(tickets) {
   if (!Array.isArray(tickets) || tickets.length === 0) {
     console.log('[INFO] No tickets received from server');
@@ -1350,25 +1387,16 @@ function processAllTickets(tickets) {
   
   console.log('[INFO] Processing all tickets received from server:', tickets.length);
   
-  // Clear all existing stories to avoid duplicates
+  // Clear existing stories to avoid duplicates
   const storyList = document.getElementById('storyList');
   if (storyList) {
-    // Clear all stories to prevent duplicates
     storyList.innerHTML = '';
   }
   
-  // Track processed ticket IDs to avoid duplicates
-  const processedIds = new Set();
-  
   // Add all tickets to the UI
   tickets.forEach((ticket, index) => {
-    // Only add if it has required properties and hasn't been processed already
-    if (ticket && ticket.id && ticket.text && !processedIds.has(ticket.id)) {
-      console.log(`[INFO] Adding ticket #${index}:`, ticket.id);
+    if (ticket && ticket.id && ticket.text) {
       addTicketToUI(ticket, false);
-      processedIds.add(ticket.id);
-    } else if (processedIds.has(ticket.id)) {
-      console.log(`[INFO] Skipping duplicate ticket:`, ticket.id);
     }
   });
   
@@ -1376,30 +1404,15 @@ function processAllTickets(tickets) {
   if (tickets.length > 0) {
     currentStoryIndex = 0;
     selectStory(0, false); // Don't emit to avoid loops
-  } else {
-    // No stories received - show empty state
-    const noStoriesMessage = document.getElementById('noStoriesMessage');
-    if (noStoriesMessage) {
-      noStoriesMessage.style.display = 'block';
-    }
   }
   
-  // ✅ Fix indexes to ensure navigation works
+  // Fix indexes to ensure navigation works
   normalizeStoryIndexes();
   
-  // Set up interactions for the newly added story cards
+  // Apply guest restrictions
   setupStoryCardInteractions();
-  
-  // If a story index was selected before, try to reapply it
-  if (pendingStoryIndex !== null) {
-    const cards = document.querySelectorAll('.story-card');
-    if (cards.length > pendingStoryIndex) {
-      console.log('[INFO] Reapplying pending story selection:', pendingStoryIndex);
-      selectStory(pendingStoryIndex, false);
-    }
-    pendingStoryIndex = null;
-  }
 }
+
 
 /**
  * Setup reveal and reset buttons
@@ -1514,14 +1527,14 @@ function normalizeStoryIndexes() {
     const newCard = card.cloneNode(true);
     card.parentNode.replaceChild(newCard, card);
     
-    // Only add click event for hosts
-    if (sessionStorage.getItem('isHost') === 'true') {
+    // Only add click event for hosts, not guests
+    if (!isGuestUser()) {
       newCard.addEventListener('click', () => {
         selectStory(index);
       });
       
       // Re-add delete button functionality
-      const removeBtn = newCard.querySelector('.remove-story');
+      const removeBtn = newCard.querySelector('.remove-story, .story-delete-btn');
       if (removeBtn) {
         removeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -1530,11 +1543,14 @@ function normalizeStoryIndexes() {
           }
         });
       }
+    } else {
+      // For guests, make sure the disabled class is applied
+      newCard.classList.add('disabled-story');
     }
   });
-  
-  console.log(`[UI] Normalized indexes for ${storyCards.length} story cards`);
 }
+
+
 
 /**
  * Display CSV data in the story list
@@ -1699,20 +1715,19 @@ function selectStory(index, emitToServer = true) {
   renderCurrentStory();
   resetOrRestoreVotes(index);
 
-  // ✅ Always request votes, even if we're not emitting selection
+  // Always request votes, even if we're not emitting selection
   if (typeof requestStoryVotes === 'function') {
     requestStoryVotes(index);
   } else if (socket) {
     socket.emit('requestStoryVotes', { storyIndex: index });
   }
 
-  // Only emit selection event if requested
-  if (emitToServer && socket) {
+  // Only emit selection event if requested and not a guest
+  if (emitToServer && !isGuestUser() && socket) {
     console.log('[EMIT] Broadcasting story selection:', index);
     socket.emit('storySelected', { storyIndex: index });
   }
 }
-
 
 /**
  * Reset or restore votes for a story
@@ -2132,21 +2147,26 @@ function setupStoryCardInteractions() {
       
       // Remove any existing click handlers by cloning and replacing
       const newCard = card.cloneNode(true);
-      card.parentNode.replaceChild(newCard, card);
+      if (card.parentNode) {
+        card.parentNode.replaceChild(newCard, card);
+      }
     } else {
       // For hosts: maintain normal selection behavior
       // Remove existing handlers first to prevent duplicates
       const newCard = card.cloneNode(true);
-      card.parentNode.replaceChild(newCard, card);
+      if (card.parentNode) {
+        card.parentNode.replaceChild(newCard, card);
       
-      // Add fresh click event listener
-      newCard.addEventListener('click', () => {
-        const index = parseInt(newCard.dataset.index || 0);
-        selectStory(index);
-      });
+        // Add fresh click event listener
+        newCard.addEventListener('click', () => {
+          const index = parseInt(newCard.dataset.index || 0, 10);
+          selectStory(index);
+        });
+      }
     }
   });
 }
+
 
 
 /**
