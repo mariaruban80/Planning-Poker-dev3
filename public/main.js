@@ -407,6 +407,15 @@ function addFixedVoteStatisticsStyles() {
       border-radius: 50%;
       background-color: white;
     }
+    .story-card {
+      position: relative; /* Ensure position relative for absolute positioning of delete button */
+    }
+    
+    /* Make delete button more visible on hover */
+    .remove-story:hover {
+      color: #f44336;
+      transform: scale(1.1);
+    }
   `;
   
   document.head.appendChild(style);
@@ -1186,21 +1195,23 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   storyTitle.textContent = ticketData.text;
   storyCard.appendChild(storyTitle);
 
-  // ✅ Add delete button for non-guests
+  // IMPORTANT: Add delete button for ALL tickets regardless of source (CSV or manual)
+  // But only if they're not a guest user
   if (!isGuestUser()) {
     const deleteBtn = document.createElement('span');
-    deleteBtn.className = 'story-delete-btn';
-    deleteBtn.textContent = '🗑';
+    deleteBtn.className = 'remove-story';  // Changed from 'story-delete-btn'
+    deleteBtn.innerHTML = '&times;';
     deleteBtn.title = 'Remove this story';
-
-    // Prevent click from triggering story selection
-    deleteBtn.addEventListener('click', (e) => {
+    
+    // Important: Use once: true to ensure no duplicate handlers
+    deleteBtn.addEventListener('click', function(e) {
       e.stopPropagation();
-      if (confirm('Are you sure you want to delete this story?')) {
+      e.preventDefault();
+      if (confirm('Are you sure you want to remove this story?')) {
         removeStory(ticketData.id);
       }
-    });
-
+    }, { once: false });
+    
     storyCard.appendChild(deleteBtn);
   }
 
@@ -1211,6 +1222,14 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   if (isGuestUser()) {
     storyCard.classList.add('disabled-story');
   } else {
+    // Remove any existing click handlers first to prevent duplicates
+    const newCard = storyCard.cloneNode(true);
+    if (storyCard.parentNode) {
+      storyCard.parentNode.replaceChild(newCard, storyCard);
+      storyCard = newCard;
+    }
+    
+    // Add fresh click event for story selection
     storyCard.addEventListener('click', () => {
       selectStory(newIndex);
     });
@@ -1233,8 +1252,31 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.setAttribute('draggable', 'true');
   });
 
-  normalizeStoryIndexes();
+  // Add delete button again for safety (in case cloning broke it)
+  if (!isGuestUser()) {
+    const deleteBtn = storyCard.querySelector('.remove-story');
+    if (!deleteBtn) {
+      const newDeleteBtn = document.createElement('span');
+      newDeleteBtn.className = 'remove-story';
+      newDeleteBtn.innerHTML = '&times;';
+      newDeleteBtn.title = 'Remove this story';
+      
+      newDeleteBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        if (confirm('Are you sure you want to remove this story?')) {
+          removeStory(ticketData.id);
+        }
+      });
+      
+      storyCard.appendChild(newDeleteBtn);
+    }
+  }
+
+  return storyCard;
 }
+
+
 
 /** function to remove selected story  */
 function removeStory(storyId) {
@@ -2065,21 +2107,33 @@ function setupStoryCardInteractions() {
     if (isGuest) {
       // For guests: disable clicking and add visual indicator
       card.classList.add('disabled-story');
-      
-      // Remove any existing click handlers by cloning and replacing
-      const newCard = card.cloneNode(true);
-      card.parentNode.replaceChild(newCard, card);
     } else {
-      // For hosts: maintain normal selection behavior
-      // Remove existing handlers first to prevent duplicates
-      const newCard = card.cloneNode(true);
-      card.parentNode.replaceChild(newCard, card);
+      // For hosts: preserve delete button if it exists
+      const deleteBtn = card.querySelector('.remove-story');
       
-      // Add fresh click event listener
+      // Reset click events by cloning, but preserve delete button behavior
+      const newCard = card.cloneNode(true);
+      if (card.parentNode) {
+        card.parentNode.replaceChild(newCard, card);
+      }
+      
+      // Add fresh click event listener for story selection
       newCard.addEventListener('click', () => {
         const index = parseInt(newCard.dataset.index || 0);
         selectStory(index);
       });
+      
+      // Reapply delete button event if it exists
+      const newDeleteBtn = newCard.querySelector('.remove-story');
+      if (newDeleteBtn) {
+        newDeleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (confirm('Are you sure you want to remove this story?')) {
+            removeStory(newCard.id);
+          }
+        });
+      }
     }
   });
 }
