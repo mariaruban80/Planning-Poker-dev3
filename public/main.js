@@ -75,29 +75,32 @@ function createStoryCard(story, index, isCSV = false) {
 
   const title = document.createElement('div');
   title.className = 'story-title';
-  title.textContent = story.text || story.title || `Story ${index + 1}`;
+  title.textContent = story.text;
   card.appendChild(title);
 
-  // Only add delete button for hosts
-  if (sessionStorage.getItem('isHost') === 'true') {
+  // Add delete button for host users
+  if (isCurrentUserHost()) {
     const removeBtn = document.createElement('span');
     removeBtn.className = 'remove-story';
-    removeBtn.innerHTML = '&times;';
+    removeBtn.innerHTML = '🗑';  // Use × symbol
     removeBtn.title = 'Remove story';
+    
+    // Ensure critical styles are applied inline as a fallback
+    removeBtn.style.position = 'absolute';
+    removeBtn.style.top = '5px';
+    removeBtn.style.right = '5px';
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.style.color = '#d32f2f';
+    removeBtn.style.fontSize = '18px';
+    removeBtn.style.fontWeight = 'bold';
+    
     removeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (confirm('Are you sure you want to remove this story?')) {
-        removeStory(card.id);
+        removeStory(story.id);
       }
     });
     card.appendChild(removeBtn);
-  }
-
-  // Add click handler for selection (only for hosts)
-  if (sessionStorage.getItem('isHost') === 'true') {
-    card.addEventListener('click', () => {
-      selectStory(parseInt(card.dataset.index, 10));
-    });
   }
 
   return card;
@@ -399,21 +402,34 @@ function addFixedVoteStatisticsStyles() {
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-    .remove-story {
-      cursor: pointer;
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      font-size: 18px;
-      z-index: 10;
-    }
+    }  
     
     .fixed-agreement-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       background-color: white;
+    }
+    .remove-story {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #d32f2f;
+      cursor: pointer;
+      z-index: 10;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+    }
+    
+    .remove-story:hover {
+      opacity: 1;
+    }
+    
+    .story-card {
+      position: relative;
+      /* Keep your existing story-card styles */
     }
   `;
   
@@ -1175,22 +1191,26 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   const storyList = document.getElementById('storyList');
   if (!storyList) return;
   
-  // Check if this ticket already exists (to avoid duplicates)
+  // Check if this ticket already exists
   const existingTicket = document.getElementById(ticketData.id);
   if (existingTicket) return;
   
   // Get current index for the new card
   const newIndex = storyList.children.length;
   
-  // Use createStoryCard for consistent behavior
-  const isCSV = ticketData.id.includes('story_csv_');
-  const storyCard = createStoryCard({
-    id: ticketData.id,
-    text: ticketData.text
-  }, newIndex, isCSV);
-
+  // Create story card using our helper function
+  const isCSV = ticketData.id.includes('csv');
+  const storyCard = createStoryCard(ticketData, newIndex, isCSV);
+  
   // Add to DOM
   storyList.appendChild(storyCard);
+
+  // Add click event handler for hosts
+  if (isCurrentUserHost()) {
+    storyCard.addEventListener('click', () => {
+      selectStory(newIndex);
+    });
+  }
 
   // Hide "no stories" message
   const noStoriesMessage = document.getElementById('noStoriesMessage');
@@ -1205,13 +1225,12 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   });
 
   // Auto-select if requested
-  if (selectAfterAdd && sessionStorage.getItem('isHost') === 'true') {
+  if (selectAfterAdd && isCurrentUserHost()) {
     selectStory(newIndex);
   }
 
   normalizeStoryIndexes();
 }
-
 /** function to remove selected story  */
 function removeStory(storyId) {
   console.log('[UI] Removing story with ID:', storyId);
