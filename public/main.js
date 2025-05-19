@@ -1195,45 +1195,32 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   storyTitle.textContent = ticketData.text;
   storyCard.appendChild(storyTitle);
 
-  // IMPORTANT: Add delete button for ALL tickets regardless of source (CSV or manual)
-  // But only if they're not a guest user
+  // Add delete button for all cards if not guest user
   if (!isGuestUser()) {
-    const deleteBtn = document.createElement('span');
-    deleteBtn.className = 'remove-story';  // Changed from 'story-delete-btn'
-    deleteBtn.innerHTML = '&times;';
-    deleteBtn.title = 'Remove this story';
-    
-    // Important: Use once: true to ensure no duplicate handlers
-    deleteBtn.addEventListener('click', function(e) {
+    const removeBtn = document.createElement('span');
+    removeBtn.className = 'remove-story';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.title = 'Remove this story';
+    removeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      e.preventDefault();
       if (confirm('Are you sure you want to remove this story?')) {
         removeStory(ticketData.id);
       }
-    }, { once: false });
-    
-    storyCard.appendChild(deleteBtn);
+    });
+    storyCard.appendChild(removeBtn);
+  }
+
+  // Add click handler directly without cloning
+  if (!isGuestUser()) {
+    storyCard.addEventListener('click', () => {
+      selectStory(newIndex);
+    });
+  } else {
+    storyCard.classList.add('disabled-story');
   }
 
   // Add to DOM
   storyList.appendChild(storyCard);
-
-  // Handle guest restrictions
-  if (isGuestUser()) {
-    storyCard.classList.add('disabled-story');
-  } else {
-    // Remove any existing click handlers first to prevent duplicates
-    const newCard = storyCard.cloneNode(true);
-    if (storyCard.parentNode) {
-      storyCard.parentNode.replaceChild(newCard, storyCard);
-      storyCard = newCard;
-    }
-    
-    // Add fresh click event for story selection
-    storyCard.addEventListener('click', () => {
-      selectStory(newIndex);
-    });
-  }
 
   // Auto-select if requested
   if (selectAfterAdd && !isGuestUser()) {
@@ -1252,27 +1239,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.setAttribute('draggable', 'true');
   });
 
-  // Add delete button again for safety (in case cloning broke it)
-  if (!isGuestUser()) {
-    const deleteBtn = storyCard.querySelector('.remove-story');
-    if (!deleteBtn) {
-      const newDeleteBtn = document.createElement('span');
-      newDeleteBtn.className = 'remove-story';
-      newDeleteBtn.innerHTML = '&times;';
-      newDeleteBtn.title = 'Remove this story';
-      
-      newDeleteBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        if (confirm('Are you sure you want to remove this story?')) {
-          removeStory(ticketData.id);
-        }
-      });
-      
-      storyCard.appendChild(newDeleteBtn);
-    }
-  }
-
+  normalizeStoryIndexes();
   return storyCard;
 }
 
