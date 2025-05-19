@@ -52,28 +52,39 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   
   // Monitor connection health
   setupConnectionMonitor(handleMessage);
+socket.on('addTicket', (ticketData) => {
+  // Fix: Check if socket.data exists before accessing roomId
+  const roomId = socket.data?.roomId;
+  
+  // Also check for rooms object existence
+  if (roomId && rooms && rooms[roomId]) {
+    console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData);
 
-  socket.on('addTicket', (ticketData) => {
-    const roomId = socket.data.roomId;
-    if (roomId && rooms[roomId]) {
-      console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData);
-
-      if (!rooms[roomId].tickets) {
-        rooms[roomId].tickets = [];
-      }
-
-      rooms[roomId].tickets.push(ticketData);
-      console.log(`[SERVER] Total tickets in room after add:`, rooms[roomId].tickets.map(t => t.id));
-
-      socket.broadcast.to(roomId).emit('addTicket', { ticketData });
-
-      const isFirstTicket = rooms[roomId].tickets.length === 1;
-      if (isFirstTicket) {
-        rooms[roomId].selectedIndex = 0;
-        io.to(roomId).emit('storySelected', { storyIndex: 0 });
-      }
+    if (!rooms[roomId].tickets) {
+      rooms[roomId].tickets = [];
     }
-  });
+
+    rooms[roomId].tickets.push(ticketData);
+    console.log(`[SERVER] Total tickets in room after add:`, rooms[roomId].tickets.map(t => t.id));
+
+    socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+
+    const isFirstTicket = rooms[roomId].tickets.length === 1;
+    if (isFirstTicket) {
+      rooms[roomId].selectedIndex = 0;
+      io.to(roomId).emit('storySelected', { storyIndex: 0 });
+    }
+  } else {
+    // Log that we couldn't find the room
+    console.error(`[SERVER] Failed to add ticket: ${socket.id} - Room not found or invalid`, {
+      roomId: socket.data?.roomId,
+      hasSocketData: !!socket.data,
+      socketId: socket.id,
+      ticketId: ticketData?.id
+    });
+  }
+});
+
 socket.on('ticketRemoved', ({ storyId }) => {
   console.log('[SOCKET] Ticket removed received from server:', storyId);
   handleMessage({ type: 'ticketRemoved', storyId });
