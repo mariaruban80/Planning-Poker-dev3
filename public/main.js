@@ -410,26 +410,20 @@ function addFixedVoteStatisticsStyles() {
       border-radius: 50%;
       background-color: white;
     }
-    .remove-story {
+  .remove-story {
+      cursor: pointer;
       position: absolute;
       top: 5px;
       right: 5px;
       font-size: 18px;
-      font-weight: bold;
-      color: #d32f2f;
-      cursor: pointer;
       z-index: 10;
-      opacity: 0.7;
-      transition: opacity 0.2s ease;
     }
     
     .remove-story:hover {
       opacity: 1;
     }
     
-    .story-card {
-      position: relative;
-      /* Keep your existing story-card styles */
+   
     }
   `;
   
