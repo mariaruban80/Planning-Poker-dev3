@@ -53,7 +53,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   // Monitor connection health
   setupConnectionMonitor(handleMessage);
 
-  /** socket.on('addTicket', (ticketData) => {
+   socket.on('addTicket', (ticketData) => {
     const roomId = socket.data.roomId;
     if (roomId && rooms[roomId]) {
       console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData);
@@ -73,11 +73,8 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
         io.to(roomId).emit('storySelected', { storyIndex: 0 });
       }
     }
-  }); */
-socket.on('addTicket', ({ ticketData }) => {
-  console.log('[SOCKET] Received addTicket broadcast:', ticketData);
-  handleMessage({ type: 'addTicket', ticketData });
-});
+  }); 
+
 
   
 socket.on('ticketRemoved', ({ storyId }) => {
