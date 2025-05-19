@@ -54,21 +54,6 @@ document.addEventListener('touchstart', updateActivityTimestamp);
 setInterval(checkActivity, 60000); // Check every minute
 
 /**
- * Determines if current user is a guest
- */
-function isGuestUser() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
-}
-
-/**
- * Check if current user is host
- */
-function isCurrentUserHost() {
-  return sessionStorage.getItem('isHost') === 'true';
-}
-
-/**
  * Save current app state to sessionStorage
  */
 function saveAppState() {
@@ -83,138 +68,33 @@ function saveAppState() {
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
 
-/**
- * Create a story card element
- */
-
 function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
   card.className = 'story-card';
   card.dataset.index = index;
-  card.id = story.id;
-  // Make sure card has position relative for delete button positioning
-  card.style.position = 'relative';
+  card.id = isCSV ? `story_csv_${index}` : story.id;
 
   const title = document.createElement('div');
   title.className = 'story-title';
   title.textContent = story.text || story.title || `Story ${index + 1}`;
   card.appendChild(title);
 
-  // Only add delete button for hosts - Note we're checking isCurrentUserHost, not isGuestUser()
-  if (isCurrentUserHost()) {
-    const removeBtn = document.createElement('span');
-    removeBtn.className = 'remove-story';
-    removeBtn.textContent = '🗑️';  // Using trash emoji for better visibility
-    removeBtn.title = 'Remove story';
-    
-    // Apply inline styles to ensure visibility
-    removeBtn.style.position = 'absolute';
-    removeBtn.style.top = '5px';
-    removeBtn.style.right = '5px';
-    removeBtn.style.cursor = 'pointer';
-    removeBtn.style.color = '#d32f2f';
-    removeBtn.style.fontSize = '18px';
-    removeBtn.style.zIndex = '999'; // Higher z-index to ensure visibility
-    removeBtn.style.background = 'white';
-    removeBtn.style.borderRadius = '50%';
-    removeBtn.style.padding = '2px';
-    removeBtn.style.width = '24px';
-    removeBtn.style.height = '24px';
-    removeBtn.style.display = 'flex';
-    removeBtn.style.alignItems = 'center';
-    removeBtn.style.justifyContent = 'center';
-    
-    // Add the event listener directly without wrapping it
-    removeBtn.onclick = function(e) {
-      e.stopPropagation();
-      if (confirm('Are you sure you want to remove this story?')) {
-        console.log(`[DELETE] Removing story with ID: ${card.id}`);
-        removeStory(card.id);
-      }
-    };
-    
-    card.appendChild(removeBtn);
-  }
-
-  // Add disabled class for guests
-  if (isGuestUser()) {
-    card.classList.add('disabled-story');
-  }
+  // ✅ Add delete button for all cards
+  const removeBtn = document.createElement('span');
+  removeBtn.className = 'remove-story';
+  removeBtn.innerHTML = '&times;';
+  removeBtn.title = 'Remove story';
+  removeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to remove this story?')) {
+      removeStory(card.id);
+    }
+  });
+  card.appendChild(removeBtn);
 
   return card;
 }
 
-/**
- * Set up story card interactions based on user role
- */
-function setupStoryCardInteractions() {
-  // Check if user is a guest (joined via shared URL)
-  const isGuest = isGuestUser();
-  
-  // Select all story cards
-  const storyCards = document.querySelectorAll('.story-card');
-  
-  storyCards.forEach(card => {
-    if (isGuest) {
-      // For guests: disable clicking and add visual indicator
-      card.classList.add('disabled-story');
-      
-      // Remove any existing click handlers by cloning and replacing
-      const newCard = card.cloneNode(true);
-      if (card.parentNode) {
-        card.parentNode.replaceChild(newCard, card);
-      }
-    } else {
-      // For hosts: maintain normal selection behavior
-      // Remove existing handlers first to prevent duplicates
-      const newCard = card.cloneNode(true);
-      if (card.parentNode) {
-        card.parentNode.replaceChild(newCard, card);
-        
-        // Add fresh click event listener
-        newCard.addEventListener('click', () => {
-          const index = parseInt(newCard.dataset.index || 0, 10);
-          selectStory(index);
-        });
-        
-        // Re-add delete button if missing
-        if (!newCard.querySelector('.remove-story')) {
-          const removeBtn = document.createElement('span');
-          removeBtn.className = 'remove-story';
-          removeBtn.innerHTML = '🗑️';
-          removeBtn.title = 'Remove story';
-          
-          // Style it
-          removeBtn.style.position = 'absolute';
-          removeBtn.style.top = '5px';
-          removeBtn.style.right = '5px';
-          removeBtn.style.cursor = 'pointer';
-          removeBtn.style.color = '#d32f2f';
-          removeBtn.style.fontSize = '18px';
-          removeBtn.style.zIndex = '10';
-          removeBtn.style.background = 'white';
-          removeBtn.style.borderRadius = '50%';
-          removeBtn.style.padding = '2px';
-          removeBtn.style.width = '24px';
-          removeBtn.style.height = '24px';
-          removeBtn.style.display = 'flex';
-          removeBtn.style.alignItems = 'center';
-          removeBtn.style.justifyContent = 'center';
-          
-          removeBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (confirm('Are you sure you want to remove this story?')) {
-              removeStory(newCard.id);
-            }
-          });
-          newCard.appendChild(removeBtn);
-        }
-      }
-    }
-  });
-  
-  console.log(`[UI] Story interactions set up for ${storyCards.length} cards (guest mode: ${isGuest})`);
-}
 /** to reset votes when the stories are deleted */
 function resetAllVotingVisuals() {
   console.log('[UI] FORCE RESET: clearing badges, avatars, stats');
@@ -257,6 +137,7 @@ function resetAllVotingVisuals() {
     noStoriesMessage.style.display = 'block';
   }
 }
+
 
 /**
  * Update last activity timestamp
@@ -314,6 +195,7 @@ function recoverAppState() {
   }
 }
 
+
 // Add a window function for index.html to call
 window.notifyStoriesUpdated = function() {
   const storyList = document.getElementById('storyList');
@@ -340,7 +222,6 @@ window.notifyStoriesUpdated = function() {
   
   console.log(`Preserved ${preservedManualTickets.length} manual tickets`);
 };
-
 /**
  * Handle adding a ticket from the modal
  * @param {Object} ticketData - Ticket data {id, text}
@@ -423,6 +304,7 @@ function fixRevealedVoteFontSizes() {
     badge.style.display = 'block';
   });
 }
+ 
 
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
@@ -529,6 +411,7 @@ function addFixedVoteStatisticsStyles() {
   
   document.head.appendChild(style);
 }
+
 function createFixedVoteDisplay(votes) {
   const container = document.createElement('div');
   container.className = 'fixed-vote-display';
@@ -589,32 +472,16 @@ const mostCommonVote = !isTie ? majorityVotes[0] : '—';
   return container;
 }
 
-/**
- * Set up guest mode restrictions
- */
-function setupGuestModeRestrictions() {
-  if (isGuestUser()) {
-    // Hide sidebar control buttons
-    const revealVotesBtn = document.getElementById('revealVotesBtn');
-    const resetVotesBtn = document.getElementById('resetVotesBtn');
-    if (revealVotesBtn) revealVotesBtn.classList.add('hide-for-guests');
-    if (resetVotesBtn) resetVotesBtn.classList.add('hide-for-guests');
-    
-    // Hide upload ticket button
-    const fileInputContainer = document.getElementById('fileInputContainer');
-    if (fileInputContainer) fileInputContainer.classList.add('hide-for-guests');
-    
-    // Hide add ticket button
-    const addTicketBtn = document.getElementById('addTicketBtn');
-    if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
-    
-    console.log('Guest mode activated - voting controls restricted');
-    
-    // Apply restrictions to all story cards
-    setupStoryCardInteractions();
-  }
-}
 
+
+
+/**
+ * Determines if current user is a guest
+ */
+function isGuestUser() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
+}
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
   if (!container) return;
@@ -644,6 +511,30 @@ function setupPlanningCards() {
 
   // ✅ Enable drag after cards are added
   setupVoteCardsDrag();
+}
+
+
+/**
+ * Set up guest mode restrictions
+ */
+function setupGuestModeRestrictions() {
+  if (isGuestUser()) {
+    // Hide sidebar control buttons
+    const revealVotesBtn = document.getElementById('revealVotesBtn');
+    const resetVotesBtn = document.getElementById('resetVotesBtn');
+    if (revealVotesBtn) revealVotesBtn.classList.add('hide-for-guests');
+    if (resetVotesBtn) resetVotesBtn.classList.add('hide-for-guests');
+    
+    // Hide upload ticket button
+    const fileInputContainer = document.getElementById('fileInputContainer');
+    if (fileInputContainer) fileInputContainer.classList.add('hide-for-guests');
+    
+    // Hide add ticket button
+    const addTicketBtn = document.getElementById('addTicketBtn');
+    if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
+    
+    console.log('Guest mode activated - voting controls restricted');
+  }
 }
 
 /**
@@ -724,6 +615,9 @@ if (isHost && socket) {
   // Add CSS for new layout
   addNewLayoutStyles();
 }
+function isCurrentUserHost() {
+  return sessionStorage.getItem('isHost') === 'true';
+}
 /**
  * Add CSS styles for the new layout
  */
@@ -754,11 +648,6 @@ function addNewLayoutStyles() {
   cursor: not-allowed;
 }
 
-    .disabled-story {
-      pointer-events: none;
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
     
     .vote-row {
       display: flex;
@@ -924,6 +813,12 @@ function addNewLayoutStyles() {
       flex-wrap: wrap;
       justify-content: center;
     }
+    .disabled-story {
+  pointer-events: none;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
     
     .card {
       padding: 10px 20px;
@@ -976,36 +871,6 @@ own-vote-space {
       font-size: 24px;
       font-weight: bold;
       opacity: 0.8;
-    }
-    
-    .remove-story {
-     position: absolute !important;
-      top: 5px !important;
-      right: 5px !important;
-      cursor: pointer !important;
-      color: #d32f2f !important;
-      font-size: 18px !important;
-      z-index: 999 !important;
-      background: white !important;
-      border-radius: 50% !important;
-      padding: 2px !important;
-      width: 24px !important;
-      height: 24px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-    }
-    
-    .remove-story:hover {
-      background: #ffebee;
-    }
-    
-    .story-card {
-         position: relative !important;
-      min-height: 20px !important;
-      padding-right: 30px !important;
     }
   `;
   document.head.appendChild(style);
@@ -1074,6 +939,7 @@ function createVoteStatisticsDisplay(votes) {
   
   return container;
 }
+
 // Helper function to find most common vote
 function findMostCommonVote(votes) {
   const voteValues = Object.values(votes);
@@ -1289,6 +1155,7 @@ function getVoteEmoji(vote) {
   };
   return map[vote] || '🎉';
 }
+
 /**
  * Add a ticket to the UI
  * @param {Object} ticketData - Ticket data { id, text }
@@ -1304,23 +1171,54 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   const existingTicket = document.getElementById(ticketData.id);
   if (existingTicket) return;
   
-  // Get current index for the new card
+  // Create new story card
+  const storyCard = document.createElement('div');
+  storyCard.className = 'story-card';
+  storyCard.id = ticketData.id;
+  
+  // Set data index attribute (for selection)
   const newIndex = storyList.children.length;
+  storyCard.dataset.index = newIndex;
   
-  // Use createStoryCard for consistent styling
-  const isCSV = ticketData.id.includes('csv');
-  const storyCard = createStoryCard(ticketData, newIndex, isCSV);
-  
+  // Create the story title element
+  const storyTitle = document.createElement('div');
+  storyTitle.className = 'story-title';
+  storyTitle.textContent = ticketData.text;
+  storyCard.appendChild(storyTitle);
+
+  // ✅ Add delete button for non-guests
+  if (!isGuestUser()) {
+    const deleteBtn = document.createElement('span');
+    deleteBtn.className = 'story-delete-btn';
+    deleteBtn.textContent = '🗑';
+    deleteBtn.title = 'Remove this story';
+
+    // Prevent click from triggering story selection
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Are you sure you want to delete this story?')) {
+        removeStory(ticketData.id);
+      }
+    });
+
+    storyCard.appendChild(deleteBtn);
+  }
+
   // Add to DOM
   storyList.appendChild(storyCard);
-  
-  // Add click events only for hosts
-  if (!isGuestUser()) {
+
+  // Handle guest restrictions
+  if (isGuestUser()) {
+    storyCard.classList.add('disabled-story');
+  } else {
     storyCard.addEventListener('click', () => {
       selectStory(newIndex);
     });
-  } else {
-    storyCard.classList.add('disabled-story');
+  }
+
+  // Auto-select if requested
+  if (selectAfterAdd && !isGuestUser()) {
+    selectStory(newIndex);
   }
 
   // Hide "no stories" message
@@ -1335,75 +1233,23 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.setAttribute('draggable', 'true');
   });
 
-  // Auto-select if requested and not guest
-  if (selectAfterAdd && !isGuestUser()) {
-    selectStory(newIndex);
-  }
-
   normalizeStoryIndexes();
 }
 
 /** function to remove selected story  */
-/**
- * Remove a story by ID
- */
 function removeStory(storyId) {
-  console.log(`[REMOVE] Attempting to remove story: ${storyId}`);
-  
-  // Prevent guests from removing stories
-  if (isGuestUser()) {
-    console.log('[UI] Guests cannot remove stories');
-    return;
-  }
-
   const card = document.getElementById(storyId);
-  if (!card) {
-    console.warn(`[REMOVE] Story card not found with ID: ${storyId}`);
-    return;
-  }
-  
-  // Get the index of the story being removed
-  const storyIndex = parseInt(card.dataset.index, 10);
-  console.log(`[UI] Removing story #${storyIndex} with ID: ${storyId}`);
-  
-  // Remove from DOM
-  card.remove();
-  
-  // Clear votes for this story index from local tracking
-  if (votesPerStory[storyIndex]) {
-    delete votesPerStory[storyIndex];
-  }
-  
-  // Clear revealed status for this story
-  if (votesRevealed[storyIndex]) {
-    delete votesRevealed[storyIndex];
+  if (card) {
+    card.remove();
   }
 
-  // Notify server 
-  if (socket) {
+  if (!isGuestUser() && socket) {
     console.log('[CLIENT] Emitting removeTicket for:', storyId);
-    socket.emit('removeTicket', { storyId, storyIndex });
+    socket.emit('removeTicket', { storyId });
   }
 
-  // Fix the indexes
   normalizeStoryIndexes();
-  
-  // Reset vote visuals
-  resetAllVoteVisuals();
-  
-  // Hide statistics if they were shown
-  const statsContainer = document.querySelector('.vote-statistics-container');
-  if (statsContainer) {
-    statsContainer.style.display = 'none';
-  }
-  
-  // Show planning cards
-  const planningCardsSection = document.querySelector('.planning-cards-section');
-  if (planningCardsSection) {
-    planningCardsSection.style.display = 'block';
-  }
 
-  // Select another story if available
   const selected = document.querySelector('.story-card.selected');
   if (!selected) {
     const first = document.querySelector('.story-card');
@@ -1480,9 +1326,10 @@ function processAllTickets(tickets) {
   
   console.log('[INFO] Processing all tickets received from server:', tickets.length);
   
-  // Clear the story list first
+  // Clear all existing stories to avoid duplicates
   const storyList = document.getElementById('storyList');
   if (storyList) {
+    // Clear all stories to prevent duplicates
     storyList.innerHTML = '';
   }
   
@@ -1496,6 +1343,8 @@ function processAllTickets(tickets) {
       console.log(`[INFO] Adding ticket #${index}:`, ticket.id);
       addTicketToUI(ticket, false);
       processedIds.add(ticket.id);
+    } else if (processedIds.has(ticket.id)) {
+      console.log(`[INFO] Skipping duplicate ticket:`, ticket.id);
     }
   });
   
@@ -1503,79 +1352,140 @@ function processAllTickets(tickets) {
   if (tickets.length > 0) {
     currentStoryIndex = 0;
     selectStory(0, false); // Don't emit to avoid loops
+  } else {
+    // No stories received - show empty state
+    const noStoriesMessage = document.getElementById('noStoriesMessage');
+    if (noStoriesMessage) {
+      noStoriesMessage.style.display = 'block';
+    }
   }
   
-  // Fix indexes to ensure navigation works
+  // ✅ Fix indexes to ensure navigation works
   normalizeStoryIndexes();
   
-  // Apply guest restrictions
+  // Set up interactions for the newly added story cards
   setupStoryCardInteractions();
+  
+  // If a story index was selected before, try to reapply it
+  if (pendingStoryIndex !== null) {
+    const cards = document.querySelectorAll('.story-card');
+    if (cards.length > pendingStoryIndex) {
+      console.log('[INFO] Reapplying pending story selection:', pendingStoryIndex);
+      selectStory(pendingStoryIndex, false);
+    }
+    pendingStoryIndex = null;
+  }
 }
+
 /**
- * Normalize story indices to ensure consistency
+ * Setup reveal and reset buttons
  */
+function setupRevealResetButtons() {
+  // Set up reveal votes button
+  const revealVotesBtn = document.getElementById('revealVotesBtn');
+  if (revealVotesBtn) {
+    revealVotesBtn.addEventListener('click', () => {
+      if (socket) {
+        socket.emit('revealVotes');
+        votesRevealed[currentStoryIndex] = true;
+        
+        // Update UI if we have votes for this story
+        if (votesPerStory[currentStoryIndex]) {
+          applyVotesToUI(votesPerStory[currentStoryIndex], false);
+        }
+      }
+    });
+  }
+  
+  // Set up reset votes button
+  const resetVotesBtn = document.getElementById('resetVotesBtn');
+  if (resetVotesBtn) {
+    resetVotesBtn.addEventListener('click', () => {
+      if (socket) {
+        socket.emit('resetVotes');
+        
+        // Reset local state
+        if (votesPerStory[currentStoryIndex]) {
+          votesPerStory[currentStoryIndex] = {};
+        }
+        votesRevealed[currentStoryIndex] = false;
+        
+        // Update UI
+        resetAllVoteVisuals();
+      }
+    });
+  }
+}
+
+/**
+ * Setup CSV file uploader
+ */
+
+function setupCSVUploader() {
+  const csvInput = document.getElementById('csvInput');
+  if (!csvInput) return;
+
+  csvInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const storyList = document.getElementById('storyList');
+      const existingTickets = [];
+
+      if (storyList) {
+        const manualTickets = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+        manualTickets.forEach(card => {
+          const title = card.querySelector('.story-title');
+          if (title) {
+            existingTickets.push({ id: card.id, text: title.textContent });
+          }
+        });
+      }
+
+      console.log(`[CSV] Saved ${existingTickets.length} manual tickets before processing upload`);
+
+      const parsedData = parseCSV(e.target.result);
+      csvData = parsedData;
+      displayCSVData(csvData);
+
+      // Note: We're now emitting each ticket in displayCSVData instead of the whole CSV data at once
+      // This is the key change to make CSV uploads synchronize properly
+
+      existingTickets.forEach((ticket, index) => {
+        if (ticket && ticket.id && ticket.text) {
+          addTicketToUI(ticket, false);
+        }
+      });
+
+      normalizeStoryIndexes();
+      
+      // Clear the input so the same file can be uploaded again if needed
+      csvInput.value = '';
+    };
+
+    reader.readAsText(file);
+  });
+}
+
+
+/**
+ * Parse CSV text into array structure
+ */
+function parseCSV(data) {
+  const rows = data.trim().split('\n');
+  return rows.map(row => row.split(','));
+}
+
 function normalizeStoryIndexes() {
   const storyList = document.getElementById('storyList');
   if (!storyList) return;
 
   const storyCards = storyList.querySelectorAll('.story-card');
   storyCards.forEach((card, index) => {
-    // Update index
     card.dataset.index = index;
-    
-    // Clone the card to remove event handlers
-    const newCard = card.cloneNode(true);
-    newCard.style.position = 'relative'; // Ensure position for delete button
-    
-    // Replace the old card
-    if (card.parentNode) {
-      card.parentNode.replaceChild(newCard, card);
-      
-      // Add event handlers for hosts only
-      if (isCurrentUserHost()) {
-        // Add click handler for story selection
-        newCard.addEventListener('click', () => {
-          selectStory(index);
-        });
-        
-        // IMPORTANT: Add a new delete button with direct handler
-        const deleteBtn = document.createElement('span');
-        deleteBtn.className = 'remove-story';
-        deleteBtn.textContent = '🗑️';
-        deleteBtn.title = 'Remove story';
-        
-        // Style the delete button
-        deleteBtn.style.position = 'absolute';
-        deleteBtn.style.top = '5px';
-        deleteBtn.style.right = '5px';
-        deleteBtn.style.cursor = 'pointer';
-        deleteBtn.style.color = '#d32f2f';
-        deleteBtn.style.fontSize = '18px';
-        deleteBtn.style.zIndex = '999';
-        deleteBtn.style.background = 'white';
-        deleteBtn.style.borderRadius = '50%';
-        deleteBtn.style.padding = '2px';
-        deleteBtn.style.width = '24px';
-        deleteBtn.style.height = '24px';
-        deleteBtn.style.display = 'flex';
-        deleteBtn.style.alignItems = 'center';
-        deleteBtn.style.justifyContent = 'center';
-        
-        // Direct click handler
-        deleteBtn.onclick = function(e) {
-          e.stopPropagation();
-          console.log(`[DELETE] Remove button clicked for story: ${newCard.id}`);
-          if (confirm('Are you sure you want to remove this story?')) {
-            removeStory(newCard.id);
-          }
-        };
-        
-        newCard.appendChild(deleteBtn);
-      } else {
-        // For guests, make sure the disabled class is applied
-        newCard.classList.add('disabled-story');
-      }
-    }
+    card.onclick = () => selectStory(index); // ensure correct click behavior
   });
 }
 
@@ -1623,13 +1533,23 @@ function displayCSVData(data) {
     // Re-add all stories to ensure they have proper indices
     storyListContainer.innerHTML = '';
     
-    // First add back manually added stories using createStoryCard
+    // First add back manually added stories
     existingStories.forEach((story, index) => {
-      const storyCard = createStoryCard(story, index, false);
-      storyListContainer.appendChild(storyCard);
+      const storyItem = document.createElement('div');
+      storyItem.classList.add('story-card');
+      storyItem.id = story.id;
+      storyItem.dataset.index = index;
       
-      if (!isGuestUser()) {
-        storyCard.addEventListener('click', () => {
+      const storyTitle = document.createElement('div');
+      storyTitle.classList.add('story-title');
+      storyTitle.textContent = story.text;
+      
+      storyItem.appendChild(storyTitle);
+      storyListContainer.appendChild(storyItem);
+      
+      const isHost = sessionStorage.getItem('isHost') === 'true';
+      if (isHost) {
+        storyItem.addEventListener('click', () => {
           selectStory(index);
         });
       }      
@@ -1637,36 +1557,24 @@ function displayCSVData(data) {
     
     // Then add CSV data
     let startIndex = existingStories.length;
-    // In the part of displayCSVData function where you handle CSV rows:
-data.forEach((row, index) => {
-  const ticketData = {
-    id: `story_csv_${index}`, // Keep IDs simple and consistent
-    text: Array.isArray(row) ? row.join(' | ') : String(row)
-  };
+    data.forEach((row, index) => {
+      const ticketData = {
+        id: `story_csv_${index}`,
+        text: Array.isArray(row) ? row.join(' | ') : String(row)
+      };
 
-  // IMPORTANT: Emit each CSV row as an individual ticket to the server 
-  // in displayCSVData, BEFORE adding to DOM
-  if (!isGuestUser()) {
-    if (typeof emitAddTicket === 'function') {
-      console.log('[CSV] Emitting ticket to server:', ticketData);
-      emitAddTicket(ticketData);
-    } else if (socket) {
-      console.log('[CSV] Emitting ticket via socket:', ticketData);
-      socket.emit('addTicket', ticketData);
-    }
-  }
+      // IMPORTANT: Emit each CSV row as an individual ticket to the server
+      if (typeof emitAddTicket === 'function') {
+        console.log('[CSV] Emitting ticket to server:', ticketData);
+        emitAddTicket(ticketData);
+      } else if (socket) {
+        console.log('[CSV] Emitting ticket via socket:', ticketData);
+        socket.emit('addTicket', ticketData);
+      }
 
-  // Use createStoryCard for consistent appearance and behavior
-  const storyCard = createStoryCard(ticketData, startIndex + index, true);
-  storyListContainer.appendChild(storyCard);
-  
-  // Add click handler for story selection (for hosts only)
-  if (!isGuestUser()) {
-    storyCard.addEventListener('click', () => {
-      selectStory(startIndex + index);
+      // Add to UI without selecting (we'll handle selection after all are added)
+      addTicketToUI(ticketData, false);
     });
-  }
-});
     
     // Update preserved tickets list
     preservedManualTickets = existingStories;
@@ -1698,7 +1606,7 @@ data.forEach((row, index) => {
       currentStoryIndex = 0;
       
       // Emit story selection if host
-      if (!isGuestUser()) {
+      if (sessionStorage.getItem('isHost') === 'true') {
         selectStory(0, true);
       }
     }
@@ -1709,6 +1617,7 @@ data.forEach((row, index) => {
     processingCSVData = false;
   }
 }
+
 /**
  * Select a story by index
  * @param {number} index - Story index to select
@@ -1716,12 +1625,6 @@ data.forEach((row, index) => {
  */
 function selectStory(index, emitToServer = true) {
   console.log('[UI] Story selected by user:', index);
-
-  // For guests, only allow selection if not emitting to server (i.e., when server tells us to select)
-  if (isGuestUser() && emitToServer) {
-    console.log('[UI] Guests cannot select stories manually');
-    return;
-  }
 
   // Update story card highlight
   document.querySelectorAll('.story-card').forEach(card => {
@@ -1762,12 +1665,13 @@ function selectStory(index, emitToServer = true) {
     socket.emit('requestStoryVotes', { storyIndex: index });
   }
 
-  // Only emit selection event if requested and not a guest
-  if (emitToServer && !isGuestUser() && socket) {
+  // Only emit selection event if requested
+  if (emitToServer && socket) {
     console.log('[EMIT] Broadcasting story selection:', index);
     socket.emit('storySelected', { storyIndex: index });
   }
 }
+
 
 /**
  * Reset or restore votes for a story
@@ -1786,7 +1690,9 @@ function resetOrRestoreVotes(index) {
  */
 function applyVotesToUI(votes, hideValues) {
   Object.entries(votes).forEach(([userId, vote]) => {
-    updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+  updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+ //     updateVoteVisuals(userId, vote, true);
+  //  showEmojiBurst(userId, vote);
   });
 }
 
@@ -1831,10 +1737,11 @@ function renderCurrentStory() {
 function sanitizeId(name) {
   return name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
 }
-
 /**
  * Update the user list display with the new layout
  */
+
+
 function updateUserList(users) {
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
@@ -1945,16 +1852,18 @@ function updateUserList(users) {
     }, 500);
   }
 }
+
+
 /**
  * Create avatar container for a user
  */
 function createAvatarContainer(user) {
-  const safeId = sanitizeId(user.name);
+  const safeId = sanitizeId(user.name); // ✅ define safeId
   const userName = user.name;
 
   const avatarContainer = document.createElement('div');
   avatarContainer.classList.add('avatar-container');
-  avatarContainer.id = `user-circle-${safeId}`;
+  avatarContainer.id = `user-circle-${safeId}`; // ✅ safe, consistent DOM ID
 
   avatarContainer.innerHTML = `
     <img src="${generateAvatarUrl(userName)}" class="avatar-circle" alt="${userName}" />
@@ -1972,6 +1881,7 @@ function createAvatarContainer(user) {
 
   return avatarContainer;
 }
+
 
 /**
  * Create vote card space for a user
@@ -2033,6 +1943,7 @@ function createVoteCardSpace(user, isCurrentUser) {
 
   return voteCard;
 }
+
 
 /**
  * Update vote visuals for a user
@@ -2105,6 +2016,7 @@ function updateStory(story) {
   const storyTitle = document.getElementById('currentStory');
   if (storyTitle) storyTitle.textContent = story;
 }
+
 /**
  * Setup story navigation
  */
@@ -2113,16 +2025,15 @@ function setupStoryNavigation() {
   const prevButton = document.getElementById('prevStory');
 
   if (!nextButton || !prevButton) return;
-  
-  // ✅ Disable for non-hosts
-  if (isGuestUser()) {
+// ✅ Disable for non-hosts
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  if (!isHost) {
     nextButton.disabled = true;
     prevButton.disabled = true;
     nextButton.classList.add('disabled-nav');
     prevButton.classList.add('disabled-nav');
     return;
   }
-  
   // Prevent multiple event listeners from being added
   nextButton.replaceWith(nextButton.cloneNode(true));
   prevButton.replaceWith(prevButton.cloneNode(true));
@@ -2164,6 +2075,40 @@ function setupStoryNavigation() {
 }
 
 /**
+ * Set up story card interactions based on user role
+ */
+function setupStoryCardInteractions() {
+  // Check if user is a guest (joined via shared URL)
+  const isGuest = isGuestUser();
+  
+  // Select all story cards
+  const storyCards = document.querySelectorAll('.story-card');
+  
+  storyCards.forEach(card => {
+    if (isGuest) {
+      // For guests: disable clicking and add visual indicator
+      card.classList.add('disabled-story');
+      
+      // Remove any existing click handlers by cloning and replacing
+      const newCard = card.cloneNode(true);
+      card.parentNode.replaceChild(newCard, card);
+    } else {
+      // For hosts: maintain normal selection behavior
+      // Remove existing handlers first to prevent duplicates
+      const newCard = card.cloneNode(true);
+      card.parentNode.replaceChild(newCard, card);
+      
+      // Add fresh click event listener
+      newCard.addEventListener('click', () => {
+        const index = parseInt(newCard.dataset.index || 0);
+        selectStory(index);
+      });
+    }
+  });
+}
+
+
+/**
  * Generate avatar URL
  */
 function generateAvatarUrl(name) {
@@ -2171,61 +2116,9 @@ function generateAvatarUrl(name) {
 }
 
 /**
- * Setup CSV file uploader
- */
-function setupCSVUploader() {
-  const csvInput = document.getElementById('csvInput');
-  if (!csvInput) return;
-
-  csvInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const storyList = document.getElementById('storyList');
-      const existingTickets = [];
-
-      if (storyList) {
-        const manualTickets = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
-        manualTickets.forEach(card => {
-          const title = card.querySelector('.story-title');
-          if (title) {
-            existingTickets.push({ id: card.id, text: title.textContent });
-          }
-        });
-      }
-
-      console.log(`[CSV] Saved ${existingTickets.length} manual tickets before processing upload`);
-
-      const parsedData = parseCSV(e.target.result);
-      csvData = parsedData;
-      displayCSVData(csvData);
-
-      // Existing tickets have already been re-added by displayCSVData
-      
-      normalizeStoryIndexes();
-      setupStoryCardInteractions();
-      
-      // Clear the input so the same file can be uploaded again if needed
-      csvInput.value = '';
-    };
-
-    reader.readAsText(file);
-  });
-}
-
-/**
- * Parse CSV text into array structure
- */
-function parseCSV(data) {
-  const rows = data.trim().split('\n');
-  return rows.map(row => row.split(','));
-}
-
-/**
  * Setup invite button
  */
+
 function setupInviteButton() {
   const inviteButton = document.getElementById('inviteButton');
   if (!inviteButton) return;
@@ -2275,46 +2168,6 @@ function setupVoteCardsDrag() {
   });
 }
 
-/**
- * Setup reveal and reset buttons
- */
-function setupRevealResetButtons() {
-  // Set up reveal votes button
-  const revealVotesBtn = document.getElementById('revealVotesBtn');
-  if (revealVotesBtn) {
-    revealVotesBtn.addEventListener('click', () => {
-      if (socket) {
-        socket.emit('revealVotes');
-        votesRevealed[currentStoryIndex] = true;
-        
-        // Update UI if we have votes for this story
-        if (votesPerStory[currentStoryIndex]) {
-          applyVotesToUI(votesPerStory[currentStoryIndex], false);
-        }
-      }
-    });
-  }
-  
-  // Set up reset votes button
-  const resetVotesBtn = document.getElementById('resetVotesBtn');
-  if (resetVotesBtn) {
-    resetVotesBtn.addEventListener('click', () => {
-      if (socket) {
-        socket.emit('resetVotes');
-        
-        // Reset local state
-        if (votesPerStory[currentStoryIndex]) {
-          votesPerStory[currentStoryIndex] = {};
-        }
-        votesRevealed[currentStoryIndex] = false;
-        
-        // Update UI
-        resetAllVoteVisuals();
-      }
-    });
-  }
-}
-
 function triggerGlobalEmojiBurst() {
   const emojis = ['😀', '✨', '😆', '😝', '😄', '😍'];
   const container = document.body;
@@ -2342,59 +2195,60 @@ function triggerGlobalEmojiBurst() {
   }
 }
 
+
 /**
  * Handle socket messages
  */
 function handleSocketMessage(message) {
   const eventType = message.type;
   const isHost = sessionStorage.getItem('isHost') === 'true';
+
   
   // console.log(`[SOCKET] Received ${eventType}:`, message);
   
   switch(eventType) {
     case 'userList':
       // Update the user list when server sends an updated list
-      if (Array.isArray(message.users)) {
-        updateUserList(message.users);
+    if (Array.isArray(message.users)) {
+    updateUserList(message.users);
 
-        // ✅ If host, re-emit current story to sync for new users
-        if (isHost && typeof emitStorySelected === 'function') {
-          const currentIndex = getCurrentStoryIndex?.() ?? 0;
-          console.log('[HOST] Re-emitting current story index for guests:', currentIndex);
-          emitStorySelected(currentIndex);
-        }
+    // ✅ If host, re-emit current story to sync for new users
+    if (isHost && typeof emitStorySelected === 'function') {
+      const currentIndex = getCurrentStoryIndex?.() ?? 0;
+      console.log('[HOST] Re-emitting current story index for guests:', currentIndex);
+      emitStorySelected(currentIndex);
+    }
+  }
+   break;
+case 'ticketRemoved':
+  if (message.storyId) {
+    const card = document.getElementById(message.storyId);
+    if (card) {
+      card.remove();
+      normalizeStoryIndexes();
+
+      const remainingStories = document.querySelectorAll('.story-card');
+      if (remainingStories.length === 0) {
+        console.log('[SOCKET] All stories removed, resetting UI');
+
+        // Reset immediately, then again after a delay
+        resetAllVotingVisuals();
+        setTimeout(resetAllVotingVisuals, 200); // re-clear any delayed DOM updates
+        votesPerStory = {};
+        votesRevealed = {};
+        currentStoryIndex = 0;
       }
-      break;
-    
-    case 'ticketRemoved':
-      if (message.storyId) {
-        const card = document.getElementById(message.storyId);
-        if (card) {
-          card.remove();
-          normalizeStoryIndexes();
-
-          const remainingStories = document.querySelectorAll('.story-card');
-          if (remainingStories.length === 0) {
-            console.log('[SOCKET] All stories removed, resetting UI');
-
-            // Reset immediately, then again after a delay
-            resetAllVotingVisuals();
-            setTimeout(resetAllVotingVisuals, 200); // re-clear any delayed DOM updates
-            votesPerStory = {};
-            votesRevealed = {};
-            currentStoryIndex = 0;
-          }
-          // If selected story was removed, pick first
-          const selected = document.querySelector('.story-card.selected');
-          if (!selected && remainingStories.length > 0) {
-            const index = parseInt(remainingStories[0].dataset.index, 10);
-            selectStory(index);
-          }
-        }
+      // If selected story was removed, pick first
+      const selected = document.querySelector('.story-card.selected');
+      if (!selected && remainingStories.length > 0) {
+        const index = parseInt(remainingStories[0].dataset.index, 10);
+        selectStory(index);
       }
-      break;
+    }
+  }
+  break;
 
-    case 'votingSystemUpdate':
+     case 'votingSystemUpdate':
       console.log('[DEBUG] Got voting system update:', message.votingSystem);
       sessionStorage.setItem('votingSystem', message.votingSystem);
       setupPlanningCards(); // Regenerate cards
@@ -2410,10 +2264,9 @@ function handleSocketMessage(message) {
       
     case 'voteReceived':
     case 'connect':
-      // When connection is established or reestablished, try to recover state
-      recoverAppState();
-      break;
-      
+    // When connection is established or reestablished, try to recover state
+    recoverAppState();
+    break;
     case 'voteUpdate':
       // Handle vote received
       if (message.userId && message.vote) {
@@ -2426,6 +2279,13 @@ function handleSocketMessage(message) {
       break;
       
     case 'votesRevealed':
+      // Handle votes revealed
+     // votesRevealed[currentStoryIndex] = true;
+     // if (votesPerStory[currentStoryIndex]) {
+       // applyVotesToUI(votesPerStory[currentStoryIndex], false);
+     // }
+      //triggerGlobalEmojiBurst();
+
       // Handle votes revealed
       votesRevealed[currentStoryIndex] = true;
       if (votesPerStory[currentStoryIndex]) {
@@ -2447,88 +2307,111 @@ function handleSocketMessage(message) {
       votesRevealed[currentStoryIndex] = false;
       resetAllVoteVisuals();
       // ✅ Hide vote statistics and show planning cards again
-      const planningCardsSection = document.querySelector('.planning-cards-section');
-      const statsContainer = document.querySelector('.vote-statistics-container');
-    
-      if (planningCardsSection) planningCardsSection.style.display = 'block';
-      if (statsContainer) statsContainer.style.display = 'none';
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  
+  if (planningCardsSection) planningCardsSection.style.display = 'block';
+  if (statsContainer) statsContainer.style.display = 'none';
       break;
 
-    case 'storySelected':
-      if (typeof message.storyIndex === 'number') {
-        console.log('[SOCKET] Story selected from server:', message.storyIndex);
-        currentStoryIndex = message.storyIndex;
+case 'storySelected':
+if (typeof message.storyIndex === 'number') {
+    console.log('[SOCKET] Story selected from server:', message.storyIndex);
+    currentStoryIndex = message.storyIndex;
 
-        //  Wait until story cards are ready
-        let attempts = 0;
-        const maxAttempts = 10;
+    //  Wait until story cards are ready
+    let attempts = 0;
+    const maxAttempts = 10;
 
-        const waitForStoryCard = setInterval(() => {
-          const card = document.querySelector(`.story-card[data-index="${message.storyIndex}"]`);
-          if (card || attempts >= maxAttempts) {
-            clearInterval(waitForStoryCard);
+    const waitForStoryCard = setInterval(() => {
+      const card = document.querySelector(`.story-card[data-index="${message.storyIndex}"]`);
+      if (card || attempts >= maxAttempts) {
+        clearInterval(waitForStoryCard);
 
-            if (card) {
-              console.log('[SOCKET] Selecting story after cards ready');
-              selectStory(message.storyIndex, false);
-              setupPlanningCards();
-              setupVoteCardsDrag();
+        if (card) {
+          console.log('[SOCKET] Selecting story after cards ready');
+          selectStory(message.storyIndex, false);
+          setupPlanningCards();
+          setupVoteCardsDrag();
 
-              if (socket) {
-                socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
-              }
-            } else {
-              console.warn('[SOCKET] Story card not found after waiting');
-            }
+          if (socket) {
+            socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
           }
-          attempts++;
-        }, 200); // check every 200ms
-      }
-      break;
-
-    case 'votesRevealed':
-      if (typeof message.storyIndex === 'number') {
-        console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
-        votesRevealed[message.storyIndex] = true;
-
-        // Re-apply vote visuals if it's the currently selected story
-        if (message.storyIndex === currentStoryIndex) {
-          const currentVotes = votesPerStory[message.storyIndex] || {};
-          applyVotesToUI(currentVotes, false); // false = don't hide values
+        } else {
+          console.warn('[SOCKET] Story card not found after waiting');
         }
       }
-      break;
+      attempts++;
+    }, 200); // check every 200ms
+  }
+  break;
+
+     case 'votesRevealed':
+  if (typeof message.storyIndex === 'number') {
+    console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
+    votesRevealed[message.storyIndex] = true;
+
+    // Re-apply vote visuals if it's the currently selected story
+    if (message.storyIndex === currentStoryIndex) {
+      const currentVotes = votesPerStory[message.storyIndex] || {};
+      applyVotesToUI(currentVotes, false); // false = don't hide values
+    }
+  }
+  break;
+ 
       
     case 'storyVotes':
+
       if (typeof message.storyIndex === 'number') {
-        console.log('[SOCKET] Received votes for story:', message.storyIndex);
+    console.log('[SOCKET] Received votes for story:', message.storyIndex);
 
-        // Store the votes
-        votesPerStory[message.storyIndex] = message.votes;
+    // Store the votes
+    votesPerStory[message.storyIndex] = message.votes;
 
-        // Apply to UI only if it's the currently selected story
-        if (message.storyIndex === currentStoryIndex) {
-          applyVotesToUI(message.votes, !votesRevealed[message.storyIndex]);
-        }
-      }
-      break;
+    // Apply to UI only if it's the currently selected story
+    if (message.storyIndex === currentStoryIndex) {
+      applyVotesToUI(message.votes, !votesRevealed[message.storyIndex]);
+    }
+  }
+         break;
       
     case 'syncCSVData':
-      // Handle CSV data sync with improved handling
-      if (Array.isArray(message.csvData)) {
-        console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
+       // Handle CSV data sync with improved handling
+  if (Array.isArray(message.csvData)) {
+    console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
     
-        // Store the CSV data
-        csvData = message.csvData;
-        csvDataLoaded = true;
+    // Store the CSV data
+    csvData = message.csvData;
+    csvDataLoaded = true;
     
-        // Display CSV data (this will preserve manual tickets)
-        displayCSVData(csvData);
+    // Temporarily save manually added tickets to preserve them
+    const storyList = document.getElementById('storyList');
+    const manualTickets = [];
     
-        // Update UI
-        renderCurrentStory();
-      }
-      break;
+    if (storyList) {
+      const manualStoryCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+      manualStoryCards.forEach(card => {
+        const title = card.querySelector('.story-title');
+        if (title) {
+          manualTickets.push({
+            id: card.id,
+            text: title.textContent
+          });
+        }
+      });
+    }
+    
+    console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
+    
+    // Display CSV data (this will clear CSV stories but preserve manual ones)
+    displayCSVData(csvData);
+    
+    // We don't need to re-add manual tickets because displayCSVData now preserves them
+    
+    // Update UI
+    renderCurrentStory();
+  }
+  break;
 
     case 'addTicket':
       // Handle new ticket added by another user
@@ -2547,7 +2430,6 @@ function handleSocketMessage(message) {
       }
       break;
       
-    // Handle initial connection
     case 'connect':
       // When connection is established, request tickets
       setTimeout(() => {
@@ -2577,3 +2459,4 @@ document.addEventListener('DOMContentLoaded', () => {
   appendRoomIdToURL(roomId);
   initializeApp(roomId);
 });
+  
