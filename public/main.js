@@ -2412,12 +2412,16 @@ if (typeof message.storyIndex === 'number') {
   break;
 
     case 'addTicket':
-      // Handle new ticket added by another user
-      if (message.ticketData) {
-        console.log('[SOCKET] New ticket received:', message.ticketData);
-        // Add ticket to UI without selecting it (to avoid loops)
-        addTicketToUI(message.ticketData, false);
-      }
+     // Handle new ticket added by another user
+  if (message.ticketData) {
+    console.log('[SOCKET] New ticket received:', message.ticketData);
+    // Add ticket to UI without selecting it (to avoid loops)
+    if (message.ticketData.id && message.ticketData.text) {
+      addTicketToUI(message.ticketData, false);
+    } else {
+      console.warn('[SOCKET] Received invalid ticket data:', message.ticketData);
+    }
+  }
       break;
       
     case 'allTickets':
