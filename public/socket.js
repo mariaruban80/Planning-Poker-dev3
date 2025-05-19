@@ -52,45 +52,19 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   
   // Monitor connection health
   setupConnectionMonitor(handleMessage);
-socket.on('addTicket', (ticketData) => {
-  // Fix: Check if socket.data exists before accessing roomId
-  const roomId = socket.data?.roomId;
+
+  socket.on('addTicket', ({ ticketData }) => {
+    console.log('[SOCKET] Received add ticket event:', ticketData);
+    handleMessage({ type: 'addTicket', ticketData });
+  });
+
+  socket.on('ticketRemoved', ({ storyId }) => {
+    console.log('[SOCKET] Ticket removed received from server:', storyId);
+    handleMessage({ type: 'ticketRemoved', storyId });
+  });
   
-  // Also check for rooms object existence
-  if (roomId && rooms && rooms[roomId]) {
-    console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData);
-
-    if (!rooms[roomId].tickets) {
-      rooms[roomId].tickets = [];
-    }
-
-    rooms[roomId].tickets.push(ticketData);
-    console.log(`[SERVER] Total tickets in room after add:`, rooms[roomId].tickets.map(t => t.id));
-
-    socket.broadcast.to(roomId).emit('addTicket', { ticketData });
-
-    const isFirstTicket = rooms[roomId].tickets.length === 1;
-    if (isFirstTicket) {
-      rooms[roomId].selectedIndex = 0;
-      io.to(roomId).emit('storySelected', { storyIndex: 0 });
-    }
-  } else {
-    // Log that we couldn't find the room
-    console.error(`[SERVER] Failed to add ticket: ${socket.id} - Room not found or invalid`, {
-      roomId: socket.data?.roomId,
-      hasSocketData: !!socket.data,
-      socketId: socket.id,
-      ticketId: ticketData?.id
-    });
-  }
-});
-
-socket.on('ticketRemoved', ({ storyId }) => {
-  console.log('[SOCKET] Ticket removed received from server:', storyId);
-  handleMessage({ type: 'ticketRemoved', storyId });
-});
   socket.on('allTickets', ({ tickets }) => {
-    console.log('[SOCKET] Received all tickets:', tickets.length);
+    console.log('[SOCKET] Received all tickets:', tickets?.length || 0);
     handleMessage({ type: 'allTickets', tickets });
   });
 
@@ -146,7 +120,27 @@ socket.on('ticketRemoved', ({ storyId }) => {
   socket.on('storySelected', ({ storyIndex }) => {
     console.log('[SOCKET] Story selected event received:', storyIndex);
     selectedStoryIndex = storyIndex;
-    handleMessage({ type: 'storySelected', storyIndex });
+    
+    // Improved story selection handling
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const waitForStoryCard = setInterval(() => {
+      const card = document.querySelector(`.story-card[data-index="${storyIndex}"]`);
+      if (card || attempts >= maxAttempts) {
+        clearInterval(waitForStoryCard);
+        
+        if (card) {
+          console.log('[SOCKET] Selecting story after cards ready');
+          handleMessage({ type: 'storySelected', storyIndex });
+        } else {
+          console.warn('[SOCKET] Story card not found after waiting');
+          // Let the handler deal with this situation
+          handleMessage({ type: 'storySelected', storyIndex, cardNotFound: true });
+        }
+      }
+      attempts++;
+    }, 200); // Check every 200ms
   });
 
   socket.on('voteUpdate', ({ userId, vote, storyIndex }) => {
