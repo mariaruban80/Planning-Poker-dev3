@@ -2286,36 +2286,39 @@ case 'ticketRemoved':
       break;
 
 case 'storySelected':
-if (typeof message.storyIndex === 'number') {
+  if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
     currentStoryIndex = message.storyIndex;
 
-    //  Wait until story cards are ready
     let attempts = 0;
     const maxAttempts = 10;
 
     const waitForStoryCard = setInterval(() => {
-      const card = document.querySelector(`.story-card[data-index="${message.storyIndex}"]`);
-      if (card || attempts >= maxAttempts) {
+      attempts++;
+
+      if (attempts > maxAttempts) {
         clearInterval(waitForStoryCard);
+        console.warn('[SOCKET] Story card not found after waiting');
+        return;
+      }
 
-        if (card) {
-          console.log('[SOCKET] Selecting story after cards ready');
-          selectStory(message.storyIndex, false);
-          setupPlanningCards();
-          setupVoteCardsDrag();
+      const card = document.querySelector(`.story-card[data-index="${message.storyIndex}"]`);
+      if (card) {
+        clearInterval(waitForStoryCard);
+        console.log('[SOCKET] Selecting story after cards ready');
 
-          if (socket) {
-            socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
-          }
-        } else {
-          console.warn('[SOCKET] Story card not found after waiting');
+        selectStory(message.storyIndex, false); // Don't emit to server
+        setupPlanningCards();
+        setupVoteCardsDrag();
+
+        if (socket) {
+          socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
         }
       }
-      attempts++;
-    }, 200); // check every 200ms
+    }, 200); // Check every 200ms
   }
   break;
+
 
      case 'votesRevealed':
   if (typeof message.storyIndex === 'number') {
