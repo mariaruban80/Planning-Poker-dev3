@@ -53,18 +53,33 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   // Monitor connection health
   setupConnectionMonitor(handleMessage);
 
-  socket.on('addTicket', ({ ticketData }) => {
-    console.log('[SOCKET] Received add ticket event:', ticketData);
-    handleMessage({ type: 'addTicket', ticketData });
-  });
+  socket.on('addTicket', (ticketData) => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData);
 
-  socket.on('ticketRemoved', ({ storyId }) => {
-    console.log('[SOCKET] Ticket removed received from server:', storyId);
-    handleMessage({ type: 'ticketRemoved', storyId });
+      if (!rooms[roomId].tickets) {
+        rooms[roomId].tickets = [];
+      }
+
+      rooms[roomId].tickets.push(ticketData);
+      console.log(`[SERVER] Total tickets in room after add:`, rooms[roomId].tickets.map(t => t.id));
+
+      socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+
+      const isFirstTicket = rooms[roomId].tickets.length === 1;
+      if (isFirstTicket) {
+        rooms[roomId].selectedIndex = 0;
+        io.to(roomId).emit('storySelected', { storyIndex: 0 });
+      }
+    }
   });
-  
+socket.on('ticketRemoved', ({ storyId }) => {
+  console.log('[SOCKET] Ticket removed received from server:', storyId);
+  handleMessage({ type: 'ticketRemoved', storyId });
+});
   socket.on('allTickets', ({ tickets }) => {
-    console.log('[SOCKET] Received all tickets:', tickets?.length || 0);
+    console.log('[SOCKET] Received all tickets:', tickets.length);
     handleMessage({ type: 'allTickets', tickets });
   });
 
@@ -120,27 +135,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   socket.on('storySelected', ({ storyIndex }) => {
     console.log('[SOCKET] Story selected event received:', storyIndex);
     selectedStoryIndex = storyIndex;
-    
-    // Improved story selection handling
-    let attempts = 0;
-    const maxAttempts = 10;
-    
-    const waitForStoryCard = setInterval(() => {
-      const card = document.querySelector(`.story-card[data-index="${storyIndex}"]`);
-      if (card || attempts >= maxAttempts) {
-        clearInterval(waitForStoryCard);
-        
-        if (card) {
-          console.log('[SOCKET] Selecting story after cards ready');
-          handleMessage({ type: 'storySelected', storyIndex });
-        } else {
-          console.warn('[SOCKET] Story card not found after waiting');
-          // Let the handler deal with this situation
-          handleMessage({ type: 'storySelected', storyIndex, cardNotFound: true });
-        }
-      }
-      attempts++;
-    }, 200); // Check every 200ms
+    handleMessage({ type: 'storySelected', storyIndex });
   });
 
   socket.on('voteUpdate', ({ userId, vote, storyIndex }) => {
