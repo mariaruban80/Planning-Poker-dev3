@@ -1229,25 +1229,50 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 }
 /** function to remove selected story  */
 function removeStory(storyId) {
-  console.log('[UI] Removing story with ID:', storyId);
-  
   const card = document.getElementById(storyId);
-  if (!card) {
-    console.warn('[UI] Story card not found for removal:', storyId);
-    return;
-  }
+  if (!card) return;
+  
+  // Get the index of the story being removed
+  const storyIndex = parseInt(card.dataset.index, 10);
+  console.log(`[UI] Removing story #${storyIndex} with ID: ${storyId}`);
   
   // Remove from DOM
   card.remove();
   
-  // Notify server if we're the host
-  if (sessionStorage.getItem('isHost') === 'true' && socket) {
-    console.log('[CLIENT] Emitting removeTicket for:', storyId);
-    socket.emit('removeTicket', { storyId });
+  // Clear votes for this story index from local tracking
+  if (votesPerStory[storyIndex]) {
+    console.log(`[UI] Clearing votes for removed story #${storyIndex}`);
+    delete votesPerStory[storyIndex];
   }
   
-  // Fix the indexes
+  // Clear revealed status for this story
+  if (votesRevealed[storyIndex]) {
+    delete votesRevealed[storyIndex];
+  }
+  
+  // Notify server if we're the host
+  if (isCurrentUserHost() && socket) {
+    console.log('[CLIENT] Emitting removeTicket for:', storyId);
+    socket.emit('removeTicket', { storyId, storyIndex });
+  }
+  
+  // Fix the indexes of remaining stories
   normalizeStoryIndexes();
+  
+  // Reset vote visuals
+  resetAllVoteVisuals();
+  
+  // Hide statistics if they were shown
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  if (statsContainer) {
+    statsContainer.style.display = 'none';
+  }
+  
+  // Show planning cards
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  if (planningCardsSection) {
+    planningCardsSection.style.display = 'block';
+  }
   
   // Select another story if available
   const selected = document.querySelector('.story-card.selected');
