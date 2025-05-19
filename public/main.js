@@ -413,7 +413,7 @@ function addFixedVoteStatisticsStyles() {
   .remove-story {
       cursor: pointer;
       position: absolute;
-      color: #FFFFFF;
+      color: white;
       top: 5px;
       right: 5px;
       font-size: 18px;
