@@ -422,9 +422,7 @@ function addFixedVoteStatisticsStyles() {
     .remove-story:hover {
       opacity: 1;
     }
-    
-   
-    }
+
   `;
   
   document.head.appendChild(style);
