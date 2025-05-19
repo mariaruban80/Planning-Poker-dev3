@@ -79,7 +79,7 @@ function createStoryCard(story, index, isCSV = false) {
   title.textContent = story.text || story.title || `Story ${index + 1}`;
   card.appendChild(title);
 
-  // ✅ Add delete button for all cards
+  // Add delete button for all cards
   const removeBtn = document.createElement('span');
   removeBtn.className = 'remove-story';
   removeBtn.innerHTML = '&times;';
