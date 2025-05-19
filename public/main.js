@@ -1319,27 +1319,32 @@ function applyGuestRestrictions() {
  * @param {Array} tickets - Array of ticket data objects
  */
 function processAllTickets(tickets) {
-  if (!Array.isArray(tickets) || tickets.length === 0) return;
+  if (!Array.isArray(tickets) || tickets.length === 0) {
+    console.log('[INFO] No tickets received from server');
+    return;
+  }
   
   console.log('[INFO] Processing all tickets received from server:', tickets.length);
   
-  // Clear the story list first
+  // Clear all existing stories to avoid duplicates
   const storyList = document.getElementById('storyList');
   if (storyList) {
- //   storyList.innerHTML = '';
-    const manualCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
-  manualCards.forEach(card => card.remove());
+    // Clear all stories to prevent duplicates
+    storyList.innerHTML = '';
   }
   
-  // Reset csvData
-//  csvData = [];
+  // Track processed ticket IDs to avoid duplicates
+  const processedIds = new Set();
   
   // Add all tickets to the UI
   tickets.forEach((ticket, index) => {
-    // Only add if it has required properties
-    if (ticket && ticket.id && ticket.text) {
-      // Add to UI without selecting
+    // Only add if it has required properties and hasn't been processed already
+    if (ticket && ticket.id && ticket.text && !processedIds.has(ticket.id)) {
+      console.log(`[INFO] Adding ticket #${index}:`, ticket.id);
       addTicketToUI(ticket, false);
+      processedIds.add(ticket.id);
+    } else if (processedIds.has(ticket.id)) {
+      console.log(`[INFO] Skipping duplicate ticket:`, ticket.id);
     }
   });
   
@@ -1347,11 +1352,29 @@ function processAllTickets(tickets) {
   if (tickets.length > 0) {
     currentStoryIndex = 0;
     selectStory(0, false); // Don't emit to avoid loops
+  } else {
+    // No stories received - show empty state
+    const noStoriesMessage = document.getElementById('noStoriesMessage');
+    if (noStoriesMessage) {
+      noStoriesMessage.style.display = 'block';
+    }
   }
-   // ✅ Fix indexes to ensure navigation works
+  
+  // ✅ Fix indexes to ensure navigation works
   normalizeStoryIndexes();
-   
+  
+  // Set up interactions for the newly added story cards
   setupStoryCardInteractions();
+  
+  // If a story index was selected before, try to reapply it
+  if (pendingStoryIndex !== null) {
+    const cards = document.querySelectorAll('.story-card');
+    if (cards.length > pendingStoryIndex) {
+      console.log('[INFO] Reapplying pending story selection:', pendingStoryIndex);
+      selectStory(pendingStoryIndex, false);
+    }
+    pendingStoryIndex = null;
+  }
 }
 
 /**
