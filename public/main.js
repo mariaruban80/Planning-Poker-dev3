@@ -1397,6 +1397,7 @@ function setupRevealResetButtons() {
 /**
  * Setup CSV file uploader
  */
+
 function setupCSVUploader() {
   const csvInput = document.getElementById('csvInput');
   if (!csvInput) return;
@@ -1426,16 +1427,8 @@ function setupCSVUploader() {
       csvData = parsedData;
       displayCSVData(csvData);
 
-      // Emit each uploaded story and ensure IDs are valid
-       csvData.forEach((ticket, index) => {
-        if (ticket && ticket.text) {
-          const ticketData = {
-            id: `story_csv_${Date.now()}_${index}`,
-            text: ticket.text || ticket.join(' | ')
-          };
-          emitAddTicket(ticketData); // Emit each CSV story as a ticket
-        }
-      });
+      // Note: We're now emitting each ticket in displayCSVData instead of the whole CSV data at once
+      // This is the key change to make CSV uploads synchronize properly
 
       existingTickets.forEach((ticket, index) => {
         if (ticket && ticket.id && ticket.text) {
@@ -1444,13 +1437,14 @@ function setupCSVUploader() {
       });
 
       normalizeStoryIndexes();
+      
+      // Clear the input so the same file can be uploaded again if needed
+      csvInput.value = '';
     };
 
     reader.readAsText(file);
   });
 }
-
-
 
 
 /**
@@ -1530,28 +1524,34 @@ function displayCSVData(data) {
       storyItem.appendChild(storyTitle);
       storyListContainer.appendChild(storyItem);
       
-  /**  storyItem.addEventListener('click', () => {
-        selectStory(index);
-      }); */
-const isHost = sessionStorage.getItem('isHost') === 'true';
-if (isHost) {
-  storyItem.addEventListener('click', () => {
-    selectStory(startIndex + index);
-  });
-}      
-});
+      const isHost = sessionStorage.getItem('isHost') === 'true';
+      if (isHost) {
+        storyItem.addEventListener('click', () => {
+          selectStory(index);
+        });
+      }      
+    });
     
     // Then add CSV data
     let startIndex = existingStories.length;
-  data.forEach((row, index) => {
-  const ticketData = {
-    id: `story_csv_${index}`,
-    text: row.join(' | ')
-  };
+    data.forEach((row, index) => {
+      const ticketData = {
+        id: `story_csv_${index}`,
+        text: Array.isArray(row) ? row.join(' | ') : String(row)
+      };
 
-  addTicketToUI(ticketData, false);
-});
+      // IMPORTANT: Emit each CSV row as an individual ticket to the server
+      if (typeof emitAddTicket === 'function') {
+        console.log('[CSV] Emitting ticket to server:', ticketData);
+        emitAddTicket(ticketData);
+      } else if (socket) {
+        console.log('[CSV] Emitting ticket via socket:', ticketData);
+        socket.emit('addTicket', ticketData);
+      }
 
+      // Add to UI without selecting (we'll handle selection after all are added)
+      addTicketToUI(ticketData, false);
+    });
     
     // Update preserved tickets list
     preservedManualTickets = existingStories;
@@ -1581,6 +1581,11 @@ if (isHost) {
     if (!selectedStory && storyListContainer.children.length > 0) {
       storyListContainer.children[0].classList.add('selected');
       currentStoryIndex = 0;
+      
+      // Emit story selection if host
+      if (sessionStorage.getItem('isHost') === 'true') {
+        selectStory(0, true);
+      }
     }
   } finally {
     normalizeStoryIndexes();
@@ -1589,6 +1594,7 @@ if (isHost) {
     processingCSVData = false;
   }
 }
+
 /**
  * Select a story by index
  * @param {number} index - Story index to select
