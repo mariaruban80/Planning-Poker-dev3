@@ -86,11 +86,12 @@ function saveAppState() {
 /**
  * Create a story card element
  */
+
 function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
   card.className = 'story-card';
   card.dataset.index = index;
-  card.id = isCSV ? `story_csv_${index}` : story.id;
+  card.id = story.id;
   // Make sure card has position relative for delete button positioning
   card.style.position = 'relative';
 
@@ -99,11 +100,11 @@ function createStoryCard(story, index, isCSV = false) {
   title.textContent = story.text || story.title || `Story ${index + 1}`;
   card.appendChild(title);
 
-  // Only add delete button for hosts, not for guests
-  if (!isGuestUser()) {
+  // Only add delete button for hosts - Note we're checking isCurrentUserHost, not isGuestUser()
+  if (isCurrentUserHost()) {
     const removeBtn = document.createElement('span');
     removeBtn.className = 'remove-story';
-    removeBtn.innerHTML = '🗑️';  // Using trash can emoji for better visibility
+    removeBtn.textContent = '🗑️';  // Using trash emoji for better visibility
     removeBtn.title = 'Remove story';
     
     // Apply inline styles to ensure visibility
@@ -113,7 +114,7 @@ function createStoryCard(story, index, isCSV = false) {
     removeBtn.style.cursor = 'pointer';
     removeBtn.style.color = '#d32f2f';
     removeBtn.style.fontSize = '18px';
-    removeBtn.style.zIndex = '10';
+    removeBtn.style.zIndex = '999'; // Higher z-index to ensure visibility
     removeBtn.style.background = 'white';
     removeBtn.style.borderRadius = '50%';
     removeBtn.style.padding = '2px';
@@ -123,12 +124,15 @@ function createStoryCard(story, index, isCSV = false) {
     removeBtn.style.alignItems = 'center';
     removeBtn.style.justifyContent = 'center';
     
-    removeBtn.addEventListener('click', (e) => {
+    // Add the event listener directly without wrapping it
+    removeBtn.onclick = function(e) {
       e.stopPropagation();
       if (confirm('Are you sure you want to remove this story?')) {
+        console.log(`[DELETE] Removing story with ID: ${card.id}`);
         removeStory(card.id);
       }
-    });
+    };
+    
     card.appendChild(removeBtn);
   }
 
@@ -975,21 +979,23 @@ own-vote-space {
     }
     
     .remove-story {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      cursor: pointer;
-      color: #d32f2f;
-      font-size: 18px;
-      z-index: 10;
-      background: white;
-      border-radius: 50%;
-      padding: 2px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
+     position: absolute !important;
+      top: 5px !important;
+      right: 5px !important;
+      cursor: pointer !important;
+      color: #d32f2f !important;
+      font-size: 18px !important;
+      z-index: 999 !important;
+      background: white !important;
+      border-radius: 50% !important;
+      padding: 2px !important;
+      width: 24px !important;
+      height: 24px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      opacity: 1 !important;
+      visibility: visible !important;
     }
     
     .remove-story:hover {
@@ -997,7 +1003,9 @@ own-vote-space {
     }
     
     .story-card {
-      position: relative;
+         position: relative !important;
+      min-height: 20px !important;
+      padding-right: 30px !important;
     }
   `;
   document.head.appendChild(style);
@@ -1336,15 +1344,23 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 }
 
 /** function to remove selected story  */
+/**
+ * Remove a story by ID
+ */
 function removeStory(storyId) {
+  console.log(`[REMOVE] Attempting to remove story: ${storyId}`);
+  
   // Prevent guests from removing stories
   if (isGuestUser()) {
     console.log('[UI] Guests cannot remove stories');
     return;
   }
-  
+
   const card = document.getElementById(storyId);
-  if (!card) return;
+  if (!card) {
+    console.warn(`[REMOVE] Story card not found with ID: ${storyId}`);
+    return;
+  }
   
   // Get the index of the story being removed
   const storyIndex = parseInt(card.dataset.index, 10);
@@ -1369,8 +1385,9 @@ function removeStory(storyId) {
     socket.emit('removeTicket', { storyId, storyIndex });
   }
 
+  // Fix the indexes
   normalizeStoryIndexes();
-
+  
   // Reset vote visuals
   resetAllVoteVisuals();
   
@@ -1396,6 +1413,7 @@ function removeStory(storyId) {
     }
   }
 }
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
@@ -1505,72 +1523,54 @@ function normalizeStoryIndexes() {
     // Update index
     card.dataset.index = index;
     
-    // Create a new card to replace the old one (to clear event listeners)
+    // Clone the card to remove event handlers
     const newCard = card.cloneNode(true);
-    
-    // Ensure position is relative for delete button positioning
-    newCard.style.position = 'relative';
+    newCard.style.position = 'relative'; // Ensure position for delete button
     
     // Replace the old card
     if (card.parentNode) {
       card.parentNode.replaceChild(newCard, card);
-    
-      // Only add click event for hosts, not guests
-      if (!isGuestUser()) {
+      
+      // Add event handlers for hosts only
+      if (isCurrentUserHost()) {
         // Add click handler for story selection
         newCard.addEventListener('click', () => {
           selectStory(index);
         });
         
-        // Re-add delete button functionality if it exists
-        const removeBtn = newCard.querySelector('.remove-story');
-        if (removeBtn) {
-          // Remove existing event listeners by cloning
-          const newRemoveBtn = removeBtn.cloneNode(true);
-          if (removeBtn.parentNode) {
-            removeBtn.parentNode.replaceChild(newRemoveBtn, removeBtn);
+        // IMPORTANT: Add a new delete button with direct handler
+        const deleteBtn = document.createElement('span');
+        deleteBtn.className = 'remove-story';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.title = 'Remove story';
+        
+        // Style the delete button
+        deleteBtn.style.position = 'absolute';
+        deleteBtn.style.top = '5px';
+        deleteBtn.style.right = '5px';
+        deleteBtn.style.cursor = 'pointer';
+        deleteBtn.style.color = '#d32f2f';
+        deleteBtn.style.fontSize = '18px';
+        deleteBtn.style.zIndex = '999';
+        deleteBtn.style.background = 'white';
+        deleteBtn.style.borderRadius = '50%';
+        deleteBtn.style.padding = '2px';
+        deleteBtn.style.width = '24px';
+        deleteBtn.style.height = '24px';
+        deleteBtn.style.display = 'flex';
+        deleteBtn.style.alignItems = 'center';
+        deleteBtn.style.justifyContent = 'center';
+        
+        // Direct click handler
+        deleteBtn.onclick = function(e) {
+          e.stopPropagation();
+          console.log(`[DELETE] Remove button clicked for story: ${newCard.id}`);
+          if (confirm('Are you sure you want to remove this story?')) {
+            removeStory(newCard.id);
           }
-          
-          // Add new click listener for the delete button
-          newRemoveBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (confirm('Are you sure you want to remove this story?')) {
-              removeStory(newCard.id);
-            }
-          });
-        } else {
-          // If no delete button exists but user is host, add one
-          const deleteBtn = document.createElement('span');
-          deleteBtn.className = 'remove-story';
-          deleteBtn.innerHTML = '🗑️';
-          deleteBtn.title = 'Remove story';
-          
-          // Style it properly
-          deleteBtn.style.position = 'absolute';
-          deleteBtn.style.top = '5px';
-          deleteBtn.style.right = '5px';
-          deleteBtn.style.cursor = 'pointer';
-          deleteBtn.style.color = '#d32f2f';
-          deleteBtn.style.fontSize = '18px';
-          deleteBtn.style.zIndex = '10';
-          deleteBtn.style.background = 'white';
-          deleteBtn.style.borderRadius = '50%';
-          deleteBtn.style.padding = '2px';
-          deleteBtn.style.width = '24px';
-          deleteBtn.style.height = '24px';
-          deleteBtn.style.display = 'flex';
-          deleteBtn.style.alignItems = 'center';
-          deleteBtn.style.justifyContent = 'center';
-          
-          deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (confirm('Are you sure you want to remove this story?')) {
-              removeStory(newCard.id);
-            }
-          });
-          
-          newCard.appendChild(deleteBtn);
-        }
+        };
+        
+        newCard.appendChild(deleteBtn);
       } else {
         // For guests, make sure the disabled class is applied
         newCard.classList.add('disabled-story');
@@ -1578,6 +1578,7 @@ function normalizeStoryIndexes() {
     }
   });
 }
+
 
 /**
  * Display CSV data in the story list
@@ -1636,33 +1637,36 @@ function displayCSVData(data) {
     
     // Then add CSV data
     let startIndex = existingStories.length;
-    data.forEach((row, index) => {
-      const ticketData = {
-        id: `story_csv_${index}`,
-        text: Array.isArray(row) ? row.join(' | ') : String(row)
-      };
+    // In the part of displayCSVData function where you handle CSV rows:
+data.forEach((row, index) => {
+  const ticketData = {
+    id: `story_csv_${index}`, // Keep IDs simple and consistent
+    text: Array.isArray(row) ? row.join(' | ') : String(row)
+  };
 
-      // Emit each CSV row as an individual ticket 
-      if (!isGuestUser()) {
-        if (typeof emitAddTicket === 'function') {
-          console.log('[CSV] Emitting ticket to server:', ticketData);
-          emitAddTicket(ticketData);
-        } else if (socket) {
-          console.log('[CSV] Emitting ticket via socket:', ticketData);
-          socket.emit('addTicket', ticketData);
-        }
-      }
+  // IMPORTANT: Emit each CSV row as an individual ticket to the server 
+  // in displayCSVData, BEFORE adding to DOM
+  if (!isGuestUser()) {
+    if (typeof emitAddTicket === 'function') {
+      console.log('[CSV] Emitting ticket to server:', ticketData);
+      emitAddTicket(ticketData);
+    } else if (socket) {
+      console.log('[CSV] Emitting ticket via socket:', ticketData);
+      socket.emit('addTicket', ticketData);
+    }
+  }
 
-      // Use createStoryCard for consistent styling
-      const storyCard = createStoryCard(ticketData, startIndex + index, true);
-      storyListContainer.appendChild(storyCard);
-      
-      if (!isGuestUser()) {
-        storyCard.addEventListener('click', () => {
-          selectStory(startIndex + index);
-        });
-      }
+  // Use createStoryCard for consistent appearance and behavior
+  const storyCard = createStoryCard(ticketData, startIndex + index, true);
+  storyListContainer.appendChild(storyCard);
+  
+  // Add click handler for story selection (for hosts only)
+  if (!isGuestUser()) {
+    storyCard.addEventListener('click', () => {
+      selectStory(startIndex + index);
     });
+  }
+});
     
     // Update preserved tickets list
     preservedManualTickets = existingStories;
