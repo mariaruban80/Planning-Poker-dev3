@@ -53,36 +53,6 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   // Monitor connection health
   setupConnectionMonitor(handleMessage);
 
-  socket.on('addTicket', (ticketData) => {
-    const roomId = socket.data.roomId;
-    if (roomId && rooms[roomId]) {
-      console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData);
-
-      if (!rooms[roomId].tickets) {
-        rooms[roomId].tickets = [];
-      }
-
-      rooms[roomId].tickets.push(ticketData);
-      console.log(`[SERVER] Total tickets in room after add:`, rooms[roomId].tickets.map(t => t.id));
-
-      socket.broadcast.to(roomId).emit('addTicket', { ticketData });
-
-      const isFirstTicket = rooms[roomId].tickets.length === 1;
-      if (isFirstTicket) {
-        rooms[roomId].selectedIndex = 0;
-        io.to(roomId).emit('storySelected', { storyIndex: 0 });
-      }
-    }
-  });
-socket.on('ticketRemoved', ({ storyId }) => {
-  console.log('[SOCKET] Ticket removed received from server:', storyId);
-  handleMessage({ type: 'ticketRemoved', storyId });
-});
-  socket.on('allTickets', ({ tickets }) => {
-    console.log('[SOCKET] Received all tickets:', tickets.length);
-    handleMessage({ type: 'allTickets', tickets });
-  });
-
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
@@ -106,15 +76,36 @@ socket.on('ticketRemoved', ({ storyId }) => {
     }
   });
 
+  // Handle received ticket data events
+  socket.on('addTicket', (data) => {
+    console.log('[SOCKET] Received addTicket event:', data);
+    // Ensure consistent data format for message handler
+    if (data && data.ticketData) {
+      handleMessage({ type: 'addTicket', ticketData: data.ticketData });
+    } else {
+      console.warn('[SOCKET] Received malformed addTicket data:', data);
+    }
+  });
+
+  socket.on('ticketRemoved', ({ storyId }) => {
+    console.log('[SOCKET] Ticket removed received from server:', storyId);
+    handleMessage({ type: 'ticketRemoved', storyId });
+  });
+
+  socket.on('allTickets', ({ tickets }) => {
+    console.log('[SOCKET] Received all tickets:', tickets?.length || 0);
+    handleMessage({ type: 'allTickets', tickets: tickets || [] });
+  });
+
   socket.on('userList', (users) => {
-    handleMessage({ type: 'userList', users });
+    handleMessage({ type: 'userList', users: users || [] });
   });
   
   // Handle voting system updates
   socket.on('votingSystemUpdate', data => {
-    console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
+    console.log('[SOCKET] votingSystemUpdate received:', data);
     // Store in session storage for reconnection
-    if (data.votingSystem) {
+    if (data && data.votingSystem) {
       savedVotingSystem = data.votingSystem;
       sessionStorage.setItem('votingSystem', data.votingSystem);
     }
@@ -123,7 +114,7 @@ socket.on('ticketRemoved', ({ storyId }) => {
 
   socket.on('syncCSVData', (csvData) => {
     console.log('[SOCKET] Received CSV data:', Array.isArray(csvData) ? csvData.length : 'invalid', 'rows');
-    handleMessage({ type: 'syncCSVData', csvData });
+    handleMessage({ type: 'syncCSVData', csvData: Array.isArray(csvData) ? csvData : [] });
     
     // Notify server that CSV data is loaded
     setTimeout(() => {
@@ -139,13 +130,17 @@ socket.on('ticketRemoved', ({ storyId }) => {
   });
 
   socket.on('voteUpdate', ({ userId, vote, storyIndex }) => {
+    if (!userId) {
+      console.warn('[SOCKET] Received vote update without userId:', { vote, storyIndex });
+      return;
+    }
     console.log('[SOCKET] Vote update received for user', userId, 'on story', storyIndex);
     handleMessage({ type: 'voteUpdate', userId, vote, storyIndex });
   });
 
   socket.on('storyVotes', ({ storyIndex, votes }) => {
-    console.log('[SOCKET] Received votes for story', storyIndex, ':', Object.keys(votes).length, 'votes');
-    handleMessage({ type: 'storyVotes', storyIndex, votes });
+    console.log('[SOCKET] Received votes for story', storyIndex, ':', Object.keys(votes || {}).length, 'votes');
+    handleMessage({ type: 'storyVotes', storyIndex, votes: votes || {} });
   });
 
   socket.on('votesRevealed', ({ storyIndex }) => {
@@ -160,7 +155,7 @@ socket.on('ticketRemoved', ({ storyId }) => {
 
   socket.on('revealVotes', (votes) => {
     console.log('[SOCKET] Reveal votes event received (legacy)');
-    handleMessage({ type: 'revealVotes', votes });
+    handleMessage({ type: 'revealVotes', votes: votes || {} });
   });
 
   socket.on('storyChange', ({ story }) => {
@@ -176,6 +171,12 @@ socket.on('ticketRemoved', ({ storyId }) => {
       data.stories ? data.stories.length : 0, 'stories and',
       data.votes ? Object.keys(data.votes).length : 0, 'vote sets');
     handleMessage({ type: 'exportData', data });
+  });
+  
+  // Error handling
+  socket.on('error', (error) => {
+    console.error('[SOCKET] Error received from server:', error);
+    handleMessage({ type: 'error', error });
   });
   
   // Listen for pong responses to track connection health
@@ -307,10 +308,13 @@ function setupConnectionMonitor(handleMessage) {
  * @param {Array} data - CSV data to synchronize
  */
 export function emitCSVData(data) {
-  if (socket) {
-    console.log('[SOCKET] Sending CSV data:', data.length, 'rows');
-    socket.emit('syncCSVData', data);
+  if (!socket || !socket.connected) {
+    console.error('[SOCKET] Cannot send CSV data: socket not connected');
+    return;
   }
+  
+  console.log('[SOCKET] Sending CSV data:', data.length, 'rows');
+  socket.emit('syncCSVData', data);
 }
 
 /**
@@ -318,23 +322,35 @@ export function emitCSVData(data) {
  * @param {number} index - Index of the selected story
  */
 export function emitStorySelected(index) {
-  if (socket) {
-    console.log('[SOCKET] Emitting storySelected:', index);
-    socket.emit('storySelected', { storyIndex: index });
-    selectedStoryIndex = index;
+  if (!socket || !socket.connected) {
+    console.error('[SOCKET] Cannot send story selection: socket not connected');
+    return;
   }
+  
+  console.log('[SOCKET] Emitting storySelected:', index);
+  socket.emit('storySelected', { storyIndex: index });
+  selectedStoryIndex = index;
 }
 
 /**
  * Cast a vote for a story
  * @param {string} vote - The vote value
- * @param {string} targetUserId - The user ID receiving the vote
+ * @param {string} targetUserId - The user ID receiving the vote (should be your own username)
  */
 export function emitVote(vote, targetUserId) {
-  if (socket) {
-    console.log('[SOCKET] Casting vote for user', targetUserId);
-    socket.emit('castVote', { vote, targetUserId }); // where targetUserId is now the `userName`
+  if (!socket || !socket.connected) {
+    console.error('[SOCKET] Cannot send vote: socket not connected');
+    return;
   }
+  
+  // Validate targetUserId is your own username
+  if (targetUserId !== userName) {
+    console.warn('[SOCKET] You can only vote as yourself. Using your own username instead.');
+    targetUserId = userName;
+  }
+  
+  console.log('[SOCKET] Casting vote for user', targetUserId);
+  socket.emit('castVote', { vote, targetUserId });
 }
 
 /**
@@ -342,10 +358,13 @@ export function emitVote(vote, targetUserId) {
  * @param {number} storyIndex - Index of the story
  */
 export function requestStoryVotes(storyIndex) {
-  if (socket) {
-    console.log('[SOCKET] Requesting votes for story:', storyIndex);
-    socket.emit('requestStoryVotes', { storyIndex });
+  if (!socket || !socket.connected) {
+    console.error('[SOCKET] Cannot request votes: socket not connected');
+    return;
   }
+  
+  console.log('[SOCKET] Requesting votes for story:', storyIndex);
+  socket.emit('requestStoryVotes', { storyIndex });
 }
 
 /**
@@ -353,10 +372,13 @@ export function requestStoryVotes(storyIndex) {
  * Triggers server to broadcast vote values to all clients
  */
 export function revealVotes() {
-  if (socket) {
-    console.log('[SOCKET] Requesting to reveal votes');
-    socket.emit('revealVotes');
+  if (!socket || !socket.connected) {
+    console.error('[SOCKET] Cannot reveal votes: socket not connected');
+    return;
   }
+  
+  console.log('[SOCKET] Requesting to reveal votes');
+  socket.emit('revealVotes');
 }
 
 /**
@@ -364,20 +386,26 @@ export function revealVotes() {
  * Clears all votes and resets the reveal state
  */
 export function resetVotes() {
-  if (socket) {
-    console.log('[SOCKET] Requesting to reset votes');
-    socket.emit('resetVotes');
+  if (!socket || !socket.connected) {
+    console.error('[SOCKET] Cannot reset votes: socket not connected');
+    return;
   }
+  
+  console.log('[SOCKET] Requesting to reset votes');
+  socket.emit('resetVotes');
 }
 
 /**
  * Request export of all votes data
  */
 export function requestExport() {
-  if (socket) {
-    console.log('[SOCKET] Requesting vote data export');
-    socket.emit('exportVotes');
+  if (!socket || !socket.connected) {
+    console.error('[SOCKET] Cannot request export: socket not connected');
+    return;
   }
+  
+  console.log('[SOCKET] Requesting vote data export');
+  socket.emit('exportVotes');
 }
 
 /**
@@ -401,10 +429,20 @@ export function isConnected() {
  * @param {Object} ticketData - The ticket data {id, text}
  */
 export function emitAddTicket(ticketData) {
-  if (socket) {
-    console.log('[SOCKET] Adding new ticket:', ticketData);
-    socket.emit('addTicket', ticketData);
+  if (!socket || !socket.connected) {
+    console.error('[SOCKET] Cannot add ticket: socket not connected');
+    return;
   }
+  
+  if (!ticketData || !ticketData.id || !ticketData.text) {
+    console.error('[SOCKET] Invalid ticket data:', ticketData);
+    return;
+  }
+  
+  console.log('[SOCKET] Adding new ticket:', ticketData);
+  
+  // Ensure we're sending a consistent format - the raw ticket data
+  socket.emit('addTicket', ticketData);
 }
 
 /**
