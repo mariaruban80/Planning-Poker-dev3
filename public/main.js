@@ -67,30 +67,38 @@ function saveAppState() {
   
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
-
 function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
   card.className = 'story-card';
   card.dataset.index = index;
-  card.id = isCSV ? `story_csv_${index}` : story.id;
+  card.id = story.id;
 
   const title = document.createElement('div');
   title.className = 'story-title';
   title.textContent = story.text || story.title || `Story ${index + 1}`;
   card.appendChild(title);
 
-  // ✅ Add delete button for all cards
-  const removeBtn = document.createElement('span');
-  removeBtn.className = 'remove-story';
-  removeBtn.innerHTML = '&times;';
-  removeBtn.title = 'Remove story';
-  removeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (confirm('Are you sure you want to remove this story?')) {
-      removeStory(card.id);
-    }
-  });
-  card.appendChild(removeBtn);
+  // Only add delete button for hosts
+  if (sessionStorage.getItem('isHost') === 'true') {
+    const removeBtn = document.createElement('span');
+    removeBtn.className = 'remove-story';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.title = 'Remove story';
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Are you sure you want to remove this story?')) {
+        removeStory(card.id);
+      }
+    });
+    card.appendChild(removeBtn);
+  }
+
+  // Add click handler for selection (only for hosts)
+  if (sessionStorage.getItem('isHost') === 'true') {
+    card.addEventListener('click', () => {
+      selectStory(parseInt(card.dataset.index, 10));
+    });
+  }
 
   return card;
 }
@@ -1171,55 +1179,18 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   const existingTicket = document.getElementById(ticketData.id);
   if (existingTicket) return;
   
-  // Create new story card
-  const storyCard = document.createElement('div');
-  storyCard.className = 'story-card';
-  storyCard.id = ticketData.id;
-  
-  // Set data index attribute (for selection)
+  // Get current index for the new card
   const newIndex = storyList.children.length;
-  storyCard.dataset.index = newIndex;
   
-  // Create the story title element
-  const storyTitle = document.createElement('div');
-  storyTitle.className = 'story-title';
-  storyTitle.textContent = ticketData.text;
-  storyCard.appendChild(storyTitle);
-
-  // ✅ Add delete button for non-guests
-  if (!isGuestUser()) {
-    const deleteBtn = document.createElement('span');
-    deleteBtn.className = 'story-delete-btn';
-    deleteBtn.textContent = '🗑';
-    deleteBtn.title = 'Remove this story';
-
-    // Prevent click from triggering story selection
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (confirm('Are you sure you want to delete this story?')) {
-        removeStory(ticketData.id);
-      }
-    });
-
-    storyCard.appendChild(deleteBtn);
-  }
+  // Use createStoryCard for consistent behavior
+  const isCSV = ticketData.id.includes('story_csv_');
+  const storyCard = createStoryCard({
+    id: ticketData.id,
+    text: ticketData.text
+  }, newIndex, isCSV);
 
   // Add to DOM
   storyList.appendChild(storyCard);
-
-  // Handle guest restrictions
-  if (isGuestUser()) {
-    storyCard.classList.add('disabled-story');
-  } else {
-    storyCard.addEventListener('click', () => {
-      selectStory(newIndex);
-    });
-  }
-
-  // Auto-select if requested
-  if (selectAfterAdd && !isGuestUser()) {
-    selectStory(newIndex);
-  }
 
   // Hide "no stories" message
   const noStoriesMessage = document.getElementById('noStoriesMessage');
@@ -1233,23 +1204,37 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.setAttribute('draggable', 'true');
   });
 
+  // Auto-select if requested
+  if (selectAfterAdd && sessionStorage.getItem('isHost') === 'true') {
+    selectStory(newIndex);
+  }
+
   normalizeStoryIndexes();
 }
 
 /** function to remove selected story  */
 function removeStory(storyId) {
+  console.log('[UI] Removing story with ID:', storyId);
+  
   const card = document.getElementById(storyId);
-  if (card) {
-    card.remove();
+  if (!card) {
+    console.warn('[UI] Story card not found for removal:', storyId);
+    return;
   }
-
-  if (!isGuestUser() && socket) {
+  
+  // Remove from DOM
+  card.remove();
+  
+  // Notify server if we're the host
+  if (sessionStorage.getItem('isHost') === 'true' && socket) {
     console.log('[CLIENT] Emitting removeTicket for:', storyId);
     socket.emit('removeTicket', { storyId });
   }
-
+  
+  // Fix the indexes
   normalizeStoryIndexes();
-
+  
+  // Select another story if available
   const selected = document.querySelector('.story-card.selected');
   if (!selected) {
     const first = document.querySelector('.story-card');
@@ -1259,7 +1244,6 @@ function removeStory(storyId) {
     }
   }
 }
-
 
 /**
  * Set up a mutation observer to catch any newly added story cards
@@ -1477,24 +1461,45 @@ function parseCSV(data) {
   const rows = data.trim().split('\n');
   return rows.map(row => row.split(','));
 }
-
 function normalizeStoryIndexes() {
   const storyList = document.getElementById('storyList');
   if (!storyList) return;
 
   const storyCards = storyList.querySelectorAll('.story-card');
   storyCards.forEach((card, index) => {
+    // Update index
     card.dataset.index = index;
-    card.onclick = () => selectStory(index); // ensure correct click behavior
+    
+    // Remove existing click handlers
+    const newCard = card.cloneNode(true);
+    card.parentNode.replaceChild(newCard, card);
+    
+    // Only add click event for hosts
+    if (sessionStorage.getItem('isHost') === 'true') {
+      newCard.addEventListener('click', () => {
+        selectStory(index);
+      });
+      
+      // Re-add delete button functionality
+      const removeBtn = newCard.querySelector('.remove-story');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm('Are you sure you want to remove this story?')) {
+            removeStory(newCard.id);
+          }
+        });
+      }
+    }
   });
+  
+  console.log(`[UI] Normalized indexes for ${storyCards.length} story cards`);
 }
-
 
 /**
  * Display CSV data in the story list
  */
 function displayCSVData(data) {
-  // Prevent reentrant calls that could cause flickering or data loss
   if (processingCSVData) {
     console.log('[CSV] Already processing CSV data, ignoring reentrant call');
     return;
@@ -1504,9 +1509,7 @@ function displayCSVData(data) {
   
   try {
     const storyListContainer = document.getElementById('storyList');
-    if (!storyListContainer) {
-      return;
-    }
+    if (!storyListContainer) return;
 
     console.log(`[CSV] Displaying ${data.length} rows of CSV data`);
 
@@ -1533,23 +1536,13 @@ function displayCSVData(data) {
     // Re-add all stories to ensure they have proper indices
     storyListContainer.innerHTML = '';
     
-    // First add back manually added stories
+    // First add back manually added stories using createStoryCard
     existingStories.forEach((story, index) => {
-      const storyItem = document.createElement('div');
-      storyItem.classList.add('story-card');
-      storyItem.id = story.id;
-      storyItem.dataset.index = index;
+      const storyCard = createStoryCard(story, index, false);
+      storyListContainer.appendChild(storyCard);
       
-      const storyTitle = document.createElement('div');
-      storyTitle.classList.add('story-title');
-      storyTitle.textContent = story.text;
-      
-      storyItem.appendChild(storyTitle);
-      storyListContainer.appendChild(storyItem);
-      
-      const isHost = sessionStorage.getItem('isHost') === 'true';
-      if (isHost) {
-        storyItem.addEventListener('click', () => {
+      if (isCurrentUserHost()) {
+        storyCard.addEventListener('click', () => {
           selectStory(index);
         });
       }      
@@ -1563,7 +1556,7 @@ function displayCSVData(data) {
         text: Array.isArray(row) ? row.join(' | ') : String(row)
       };
 
-      // IMPORTANT: Emit each CSV row as an individual ticket to the server
+      // Emit each CSV row as ticket
       if (typeof emitAddTicket === 'function') {
         console.log('[CSV] Emitting ticket to server:', ticketData);
         emitAddTicket(ticketData);
@@ -1572,8 +1565,15 @@ function displayCSVData(data) {
         socket.emit('addTicket', ticketData);
       }
 
-      // Add to UI without selecting (we'll handle selection after all are added)
-      addTicketToUI(ticketData, false);
+      // Add to DOM using createStoryCard for consistent behavior
+      const storyCard = createStoryCard(ticketData, startIndex + index, true);
+      storyListContainer.appendChild(storyCard);
+      
+      if (isCurrentUserHost()) {
+        storyCard.addEventListener('click', () => {
+          selectStory(startIndex + index);
+        });
+      }
     });
     
     // Update preserved tickets list
@@ -1606,7 +1606,7 @@ function displayCSVData(data) {
       currentStoryIndex = 0;
       
       // Emit story selection if host
-      if (sessionStorage.getItem('isHost') === 'true') {
+      if (isCurrentUserHost()) {
         selectStory(0, true);
       }
     }
@@ -1617,6 +1617,7 @@ function displayCSVData(data) {
     processingCSVData = false;
   }
 }
+
 
 /**
  * Select a story by index
