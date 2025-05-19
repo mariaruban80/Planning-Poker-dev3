@@ -72,6 +72,8 @@ function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
   card.className = 'story-card';
   card.dataset.index = index;
+
+  // Assign ID depending on CSV/manual
   card.id = isCSV ? `story_csv_${index}` : story.id;
 
   const title = document.createElement('div');
@@ -84,16 +86,25 @@ function createStoryCard(story, index, isCSV = false) {
   removeBtn.className = 'remove-story';
   removeBtn.innerHTML = '&times;';
   removeBtn.title = 'Remove story';
-  removeBtn.addEventListener('click', (e) => {
+  removeBtn.onclick = (e) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to remove this story?')) {
-      removeStory(card.id);
+      if (socket) {
+        socket.emit('removeTicket', { storyId: card.id });
+      }
     }
-  });
+  };
   card.appendChild(removeBtn);
 
   return card;
 }
+
+
+
+
+
+
+
 
 /** to reset votes when the stories are deleted */
 function resetAllVotingVisuals() {
@@ -391,14 +402,6 @@ function addFixedVoteStatisticsStyles() {
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-    .remove-story {
-      cursor: pointer;
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      font-size: 18px;
-      z-index: 10;
     }
     
     .fixed-agreement-dot {
@@ -1190,7 +1193,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   if (!isGuestUser()) {
     const deleteBtn = document.createElement('span');
     deleteBtn.className = 'story-delete-btn';
-    deleteBtn.textContent = '🗑';
+    deleteBtn.textContent = '❌';
     deleteBtn.title = 'Remove this story';
 
     // Prevent click from triggering story selection
@@ -1243,13 +1246,14 @@ function removeStory(storyId) {
     card.remove();
   }
 
+  // Notify server if host
   if (!isGuestUser() && socket) {
-    console.log('[CLIENT] Emitting removeTicket for:', storyId);
     socket.emit('removeTicket', { storyId });
   }
 
   normalizeStoryIndexes();
 
+  // Re-select a story if the selected one was deleted
   const selected = document.querySelector('.story-card.selected');
   if (!selected) {
     const first = document.querySelector('.story-card');
@@ -1407,52 +1411,61 @@ function setupCSVUploader() {
 
     const reader = new FileReader();
     reader.onload = (e) => {
+      // Save existing manually added tickets before processing CSV
       const storyList = document.getElementById('storyList');
       const existingTickets = [];
-
+      
       if (storyList) {
         const manualTickets = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
         manualTickets.forEach(card => {
           const title = card.querySelector('.story-title');
           if (title) {
-            existingTickets.push({ id: card.id, text: title.textContent });
+            existingTickets.push({
+              id: card.id, 
+              text: title.textContent
+            });
           }
         });
       }
-
+      
       console.log(`[CSV] Saved ${existingTickets.length} manual tickets before processing upload`);
-
+      
+      // Parse the CSV data
       const parsedData = parseCSV(e.target.result);
+      
+      // Store in the module state
       csvData = parsedData;
+      
+      // Display CSV data - this will clear and rebuild the story list
       displayCSVData(csvData);
-
-      // Emit each uploaded story and ensure IDs are valid
-      csvData.forEach((ticket, index) => {
-        if (ticket && ticket.text) {
-          if (!ticket.id) {
-            ticket.id = `story_csv_${Date.now()}_${index}`;
-          }
-          console.log('[CLIENT] Emitting uploaded ticket to server:', ticket);
-          emitAddTicket(ticket);
-        }
-      });
-
+      
+      // Re-add the preserved manual tickets
       existingTickets.forEach((ticket, index) => {
-        if (ticket && ticket.id && ticket.text) {
+        // Make sure this ticket isn't already in the list to avoid duplicates
+        if (!document.getElementById(ticket.id)) {
           addTicketToUI(ticket, false);
         }
       });
-
-      normalizeStoryIndexes();
+      
+      // Store these for future preservation
+      preservedManualTickets = [...existingTickets];
+      
+      // Emit the CSV data to server AFTER ensuring all UI is updated
+      emitCSVData(parsedData);
+      
+      // Reset voting state for new data
+      votesPerStory = {};
+      votesRevealed = {};
+      
+      // Reset current story index only if no stories were selected before
+      if (!document.querySelector('.story-card.selected')) {
+        currentStoryIndex = 0;
+        renderCurrentStory();
+      }
     };
-
     reader.readAsText(file);
   });
 }
-
-
-
-
 /**
  * Parse CSV text into array structure
  */
