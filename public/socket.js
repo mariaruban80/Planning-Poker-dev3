@@ -53,10 +53,10 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   // Monitor connection health
   setupConnectionMonitor(handleMessage);
 
-socket.on('addTicket', ({ ticketData }) => {
-  console.log('[SOCKET] Received addTicket:', ticketData);
-  handleMessage({ type: 'addTicket', ticketData });
-});
+  socket.on('addTicket', ({ ticketData }) => {
+    console.log('[SOCKET] Received new ticket from another user:', ticketData);
+    handleMessage({ type: 'addTicket', ticketData });
+  });
 socket.on('ticketRemoved', ({ storyId }) => {
   console.log('[SOCKET] Ticket removed received from server:', storyId);
   handleMessage({ type: 'ticketRemoved', storyId });
