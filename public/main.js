@@ -392,6 +392,14 @@ function addFixedVoteStatisticsStyles() {
       align-items: center;
       justify-content: center;
     }
+    .remove-story {
+      cursor: pointer;
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 18px;
+      z-index: 10;
+    }
     
     .fixed-agreement-dot {
       width: 8px;
@@ -1418,41 +1426,23 @@ function setupCSVUploader() {
       csvData = parsedData;
       displayCSVData(csvData);
 
-   /**   // Emit each uploaded story and ensure IDs are valid
-      csvData.forEach((ticket, index) => {
+      // Emit each uploaded story and ensure IDs are valid
+       csvData.forEach((ticket, index) => {
         if (ticket && ticket.text) {
-          if (!ticket.id) {
-            ticket.id = `story_csv_${Date.now()}_${index}`;
-          }
-          console.log('[CLIENT] Emitting uploaded ticket to server:', ticket);
-          emitAddTicket(ticket);
+          const ticketData = {
+            id: `story_csv_${Date.now()}_${index}`,
+            text: ticket.text || ticket.join(' | ')
+          };
+          emitAddTicket(ticketData); // Emit each CSV story as a ticket
         }
-      });*/
-   
+      });
+
       existingTickets.forEach((ticket, index) => {
         if (ticket && ticket.id && ticket.text) {
           addTicketToUI(ticket, false);
         }
       });
-// Store these for future preservation
-      preservedManualTickets = [...existingTickets];    
 
-      // Emit the CSV data to server AFTER ensuring all UI is updated
-      emitCSVData(parsedData);     
-
-      // Reset voting state for new data
-      votesPerStory = {};
-      votesRevealed = {};    
-
-      // Reset current story index only if no stories were selected before
-
-      if (!document.querySelector('.story-card.selected')) {
-
-        currentStoryIndex = 0;
-
-        renderCurrentStory();
-
-      }
       normalizeStoryIndexes();
     };
 
@@ -2296,39 +2286,36 @@ case 'ticketRemoved':
       break;
 
 case 'storySelected':
-  if (typeof message.storyIndex === 'number') {
+if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
     currentStoryIndex = message.storyIndex;
 
+    //  Wait until story cards are ready
     let attempts = 0;
     const maxAttempts = 10;
 
     const waitForStoryCard = setInterval(() => {
-      attempts++;
-
-      if (attempts > maxAttempts) {
-        clearInterval(waitForStoryCard);
-        console.warn('[SOCKET] Story card not found after waiting');
-        return;
-      }
-
       const card = document.querySelector(`.story-card[data-index="${message.storyIndex}"]`);
-      if (card) {
+      if (card || attempts >= maxAttempts) {
         clearInterval(waitForStoryCard);
-        console.log('[SOCKET] Selecting story after cards ready');
 
-        selectStory(message.storyIndex, false); // Don't emit to server
-        setupPlanningCards();
-        setupVoteCardsDrag();
+        if (card) {
+          console.log('[SOCKET] Selecting story after cards ready');
+          selectStory(message.storyIndex, false);
+          setupPlanningCards();
+          setupVoteCardsDrag();
 
-        if (socket) {
-          socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
+          if (socket) {
+            socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
+          }
+        } else {
+          console.warn('[SOCKET] Story card not found after waiting');
         }
       }
-    }, 200); // Check every 200ms
+      attempts++;
+    }, 200); // check every 200ms
   }
   break;
-
 
      case 'votesRevealed':
   if (typeof message.storyIndex === 'number') {
@@ -2399,14 +2386,11 @@ case 'storySelected':
 
     case 'addTicket':
       // Handle new ticket added by another user
-  /**    if (message.ticketData) {
+      if (message.ticketData) {
         console.log('[SOCKET] New ticket received:', message.ticketData);
         // Add ticket to UI without selecting it (to avoid loops)
         addTicketToUI(message.ticketData, false);
-      }*/
- console.log('[SOCKET] Adding ticket from another user:', message.ticketData);
-  addTicketToUI(message.ticketData, false);
-      
+      }
       break;
       
     case 'allTickets':
