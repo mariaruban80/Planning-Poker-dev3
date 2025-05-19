@@ -392,14 +392,6 @@ function addFixedVoteStatisticsStyles() {
       align-items: center;
       justify-content: center;
     }
-    .remove-story {
-      cursor: pointer;
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      font-size: 18px;
-      z-index: 10;
-    }
     
     .fixed-agreement-dot {
       width: 8px;
@@ -1426,7 +1418,7 @@ function setupCSVUploader() {
       csvData = parsedData;
       displayCSVData(csvData);
 
-      // Emit each uploaded story and ensure IDs are valid
+   /**   // Emit each uploaded story and ensure IDs are valid
       csvData.forEach((ticket, index) => {
         if (ticket && ticket.text) {
           if (!ticket.id) {
@@ -1435,14 +1427,32 @@ function setupCSVUploader() {
           console.log('[CLIENT] Emitting uploaded ticket to server:', ticket);
           emitAddTicket(ticket);
         }
-      });
-
+      });*/
+   
       existingTickets.forEach((ticket, index) => {
         if (ticket && ticket.id && ticket.text) {
           addTicketToUI(ticket, false);
         }
       });
+// Store these for future preservation
+      preservedManualTickets = [...existingTickets];    
 
+      // Emit the CSV data to server AFTER ensuring all UI is updated
+      emitCSVData(parsedData);     
+
+      // Reset voting state for new data
+      votesPerStory = {};
+      votesRevealed = {};    
+
+      // Reset current story index only if no stories were selected before
+
+      if (!document.querySelector('.story-card.selected')) {
+
+        currentStoryIndex = 0;
+
+        renderCurrentStory();
+
+      }
       normalizeStoryIndexes();
     };
 
