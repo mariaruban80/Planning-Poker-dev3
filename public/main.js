@@ -1493,6 +1493,7 @@ function normalizeStoryIndexes() {
 /**
  * Display CSV data in the story list
  */
+
 function displayCSVData(data) {
   // Prevent reentrant calls that could cause flickering or data loss
   if (processingCSVData) {
@@ -1534,29 +1535,11 @@ function displayCSVData(data) {
     storyListContainer.innerHTML = '';
     
     // First add back manually added stories
-    existingStories.forEach((story, index) => {
-      const storyItem = document.createElement('div');
-      storyItem.classList.add('story-card');
-      storyItem.id = story.id;
-      storyItem.dataset.index = index;
-      
-      const storyTitle = document.createElement('div');
-      storyTitle.classList.add('story-title');
-      storyTitle.textContent = story.text;
-      
-      storyItem.appendChild(storyTitle);
-      storyListContainer.appendChild(storyItem);
-      
-      const isHost = sessionStorage.getItem('isHost') === 'true';
-      if (isHost) {
-        storyItem.addEventListener('click', () => {
-          selectStory(index);
-        });
-      }      
+    existingStories.forEach(story => {
+      addTicketToUI(story, false);
     });
     
-    // Then add CSV data
-    let startIndex = existingStories.length;
+    // Then add CSV data - using addTicketToUI for each row to leverage its delete button creation
     data.forEach((row, index) => {
       const ticketData = {
         id: `story_csv_${index}`,
@@ -1602,13 +1585,7 @@ function displayCSVData(data) {
     // Select first story if none is selected
     const selectedStory = storyListContainer.querySelector('.story-card.selected');
     if (!selectedStory && storyListContainer.children.length > 0) {
-      storyListContainer.children[0].classList.add('selected');
-      currentStoryIndex = 0;
-      
-      // Emit story selection if host
-      if (sessionStorage.getItem('isHost') === 'true') {
-        selectStory(0, true);
-      }
+      selectStory(0, true);
     }
   } finally {
     normalizeStoryIndexes();
