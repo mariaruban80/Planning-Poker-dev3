@@ -161,7 +161,11 @@ socket.on('removeTicket', ({ storyId }) => {
     rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
     rooms[roomId].users.push({ id: socket.id, name: userName });
     socket.join(roomId);
-    
+    // Send all existing tickets to the newly joined user
+    if (rooms[roomId].tickets && rooms[roomId].tickets.length > 0) {
+      socket.emit('allTickets', { tickets: rooms[roomId].tickets });
+    }
+
     // Track connection count for this user
     if (!userConnections[userName]) {
       userConnections[userName] = { connectionCount: 1, lastPing: Date.now() };
@@ -212,7 +216,8 @@ socket.on('addTicket', (ticketData) => {
     updateRoomActivity(roomId);
     
     // Broadcast the new ticket to everyone in the room EXCEPT sender
-    socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+  //  socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+io.to(roomId).emit('addTicket', { ticketData });
 
     // Keep track of tickets on the server
     if (!rooms[roomId].tickets) {
