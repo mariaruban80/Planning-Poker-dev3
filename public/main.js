@@ -2389,11 +2389,14 @@ case 'storySelected':
 
     case 'addTicket':
       // Handle new ticket added by another user
-      if (message.ticketData) {
+  /**    if (message.ticketData) {
         console.log('[SOCKET] New ticket received:', message.ticketData);
         // Add ticket to UI without selecting it (to avoid loops)
         addTicketToUI(message.ticketData, false);
-      }
+      }*/
+ console.log('[SOCKET] Adding ticket from another user:', message.ticketData);
+  addTicketToUI(message.ticketData, false);
+      
       break;
       
     case 'allTickets':
