@@ -1934,66 +1934,42 @@ function createVoteCardSpace(user, isCurrentUser) {
 /**
  * Update vote visuals for a user
  */
-function updateVoteVisuals(userId, vote, hasVoted = false) {
-  const safeId = sanitizeId(userId);
-  // Determine what to show based on reveal state
-  const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
-  
-  // Update badges in sidebar
-  const sidebarBadge = document.querySelector(`#user-${safeId} .vote-badge`);
-  if (sidebarBadge) {
-    // Only set content if the user has voted
-    if (hasVoted) {
-      sidebarBadge.textContent = displayVote;
-      sidebarBadge.style.color = '#673ab7'; // Make sure the text has a visible color
-      sidebarBadge.style.opacity = '1'; // Ensure full opacity
+function updateVoteVisuals(userId, voteDisplay, updateCard = false) {
+  console.log('[UI] updateVoteVisuals called for user:', userId, 'vote:', voteDisplay, 'updateCard:', updateCard);
+
+  // === Update user list ===
+  const userCard = document.querySelector(`[data-user-id="${userId}"]`);
+  if (userCard) {
+    const voteSpan = userCard.querySelector('.user-vote');
+    if (voteSpan) {
+      voteSpan.textContent = voteDisplay;
+      voteSpan.style.display = 'inline';
+      console.log(`[UI] Updated .user-vote for ${userId}:`, voteDisplay);
     } else {
-      sidebarBadge.textContent = ''; // Empty if no vote
+      console.warn(`[UI] No .user-vote span found inside user card for ${userId}`);
     }
-  }
-  
-  // Update vote card space
-  const voteSpace = document.querySelector(`#vote-space-${safeId}`);
-  if (voteSpace) {
-    const voteBadge = voteSpace.querySelector('.vote-badge');
-    if (voteBadge) {
-      // Only show vote if they've voted
-      if (hasVoted) {
-        voteBadge.textContent = displayVote;
-        voteBadge.style.color = '#673ab7'; // Make sure the text has a visible color
-        voteBadge.style.opacity = '1'; // Ensure full opacity
-      } else {
-        voteBadge.textContent = ''; // Empty if no vote
-      }
-    }
-    
-    // Update vote space class
-    if (hasVoted) {
-      voteSpace.classList.add('has-vote');
-    } else {
-      voteSpace.classList.remove('has-vote');
-    }
+  } else {
+    console.warn(`[UI] No user card found for data-user-id="${userId}"`);
   }
 
-  // Update avatar to show they've voted
-  if (hasVoted) {
-    const avatarContainer = document.querySelector(`#user-circle-${safeId}`);
-    if (avatarContainer) {
-      avatarContainer.classList.add('has-voted');
-      
-      const avatar = avatarContainer.querySelector('.avatar-circle');
-      if (avatar) {
-        avatar.style.backgroundColor = '#c1e1c1'; // Green background
+  // === Update center vote card ===
+  if (updateCard) {
+    const centerCard = document.querySelector(`.center-vote-card[data-user-id="${userId}"]`);
+    if (centerCard) {
+      const voteText = centerCard.querySelector('.vote-value');
+      if (voteText) {
+        voteText.textContent = voteDisplay;
+        voteText.style.display = 'block';
+        console.log(`[UI] Updated .center-vote-card for ${userId}:`, voteDisplay);
+      } else {
+        console.warn(`[UI] No .vote-value span found in center card for ${userId}`);
       }
-    }
-    
-    // Also update sidebar avatar
-    const sidebarAvatar = document.querySelector(`#user-${safeId} img.avatar`);
-    if (sidebarAvatar) {
-      sidebarAvatar.style.backgroundColor = '#c1e1c1';
+    } else {
+      console.warn(`[UI] No center card found for data-user-id="${userId}"`);
     }
   }
 }
+
 
 /**
  * Update story title
