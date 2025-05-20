@@ -67,37 +67,6 @@ function saveAppState() {
   
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
-/**
- * Reset all vote visuals
- */
-function resetAllVoteVisuals() {
-  // Remove vote badges
-  document.querySelectorAll('.vote-badge').forEach(b => b.remove());
-
-  // Reset visual vote spaces
-  document.querySelectorAll('.vote-card-space').forEach(space => {
-    space.classList.remove('has-vote');
-  });
-
-  // Clear vote statistics
-  const stats = document.querySelector('.vote-statistics-container');
-  if (stats) {
-    stats.style.display = 'none';
-    stats.innerHTML = '';
-  }
-
-  // Show planning cards again
-  const planning = document.querySelector('.planning-cards-section');
-  if (planning) {
-    planning.style.display = 'block';
-  }
-
-  // Reset avatar states
-  document.querySelectorAll('.avatar-container').forEach(avatar => {
-    avatar.classList.remove('has-voted');
-  });
-}
-
 
 function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
@@ -1115,29 +1084,44 @@ function addVoteStatisticsStyles()
  * @param {Object} votes - Vote data
  */
 function handleVotesRevealed(storyIndex, votes) {
+  // Mark this story as having revealed votes
+  votesRevealed[storyIndex] = true;
+  
+  // Get the planning cards container
   const planningCardsSection = document.querySelector('.planning-cards-section');
+    // Make sure the fixed styles are added
   addFixedVoteStatisticsStyles();
-
+  // Create vote statistics display
+//  const voteStats = createVoteStatisticsDisplay(votes);
+  // removed the above old function and add the new onw 
   const voteStats = createFixedVoteDisplay(votes);
-
+  // Hide planning cards and show statistics
   if (planningCardsSection) {
+    // Create container for statistics if it doesn't exist
     let statsContainer = document.querySelector('.vote-statistics-container');
     if (!statsContainer) {
       statsContainer = document.createElement('div');
       statsContainer.className = 'vote-statistics-container';
       planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
     }
-
+    
+    // Clear any previous stats and add new one
     statsContainer.innerHTML = '';
     statsContainer.appendChild(voteStats);
-
+    
+    // Hide planning cards
     planningCardsSection.style.display = 'none';
+    
+    // Show statistics
     statsContainer.style.display = 'block';
   }
-
+  
+  // Apply the vote visuals as normal too
   applyVotesToUI(votes, false);
-
+    // Add a delay to ensure the DOM is updated before fixing font sizes
   setTimeout(fixRevealedVoteFontSizes, 100);
+  
+  // Run it again after a bit longer to be sure (sometimes the DOM updates can be delayed)
   setTimeout(fixRevealedVoteFontSizes, 300);
 }
 /**
@@ -1699,6 +1683,24 @@ function applyVotesToUI(votes, hideValues) {
   //  showEmojiBurst(userId, vote);
   });
 }
+
+/**
+ * Reset all vote visuals
+ */
+function resetAllVoteVisuals() {
+  document.querySelectorAll('.vote-badge').forEach(badge => {
+    badge.textContent = '';
+  });
+  
+  document.querySelectorAll('.has-vote').forEach(el => {
+    el.classList.remove('has-vote');
+  });
+  
+  document.querySelectorAll('.has-voted').forEach(el => {
+    el.classList.remove('has-voted');
+  });
+}
+
 /**
  * Render the current story
  */
@@ -1995,7 +1997,6 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   }
 }
 
-
 /**
  * Update story title
  */
@@ -2156,26 +2157,14 @@ function setupVoteCardsDrag() {
       e.preventDefault(); // Allow drop
     });
 
-space.addEventListener('drop', (e) => {
-  e.preventDefault();
-
-  const vote = e.dataTransfer.getData('text/plain');
-  const userName = sessionStorage.getItem('userName');
-
-  if (userName && vote) {
-    emitVote(vote, userName); // Notify server
-
-    // Update local UI immediately
-    const isRevealed = votesRevealed[currentStoryIndex] === true;
-    updateVoteVisuals(userName, isRevealed ? vote : '👍', true);
-
-    // Update local vote store
-    if (!votesPerStory[currentStoryIndex]) {
-      votesPerStory[currentStoryIndex] = {};
-    }
-    votesPerStory[currentStoryIndex][userName] = vote;
-  }
-});
+    space.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const vote = e.dataTransfer.getData('text/plain');
+      const userName = sessionStorage.getItem('userName');
+      if (userName) {
+        emitVote(vote, userName); // ✅ Use userName instead of socket.id
+      }
+    });
   });
 }
 
@@ -2251,24 +2240,10 @@ case 'ticketRemoved':
       }
       // If selected story was removed, pick first
       const selected = document.querySelector('.story-card.selected');
-
       if (!selected && remainingStories.length > 0) {
         const index = parseInt(remainingStories[0].dataset.index, 10);
-      
-        console.log('[SOCKET] Auto-selecting next story after deletion:', index);
-      
-        // 🧹 Clear all vote visuals and state
-        resetAllVoteVisuals(); // Clears UI badges and statistics
-        votesPerStory[index] = {};            // Clear votes for next story
-        votesRevealed[index] = false;         // Ensure votes aren't shown by mistake
-      
-        selectStory(index, true); // true = emit to server if host
+        selectStory(index);
       }
-
-
-
-
-      
     }
   }
   break;
@@ -2293,21 +2268,36 @@ case 'ticketRemoved':
     recoverAppState();
     break;
     case 'voteUpdate':
-if (message.userId && message.vote && typeof message.storyIndex === 'number') {
-  if (!votesPerStory[message.storyIndex]) {
-    votesPerStory[message.storyIndex] = {};
-  }
-  votesPerStory[message.storyIndex][message.userId] = message.vote;
-
-  // Only update UI if the vote is for the current story being viewed
-  if (message.storyIndex === currentStoryIndex) {
-    const isRevealed = votesRevealed[currentStoryIndex] === true;
-    updateVoteVisuals(message.userId, isRevealed ? message.vote : '👍', true);
-  }
-}
+      // Handle vote received
+      if (message.userId && message.vote) {
+        if (!votesPerStory[currentStoryIndex]) {
+          votesPerStory[currentStoryIndex] = {};
+        }
+        votesPerStory[currentStoryIndex][message.userId] = message.vote;
+        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
+      }
       break;
       
-   votesRevealed
+    case 'votesRevealed':
+      // Handle votes revealed
+     // votesRevealed[currentStoryIndex] = true;
+     // if (votesPerStory[currentStoryIndex]) {
+       // applyVotesToUI(votesPerStory[currentStoryIndex], false);
+     // }
+      //triggerGlobalEmojiBurst();
+
+      // Handle votes revealed
+      votesRevealed[currentStoryIndex] = true;
+      if (votesPerStory[currentStoryIndex]) {
+        handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
+      } else {
+        console.log('[WARN] Votes revealed but no votes found for story index:', currentStoryIndex);
+        
+        // If no votes found, still show empty statistics
+        handleVotesRevealed(currentStoryIndex, {});
+      }
+      triggerGlobalEmojiBurst();
+      break;
       
     case 'votesReset':
       // Handle votes reset
@@ -2349,20 +2339,14 @@ case 'storySelected':
   }
   break;
      case 'votesRevealed':
-   if (typeof message.storyIndex === 'number') {
+  if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
-
-    // Mark as revealed
     votesRevealed[message.storyIndex] = true;
 
-    // ONLY request votes if we don't already have them
-    if (!votesPerStory[message.storyIndex]) {
-      requestStoryVotes(message.storyIndex);
-    }
-
-    // If it's the currently selected story and votes are already known, render them
-    if (message.storyIndex === currentStoryIndex && votesPerStory[message.storyIndex]) {
-      handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
+    // Re-apply vote visuals if it's the currently selected story
+    if (message.storyIndex === currentStoryIndex) {
+      const currentVotes = votesPerStory[message.storyIndex] || {};
+      applyVotesToUI(currentVotes, false); // false = don't hide values
     }
   }
   break;
@@ -2373,15 +2357,12 @@ case 'storySelected':
       if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Received votes for story:', message.storyIndex);
 
-    // Save votes
+    // Store the votes
     votesPerStory[message.storyIndex] = message.votes;
 
-    if (votesRevealed[message.storyIndex]) {
-      // ✅ If revealed, show actual values and update stats layout
-      handleVotesRevealed(message.storyIndex, message.votes);
-    } else if (message.storyIndex === currentStoryIndex) {
-      // ✅ If not revealed, show thumbs only
-      applyVotesToUI(message.votes, true); // true = hide actual values
+    // Apply to UI only if it's the currently selected story
+    if (message.storyIndex === currentStoryIndex) {
+      applyVotesToUI(message.votes, !votesRevealed[message.storyIndex]);
     }
   }
          break;
