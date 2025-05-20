@@ -2170,14 +2170,15 @@ function setupVoteCardsDrag() {
       e.preventDefault(); // Allow drop
     });
 
-    space.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const vote = e.dataTransfer.getData('text/plain');
-      const userName = sessionStorage.getItem('userName');
-      if (userName) {
-        emitVote(vote, userName); // ✅ Use userName instead of socket.id
-      }
-    });
+  space.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const vote = e.dataTransfer.getData('text/plain');
+  const userName = sessionStorage.getItem('userName');
+  if (userName) {
+    emitVote(vote, userName); // Notify server
+    updateVoteVisuals(userName, votesRevealed[currentStoryIndex] ? vote : '👍', true); // Update local UI
+  }
+});
   });
 }
 
@@ -2295,14 +2296,18 @@ case 'ticketRemoved':
     recoverAppState();
     break;
     case 'voteUpdate':
-      if (message.userId && message.vote) {
-      if (!votesPerStory[message.storyIndex]) {
-      votesPerStory[message.storyIndex] = {};
-      }
-    votesPerStory[message.storyIndex][message.userId] = message.vote;
-    const isRevealed = votesRevealed[message.storyIndex] === true;
+if (message.userId && message.vote && typeof message.storyIndex === 'number') {
+  if (!votesPerStory[message.storyIndex]) {
+    votesPerStory[message.storyIndex] = {};
+  }
+  votesPerStory[message.storyIndex][message.userId] = message.vote;
+
+  // Only update UI if the vote is for the current story being viewed
+  if (message.storyIndex === currentStoryIndex) {
+    const isRevealed = votesRevealed[currentStoryIndex] === true;
     updateVoteVisuals(message.userId, isRevealed ? message.vote : '👍', true);
-    }
+  }
+}
       break;
       
     case 'votesRevealed':
