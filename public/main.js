@@ -185,9 +185,12 @@ function recoverAppState() {
       }
       
       // Restore story selection if possible
-      if (typeof state.currentStoryIndex === 'number' && 
+    if (typeof state.currentStoryIndex === 'number' && 
           document.querySelectorAll('.story-card').length > state.currentStoryIndex) {
-        setTimeout(() => selectStory(state.currentStoryIndex, false), 500);
+          setTimeout(() => {
+          selectStory(state.currentStoryIndex, false);
+          receivedInitialStoryIndex = true; // ✅ Prevent overriding later
+        }, 500);
       }
     }
   } catch (err) {
@@ -273,6 +276,8 @@ let votesPerStory = {};     // Track votes for each story { storyIndex: { userId
 let votesRevealed = {};     // Track which stories have revealed votes { storyIndex: boolean }
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
+let receivedInitialStoryIndex = false; // NEW: track if server sent storySelected
+
 
 // Adding  this function to main.js to be called whenever votes are revealed
 function fixRevealedVoteFontSizes() {
@@ -1358,16 +1363,13 @@ function processAllTickets(tickets) {
   });
   
   // Select first story if any
-  if (tickets.length > 0) {
+  if (tickets.length > 0 && !receivedInitialStoryIndex) {
     currentStoryIndex = 0;
-    selectStory(0, false); // Don't emit to avoid loops
+    selectStory(0, false); // Select only if server hasn't already sent a selection
   } else {
-    // No stories received - show empty state
-    const noStoriesMessage = document.getElementById('noStoriesMessage');
-    if (noStoriesMessage) {
-      noStoriesMessage.style.display = 'block';
-    }
+    console.log('[INFO] Skipping auto-select of story 0 — server already selected:', currentStoryIndex);
   }
+
   
   // ✅ Fix indexes to ensure navigation works
   normalizeStoryIndexes();
@@ -2313,11 +2315,12 @@ case 'ticketRemoved':
       break;
 
 case 'storySelected':
-if (typeof message.storyIndex === 'number') {
+ if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
     currentStoryIndex = message.storyIndex;
+    receivedInitialStoryIndex = true; // ✅ Mark that we've received this
 
-    //  Wait until story cards are ready
+    // Wait until story cards are ready
     let attempts = 0;
     const maxAttempts = 10;
 
@@ -2328,7 +2331,7 @@ if (typeof message.storyIndex === 'number') {
 
         if (card) {
           console.log('[SOCKET] Selecting story after cards ready');
-          selectStory(message.storyIndex, false);
+          selectStory(message.storyIndex, false); // false = don't emit back
           setupPlanningCards();
           setupVoteCardsDrag();
 
@@ -2342,6 +2345,7 @@ if (typeof message.storyIndex === 'number') {
       attempts++;
     }, 200); // check every 200ms
   }
+      
   break;
 
      case 'votesRevealed':
