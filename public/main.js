@@ -2170,13 +2170,24 @@ function setupVoteCardsDrag() {
       e.preventDefault(); // Allow drop
     });
 
-  space.addEventListener('drop', (e) => {
+space.addEventListener('drop', (e) => {
   e.preventDefault();
+
   const vote = e.dataTransfer.getData('text/plain');
   const userName = sessionStorage.getItem('userName');
-  if (userName) {
+
+  if (userName && vote) {
     emitVote(vote, userName); // Notify server
-    updateVoteVisuals(userName, votesRevealed[currentStoryIndex] ? vote : '👍', true); // Update local UI
+
+    // Update local UI immediately
+    const isRevealed = votesRevealed[currentStoryIndex] === true;
+    updateVoteVisuals(userName, isRevealed ? vote : '👍', true);
+
+    // Update local vote store
+    if (!votesPerStory[currentStoryIndex]) {
+      votesPerStory[currentStoryIndex] = {};
+    }
+    votesPerStory[currentStoryIndex][userName] = vote;
   }
 });
   });
@@ -2310,23 +2321,7 @@ if (message.userId && message.vote && typeof message.storyIndex === 'number') {
 }
       break;
       
-    case 'votesRevealed':
-    if (typeof message.storyIndex === 'number') {
-    console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
-    votesRevealed[message.storyIndex] = true;
-
-    const currentVotes = votesPerStory[message.storyIndex] || {};
-
-    // ✅ First update all vote badges and avatars with the real values
-    applyVotesToUI(currentVotes, false); // false = don't hide values
-
-    // ✅ Then update vote statistics panel
-    handleVotesRevealed(message.storyIndex, currentVotes);
-
-    // 🎉 Show the emoji burst
-    triggerGlobalEmojiBurst();
-    }
-      break;
+   votesRevealed
       
     case 'votesReset':
       // Handle votes reset
@@ -2368,14 +2363,16 @@ case 'storySelected':
   }
   break;
      case 'votesRevealed':
-  if (typeof message.storyIndex === 'number') {
+ if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
     votesRevealed[message.storyIndex] = true;
 
-    // Re-apply vote visuals if it's the currently selected story
-    if (message.storyIndex === currentStoryIndex) {
-      const currentVotes = votesPerStory[message.storyIndex] || {};
-      applyVotesToUI(currentVotes, false); // false = don't hide values
+    // Always request the actual votes from the server
+    requestStoryVotes(message.storyIndex);
+
+    // If votes already exist locally, update immediately
+    if (message.storyIndex === currentStoryIndex && votesPerStory[message.storyIndex]) {
+      handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
     }
   }
   break;
@@ -2386,12 +2383,15 @@ case 'storySelected':
       if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Received votes for story:', message.storyIndex);
 
-    // Store the votes
+    // Save votes
     votesPerStory[message.storyIndex] = message.votes;
 
-    // Apply to UI only if it's the currently selected story
-    if (message.storyIndex === currentStoryIndex) {
-      applyVotesToUI(message.votes, !votesRevealed[message.storyIndex]);
+    if (votesRevealed[message.storyIndex]) {
+      // ✅ If revealed, show actual values and update stats layout
+      handleVotesRevealed(message.storyIndex, message.votes);
+    } else if (message.storyIndex === currentStoryIndex) {
+      // ✅ If not revealed, show thumbs only
+      applyVotesToUI(message.votes, true); // true = hide actual values
     }
   }
          break;
