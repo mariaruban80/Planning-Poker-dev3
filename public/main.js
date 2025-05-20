@@ -2313,41 +2313,31 @@ case 'ticketRemoved':
   if (planningCardsSection) planningCardsSection.style.display = 'block';
   if (statsContainer) statsContainer.style.display = 'none';
       break;
-
 case 'storySelected':
- if (typeof message.storyIndex === 'number') {
+  if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Story selected from server:', message.storyIndex);
     currentStoryIndex = message.storyIndex;
-    receivedInitialStoryIndex = true; // ✅ Mark that we've received this
+    receivedInitialStoryIndex = true;
 
-    // Wait until story cards are ready
-    let attempts = 0;
-    const maxAttempts = 10;
+    // Defer selection until DOM is likely updated after ticket rendering
+    setTimeout(() => {
+      const storyCards = document.querySelectorAll('.story-card');
+      const card = storyCards[message.storyIndex];
+      if (card) {
+        console.log('[SOCKET] Selecting story after delay');
+        selectStory(message.storyIndex, false); // false = don’t emit
+        setupPlanningCards();
+        setupVoteCardsDrag();
 
-    const waitForStoryCard = setInterval(() => {
-      const card = document.querySelector(`.story-card[data-index="${message.storyIndex}"]`);
-      if (card || attempts >= maxAttempts) {
-        clearInterval(waitForStoryCard);
-
-        if (card) {
-          console.log('[SOCKET] Selecting story after cards ready');
-          selectStory(message.storyIndex, false); // false = don't emit back
-          setupPlanningCards();
-          setupVoteCardsDrag();
-
-          if (socket) {
-            socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
-          }
-        } else {
-          console.warn('[SOCKET] Story card not found after waiting');
+        if (socket) {
+          socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
         }
+      } else {
+        console.warn('[SOCKET] Could not find card at index', message.storyIndex);
       }
-      attempts++;
-    }, 200); // check every 200ms
+    }, 600); // wait a bit longer than ticket rendering
   }
-      
   break;
-
      case 'votesRevealed':
   if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
