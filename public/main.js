@@ -2295,35 +2295,32 @@ case 'ticketRemoved':
     recoverAppState();
     break;
     case 'voteUpdate':
-      // Handle vote received
       if (message.userId && message.vote) {
-        if (!votesPerStory[currentStoryIndex]) {
-          votesPerStory[currentStoryIndex] = {};
-        }
-        votesPerStory[currentStoryIndex][message.userId] = message.vote;
-        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
+      if (!votesPerStory[message.storyIndex]) {
+      votesPerStory[message.storyIndex] = {};
       }
+    votesPerStory[message.storyIndex][message.userId] = message.vote;
+    const isRevealed = votesRevealed[message.storyIndex] === true;
+    updateVoteVisuals(message.userId, isRevealed ? message.vote : '👍', true);
+    }
       break;
       
     case 'votesRevealed':
-      // Handle votes revealed
-     // votesRevealed[currentStoryIndex] = true;
-     // if (votesPerStory[currentStoryIndex]) {
-       // applyVotesToUI(votesPerStory[currentStoryIndex], false);
-     // }
-      //triggerGlobalEmojiBurst();
+    if (typeof message.storyIndex === 'number') {
+    console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
+    votesRevealed[message.storyIndex] = true;
 
-      // Handle votes revealed
-      votesRevealed[currentStoryIndex] = true;
-      if (votesPerStory[currentStoryIndex]) {
-        handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
-      } else {
-        console.log('[WARN] Votes revealed but no votes found for story index:', currentStoryIndex);
-        
-        // If no votes found, still show empty statistics
-        handleVotesRevealed(currentStoryIndex, {});
-      }
-      triggerGlobalEmojiBurst();
+    const currentVotes = votesPerStory[message.storyIndex] || {};
+
+    // ✅ First update all vote badges and avatars with the real values
+    applyVotesToUI(currentVotes, false); // false = don't hide values
+
+    // ✅ Then update vote statistics panel
+    handleVotesRevealed(message.storyIndex, currentVotes);
+
+    // 🎉 Show the emoji burst
+    triggerGlobalEmojiBurst();
+    }
       break;
       
     case 'votesReset':
