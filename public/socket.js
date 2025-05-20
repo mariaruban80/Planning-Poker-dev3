@@ -129,13 +129,13 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     handleMessage({ type: 'storySelected', storyIndex });
   });
 
-  socket.on('voteUpdate', ({ userId, vote, storyIndex }) => {
+  socket.on('voteUpdate', ({ userId, vote, storyId }) => {
     if (!userId) {
       console.warn('[SOCKET] Received vote update without userId:', { vote, storyIndex });
       return;
     }
     console.log('[SOCKET] Vote update received for user', userId, 'on story', storyIndex);
-    handleMessage({ type: 'voteUpdate', userId, vote, storyIndex });
+   handleMessage({ type: 'voteUpdate', userId, vote, storyId });
   });
 
   socket.on('storyVotes', ({ storyIndex, votes }) => {
