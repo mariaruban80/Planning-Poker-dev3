@@ -67,6 +67,37 @@ function saveAppState() {
   
   sessionStorage.setItem('appState', JSON.stringify(currentState));
 }
+/**
+ * Reset all vote visuals
+ */
+function resetAllVoteVisuals() {
+  // Remove vote badges
+  document.querySelectorAll('.vote-badge').forEach(b => b.remove());
+
+  // Reset visual vote spaces
+  document.querySelectorAll('.vote-card-space').forEach(space => {
+    space.classList.remove('has-vote');
+  });
+
+  // Clear vote statistics
+  const stats = document.querySelector('.vote-statistics-container');
+  if (stats) {
+    stats.style.display = 'none';
+    stats.innerHTML = '';
+  }
+
+  // Show planning cards again
+  const planning = document.querySelector('.planning-cards-section');
+  if (planning) {
+    planning.style.display = 'block';
+  }
+
+  // Reset avatar states
+  document.querySelectorAll('.avatar-container').forEach(avatar => {
+    avatar.classList.remove('has-voted');
+  });
+}
+
 
 function createStoryCard(story, index, isCSV = false) {
   const card = document.createElement('div');
@@ -1683,24 +1714,6 @@ function applyVotesToUI(votes, hideValues) {
   //  showEmojiBurst(userId, vote);
   });
 }
-
-/**
- * Reset all vote visuals
- */
-function resetAllVoteVisuals() {
-  document.querySelectorAll('.vote-badge').forEach(badge => {
-    badge.textContent = '';
-  });
-  
-  document.querySelectorAll('.has-vote').forEach(el => {
-    el.classList.remove('has-vote');
-  });
-  
-  document.querySelectorAll('.has-voted').forEach(el => {
-    el.classList.remove('has-voted');
-  });
-}
-
 /**
  * Render the current story
  */
@@ -2240,10 +2253,24 @@ case 'ticketRemoved':
       }
       // If selected story was removed, pick first
       const selected = document.querySelector('.story-card.selected');
+
       if (!selected && remainingStories.length > 0) {
         const index = parseInt(remainingStories[0].dataset.index, 10);
-        selectStory(index);
+      
+        console.log('[SOCKET] Auto-selecting next story after deletion:', index);
+      
+        // 🧹 Clear all vote visuals and state
+        resetAllVoteVisuals(); // Clears UI badges and statistics
+        votesPerStory[index] = {};            // Clear votes for next story
+        votesRevealed[index] = false;         // Ensure votes aren't shown by mistake
+      
+        selectStory(index, true); // true = emit to server if host
       }
+
+
+
+
+      
     }
   }
   break;
