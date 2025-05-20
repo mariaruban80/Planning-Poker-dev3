@@ -1115,44 +1115,29 @@ function addVoteStatisticsStyles()
  * @param {Object} votes - Vote data
  */
 function handleVotesRevealed(storyIndex, votes) {
-  // Mark this story as having revealed votes
-  votesRevealed[storyIndex] = true;
-  
-  // Get the planning cards container
   const planningCardsSection = document.querySelector('.planning-cards-section');
-    // Make sure the fixed styles are added
   addFixedVoteStatisticsStyles();
-  // Create vote statistics display
-//  const voteStats = createVoteStatisticsDisplay(votes);
-  // removed the above old function and add the new onw 
+
   const voteStats = createFixedVoteDisplay(votes);
-  // Hide planning cards and show statistics
+
   if (planningCardsSection) {
-    // Create container for statistics if it doesn't exist
     let statsContainer = document.querySelector('.vote-statistics-container');
     if (!statsContainer) {
       statsContainer = document.createElement('div');
       statsContainer.className = 'vote-statistics-container';
       planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
     }
-    
-    // Clear any previous stats and add new one
+
     statsContainer.innerHTML = '';
     statsContainer.appendChild(voteStats);
-    
-    // Hide planning cards
+
     planningCardsSection.style.display = 'none';
-    
-    // Show statistics
     statsContainer.style.display = 'block';
   }
-  
-  // Apply the vote visuals as normal too
+
   applyVotesToUI(votes, false);
-    // Add a delay to ensure the DOM is updated before fixing font sizes
+
   setTimeout(fixRevealedVoteFontSizes, 100);
-  
-  // Run it again after a bit longer to be sure (sometimes the DOM updates can be delayed)
   setTimeout(fixRevealedVoteFontSizes, 300);
 }
 /**
