@@ -2363,14 +2363,18 @@ case 'storySelected':
   }
   break;
      case 'votesRevealed':
- if (typeof message.storyIndex === 'number') {
+   if (typeof message.storyIndex === 'number') {
     console.log('[SOCKET] Revealed votes for story:', message.storyIndex);
+
+    // Mark as revealed
     votesRevealed[message.storyIndex] = true;
 
-    // Always request the actual votes from the server
-    requestStoryVotes(message.storyIndex);
+    // ONLY request votes if we don't already have them
+    if (!votesPerStory[message.storyIndex]) {
+      requestStoryVotes(message.storyIndex);
+    }
 
-    // If votes already exist locally, update immediately
+    // If it's the currently selected story and votes are already known, render them
     if (message.storyIndex === currentStoryIndex && votesPerStory[message.storyIndex]) {
       handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
     }
