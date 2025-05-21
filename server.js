@@ -93,7 +93,6 @@ io.on('connection', (socket) => {
   });
 
   // Handle ticket removal
-
 socket.on('removeTicket', ({ storyId }) => {
   const roomId = socket.data.roomId;
   if (!roomId || !rooms[roomId]) {
@@ -130,6 +129,8 @@ socket.on('removeTicket', ({ storyId }) => {
   io.to(roomId).emit('ticketRemoved', { storyId });
   io.to(roomId).emit('votesReset', { storyId }); // Use storyId here
 });
+
+
   
   
   // Handle room joining
@@ -396,8 +397,7 @@ socket.on('removeTicket', ({ storyId }) => {
 
 
   // Handle vote revealing
- 
-socket.on('revealVotes', () => {
+ socket.on('revealVotes', () => {
   const roomId = socket.data?.roomId;
   if (!roomId || !rooms[roomId]) {
     console.error(`[SERVER] Invalid room for revealVotes: ${roomId || 'undefined'}`);
@@ -417,14 +417,13 @@ socket.on('revealVotes', () => {
   rooms[roomId].votesRevealed[storyId] = true;
   updateRoomActivity(roomId);
 
-  // Send the reveal signal to all clients with storyId
+  // Send the reveal signal to all clients
   io.to(roomId).emit('votesRevealed', { storyId });
 
   console.log(`[SERVER] Votes revealed for story ${storyId} in room ${roomId}`);
 });
 
 
-  
   // Handle vote reset for current story
  socket.on('resetVotes', () => {
   const roomId = socket.data?.roomId;
