@@ -316,84 +316,91 @@ if (isFirstTicket || rooms[roomId].selectedIndex == null) {
   });
 
   // Handle story selection
-  socket.on('storySelected', ({ storyIndex }) => {
-    const roomId = socket.data?.roomId;
-    if (!roomId || !rooms[roomId]) {
-      console.error(`[SERVER] Invalid room for storySelected: ${roomId || 'undefined'}`);
-      return;
-    }
-    
-    console.log(`[SERVER] storySelected received from ${socket.id} in room ${roomId}, storyIndex: ${storyIndex}`);
-    
-    // Store the selected index in room state
-    rooms[roomId].selectedIndex = storyIndex;
-    updateRoomActivity(roomId);
-    
-    // Broadcast to ALL clients in the room (including sender for confirmation)
-    io.to(roomId).emit('storySelected', { storyIndex });
+
+socket.on('storySelected', ({ storyIndex }) => {
+  const roomId = socket.data?.roomId;
+  if (!roomId || !rooms[roomId]) {
+    console.error(`[SERVER] Invalid room for storySelected: ${roomId || 'undefined'}`);
+    return;
+  }
+
+  const room = rooms[roomId];
+  const story = room.tickets?.[storyIndex];
+
+  if (!story) {
+    console.warn(`[SERVER] No story found at index ${storyIndex} in room ${roomId}`);
+    return;
+  }
+
+  room.selectedIndex = storyIndex;
+  updateRoomActivity(roomId);
+
+  io.to(roomId).emit('storySelected', { storyIndex });
+});
+
+
+// Handle vote casting (✅ updated to use storyId)
+socket.on('castVote', ({ vote, targetUserId, storyId }) => {
+  const roomId = socket.data?.roomId;
+  const voterName = socket.data.userName;
+
+  if (!roomId || !rooms[roomId]) {
+    console.error(`[SERVER] Invalid room for castVote: ${roomId || 'undefined'}`);
+    return;
+  }
+
+  if (targetUserId !== voterName) {
+    socket.emit('error', { message: 'You can only vote for yourself' });
+    return;
+  }
+
+  const room = rooms[roomId];
+
+  if (!room.votesPerStory[storyId]) {
+    room.votesPerStory[storyId] = {};
+  }
+
+  room.votesPerStory[storyId][voterName] = vote;
+  updateRoomActivity(roomId);
+
+  io.to(roomId).emit('voteUpdate', {
+    userId: voterName,
+    vote,
+    storyId
   });
-
-  // Handle vote casting
-  socket.on('castVote', ({ vote, targetUserId }) => {
-    const roomId = socket.data?.roomId;
-    if (!roomId || !rooms[roomId]) {
-      console.error(`[SERVER] Invalid room for castVote: ${roomId || 'undefined'}`);
-      return;
-    }
-
-    const currentStoryIndex = rooms[roomId].selectedIndex;
-    const voterName = socket.data.userName;
-    
-    // Validate targetUserId matches voterName (can only vote for self)
-    if (targetUserId !== voterName) {
-      socket.emit('error', { message: 'You can only vote for yourself' });
-      return;
-    }
-
-    // Initialize vote storage for this story if needed
-    if (!rooms[roomId].votesPerStory[currentStoryIndex]) {
-      rooms[roomId].votesPerStory[currentStoryIndex] = {};
-    }
-
-    // Store the vote using userName instead of socket.id
-    rooms[roomId].votesPerStory[currentStoryIndex][voterName] = vote;
-    updateRoomActivity(roomId);
-
-    // Broadcast vote using userName
-    io.to(roomId).emit('voteUpdate', {
-      userId: voterName,
-      vote,
-      storyIndex: currentStoryIndex
-    });
-  });
-
-  // Handle requests for votes for a specific story
- socket.on('requestStoryVotes', ({ storyIndex }) => {
+});
+// Handle requests for votes using storyId directly (✅ safer and cleaner)
+socket.on('requestStoryVotes', ({ storyId }) => {
   const roomId = socket.data?.roomId;
   if (!roomId || !rooms[roomId]) {
     console.error(`[SERVER] Invalid room for requestStoryVotes: ${roomId || 'undefined'}`);
     return;
   }
 
-  const story = rooms[roomId].tickets?.[storyIndex];
+  const room = rooms[roomId];
+
+  const story = room.tickets?.find(story => story.id === storyId);
   if (!story) {
-    console.error(`[SERVER] No story found at index ${storyIndex} in room ${roomId}`);
+    console.warn(`[SERVER] No story found with ID ${storyId} in room ${roomId}`);
     return;
   }
 
-  const storyId = story.id;
-  const votes = rooms[roomId].votesPerStory[storyId] || {};
-
-  console.log(`[SERVER] Sending votes for story ID ${storyId} (index ${storyIndex}) to client ${socket.id}`);
+  const votes = room.votesPerStory[storyId] || {};
+  console.log(`[SERVER] Sending votes for story ID ${storyId} to client ${socket.id}`);
   socket.emit('storyVotes', { storyId, votes });
 
-  // If votes have been revealed for this story, also send that info
-  if (rooms[roomId].votesRevealed[storyId]) {
+  if (room.votesRevealed[storyId]) {
     socket.emit('votesRevealed', { storyId });
   }
 
   updateRoomActivity(roomId);
 });
+
+  
+
+
+
+  
 
 
   // Handle vote revealing
