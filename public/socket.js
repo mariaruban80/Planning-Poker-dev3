@@ -158,6 +158,11 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     handleMessage({ type: 'revealVotes', votes: votes || {} });
   });
 
+  socket.on('votesRevealed', ({ storyId }) => {
+  console.log('[SOCKET] Votes revealed event received for story:', storyId);
+  handleMessage({ type: 'votesRevealed', storyId });
+});
+
   socket.on('storyChange', ({ story }) => {
     handleMessage({ type: 'storyChange', story });
   });
