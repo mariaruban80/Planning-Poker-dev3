@@ -396,7 +396,8 @@ socket.on('removeTicket', ({ storyId }) => {
 
 
   // Handle vote revealing
- socket.on('revealVotes', () => {
+ 
+socket.on('revealVotes', () => {
   const roomId = socket.data?.roomId;
   if (!roomId || !rooms[roomId]) {
     console.error(`[SERVER] Invalid room for revealVotes: ${roomId || 'undefined'}`);
@@ -416,13 +417,14 @@ socket.on('removeTicket', ({ storyId }) => {
   rooms[roomId].votesRevealed[storyId] = true;
   updateRoomActivity(roomId);
 
-  // Send the reveal signal to all clients
+  // Send the reveal signal to all clients with storyId
   io.to(roomId).emit('votesRevealed', { storyId });
 
   console.log(`[SERVER] Votes revealed for story ${storyId} in room ${roomId}`);
 });
 
 
+  
   // Handle vote reset for current story
  socket.on('resetVotes', () => {
   const roomId = socket.data?.roomId;
