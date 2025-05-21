@@ -427,6 +427,8 @@ function addFixedVoteStatisticsStyles() {
 }
 
 function createFixedVoteDisplay(votes) {
+  console.log('[UI] Creating vote display for votes:', votes);
+  
   const container = document.createElement('div');
   container.className = 'fixed-vote-display';
 
@@ -436,26 +438,33 @@ function createFixedVoteDisplay(votes) {
     .map(v => parseFloat(v));
 
   const voteCount = voteValues.length;
+  
+  if (voteCount === 0) {
+    console.log('[UI] No votes to display');
+    container.innerHTML = '<div class="fixed-vote-card">No votes yet</div>';
+    return container;
+  }
+  
   let averageValue = 0;
 
- const voteFrequency = {};
-let highestCount = 0;
+  const voteFrequency = {};
+  let highestCount = 0;
 
-// Count votes and track highest frequency
-voteValues.forEach(vote => {
-  voteFrequency[vote] = (voteFrequency[vote] || 0) + 1;
-  if (voteFrequency[vote] > highestCount) {
-    highestCount = voteFrequency[vote];
-  }
-});
+  // Count votes and track highest frequency
+  voteValues.forEach(vote => {
+    voteFrequency[vote] = (voteFrequency[vote] || 0) + 1;
+    if (voteFrequency[vote] > highestCount) {
+      highestCount = voteFrequency[vote];
+    }
+  });
 
-// Find how many votes have the highest count
-const majorityVotes = Object.entries(voteFrequency)
-  .filter(([_, count]) => count === highestCount)
-  .map(([vote]) => vote);
+  // Find how many votes have the highest count
+  const majorityVotes = Object.entries(voteFrequency)
+    .filter(([_, count]) => count === highestCount)
+    .map(([vote]) => vote);
 
-const isTie = majorityVotes.length > 1;
-const mostCommonVote = !isTie ? majorityVotes[0] : '—';
+  const isTie = majorityVotes.length > 1;
+  const mostCommonVote = !isTie ? majorityVotes[0] : '—';
 
   // Calculate average
   if (numericValues.length > 0) {
@@ -485,9 +494,6 @@ const mostCommonVote = !isTie ? majorityVotes[0] : '—';
 
   return container;
 }
-
-
-
 
 /**
  * Determines if current user is a guest
@@ -1083,40 +1089,54 @@ function addVoteStatisticsStyles()
  * @param {number} storyIndex - Index of the story
  * @param {Object} votes - Vote data
  */
-
 function handleVotesRevealed(storyId, votes) {
+  console.log('[UI] Handling votes revealed for story:', storyId, 'with votes:', votes);
+  
   // Mark this story as having revealed votes using storyId
   votesRevealed[storyId] = true;
 
   // Get the planning cards container
   const planningCardsSection = document.querySelector('.planning-cards-section');
+  if (!planningCardsSection) {
+    console.error('[UI] Cannot find planning cards section');
+    return;
+  }
   
   // Add fixed styles
   addFixedVoteStatisticsStyles();
 
   // Create vote statistics display
   const voteStats = createFixedVoteDisplay(votes);
+  console.log('[UI] Created vote stats display:', voteStats);
 
   // Display vote statistics
-  if (planningCardsSection) {
-    let statsContainer = document.querySelector('.vote-statistics-container');
-    if (!statsContainer) {
-      statsContainer = document.createElement('div');
-      statsContainer.className = 'vote-statistics-container';
-      planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
-    }
-
-    statsContainer.innerHTML = '';
-    statsContainer.appendChild(voteStats);
-    planningCardsSection.style.display = 'none';
-    statsContainer.style.display = 'block';
+  let statsContainer = document.querySelector('.vote-statistics-container');
+  if (!statsContainer) {
+    console.log('[UI] Creating new statistics container');
+    statsContainer = document.createElement('div');
+    statsContainer.className = 'vote-statistics-container';
+    planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
   }
+
+  // Clear and add new stats
+  statsContainer.innerHTML = '';
+  statsContainer.appendChild(voteStats);
+  
+  // Make sure the containers have proper display settings
+  planningCardsSection.style.display = 'none';
+  statsContainer.style.display = 'block';
+  
+  console.log('[UI] Statistics displayed successfully');
 
   // Apply vote visuals
   applyVotesToUI(votes, false);
 
+  // Fix font sizes
   setTimeout(fixRevealedVoteFontSizes, 100);
   setTimeout(fixRevealedVoteFontSizes, 300);
+  
+  // Trigger emoji burst
+  triggerGlobalEmojiBurst();
 }
 
 /**
@@ -1398,18 +1418,29 @@ function setupRevealResetButtons() {
   if (revealVotesBtn) {
     revealVotesBtn.addEventListener('click', () => {
       if (socket) {
+        console.log('[UI] Requesting to reveal votes');
         socket.emit('revealVotes');
-        votesRevealed[currentStoryIndex] = true;
         
-        // Update UI if we have votes for this story
-        if (votesPerStory[currentStoryIndex]) {
-          applyVotesToUI(votesPerStory[currentStoryIndex], false);
+        // Get the currently selected story ID
+        const selectedStory = document.querySelector('.story-card.selected');
+        if (selectedStory) {
+          const storyId = selectedStory.id;
+          console.log('[UI] Marking story as revealed:', storyId);
+          votesRevealed[storyId] = true;
+          
+          // If we have votes for this story, handle them immediately
+          if (votesPerStory[storyId] && Object.keys(votesPerStory[storyId]).length > 0) {
+            console.log('[UI] Local votes available, handling reveal locally:', votesPerStory[storyId]);
+            handleVotesRevealed(storyId, votesPerStory[storyId]);
+          } else {
+            console.log('[UI] No local votes to reveal, waiting for server');
+          }
         }
       }
     });
   }
   
-  // Set up reset votes button
+  // Set up reset votes button (unchanged)
   const resetVotesBtn = document.getElementById('resetVotesBtn');
   if (resetVotesBtn) {
     resetVotesBtn.addEventListener('click', () => {
@@ -1417,10 +1448,14 @@ function setupRevealResetButtons() {
         socket.emit('resetVotes');
         
         // Reset local state
-        if (votesPerStory[currentStoryIndex]) {
-          votesPerStory[currentStoryIndex] = {};
+        const selectedStory = document.querySelector('.story-card.selected');
+        if (selectedStory) {
+          const storyId = selectedStory.id;
+          if (votesPerStory[storyId]) {
+            votesPerStory[storyId] = {};
+          }
+          votesRevealed[storyId] = false;
         }
-        votesRevealed[currentStoryIndex] = false;
         
         // Update UI
         resetAllVoteVisuals();
@@ -1428,6 +1463,7 @@ function setupRevealResetButtons() {
     });
   }
 }
+
 
 /**
  * Setup CSV file uploader
@@ -2285,17 +2321,22 @@ case 'ticketRemoved':
   break;
       
     case 'votesRevealed':
-  if (message.storyId) {
+   if (message.storyId) {
+    console.log('[SOCKET] Votes revealed for story ID:', message.storyId);
     votesRevealed[message.storyId] = true;
 
-    // Get the votes for this story
     const votes = votesPerStory[message.storyId] || {};
+    console.log('[SOCKET] Votes to reveal:', votes);
     
-    // Display the statistics
-    handleVotesRevealed(message.storyId, votes);
-    triggerGlobalEmojiBurst();
+    // Make sure this story is currently selected
+    const selectedStory = document.querySelector('.story-card.selected');
+    if (selectedStory && selectedStory.id === message.storyId) {
+      console.log('[SOCKET] Displaying vote statistics since this is the selected story');
+      handleVotesRevealed(message.storyId, votes);
+    }
+  } else {
+    console.warn('[SOCKET] Received votesRevealed without storyId');
   }
-  break;
   break;
       
 case 'votesReset':
