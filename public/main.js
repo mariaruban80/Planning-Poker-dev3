@@ -2223,26 +2223,38 @@ case 'ticketRemoved':
       card.remove();
       normalizeStoryIndexes();
 
-      const remainingStories = document.querySelectorAll('.story-card');
-      if (remainingStories.length === 0) {
-        console.log('[SOCKET] All stories removed, resetting UI');
-
-        // Reset immediately, then again after a delay
-        resetAllVotingVisuals();
-        setTimeout(resetAllVotingVisuals, 200); // re-clear any delayed DOM updates
-        votesPerStory = {};
-        votesRevealed = {};
-        currentStoryIndex = 0;
+      // 🔁 Always clear visuals for the removed story
+      if (votesPerStory[message.storyId]) {
+        delete votesPerStory[message.storyId];
       }
-      // If selected story was removed, pick first
+      if (votesRevealed[message.storyId]) {
+        delete votesRevealed[message.storyId];
+      }
+
+      resetAllVotingVisuals(); // 🧼 Clear vote cards, avatars, stats
+
+      const remainingStories = document.querySelectorAll('.story-card');
+
+      // If selected story was removed, reselect the first one
       const selected = document.querySelector('.story-card.selected');
       if (!selected && remainingStories.length > 0) {
         const index = parseInt(remainingStories[0].dataset.index, 10);
         selectStory(index);
       }
+
+      // If all stories are gone, reset tracking
+      if (remainingStories.length === 0) {
+        console.log('[SOCKET] All stories removed, fully resetting vote state');
+        votesPerStory = {};
+        votesRevealed = {};
+        currentStoryIndex = 0;
+
+        setTimeout(resetAllVotingVisuals, 200); // Ensure late DOM updates are also cleared
+      }
     }
   }
   break;
+
 
      case 'votingSystemUpdate':
       console.log('[DEBUG] Got voting system update:', message.votingSystem);
