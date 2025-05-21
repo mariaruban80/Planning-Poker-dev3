@@ -90,7 +90,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   socket.on('ticketRemoved', ({ storyId }) => {
     console.log('[SOCKET] Ticket removed received from server:', storyId);
     handleMessage({ type: 'ticketRemoved', storyId });
-     resetAllVotingVisuals();
+     //resetAllVotingVisuals();
   });
 
   socket.on('allTickets', ({ tickets }) => {
