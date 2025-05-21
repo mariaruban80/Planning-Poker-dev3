@@ -134,7 +134,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
       console.warn('[SOCKET] Received vote update without userId:', { vote, storyIndex });
       return;
     }
- //   console.log('[SOCKET] Vote update received for user', userId, 'on story', storyIndex);
+    console.log('[SOCKET] Vote update received for user', userId, 'on story', storyIndex);
    handleMessage({ type: 'voteUpdate', userId, vote, storyId });
   });
 
@@ -157,11 +157,6 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     console.log('[SOCKET] Reveal votes event received (legacy)');
     handleMessage({ type: 'revealVotes', votes: votes || {} });
   });
-
-  socket.on('votesRevealed', ({ storyId }) => {
-  console.log('[SOCKET] Votes revealed event received for story:', storyId);
-  handleMessage({ type: 'votesRevealed', storyId });
-});
 
   socket.on('storyChange', ({ story }) => {
     handleMessage({ type: 'storyChange', story });
