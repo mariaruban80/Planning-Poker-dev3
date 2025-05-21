@@ -427,9 +427,7 @@ function addFixedVoteStatisticsStyles() {
 }
 
 function createFixedVoteDisplay(votes) {
-  console.log('[UI] Creating vote display for votes:', votes);
-  
-  const container = document.createElement('div');
+   const container = document.createElement('div');
   container.className = 'fixed-vote-display';
 
   const voteValues = Object.values(votes);
@@ -438,33 +436,26 @@ function createFixedVoteDisplay(votes) {
     .map(v => parseFloat(v));
 
   const voteCount = voteValues.length;
-  
-  if (voteCount === 0) {
-    console.log('[UI] No votes to display');
-    container.innerHTML = '<div class="fixed-vote-card">No votes yet</div>';
-    return container;
-  }
-  
   let averageValue = 0;
 
-  const voteFrequency = {};
-  let highestCount = 0;
+ const voteFrequency = {};
+let highestCount = 0;
 
-  // Count votes and track highest frequency
-  voteValues.forEach(vote => {
-    voteFrequency[vote] = (voteFrequency[vote] || 0) + 1;
-    if (voteFrequency[vote] > highestCount) {
-      highestCount = voteFrequency[vote];
-    }
-  });
+// Count votes and track highest frequency
+voteValues.forEach(vote => {
+  voteFrequency[vote] = (voteFrequency[vote] || 0) + 1;
+  if (voteFrequency[vote] > highestCount) {
+    highestCount = voteFrequency[vote];
+  }
+});
 
-  // Find how many votes have the highest count
-  const majorityVotes = Object.entries(voteFrequency)
-    .filter(([_, count]) => count === highestCount)
-    .map(([vote]) => vote);
+// Find how many votes have the highest count
+const majorityVotes = Object.entries(voteFrequency)
+  .filter(([_, count]) => count === highestCount)
+  .map(([vote]) => vote);
 
-  const isTie = majorityVotes.length > 1;
-  const mostCommonVote = !isTie ? majorityVotes[0] : '—';
+const isTie = majorityVotes.length > 1;
+const mostCommonVote = !isTie ? majorityVotes[0] : '—';
 
   // Calculate average
   if (numericValues.length > 0) {
