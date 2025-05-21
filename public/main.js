@@ -1119,8 +1119,6 @@ function handleVotesRevealed(storyId, votes) {
   setTimeout(fixRevealedVoteFontSizes, 300);
 }
 
-
-
 /**
  * Setup Add Ticket button
  */
@@ -1614,6 +1612,7 @@ function displayCSVData(data) {
  * @param {number} index - Story index to select
  * @param {boolean} emitToServer - Whether to emit to server (default: true)
  */
+
 function selectStory(index, emitToServer = true) {
   console.log('[UI] Story selected by user:', index);
 
@@ -1625,41 +1624,40 @@ function selectStory(index, emitToServer = true) {
   const storyCard = document.querySelector(`.story-card[data-index="${index}"]`);
   if (storyCard) {
     storyCard.classList.add('selected', 'active');
-  }
+    
+    // Get the storyId from the card
+    const storyId = storyCard.id;
+    currentStoryIndex = index;
 
-  // Update state
-  currentStoryIndex = index;
+    // Ensure reveal state is initialized
+    if (typeof votesRevealed[storyId] === 'undefined') {
+      votesRevealed[storyId] = false;
+    }
 
-  // Ensure reveal state is initialized
-  if (typeof votesRevealed[index] === 'undefined') {
-    votesRevealed[index] = false;
-  }
+    // Show planning cards or stats depending on reveal state
+    const planningCardsSection = document.querySelector('.planning-cards-section');
+    const statsContainer = document.querySelector('.vote-statistics-container');
 
-  // Show planning cards or stats depending on reveal state
-  const planningCardsSection = document.querySelector('.planning-cards-section');
-  const statsContainer = document.querySelector('.vote-statistics-container');
+    if (votesRevealed[storyId]) {
+      handleVotesRevealed(storyId, votesPerStory[storyId] || {});
+    } else {
+      if (planningCardsSection) planningCardsSection.style.display = 'block';
+      if (statsContainer) statsContainer.style.display = 'none';
+    }
 
-  if (votesRevealed[index]) {
-    handleVotesRevealed(index, votesPerStory[index] || {});
-  } else {
-    if (planningCardsSection) planningCardsSection.style.display = 'block';
-    if (statsContainer) statsContainer.style.display = 'none';
-  }
+    renderCurrentStory();
+    resetOrRestoreVotes(storyId);
 
-  renderCurrentStory();
-  resetOrRestoreVotes(index);
+    // Request votes by storyId
+    if (socket) {
+      socket.emit('requestStoryVotes', { storyId: storyId });
+    }
 
-  // ✅ Always request votes, even if we're not emitting selection
-  if (typeof requestStoryVotes === 'function') {
-    requestStoryVotes(index);
-  } else if (socket) {
-    socket.emit('requestStoryVotes', { storyIndex: index });
-  }
-
-  // Only emit selection event if requested
-  if (emitToServer && socket) {
-    console.log('[EMIT] Broadcasting story selection:', index);
-    socket.emit('storySelected', { storyIndex: index });
+    // Only emit selection event if requested
+    if (emitToServer && socket) {
+      console.log('[EMIT] Broadcasting story selection:', index);
+      socket.emit('storySelected', { storyIndex: index });
+    }
   }
 }
 
@@ -2287,13 +2285,17 @@ case 'ticketRemoved':
   break;
       
     case 'votesRevealed':
-    if (message.storyId) {
-      votesRevealed[message.storyId] = true;
-  
-      const votes = votesPerStory[message.storyId] || {};
-      handleVotesRevealed(message.storyId, votes);
-      triggerGlobalEmojiBurst();
-    }
+  if (message.storyId) {
+    votesRevealed[message.storyId] = true;
+
+    // Get the votes for this story
+    const votes = votesPerStory[message.storyId] || {};
+    
+    // Display the statistics
+    handleVotesRevealed(message.storyId, votes);
+    triggerGlobalEmojiBurst();
+  }
+  break;
   break;
       
 case 'votesReset':
