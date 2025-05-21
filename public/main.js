@@ -2328,14 +2328,24 @@ case 'ticketRemoved':
     const votes = votesPerStory[message.storyId] || {};
     console.log('[SOCKET] Votes to reveal:', votes);
     
-    // Make sure this story is currently selected
-    const selectedStory = document.querySelector('.story-card.selected');
-    if (selectedStory && selectedStory.id === message.storyId) {
-      console.log('[SOCKET] Displaying vote statistics since this is the selected story');
-      handleVotesRevealed(message.storyId, votes);
+    // Display statistics and trigger emojis
+    handleVotesRevealed(message.storyId, votes);
+    triggerGlobalEmojiBurst();
+  }
+  
+  break;
+
+      case 'revealVotes':
+  // Handle legacy format
+  console.log('[SOCKET] Legacy reveal votes event handled');
+  if (message.votes) {
+    const currentStory = document.querySelector('.story-card.selected');
+    if (currentStory) {
+      const storyId = currentStory.id;
+      votesRevealed[storyId] = true;
+      handleVotesRevealed(storyId, message.votes);
+      triggerGlobalEmojiBurst();
     }
-  } else {
-    console.warn('[SOCKET] Received votesRevealed without storyId');
   }
   break;
       
