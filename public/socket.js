@@ -134,7 +134,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
       console.warn('[SOCKET] Received vote update without userId:', { vote, storyIndex });
       return;
     }
-    console.log('[SOCKET] Vote update received for user', userId, 'on story', storyIndex);
+ //   console.log('[SOCKET] Vote update received for user', userId, 'on story', storyIndex);
    handleMessage({ type: 'voteUpdate', userId, vote, storyId });
   });
 
