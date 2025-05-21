@@ -93,6 +93,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle ticket removal
+
 socket.on('removeTicket', ({ storyId }) => {
   const roomId = socket.data.roomId;
   if (!roomId || !rooms[roomId]) {
@@ -129,8 +130,6 @@ socket.on('removeTicket', ({ storyId }) => {
   io.to(roomId).emit('ticketRemoved', { storyId });
   io.to(roomId).emit('votesReset', { storyId }); // Use storyId here
 });
-
-
   
   
   // Handle room joining
