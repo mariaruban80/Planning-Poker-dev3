@@ -90,6 +90,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   socket.on('ticketRemoved', ({ storyId }) => {
     console.log('[SOCKET] Ticket removed received from server:', storyId);
     handleMessage({ type: 'ticketRemoved', storyId });
+     resetAllVotingVisuals();
   });
 
   socket.on('allTickets', ({ tickets }) => {
@@ -126,6 +127,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   socket.on('storySelected', ({ storyIndex }) => {
     console.log('[SOCKET] Story selected event received:', storyIndex);
     selectedStoryIndex = storyIndex;
+    resetAllVotingVisuals(); // clear previous vote visuals
     handleMessage({ type: 'storySelected', storyIndex });
   });
 
