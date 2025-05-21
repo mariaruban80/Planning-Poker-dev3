@@ -340,10 +340,10 @@ export function emitStorySelected(index) {
  * @param {string} targetUserId - The user ID receiving the vote (should be your own username)
  */
 export function emitVote(vote, targetUserId) {
-  if (!socket || !socket.connected) {
-    console.error('[SOCKET] Cannot send vote: socket not connected');
-    return;
-  }
+  const storyId = getCurrentStoryId();
+  if (!storyId) return;
+  socket.emit('castVote', { vote, targetUserId, storyId });
+}
   
   // Validate targetUserId is your own username
   if (targetUserId !== userName) {
@@ -354,19 +354,25 @@ export function emitVote(vote, targetUserId) {
   console.log('[SOCKET] Casting vote for user', targetUserId);
   socket.emit('castVote', { vote, targetUserId });
 }
+export function getCurrentStoryId() {
+  const selected = document.querySelector('.story-card.selected');
+  return selected?.id || null;
+}
+
 
 /**
  * Request votes for a specific story
  * @param {number} storyIndex - Index of the story
  */
-export function requestStoryVotes(storyIndex) {
-  if (!socket || !socket.connected) {
-    console.error('[SOCKET] Cannot request votes: socket not connected');
-    return;
-  }
+export function requestStoryVotes() {
+  const storyId = getCurrentStoryId();
+  if (!storyId) return;
+  socket.emit('requestStoryVotes', { storyId });
+}
   
   console.log('[SOCKET] Requesting votes for story:', storyIndex);
-  socket.emit('requestStoryVotes', { storyIndex });
+  const storyId = getCurrentStoryId();
+socket.emit('requestStoryVotes', { storyId });
 }
 
 /**
@@ -374,13 +380,9 @@ export function requestStoryVotes(storyIndex) {
  * Triggers server to broadcast vote values to all clients
  */
 export function revealVotes() {
-  if (!socket || !socket.connected) {
-    console.error('[SOCKET] Cannot reveal votes: socket not connected');
-    return;
-  }
-  
-  console.log('[SOCKET] Requesting to reveal votes');
-  socket.emit('revealVotes');
+  const storyId = getCurrentStoryId();
+  if (!storyId) return;
+  socket.emit('revealVotes', { storyId });
 }
 
 /**
