@@ -143,11 +143,11 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     handleMessage({ type: 'storyVotes', storyIndex, votes: votes || {} });
   });
 
-  socket.on('votesRevealed', ({ storyIndex }) => {
-    console.log('[SOCKET] Votes revealed for story', storyIndex);
-    handleMessage({ type: 'votesRevealed', storyIndex });
-  });
-
+socket.on('votesRevealed', ({ storyId }) => {
+  console.log('[SOCKET] Votes revealed for storyId', storyId);
+  handleMessage({ type: 'votesRevealed', storyId });
+});
+  
   socket.on('votesReset', ({ storyIndex }) => {
     console.log('[SOCKET] Votes reset for story', storyIndex);
     handleMessage({ type: 'votesReset', storyIndex });
