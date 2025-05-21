@@ -247,11 +247,11 @@ socket.on('removeTicket', ({ storyId }) => {
     socket.broadcast.to(roomId).emit('addTicket', { ticketData });
 
     // Check if this is the first ticket
-    const isFirstTicket = rooms[roomId].tickets.length === 1;
-    if (isFirstTicket) {
-      rooms[roomId].selectedIndex = 0;
-      io.to(roomId).emit('storySelected', { storyIndex: 0 });
-    }
+  const isFirstTicket = rooms[roomId].tickets.length === 1;
+if (isFirstTicket || rooms[roomId].selectedIndex == null) {
+  rooms[roomId].selectedIndex = 0;
+  io.to(roomId).emit('storySelected', { storyIndex: 0 });
+}
     
     updateRoomActivity(roomId);
   });
