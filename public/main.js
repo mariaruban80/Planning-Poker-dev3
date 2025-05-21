@@ -1083,6 +1083,7 @@ function addVoteStatisticsStyles()
  * @param {number} storyIndex - Index of the story
  * @param {Object} votes - Vote data
  */
+
 function handleVotesRevealed(storyId, votes) {
   // Mark this story as having revealed votes using storyId
   votesRevealed[storyId] = true;
@@ -1253,12 +1254,19 @@ function removeStory(storyId) {
     card.remove();
   }
 
+  // Clean up votes for this story
+  delete votesPerStory[storyId];
+  delete votesRevealed[storyId];
+
   if (!isGuestUser() && socket) {
     console.log('[CLIENT] Emitting removeTicket for:', storyId);
     socket.emit('removeTicket', { storyId });
   }
 
   normalizeStoryIndexes();
+
+  // Reset voting visuals since a story was removed
+  resetAllVoteVisuals();
 
   const selected = document.querySelector('.story-card.selected');
   if (!selected) {
@@ -1269,7 +1277,6 @@ function removeStory(storyId) {
     }
   }
 }
-
 
 /**
  * Set up a mutation observer to catch any newly added story cards
