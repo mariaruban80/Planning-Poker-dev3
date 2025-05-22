@@ -59,6 +59,8 @@ socket.on('allTickets', ({ tickets }) => {
     handleMessage({ type: 'votingSystemUpdate', ...data });
   });
 
+   
+
   socket.on('syncCSVData', (csvData) => {
     console.log('[SOCKET] Received CSV data:', Array.isArray(csvData) ? csvData.length : 'invalid', 'rows');
     handleMessage({ type: 'syncCSVData', csvData });
@@ -89,6 +91,11 @@ socket.on('allTickets', ({ tickets }) => {
   socket.on('votesRevealed', ({ storyIndex }) => {
     console.log('[SOCKET] Votes revealed for story', storyIndex);
     handleMessage({ type: 'votesRevealed', storyIndex });
+  });
+
+     socket.on('deleteStory', ({ storyId }) => {
+    console.log('[SOCKET] Story deletion event received:', storyId);
+    handleMessage({ type: 'deleteStory', storyId });
   });
 
   socket.on('votesReset', ({ storyIndex }) => {
@@ -128,6 +135,17 @@ socket.on('allTickets', ({ tickets }) => {
 
   // Return socket for external operations if needed
   return socket;
+}
+
+/**
+ * Delete a story and sync with other users
+ * @param {string} storyId - ID of the story to delete
+ */
+export function emitDeleteStory(storyId) {
+  if (socket) {
+    console.log('[SOCKET] Deleting story:', storyId);
+    socket.emit('deleteStory', { storyId });
+  }
 }
 
 /**
