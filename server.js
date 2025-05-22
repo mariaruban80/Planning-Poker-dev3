@@ -94,11 +94,26 @@ socket.emit('votingSystemUpdate', { votingSystem });
       roomVotingSystems[roomId] = votingSystem;
     }
   });
+// In server.js, inside socket.on('deleteStory')
 socket.on('deleteStory', ({ storyId }) => {
   const roomId = socket.data.roomId;
   
   if (roomId && rooms[roomId]) {
     console.log(`[SERVER] Story deleted in room ${roomId}: ${storyId}`);
+    
+    // Check if it's a CSV story (has story_csv_ prefix)
+    const isCsvStory = storyId.startsWith('story_csv_');
+    
+    // Handle CSV story deletion by removing from csvData if applicable
+    if (isCsvStory && rooms[roomId].csvData) {
+      const csvIndex = parseInt(storyId.replace('story_csv_', ''));
+      if (!isNaN(csvIndex) && csvIndex >= 0 && csvIndex < rooms[roomId].csvData.length) {
+        // Remove the item from csvData
+        rooms[roomId].csvData.splice(csvIndex, 1);
+        // This is optional but helps keep everyone in sync
+        io.to(roomId).emit('syncCSVData', rooms[roomId].csvData);
+      }
+    }
     
     // Remove from tracked tickets if present
     if (rooms[roomId].tickets) {
