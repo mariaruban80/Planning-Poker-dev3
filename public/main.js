@@ -678,6 +678,36 @@ own-vote-space {
       font-weight: bold;
       opacity: 0.8;
     }
+     /* Delete button styles */
+    .story-delete-btn {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 20px;
+      height: 20px;
+      background-color: #f44336;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 2;
+    }
+    
+    .story-delete-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    
+    /* Make sure story cards properly handle the delete button position */
+    .story-card {
+      position: relative;
+      padding-right: 35px;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -1025,6 +1055,23 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   
   // Add to DOM
   storyCard.appendChild(storyTitle);
+  
+  // Add delete button for hosts only
+  if (isCurrentUserHost()) {
+    const deleteButton = document.createElement('div');
+    deleteButton.className = 'story-delete-btn';
+    deleteButton.innerHTML = '&times;'; // × symbol
+    deleteButton.title = 'Delete story';
+    
+    // Add click handler for delete button
+    deleteButton.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent story selection when clicking delete
+      deleteStory(ticketData.id);
+    });
+    
+    storyCard.appendChild(deleteButton);
+  }
+  
   storyList.appendChild(storyCard);
   
   // Check if user is guest and handle accordingly
@@ -1042,8 +1089,6 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     selectStory(newIndex);
   }
   
-  // Rest of your existing code...
-  
   // Check for stories message
   const noStoriesMessage = document.getElementById('noStoriesMessage');
   if (noStoriesMessage) {
@@ -1056,6 +1101,63 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.setAttribute('draggable', 'true');
   });
   normalizeStoryIndexes();
+}
+
+/**
+ * Delete a story by ID
+ * @param {string} storyId - ID of the story to delete
+ */
+function deleteStory(storyId) {
+  // Confirm deletion
+  if (!confirm('Are you sure you want to delete this story?')) {
+    return;
+  }
+  
+  // Get the story element
+  const storyCard = document.getElementById(storyId);
+  if (!storyCard) return;
+  
+  // Get story index before removal (for selection adjustment)
+  const index = parseInt(storyCard.dataset.index);
+  
+  // Emit deletion event to server
+  if (socket) {
+    socket.emit('deleteStory', { storyId });
+  }
+  
+  // Remove from DOM
+  storyCard.remove();
+  
+  // Remove from preserved manual tickets if applicable
+  preservedManualTickets = preservedManualTickets.filter(ticket => ticket.id !== storyId);
+  
+  // If this was a manually added ticket, remove it from that list too
+  manuallyAddedTickets = manuallyAddedTickets.filter(ticket => ticket.id !== storyId);
+  
+  // Renumber remaining stories
+  normalizeStoryIndexes();
+  
+  // If the deleted story was the current selection, select another one if available
+  if (index === currentStoryIndex) {
+    const storyList = document.getElementById('storyList');
+    if (storyList && storyList.children.length > 0) {
+      // If we deleted the last story, select the new last one
+      const newIndex = Math.min(index, storyList.children.length - 1);
+      selectStory(newIndex);
+    } else {
+      // No stories left, hide cards and show message
+      const noStoriesMessage = document.getElementById('noStoriesMessage');
+      if (noStoriesMessage) {
+        noStoriesMessage.style.display = 'block';
+      }
+      
+      // Disable planning cards
+      document.querySelectorAll('#planningCards .card').forEach(card => {
+        card.classList.add('disabled');
+        card.setAttribute('draggable', 'false');
+      });
+    }
+  }
 }
 
 /**
