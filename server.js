@@ -289,16 +289,23 @@ socket.on('castVote', ({ vote, targetUserId }) => {
   });
 
   // Handle CSV data synchronization
-  socket.on('syncCSVData', (csvData) => {
-    const roomId = socket.data.roomId;
-    if (roomId && rooms[roomId]) {
-      rooms[roomId].csvData = csvData;
-      rooms[roomId].selectedIndex = 0; // Reset selected index when new CSV data is loaded
-      rooms[roomId].votesPerStory = {}; // Reset all votes when new CSV data is loaded
-      rooms[roomId].votesRevealed = {}; // Reset all reveal states when new CSV data is loaded
-      io.to(roomId).emit('syncCSVData', csvData);
-    }
-  });
+socket.on('syncCSVData', (csvData) => {
+  const roomId = socket.data.roomId;
+  if (roomId && rooms[roomId]) {
+    console.log(`[SERVER] Received CSV data for room ${roomId}, ${csvData.length} rows`);
+    
+    // Store the CSV data
+    rooms[roomId].csvData = csvData;
+    
+    // Reset states when new CSV data is loaded
+    rooms[roomId].selectedIndex = 0;
+    rooms[roomId].votesPerStory = {}; 
+    rooms[roomId].votesRevealed = {}; 
+    
+    // Broadcast to ALL clients in the room
+    io.to(roomId).emit('syncCSVData', csvData);
+  }
+});
 
   // Export votes data (optional feature)
   socket.on('exportVotes', () => {
