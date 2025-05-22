@@ -1134,6 +1134,8 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
  * @param {string} storyId - ID of the story to delete
  */
 function deleteStory(storyId) {
+  console.log('[DELETE] Attempting to delete story:', storyId); // Add logging
+  
   // Confirm deletion
   if (!confirm('Are you sure you want to delete this story?')) {
     return;
@@ -1141,14 +1143,22 @@ function deleteStory(storyId) {
   
   // Get the story element
   const storyCard = document.getElementById(storyId);
-  if (!storyCard) return;
+  if (!storyCard) {
+    console.error('[DELETE] Story card not found:', storyId);
+    return;
+  }
+
+  console.log('[DELETE] Found story card, proceeding with deletion');
   
   // Get story index before removal (for selection adjustment)
   const index = parseInt(storyCard.dataset.index);
   
   // Emit deletion event to server
   if (socket) {
+    console.log('[DELETE] Emitting deleteStory event to server');
     socket.emit('deleteStory', { storyId });
+  } else {
+    console.warn('[DELETE] Socket not available, deleting locally only');
   }
   
   // Remove from DOM
@@ -1184,7 +1194,10 @@ function deleteStory(storyId) {
       });
     }
   }
+  
+  console.log('[DELETE] Deletion completed for story:', storyId);
 }
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
@@ -1466,20 +1479,23 @@ function displayCSVData(data) {
       storyItem.appendChild(storyTitle);
       
       // Add delete button for hosts only
-      if (isCurrentUserHost()) {
-        const deleteButton = document.createElement('div');
-        deleteButton.className = 'story-delete-btn';
-        deleteButton.innerHTML = '🗑'; // dustbin symbol
-        deleteButton.title = 'Delete story';
-        
-        // Add click handler for delete button
-        deleteButton.addEventListener('click', (e) => {
-          e.stopPropagation(); // Prevent story selection when clicking delete
-          deleteStory(story.id);
-        });
-        
-        storyItem.appendChild(deleteButton);
-      }
+       if (isCurrentUserHost()) {
+      const deleteButton = document.createElement('div');
+      deleteButton.className = 'story-delete-btn';
+      deleteButton.innerHTML = '🗑'; // dustbin symbol
+      deleteButton.title = 'Delete story';
+      
+      // Use a more explicit approach with a named function to ensure proper binding
+      const storyIdToDelete = `story_csv_${index}`; // Store ID in closure
+      deleteButton.onclick = function(e) {
+        e.stopPropagation(); // Prevent story selection
+        e.preventDefault();
+        console.log('[DELETE] Delete button clicked for CSV story:', storyIdToDelete);
+        deleteStory(storyIdToDelete);
+      };
+      
+      storyItem.appendChild(deleteButton);
+    }
       
       storyListContainer.appendChild(storyItem);
       
@@ -1493,44 +1509,47 @@ function displayCSVData(data) {
     });
     
     // Then add CSV data
-    let startIndex = existingStories.length;
-    data.forEach((row, index) => {
-      const storyItem = document.createElement('div');
-      storyItem.classList.add('story-card');
-      storyItem.id = `story_csv_${index}`;
-      storyItem.dataset.index = startIndex + index;
-      
-      const storyTitle = document.createElement('div');
-      storyTitle.classList.add('story-title');
-      storyTitle.textContent = row.join(' | ');
-      
-      storyItem.appendChild(storyTitle);
-      
-      // Add delete button for hosts only
-      if (isCurrentUserHost()) {
-        const deleteButton = document.createElement('div');
-        deleteButton.className = 'story-delete-btn';
-        deleteButton.innerHTML = '🗑'; // dustbin symbol
-        deleteButton.title = 'Delete story';
-        
-        // Add click handler for delete button
-        deleteButton.addEventListener('click', (e) => {
-          e.stopPropagation(); // Prevent story selection when clicking delete
-          deleteStory(storyItem.id);
-        });
-        
-        storyItem.appendChild(deleteButton);
-      }
-      
-      storyListContainer.appendChild(storyItem);
-      
-      // Add click event for story selection
-      if (isCurrentUserHost()) {
-        storyItem.addEventListener('click', () => {
-          selectStory(startIndex + index);
-        });
-      }
+    
+let startIndex = existingStories.length;
+data.forEach((row, index) => {
+  const storyItem = document.createElement('div');
+  storyItem.classList.add('story-card');
+  
+  const csvStoryId = `story_csv_${index}`;
+  storyItem.id = csvStoryId;
+  storyItem.dataset.index = startIndex + index;
+  
+  const storyTitle = document.createElement('div');
+  storyTitle.classList.add('story-title');
+  storyTitle.textContent = row.join(' | ');
+  
+  storyItem.appendChild(storyTitle);
+  
+  // Add delete button for hosts only
+  if (isCurrentUserHost()) {
+    const deleteButtonHtml = `<div class="story-delete-btn" title="Delete story">🗑</div>`;
+    storyItem.insertAdjacentHTML('beforeend', deleteButtonHtml);
+    
+    // Add the event handler after inserting HTML
+    const deleteBtn = storyItem.querySelector('.story-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.onclick = function(e) {
+        e.stopPropagation();
+        console.log('[DELETE] Deleting CSV story:', csvStoryId);
+        deleteStory(csvStoryId);
+      };
+    }
+  }
+  
+  storyListContainer.appendChild(storyItem);
+  
+  // Only add click events for hosts
+  if (isCurrentUserHost()) {
+    storyItem.addEventListener('click', () => {
+      selectStory(startIndex + index);
     });
+  }
+});
     
     // Update preserved tickets list
     preservedManualTickets = existingStories;
@@ -2374,3 +2393,18 @@ document.addEventListener('DOMContentLoaded', () => {
   appendRoomIdToURL(roomId);
   initializeApp(roomId);
 });
+
+// Temporary debugging function - call from browser console
+window.forceDeleteStory = function(id) {
+  console.log('Force deleting story:', id);
+  const storyCard = document.getElementById(id);
+  if (storyCard) {
+    storyCard.remove();
+    console.log('Story removed from DOM');
+    normalizeStoryIndexes();
+    return true;
+  } else {
+    console.error('Story not found');
+    return false;
+  }
+};
