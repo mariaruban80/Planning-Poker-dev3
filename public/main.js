@@ -146,6 +146,23 @@ function fixRevealedVoteFontSizes() {
   });
 }
 
+function setupCSVDeleteButtons() {
+  // Use event delegation for better reliability
+  document.addEventListener('click', function(event) {
+    // Check if the click was on a delete button in a CSV story
+    if (event.target.closest('.story-card[id^="story_csv_"] .story-delete-btn')) {
+      event.stopPropagation();
+      const deleteBtn = event.target.closest('.story-delete-btn');
+      const storyCard = deleteBtn.closest('.story-card');
+      
+      if (storyCard && storyCard.id.startsWith('story_csv_')) {
+        console.log('[DELETE] Delegated click handler for CSV story:', storyCard.id);
+        deleteCSVStory(storyCard.id);
+      }
+    }
+  });
+}
+
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
   const existingStyle = document.getElementById('fixed-vote-statistics-styles');
@@ -420,6 +437,7 @@ if (isHost && socket) {
   setupStoryCardInteractions();
   // Add CSS for new layout
   addNewLayoutStyles();
+  setupCSVDeleteButtons();
 }
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
@@ -2452,16 +2470,93 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Temporary debugging function - call from browser console
-window.forceDeleteStory = function(id) {
-  console.log('Force deleting story:', id);
-  const storyCard = document.getElementById(id);
-  if (storyCard) {
-    storyCard.remove();
-    console.log('Story removed from DOM');
+// Add this debugging function near the end of main.js
+window.forceDeleteCSVStory = function(csvStoryId) {
+  console.log('Force deleting CSV story:', csvStoryId);
+  
+  // Extract the CSV index
+  const csvIndex = parseInt(csvStoryId.replace('story_csv_', ''));
+  console.log('CSV index:', csvIndex);
+  
+  // Get the element
+  const storyCard = document.getElementById(csvStoryId);
+  if (!storyCard) {
+    console.error('CSV story element not found in DOM');
+    return false;
+  }
+  
+  console.log('Found element:', storyCard);
+  
+  // Try direct DOM removal
+  try {
+    const parent = storyCard.parentNode;
+    parent.removeChild(storyCard);
+    console.log('Removed successfully via parentNode');
+  } catch (e) {
+    console.error('Error removing via parentNode:', e);
+    
+    // Fallback
+    try {
+      storyCard.remove();
+      console.log('Removed successfully via element.remove()');
+    } catch (e2) {
+      console.error('Error removing via element.remove():', e2);
+    }
+  }
+  
+  // Check if it's still in DOM
+  if (document.getElementById(csvStoryId)) {
+    console.error('FAILED: Element still exists in DOM after removal attempt');
+    return false;
+  } else {
+    console.log('SUCCESS: Element no longer in DOM');
     normalizeStoryIndexes();
     return true;
-  } else {
-    console.error('Story not found');
+  }
+};
+// Add this debugging function to main.js
+window.checkCSVDeleteButtons = function() {
+  const csvStories = document.querySelectorAll('.story-card[id^="story_csv_"]');
+  console.log(`Found ${csvStories.length} CSV story cards`);
+  
+  let buttonCount = 0;
+  csvStories.forEach(card => {
+    const btn = card.querySelector('.story-delete-btn');
+    if (btn) {
+      buttonCount++;
+      console.log(`Story ${card.id} has delete button`);
+    } else {
+      console.error(`Story ${card.id} is MISSING delete button`);
+    }
+  });
+  
+  console.log(`${buttonCount} out of ${csvStories.length} CSV stories have delete buttons`);
+  return {
+    totalCards: csvStories.length,
+    withButtons: buttonCount,
+    missing: csvStories.length - buttonCount
+  };
+};
+// Add this emergency function to main.js
+window.emergencyDeleteCSV = function(index) {
+  const id = `story_csv_${index}`;
+  console.log('EMERGENCY: Attempting to delete CSV story:', id);
+  
+  // Get the element
+  const element = document.getElementById(id);
+  if (!element) {
+    console.error('Element not found');
+    return false;
+  }
+  
+  try {
+    // Replace with direct DOM API call
+    element.parentNode.removeChild(element);
+    normalizeStoryIndexes();
+    console.log('SUCCESS: Story removed via emergency function');
+    return true;
+  } catch (e) {
+    console.error('ERROR in emergency delete:', e);
     return false;
   }
 };
