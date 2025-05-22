@@ -94,6 +94,23 @@ socket.emit('votingSystemUpdate', { votingSystem });
       roomVotingSystems[roomId] = votingSystem;
     }
   });
+socket.on('deleteStory', ({ storyId }) => {
+  const roomId = socket.data.roomId;
+  
+  if (roomId && rooms[roomId]) {
+    console.log(`[SERVER] Story deleted in room ${roomId}: ${storyId}`);
+    
+    // Remove from tracked tickets if present
+    if (rooms[roomId].tickets) {
+      rooms[roomId].tickets = rooms[roomId].tickets.filter(ticket => ticket.id !== storyId);
+    }
+    
+    // Broadcast deletion to all other clients in the room
+    socket.broadcast.to(roomId).emit('deleteStory', { storyId });
+  }
+});
+
+  
 // Add handler for getting all tickets
 socket.on('requestAllTickets', () => {
   const roomId = socket.data.roomId;
