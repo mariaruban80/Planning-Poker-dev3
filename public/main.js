@@ -129,31 +129,45 @@ function saveVotesToLocalStorage() {
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('roomId');
     
-    if (!roomId) return;
+    if (!roomId || !userName) {
+      console.log('[STORAGE] Cannot save votes: missing roomId or userName');
+      return;
+    }
     
-    // Use username for the storage key to persist across sessions
-    // This is more reliable than socket.id which changes between sessions
-    const storageKey = `poker_votes_${roomId}_${userName}`;
+    // Create a unique key for this user and room that will stay consistent
+    // even after login/logout cycles
+    const storageKey = `poker_votes_${roomId}_${userName.toLowerCase().trim()}`;
     
     // Store both votes and revealed state
     const dataToStore = {
       votesPerStory,
       votesRevealed,
       username: userName,
-      lastUpdated: new Date().toISOString(),
-      currentStoryIndex: currentStoryIndex
+      timestamp: Date.now(),
+      currentStoryIndex: currentStoryIndex,
+      userSocketId: socket ? socket.id : null
     };
     
-    // Save to localStorage
-    localStorage.setItem(storageKey, JSON.stringify(dataToStore));
-    console.log('[STORAGE] Votes saved to local storage for user', userName);
+    // Save to localStorage with more detailed logging
+    const serialized = JSON.stringify(dataToStore);
+    localStorage.setItem(storageKey, serialized);
+    console.log(`[STORAGE] Votes saved to localStorage (key: ${storageKey}, size: ${serialized.length} bytes)`);
+    
+    // Debug output to verify what's being saved
+    const voteCounts = {};
+    Object.keys(votesPerStory).forEach(storyIdx => {
+      voteCounts[storyIdx] = Object.keys(votesPerStory[storyIdx]).length;
+    });
+    console.log('[STORAGE] Saved vote counts by story:', voteCounts);
+    
   } catch (e) {
     console.error('[STORAGE] Error saving votes to localStorage:', e);
   }
 }
 
 /**
- * Load votes from local storage
+ * Load votes from local storage with better error handling
+ * @returns {boolean} Whether votes were loaded successfully
  */
 function loadVotesFromLocalStorage() {
   try {
@@ -161,72 +175,144 @@ function loadVotesFromLocalStorage() {
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('roomId');
     
-    if (!roomId || !userName) return false;
-    
-    // Use username for the storage key
-    const storageKey = `poker_votes_${roomId}_${userName}`;
-    
-    // Retrieve from localStorage
-    const storedData = localStorage.getItem(storageKey);
-    if (!storedData) return false;
-    
-    const parsedData = JSON.parse(storedData);
-    
-    // Check if the stored data is for the current user
-    if (parsedData.username === userName) {
-      console.log('[STORAGE] Found stored votes for user', userName);
-      
-      // Restore the vote data
-      if (parsedData.votesPerStory) {
-        votesPerStory = parsedData.votesPerStory;
-      }
-      
-      if (parsedData.votesRevealed) {
-        votesRevealed = parsedData.votesRevealed;
-      }
-      
-      // Restore the story index (but don't select it yet - we'll do that after UI is set up)
-      if (typeof parsedData.currentStoryIndex === 'number') {
-        pendingStoryIndex = parsedData.currentStoryIndex;
-      }
-      
-      console.log('[STORAGE] Votes loaded from local storage');
-      return true;
+    if (!roomId || !userName) {
+      console.log('[STORAGE] Cannot load votes: missing roomId or userName');
+      return false;
     }
     
-    return false;
+    // Create the same key pattern for consistency
+    const storageKey = `poker_votes_${roomId}_${userName.toLowerCase().trim()}`;
+    
+    // Retrieve from localStorage with detailed logging
+    const storedData = localStorage.getItem(storageKey);
+    if (!storedData) {
+      console.log(`[STORAGE] No saved votes found for key: ${storageKey}`);
+      return false;
+    }
+    
+    // Parse the stored data
+    const parsedData = JSON.parse(storedData);
+    console.log(`[STORAGE] Found stored data:`, {
+      username: parsedData.username,
+      timestamp: new Date(parsedData.timestamp).toLocaleString(),
+      storyIndex: parsedData.currentStoryIndex,
+      storyCount: parsedData.votesPerStory ? Object.keys(parsedData.votesPerStory).length : 0
+    });
+    
+    // Validate the stored data - check if username matches (case insensitive)
+    if (parsedData.username && 
+        parsedData.username.toLowerCase().trim() === userName.toLowerCase().trim()) {
+      
+      console.log('[STORAGE] Username match confirmed, restoring data');
+      
+      // Restore votes data
+      if (parsedData.votesPerStory) {
+        votesPerStory = parsedData.votesPerStory;
+        
+        // Debug output to verify what's being loaded
+        const voteCounts = {};
+        Object.keys(votesPerStory).forEach(storyIdx => {
+          voteCounts[storyIdx] = Object.keys(votesPerStory[storyIdx]).length;
+        });
+        console.log('[STORAGE] Loaded vote counts by story:', voteCounts);
+      }
+      
+      // Restore revealed states
+      if (parsedData.votesRevealed) {
+        votesRevealed = parsedData.votesRevealed;
+        console.log('[STORAGE] Restored revealed states:', votesRevealed);
+      }
+      
+      // Restore story index
+      if (typeof parsedData.currentStoryIndex === 'number') {
+        pendingStoryIndex = parsedData.currentStoryIndex;
+        console.log('[STORAGE] Will restore story index:', pendingStoryIndex);
+      }
+      
+      return true;
+    } else {
+      console.log('[STORAGE] Username mismatch - stored:', 
+                  parsedData.username, 'current:', userName);
+      return false;
+    }
   } catch (e) {
     console.error('[STORAGE] Error loading votes from localStorage:', e);
     return false;
   }
 }
 
+
 /**
  * Sync local votes to the server
  */
+
 function syncLocalVotesToServer() {
-  if (!socket || !socket.connected) return;
+  if (!socket || !socket.connected) {
+    console.log('[SYNC] Cannot sync votes: socket not connected');
+    return;
+  }
   
   // Get current user ID
   const userId = socket.id;
-  if (!userId) return;
+  if (!userId) {
+    console.log('[SYNC] Cannot sync votes: no socket ID available');
+    return;
+  }
+  
+  console.log(`[SYNC] Starting vote sync with server using socket ID: ${userId}`);
+  
+  // Track if we actually synced anything
+  let syncedVotes = 0;
   
   // Go through all story votes
   Object.entries(votesPerStory).forEach(([storyIndex, votes]) => {
-    // Check if we have a vote for this story
-    const myVote = votes[userId];
-    if (myVote) {
-      console.log(`[SYNC] Sending saved vote for story ${storyIndex}: ${myVote}`);
+    // We need to use the current socket.id to cast votes now
+    // Look through the votes for an entry that matches this user
+    let myOldVote = null;
+    
+    // First, try to find a vote from the current socket ID
+    if (votes[userId]) {
+      myOldVote = votes[userId];
+    } else {
+      // Then look for votes from the user's name
+      // This is critical for restoring votes after login/logout
+      for (const [voterIdKey, voteValue] of Object.entries(votes)) {
+        // Skip if this isn't a vote key
+        if (typeof voteValue !== 'string') continue;
+        
+        // We found a vote that might be this user's
+        myOldVote = voteValue;
+        
+        // Update the vote key to use the current socket ID
+        delete votes[voterIdKey];
+        votes[userId] = voteValue;
+        break;
+      }
+    }
+    
+    // If we found a vote for the current user
+    if (myOldVote) {
+      console.log(`[SYNC] Sending saved vote for story ${storyIndex}: ${myOldVote}`);
       
       // Emit to server
       socket.emit('castVote', {
-        vote: myVote,
+        vote: myOldVote,
         targetUserId: userId,
         storyIndex: parseInt(storyIndex)
       });
+      
+      syncedVotes++;
     }
   });
+  
+  console.log(`[SYNC] Completed vote sync with server: ${syncedVotes} votes synced`);
+  
+  // Update local storage after syncing to reflect new socket ID
+  if (syncedVotes > 0) {
+    saveVotesToLocalStorage();
+  }
 }
+
 
 // Adding this function to main.js to be called whenever votes are revealed
 function fixRevealedVoteFontSizes() {
@@ -505,6 +591,11 @@ function appendRoomIdToURL(roomId) {
  * Initialize the application
  */
 function initializeApp(roomId) {
+  // Test localStorage functionality first
+  const storageWorks = testLocalStorage();
+  if (!storageWorks) {
+    console.warn('[INIT] Vote persistence will be unavailable due to localStorage issues');
+  }
   // Try to load saved votes first - needs to happen early
   const votesLoaded = loadVotesFromLocalStorage();
   console.log(`[INIT] Votes loaded from storage: ${votesLoaded}`);
@@ -2465,16 +2556,25 @@ function handleSocketMessage(message) {
     case 'voteReceived':
     case 'voteUpdate':
       // Handle vote received
-      if (message.userId && message.vote) {
-        if (!votesPerStory[currentStoryIndex]) {
-          votesPerStory[currentStoryIndex] = {};
-        }
-        votesPerStory[currentStoryIndex][message.userId] = message.vote;
-        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
-        
-        // Save to local storage when votes change
-        saveVotesToLocalStorage();
-      }
+     if (message.userId && message.vote && message.storyIndex !== undefined) {
+    // Make sure we have a votes object for this story
+    if (!votesPerStory[message.storyIndex]) {
+      votesPerStory[message.storyIndex] = {};
+    }
+    
+    // Store the vote
+    votesPerStory[message.storyIndex][message.userId] = message.vote;
+    
+    // Update UI if this is the current story
+    if (message.storyIndex == currentStoryIndex) {
+      updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
+    }
+    
+    // Save to local storage when votes change
+    saveVotesToLocalStorage();
+  } else {
+    console.warn('[VOTE] Received incomplete vote data:', message);
+  }
       break;
 
     case 'deleteStory':
@@ -2700,6 +2800,29 @@ function handleSocketMessage(message) {
   }
 }
 
+/**
+ * Test if localStorage is available and working
+ */
+function testLocalStorage() {
+  try {
+    const testKey = 'poker_storage_test';
+    localStorage.setItem(testKey, 'test');
+    const testValue = localStorage.getItem(testKey);
+    localStorage.removeItem(testKey);
+    
+    const isWorking = testValue === 'test';
+    console.log(`[STORAGE] localStorage ${isWorking ? 'is working' : 'is NOT working'}`);
+    
+    if (!isWorking) {
+      console.error('[STORAGE] Vote persistence will not work without localStorage');
+    }
+    
+    return isWorking;
+  } catch (e) {
+    console.error('[STORAGE] localStorage test failed:', e);
+    return false;
+  }
+}
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
   let roomId = getRoomIdFromURL();
