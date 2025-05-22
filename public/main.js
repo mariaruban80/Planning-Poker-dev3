@@ -2,7 +2,7 @@
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
 // Import socket functionality
-import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket } from './socket.js'; 
+import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, requestUserList } from './socket.js'; 
 
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
@@ -88,6 +88,9 @@ window.initializeSocketWithName = function(roomId, name) {
   
   // Add CSS for new layout
   addNewLayoutStyles();
+  
+  // Check and fix central UI components
+  setTimeout(checkAndFixCentralUI, 500);
 };
 
 // Modify the existing DOMContentLoaded event handler to check if username is ready
@@ -607,6 +610,79 @@ function appendRoomIdToURL(roomId) {
 }
 
 /**
+ * Check and fix central UI components
+ */
+function checkAndFixCentralUI() {
+  console.log('[UI] Checking and fixing central UI components');
+  
+  const userCircleContainer = document.getElementById('userCircle');
+  if (!userCircleContainer) {
+    console.error('[UI] User circle container not found');
+    return;
+  }
+  
+  // Check if avatar row exists
+  let avatarRow = userCircleContainer.querySelector('.avatar-row');
+  if (!avatarRow) {
+    console.log('[UI] Creating missing avatar row');
+    avatarRow = document.createElement('div');
+    avatarRow.className = 'avatar-row';
+    userCircleContainer.prepend(avatarRow);
+  }
+  
+  // Check if vote row exists
+  let voteRow = userCircleContainer.querySelector('.vote-row');
+  if (!voteRow) {
+    console.log('[UI] Creating missing vote row');
+    voteRow = document.createElement('div');
+    voteRow.className = 'vote-row';
+    if (avatarRow.nextSibling) {
+      userCircleContainer.insertBefore(voteRow, avatarRow.nextSibling);
+    } else {
+      userCircleContainer.appendChild(voteRow);
+    }
+  }
+  
+  // Check if reveal button container exists
+  if (!userCircleContainer.querySelector('.reveal-button-container')) {
+    console.log('[UI] Creating missing reveal button');
+    const revealButtonContainer = document.createElement('div');
+    revealButtonContainer.className = 'reveal-button-container';
+    
+    const revealButton = document.createElement('button');
+    revealButton.className = 'reveal-votes-button';
+    revealButton.textContent = 'Reveal Votes';
+    revealButton.onclick = function() {
+      if (socket && currentStoryId) {
+        socket.emit('revealVotes', { storyId: currentStoryId });
+      }
+    };
+    
+    // Only show reveal button for hosts
+    if (!isGuestUser()) {
+      revealButtonContainer.appendChild(revealButton);
+    }
+    
+    userCircleContainer.appendChild(revealButtonContainer);
+  }
+  
+  // Request user list update if needed
+  if (socket && socket.connected) {
+    const avatars = avatarRow.querySelectorAll('.avatar-container');
+    if (avatars.length === 0) {
+      console.log('[UI] No avatars found, requesting user list update');
+      if (typeof requestUserList === 'function') {
+        requestUserList();
+      } else {
+        socket.emit('requestUserList');
+      }
+    }
+  }
+  
+  console.log('[UI] Central UI check complete');
+}
+
+/**
  * Initialize the application
  */
 function initializeApp(roomId) {
@@ -669,7 +745,6 @@ function initializeApp(roomId) {
     socket.emit('votingSystemSelected', { roomId, votingSystem });
   }
 
- // updateHeaderStyle();
   addFixedVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
@@ -724,9 +799,10 @@ function initializeApp(roomId) {
   window.addEventListener('beforeunload', () => {
     saveVotesToLocalStorage();
   });
+  
+  // Check and fix central UI components
+  setTimeout(checkAndFixCentralUI, 500);
 }
-
-
 
 /**
  * Add CSS styles for the new layout
@@ -1531,10 +1607,6 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   normalizeStoryIndexes();
 }
 
-
-
-
-
 /**
  * Set up a mutation observer to catch any newly added story cards
  */
@@ -1680,7 +1752,6 @@ function setupRevealResetButtons() {
 /**
  * Setup CSV file uploader
  */
-
 function setupCSVUploader() {
   const csvInput = document.getElementById('csvInput');
   if (!csvInput) return;
@@ -1695,7 +1766,7 @@ function setupCSVUploader() {
       const storyList = document.getElementById('storyList');
       const existingTickets = [];
       
-      if (storyList) {
+            if (storyList) {
         const manualTickets = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
         manualTickets.forEach(card => {
           const title = card.querySelector('.story-title');
@@ -1767,7 +1838,6 @@ function setupCSVUploader() {
     reader.readAsText(file);
   });
 }
-
 
 /**
  * Parse CSV text into array structure
@@ -2004,6 +2074,9 @@ function selectStory(storyId, emitToServer = true) {
     // Render and update votes for the current story
     renderCurrentStory();
     resetOrRestoreVotes(currentStoryId);
+    
+    // Check and fix the central UI
+    setTimeout(checkAndFixCentralUI, 100);
 
     if (emitToServer && socket) {
         // Notify server about selection
@@ -2011,8 +2084,6 @@ function selectStory(storyId, emitToServer = true) {
         requestStoryVotes(storyId);
     }
 }
-
-
 
 /**
  * Reset or restore votes for a story by ID
@@ -2032,20 +2103,14 @@ function resetOrRestoreVotes(storyId) {
   }
 }
 
-
-
 /**
  * Apply votes to UI
  */
 function applyVotesToUI(votes, hideValues) {
-    // Determine display value based on the current story only
-    const displayVote = votesRevealed[currentStoryId] ? vote : '👍';
-
     Object.entries(votes).forEach(([userId, vote]) => {
         updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
     });
 }
-
 
 /**
  * Reset all vote visuals
@@ -2094,200 +2159,210 @@ function updateUserList(users) {
     const userListContainer = document.getElementById('userList');
     const userCircleContainer = document.getElementById('userCircle');
 
-    if (!userListContainer || !userCircleContainer) return;
+    if (!userListContainer || !userCircleContainer) {
+        console.error('[UI] Missing user list containers');
+        return;
+    }
 
+    console.log(`[UI] Updating user list with ${users.length} users`);
+    
+    // Clear existing content
     userListContainer.innerHTML = '';
     userCircleContainer.innerHTML = '';
 
+    // Get current user ID
     const currentUserId = socket ? socket.id : null;
 
+    // Create avatar row
+    const avatarRow = document.createElement('div');
+    avatarRow.className = 'avatar-row';
+    userCircleContainer.appendChild(avatarRow);
+
+    // Create vote row
+    const voteRow = document.createElement('div');
+    voteRow.className = 'vote-row';
+    userCircleContainer.appendChild(voteRow);
+
+    // Add users to both sidebar and center display
     users.forEach(user => {
+        // Add to sidebar
         const userEntry = document.createElement('div');
-        userEntry.classList.add('user-entry');
+        userEntry.className = 'user-entry';
         userEntry.id = `user-${user.id}`;
         userEntry.innerHTML = `
             <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
             <span class="username">${user.name}</span>
-            <span class="vote-badge"></span> 
+            <span class="vote-badge"></span>
         `;
         userListContainer.appendChild(userEntry);
+
+        // Add avatar to center display
+        const isCurrentUser = (user.id === currentUserId);
+        const avatarContainer = document.createElement('div');
+        avatarContainer.className = 'avatar-container';
+        avatarContainer.id = `user-circle-${user.id}`;
+        avatarContainer.setAttribute('data-user-id', user.id);
+        avatarContainer.innerHTML = `
+            <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}">
+            <div class="user-name">${user.name}</div>
+        `;
+        avatarRow.appendChild(avatarContainer);
+
+        // Add vote card space to center display
+        const voteCard = document.createElement('div');
+        voteCard.className = 'vote-card-space';
+        if (isCurrentUser) {
+            voteCard.classList.add('own-vote-space');
+        }
+        voteCard.id = `vote-space-${user.id}`;
+        
+        // Add vote badge inside the card space
+        const voteBadge = document.createElement('span');
+        voteBadge.className = 'vote-badge';
+        voteBadge.textContent = '';
+        voteCard.appendChild(voteBadge);
+        
+        // Only allow drops on own vote space
+        if (isCurrentUser) {
+            voteCard.addEventListener('dragover', (e) => e.preventDefault());
+            voteCard.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const vote = e.dataTransfer.getData('text/plain');
+                
+                if (socket && vote && currentStoryId) {
+                    socket.emit('castVote', { vote, targetUserId: user.id, storyId: currentStoryId });
+                }
+                
+                // Store vote locally
+                if (!votesPerStory[currentStoryId]) {
+                    votesPerStory[currentStoryId] = {};
+                }
+                votesPerStory[currentStoryId][user.id] = vote;
+                
+                // Update UI - show checkmark if votes aren't revealed
+                updateVoteVisuals(user.id, votesRevealed[currentStoryId] ? vote : '👍', true);
+            });
+        } else {
+            // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
+            voteCard.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                voteCard.classList.add('drop-not-allowed');
+                setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
+            });
+        }
+        
+        voteRow.appendChild(voteCard);
     });
 
-    // (Rest of your existing updateUserList function to create avatar/vote displays...)
-
-    // This part IS important for vote and story synchronization
-    if (!hasRequestedTickets && users.length > 0 && socket && socket.connected) {
-        setTimeout(() => {
-            console.log('[INFO] Requesting all tickets after user list update.');
-            socket.emit('requestAllTickets'); // Need to request tickets after getting user list
-            hasRequestedTickets = true;
-
-            // Request the current story from server
-            console.log('[SOCKET] Requesting current story from server...');
-            socket.emit('requestCurrentStory');
-        }, 500);
+    // Add reveal button container if it doesn't exist
+    if (!document.querySelector('.reveal-button-container') && !isGuestUser()) {
+        const revealButtonContainer = document.createElement('div');
+        revealButtonContainer.className = 'reveal-button-container';
+        
+        const revealButton = document.createElement('button');
+        revealButton.className = 'reveal-votes-button';
+        revealButton.textContent = 'Reveal Votes';
+        revealButton.onclick = function() {
+            if (socket && currentStoryId) {
+                socket.emit('revealVotes', { storyId: currentStoryId });
+            }
+        };
+        
+        revealButtonContainer.appendChild(revealButton);
+        userCircleContainer.appendChild(revealButtonContainer);
     }
 
-    // Existing vote application logic if needed:
-    if (votesPerStory[currentStoryId]) {
+    // Apply any existing votes for the current story
+    if (currentStoryId && votesPerStory[currentStoryId]) {
         const votes = votesPerStory[currentStoryId];
-        const reveal = votesRevealed[currentStoryId];
-        applyVotesToUI(votes, !reveal);
-        if (reveal) {
-            setTimeout(() => handleVotesRevealed(currentStoryId, votes), 200);
+        const revealed = votesRevealed[currentStoryId];
+        
+        Object.entries(votes).forEach(([userId, vote]) => {
+            updateVoteVisuals(userId, revealed ? vote : '👍', true);
+        });
+        
+        if (revealed) {
+            // If votes are revealed, show statistics
+            setTimeout(() => handleVotesRevealed(currentStoryId, votes), 100);
+        }
+    }
+
+    // Request tickets and current story if needed
+    if (users.length > 0 && socket && socket.connected) {
+        if (!hasRequestedTickets) {
+            console.log('[INFO] Requesting all tickets after user list update');
+            socket.emit('requestAllTickets');
+            hasRequestedTickets = true;
+            
+            // Also request current story
+            console.log('[SOCKET] Requesting current story from server...');
+            socket.emit('requestCurrentStory');
         }
     }
 }
 
 /**
- * Create avatar container for a user
- */
-function createAvatarContainer(user) {
-    const avatarContainer = document.createElement('div');
-  avatarContainer.classList.add('avatar-container');
-  avatarContainer.id = `user-circle-${user.id}`;
-
-  avatarContainer.innerHTML = `
-    <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
-    <div class="user-name">${user.name}</div>
-  `;
-  
-  avatarContainer.setAttribute('data-user-id', user.id);
-  
-  // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryId]?.[user.id];
-  if (existingVote) {
-    avatarContainer.classList.add('has-voted');
-  }
-  
-  return avatarContainer;
-
-}
-
-
-/**
- * Create vote card space for a user
- */
-function createVoteCardSpace(user, isCurrentUser) {
-     const voteCard = document.createElement('div');
-  voteCard.classList.add('vote-card-space');
-  voteCard.id = `vote-space-${user.id}`;
-  
-  // Add visual indication if this is current user's vote space
-  if (isCurrentUser) {
-    voteCard.classList.add('own-vote-space');
-  }
-  
-  // Add vote badge inside the card space
-  const voteBadge = document.createElement('span');
-  voteBadge.classList.add('vote-badge');
-  voteBadge.textContent = '';
-  voteCard.appendChild(voteBadge);
-  
-  // Only allow drops on own vote space
-  if (isCurrentUser) {
-    voteCard.addEventListener('dragover', (e) => e.preventDefault());
-    voteCard.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const vote = e.dataTransfer.getData('text/plain');
-      const userId = user.id;
-
-      if (socket && vote) {
-        socket.emit('castVote', { vote, targetUserId: userId });
-      }
-
-      // Store vote locally
-      if (!votesPerStory[currentStoryIndex]) {
-        votesPerStory[currentStoryIndex] = {};
-      }
-      votesPerStory[currentStoryIndex][userId] = vote;
-      
-      // Update UI - show checkmark if votes aren't revealed
-      updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
-    });
-  } else {
-    // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
-    voteCard.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      voteCard.classList.add('drop-not-allowed');
-      setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
-    });
-  }
-  
-  // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
-  if (existingVote) {
-    voteCard.classList.add('has-vote');
-    voteBadge.textContent = votesRevealed[currentStoryIndex] ? existingVote : '👍';
-  }
-  
-  return voteCard;
-}
-
-
-/**
  * Update vote visuals for a user
  */
 function updateVoteVisuals(userId, vote, hasVoted = false) {
- const displayVote = votesRevealed[currentStoryId] ? vote : '👍';
+    // Use currentStoryId instead of currentStoryIndex
+    const displayVote = votesRevealed[currentStoryId] ? vote : '👍';
   
-  // Update badges in sidebar
-  const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
-  if (sidebarBadge) {
-    // Only set content if the user has voted
-    if (hasVoted) {
-      sidebarBadge.textContent = displayVote;
-      sidebarBadge.style.color = '#673ab7';
-      sidebarBadge.style.opacity = '1';
-    } else {
-      sidebarBadge.textContent = '';
+    // Update badges in sidebar
+    const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
+    if (sidebarBadge) {
+        // Only set content if the user has voted
+        if (hasVoted) {
+            sidebarBadge.textContent = displayVote;
+            sidebarBadge.style.color = '#673ab7'; // Make sure the text has a visible color
+            sidebarBadge.style.opacity = '1'; // Ensure full opacity
+        } else {
+            sidebarBadge.textContent = ''; // Empty if no vote
+        }
     }
-  }
   
-  // Update vote card space
-  const voteSpace = document.querySelector(`#vote-space-${userId}`);
-  if (voteSpace) {
-    const voteBadge = voteSpace.querySelector('.vote-badge');
-    if (voteBadge) {
-      // Only show vote if they've voted
-      if (hasVoted) {
-        voteBadge.textContent = displayVote;
-        voteBadge.style.color = '#673ab7'; // Make sure the text has a visible color
-        voteBadge.style.opacity = '1'; // Ensure full opacity
-      } else {
-        voteBadge.textContent = ''; // Empty if no vote
-      }
-    }
+    // Update vote card space
+    const voteSpace = document.querySelector(`#vote-space-${userId}`);
+    if (voteSpace) {
+        const voteBadge = voteSpace.querySelector('.vote-badge');
+        if (voteBadge) {
+            // Only show vote if they've voted
+            if (hasVoted) {
+                voteBadge.textContent = displayVote;
+                voteBadge.style.color = '#673ab7'; // Make sure the text has a visible color
+                voteBadge.style.opacity = '1'; // Ensure full opacity
+            } else {
+                voteBadge.textContent = ''; // Empty if no vote
+            }
+        }
     
-    // Update vote space class
-    if (hasVoted) {
-      voteSpace.classList.add('has-vote');
-    } else {
-      voteSpace.classList.remove('has-vote');
+        // Update vote space class
+        if (hasVoted) {
+            voteSpace.classList.add('has-vote');
+        } else {
+            voteSpace.classList.remove('has-vote');
+        }
     }
-  }
 
-  // Update avatar to show they've voted
-  if (hasVoted) {
-    const avatarContainer = document.querySelector(`#user-circle-${userId}`);
-    if (avatarContainer) {
-      avatarContainer.classList.add('has-voted');
+    // Update avatar to show they've voted
+    if (hasVoted) {
+        const avatarContainer = document.querySelector(`#user-circle-${userId}`);
+        if (avatarContainer) {
+            avatarContainer.classList.add('has-voted');
       
-      const avatar = avatarContainer.querySelector('.avatar-circle');
-      if (avatar) {
-        avatar.style.backgroundColor = '#c1e1c1'; // Green background
-      }
-    }
+            const avatar = avatarContainer.querySelector('.avatar-circle');
+            if (avatar) {
+                avatar.style.backgroundColor = '#c1e1c1'; // Green background
+            }
+        }
     
-    // Also update sidebar avatar
-    const sidebarAvatar = document.querySelector(`#user-${userId} img.avatar`);
-    if (sidebarAvatar) {
-      sidebarAvatar.style.backgroundColor = '#c1e1c1';
+        // Also update sidebar avatar
+        const sidebarAvatar = document.querySelector(`#user-${userId} img.avatar`);
+        if (sidebarAvatar) {
+            sidebarAvatar.style.backgroundColor = '#c1e1c1';
+        }
     }
-  }
 }
-
-
 
 /**
  * Update story title
@@ -2301,101 +2376,95 @@ function updateStory(story) {
  * Setup story navigation
  */
 function setupStoryNavigation() {
-  const nextButton = document.getElementById('nextStory');
-  const prevButton = document.getElementById('prevStory');
+    const nextButton = document.getElementById('nextStory');
+    const prevButton = document.getElementById('prevStory');
 
-  if (!nextButton || !prevButton) return;
-  
-  // Disable for non-hosts
-  const isHost = sessionStorage.getItem('isHost') === 'true';
-  if (!isHost) {
-    nextButton.disabled = true;
-    prevButton.disabled = true;
-    nextButton.classList.add('disabled-nav');
-    prevButton.classList.add('disabled-nav');
-    return;
-  }
-  
-  // Prevent multiple event listeners
-  nextButton.replaceWith(nextButton.cloneNode(true));
-  prevButton.replaceWith(prevButton.cloneNode(true));
+    if (!nextButton || !prevButton) return;
+    
+    // Disable for non-hosts
+    const isHost = sessionStorage.getItem('isHost') === 'true';
+    if (!isHost) {
+        nextButton.disabled = true;
+        prevButton.disabled = true;
+        nextButton.classList.add('disabled-nav');
+        prevButton.classList.add('disabled-nav');
+        return;
+    }
+    
+    // Prevent multiple event listeners
+    nextButton.replaceWith(nextButton.cloneNode(true));
+    prevButton.replaceWith(prevButton.cloneNode(true));
 
-  const newNextButton = document.getElementById('nextStory');
-  const newPrevButton = document.getElementById('prevStory');
+    const newNextButton = document.getElementById('nextStory');
+    const newPrevButton = document.getElementById('prevStory');
 
-  function getOrderedCardIds() {
-    return [...document.querySelectorAll('.story-card')].map(card => card.id);
-  }
+    function getOrderedCardIds() {
+        return [...document.querySelectorAll('.story-card')].map(card => card.id);
+    }
 
-  function getCurrentCardIndex() {
-    const cardIds = getOrderedCardIds();
-    return cardIds.indexOf(currentStoryId);
-  }
+    function getCurrentCardIndex() {
+        const cardIds = getOrderedCardIds();
+        return cardIds.indexOf(currentStoryId);
+    }
 
-  newNextButton.addEventListener('click', () => {
-    const cardIds = getOrderedCardIds();
-    if (cardIds.length === 0) return;
+    newNextButton.addEventListener('click', () => {
+        const cardIds = getOrderedCardIds();
+        if (cardIds.length === 0) return;
 
-    const currentIndex = getCurrentCardIndex();
-    const nextIndex = (currentIndex + 1) % cardIds.length;
+        const currentIndex = getCurrentCardIndex();
+        const nextIndex = (currentIndex + 1) % cardIds.length;
 
-    console.log(`[NAV] Next from ${currentIndex} → ${nextIndex} (${cardIds[nextIndex]})`);
-    selectStory(cardIds[nextIndex]); // Use ID instead of index
-  });
+        console.log(`[NAV] Next from ${currentIndex} → ${nextIndex} (${cardIds[nextIndex]})`);
+        selectStory(cardIds[nextIndex]); // Use ID instead of index
+    });
 
-  newPrevButton.addEventListener('click', () => {
-    const cardIds = getOrderedCardIds();
-    if (cardIds.length === 0) return;
+    newPrevButton.addEventListener('click', () => {
+        const cardIds = getOrderedCardIds();
+        if (cardIds.length === 0) return;
 
-    const currentIndex = getCurrentCardIndex();
-    const prevIndex = (currentIndex - 1 + cardIds.length) % cardIds.length;
+        const currentIndex = getCurrentCardIndex();
+        const prevIndex = (currentIndex - 1 + cardIds.length) % cardIds.length;
 
-    console.log(`[NAV] Previous from ${currentIndex} → ${prevIndex} (${cardIds[prevIndex]})`);
-    selectStory(cardIds[prevIndex]); // Use ID instead of index
-  });
+        console.log(`[NAV] Previous from ${currentIndex} → ${prevIndex} (${cardIds[prevIndex]})`);
+        selectStory(cardIds[prevIndex]); // Use ID instead of index
+    });
 }
-
-
-
 
 /**
  * Set up story card interactions based on user role
  */
 function setupStoryCardInteractions() {
     // Check if user is a guest (joined via shared URL)
-  const isGuest = isGuestUser();
-  
-  // Select all story cards
-  const storyCards = document.querySelectorAll('.story-card');
-  
-  storyCards.forEach(card => {
-    if (isGuest) {
-      // For guests: disable clicking and add visual indicator
-      card.classList.add('disabled-story');
-      
-      // Remove any existing click handlers by cloning and replacing
-      const newCard = card.cloneNode(true);
-      if (card.parentNode) {
-        card.parentNode.replaceChild(newCard, card);
-      }
-    } else {
-      // For hosts: maintain normal selection behavior
-      // Remove existing handlers first to prevent duplicates
-      const newCard = card.cloneNode(true);
-      if (card.parentNode) {
-        card.parentNode.replaceChild(newCard, card);
-      
-        // Add fresh click event listener
-        newCard.addEventListener('click', () => {
-          const index = parseInt(newCard.dataset.index || 0);
-          selectStory(index);
-        });
-      }
-    }
-  });
+    const isGuest = isGuestUser();
+    
+    // Select all story cards
+    const storyCards = document.querySelectorAll('.story-card');
+    
+    storyCards.forEach(card => {
+        if (isGuest) {
+            // For guests: disable clicking and add visual indicator
+            card.classList.add('disabled-story');
+            
+            // Remove any existing click handlers by cloning and replacing
+            const newCard = card.cloneNode(true);
+            if (card.parentNode) {
+                card.parentNode.replaceChild(newCard, card);
+            }
+        } else {
+            // For hosts: maintain normal selection behavior
+            // Remove existing handlers first to prevent duplicates
+            const newCard = card.cloneNode(true);
+            if (card.parentNode) {
+                card.parentNode.replaceChild(newCard, card);
+            
+                // Add fresh click event listener
+                newCard.addEventListener('click', () => {
+                    selectStory(newCard.id);
+                });
+            }
+        }
+    });
 }
-
-
 
 /**
  * Generate avatar URL
@@ -2409,70 +2478,65 @@ function generateAvatarUrl(name) {
  */
 function setupInviteButton() {
     const inviteButton = document.getElementById('inviteButton');
-  if (!inviteButton) return;
+    if (!inviteButton) return;
 
-  inviteButton.onclick = () => {
-    // Check if the custom function exists in window scope
-    if (typeof window.showInviteModalCustom === 'function') {
-      window.showInviteModalCustom();
-    } else if (typeof showInviteModalCustom === 'function') {
-      showInviteModalCustom();
-    } else {
-      // Fallback if function isn't available
-      const currentUrl = new URL(window.location.href);
-      const params = new URLSearchParams(currentUrl.search);
-      const roomId = params.get('roomId') || getRoomIdFromURL();
-      
-      // Create guest URL (remove any host parameter)
-      const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
-      
-      alert(`Share this invite link: ${guestUrl}`);
-    }
-  };
+    inviteButton.onclick = () => {
+        // Check if the custom function exists in window scope
+        if (typeof window.showInviteModalCustom === 'function') {
+            window.showInviteModalCustom();
+        } else if (typeof showInviteModalCustom === 'function') {
+            showInviteModalCustom();
+        } else {
+            // Fallback if function isn't available
+            const currentUrl = new URL(window.location.href);
+            const params = new URLSearchParams(currentUrl.search);
+            const roomId = params.get('roomId') || getRoomIdFromURL();
+            
+            // Create guest URL (remove any host parameter)
+            const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
+            
+            alert(`Share this invite link: ${guestUrl}`);
+        }
+    };
 }
-
 
 /**
  * Setup vote cards drag functionality
  */
 function setupVoteCardsDrag() {
     document.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', card.textContent.trim());
+        card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', card.textContent.trim());
+        });
     });
-  });
-
 }
-
 
 function triggerGlobalEmojiBurst() {
-  const emojis = ['😀', '✨', '😆', '😝', '😄', '😍'];
-  const container = document.body;
+    const emojis = ['😀', '✨', '😆', '😝', '😄', '😍'];
+    const container = document.body;
 
-  for (let i = 0; i < 20; i++) {
-    const burst = document.createElement('div');
-    burst.className = 'global-emoji-burst';
-    burst.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    for (let i = 0; i < 20; i++) {
+        const burst = document.createElement('div');
+        burst.className = 'global-emoji-burst';
+        burst.textContent = emojis[Math.floor(Math.random() * emojis.length)];
 
-    // Random position on screen
-    burst.style.left = `${Math.random() * 100}vw`;
-    burst.style.top = `${Math.random() * 100}vh`;
+        // Random position on screen
+        burst.style.left = `${Math.random() * 100}vw`;
+        burst.style.top = `${Math.random() * 100}vh`;
 
-    container.appendChild(burst);
+        container.appendChild(burst);
 
-    // Trigger animation
-    setTimeout(() => {
-      burst.classList.add('burst-go');
-    }, 10);
+        // Trigger animation
+        setTimeout(() => {
+            burst.classList.add('burst-go');
+        }, 10);
 
-    // Remove after animation
-    setTimeout(() => {
-      burst.remove();
-    }, 1200);
-  }
-
+        // Remove after animation
+        setTimeout(() => {
+            burst.remove();
+        }, 1200);
+    }
 }
-
 
 /**
  * Handle socket messages with improved state persistence
@@ -2480,264 +2544,283 @@ function triggerGlobalEmojiBurst() {
 function handleSocketMessage(message) {
     const eventType = message.type;
   
-  // console.log(`[SOCKET] Received ${eventType}:`, message);
+    // console.log(`[SOCKET] Received ${eventType}:`, message);
   
-  switch(eventType) {
-    case 'userList':
-      // Update the user list when server sends an updated list
-      if (Array.isArray(message.users)) {
-        updateUserList(message.users);
-      }
-      break;
-
-    case 'addTicket':
-      // Handle ticket added by another user
-      if (message.ticketData) {
-        console.log('[SOCKET] New ticket received:', message.ticketData);
-        // Add ticket to UI without selecting it (to avoid loops)
-        addTicketToUI(message.ticketData, false);
-        applyGuestRestrictions();
-      }
-      break;
-      
-    case 'votingSystemUpdate':
-      console.log('[DEBUG] Got voting system update:', message.votingSystem);
-      sessionStorage.setItem('votingSystem', message.votingSystem);
-      setupPlanningCards(); // Regenerate cards
-      break;
-
-    case 'allTickets':
-      // Handle receiving all tickets (used when joining a room)
-      if (Array.isArray(message.tickets)) {
-        console.log('[SOCKET] Received all tickets:', message.tickets.length);
-        processAllTickets(message.tickets);
-        applyGuestRestrictions();
-      }
-      break;
-      
-    case 'userJoined':
-      // Individual user joined - could update existing list
-      break;
-      
-    case 'userLeft':
-      // Handle user leaving
-      break;
-      
-    case 'voteReceived':
-    case 'voteUpdate':
-      // Handle vote received
-      if (message.userId && message.vote) {
-        if (!votesPerStory[currentStoryIndex]) {
-          votesPerStory[currentStoryIndex] = {};
-        }
-        votesPerStory[currentStoryIndex][message.userId] = message.vote;
-        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
-      }
-      break;
-
-    case 'deleteStory':
-      // Handle story deletion from another user
-      if (message.storyId) {
-        console.log('[SOCKET] Story deletion received:', message.storyId);
-        
-        // Get the story element
-        const storyCard = document.getElementById(message.storyId);
-        if (storyCard) {
-          // Get the index for potential reselection
-          const index = parseInt(storyCard.dataset.index);
-          
-          // Remove the story
-          storyCard.remove();
-          
-          // Renumber remaining stories
-          normalizeStoryIndexes();
-          
-          // If this was the current story, select another one
-          if (index === currentStoryIndex) {
-            const storyList = document.getElementById('storyList');
-            if (storyList && storyList.children.length > 0) {
-              const newIndex = Math.min(index, storyList.children.length - 1);
-              selectStory(newIndex, false); // Don't emit selection to avoid loops
+    switch(eventType) {
+        case 'userList':
+            // Update the user list when server sends an updated list
+            if (Array.isArray(message.users)) {
+                updateUserList(message.users);
             }
-          }
-          // Update card interactions after DOM changes
-          setupStoryCardInteractions();
-        }
-      }
-      break;
-      
-    case 'votesRevealed':
-      // Handle votes revealed with improved state persistence
-      if (typeof message.storyIndex === 'number') {
-        // First store the revealed state
-        votesRevealed[message.storyIndex] = true;
-        
-        // If this is the current story, update the UI
-        if (message.storyIndex === currentStoryIndex && votesPerStory[message.storyIndex]) {
-          handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
-        }
-        
-        // If we don't have votes for this story yet, request them
-        if (!votesPerStory[message.storyIndex] && socket && socket.connected) {
-          socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
-        }
-        
-        triggerGlobalEmojiBurst();
-      }
-      break;
-      
-    case 'votesReset':
-      // Handle votes reset
-      if (typeof message.storyIndex === 'number') {
-        // Clear votes for the specified story
-        if (votesPerStory[message.storyIndex]) {
-          votesPerStory[message.storyIndex] = {};
-        }
-        
-        // Reset revealed status
-        votesRevealed[message.storyIndex] = false;
-        
-        // Update UI if this is the current story
-        if (message.storyIndex === currentStoryIndex) {
-          resetAllVoteVisuals();
-          
-          // ✅ Hide vote statistics and show planning cards again
-          const planningCardsSection = document.querySelector('.planning-cards-section');
-          const statsContainer = document.querySelector('.vote-statistics-container');
-          
-          if (planningCardsSection) planningCardsSection.style.display = 'block';
-          if (statsContainer) statsContainer.style.display = 'none';
-        }
-      }
-      break;
+            break;
 
-    case 'storySelected':
-      if (typeof message.storyIndex === 'number') {
-        console.log('[SOCKET] Story selected from server:', message.storyIndex);
-        selectStory(message.storyIndex, false); // false to avoid re-emitting
-      }
-      break;
-      
-    case 'storyVotes':
-      // Handle received votes for a specific story with improved state persistence
-      if (message.storyIndex !== undefined && message.votes) {
-        // Store votes for this story
-        if (!votesPerStory[message.storyIndex]) {
-          votesPerStory[message.storyIndex] = {};
-        }
-        
-        // Update with received votes
-        Object.assign(votesPerStory[message.storyIndex], message.votes);
-        
-        // Update UI if this is the current story
-        if (message.storyIndex === currentStoryIndex) {
-          // If votes are revealed, show them; otherwise, just show that people voted
-          if (votesRevealed[message.storyIndex]) {
-            applyVotesToUI(message.votes, false);
-            handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
-          } else {
-            applyVotesToUI(message.votes, true);
-          }
-        }
-      }
-      break;
-      
-    case 'syncCSVData':
-      // Handle CSV data sync with improved state handling
-      if (Array.isArray(message.csvData)) {
-        console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
-        
-        // Store the CSV data
-        csvData = message.csvData;
-        csvDataLoaded = true;
-        
-        // Temporarily save manually added tickets to preserve them
-        const storyList = document.getElementById('storyList');
-        const manualTickets = [];
-        
-        if (storyList) {
-          const manualStoryCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
-          manualStoryCards.forEach(card => {
-            const title = card.querySelector('.story-title');
-            if (title) {
-              manualTickets.push({
-                id: card.id,
-                text: title.textContent
-              });
+        case 'addTicket':
+            // Handle ticket added by another user
+            if (message.ticketData) {
+                console.log('[SOCKET] New ticket received:', message.ticketData);
+                // Add ticket to UI without selecting it (to avoid loops)
+                addTicketToUI(message.ticketData, false);
+                applyGuestRestrictions();
             }
-          });
-        }
-        
-        console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
-        
-        // Display CSV data (this will clear CSV stories but preserve manual ones)
-        displayCSVData(csvData);
-        
-        // We don't need to re-add manual tickets because displayCSVData now preserves them
-        
-        // Update UI
-        renderCurrentStory();
-      }
-      break;
+            break;
+            
+        case 'votingSystemUpdate':
+            console.log('[DEBUG] Got voting system update:', message.votingSystem);
+            sessionStorage.setItem('votingSystem', message.votingSystem);
+            setupPlanningCards(); // Regenerate cards
+            break;
 
-    case 'connect':
-      // When connection is established
-      updateConnectionStatus('connected');
-      
-      // Request tickets and state after connection
-      setTimeout(() => {
-        if (socket && socket.connected) {
-          if (!hasRequestedTickets) {
-            console.log('[SOCKET] Connected, requesting all tickets');
-            socket.emit('requestAllTickets');
-            hasRequestedTickets = true;
-          }
-          
-          // Also request votes for current story
-          if (typeof currentStoryIndex === 'number') {
-            socket.emit('requestStoryVotes', { storyIndex: currentStoryIndex });
-          }
-        }
-      }, 500);
-      break;
-      
-    case 'reconnect_attempt':
-      // Show reconnecting status
-      updateConnectionStatus('reconnecting');
-      reconnectingInProgress = true;
-      break;
-      
-    case 'reconnect':
-      // Handle successful reconnection
-      updateConnectionStatus('connected');
-      reconnectingInProgress = false;
-      
-      // Request current state after reconnection
-      setTimeout(() => {
-        if (socket && socket.connected) {
-          // Request votes for current story
-          if (typeof currentStoryIndex === 'number') {
-            socket.emit('requestStoryVotes', { storyIndex: currentStoryIndex });
-          }
-          
-          // Request all tickets if we don't have them
-          if (!hasRequestedTickets) {
-            socket.emit('requestAllTickets');
-            hasRequestedTickets = true;
-          }
-        }
-      }, 500);
-      break;
-      
-    case 'error':
-      // Show connection error status
-      updateConnectionStatus('error');
-      break;
-  }
+        case 'allTickets':
+            // Handle receiving all tickets (used when joining a room)
+            if (Array.isArray(message.tickets)) {
+                console.log('[SOCKET] Received all tickets:', message.tickets.length);
+                processAllTickets(message.tickets);
+                applyGuestRestrictions();
+            }
+            break;
+            
+        case 'userJoined':
+            // Individual user joined - could update existing list
+            break;
+            
+        case 'userLeft':
+            // Handle user leaving
+            break;
+            
+        case 'voteReceived':
+        case 'voteUpdate':
+            // Handle vote received
+            if (message.userId && message.vote && message.storyId) {
+                if (!votesPerStory[message.storyId]) {
+                    votesPerStory[message.storyId] = {};
+                }
+                votesPerStory[message.storyId][message.userId] = message.vote;
+                
+                // Only update UI if this is for the current story
+                if (message.storyId === currentStoryId) {
+                    updateVoteVisuals(message.userId, votesRevealed[currentStoryId] ? message.vote : '👍', true);
+                }
+            }
+            break;
 
+        case 'deleteStory':
+            // Handle story deletion from another user
+            if (message.storyId) {
+                console.log('[SOCKET] Story deletion received:', message.storyId);
+                
+                // Get the story element
+                const storyCard = document.getElementById(message.storyId);
+                if (storyCard) {
+                    // Check if this was the current story
+                    const wasCurrentStory = (message.storyId === currentStoryId);
+                    
+                    // Remove the story
+                    storyCard.remove();
+                    
+                    // Renumber remaining stories
+                    normalizeStoryIndexes();
+                    
+                    // If this was the current story, select another one
+                    if (wasCurrentStory) {
+                        const storyList = document.getElementById('storyList');
+                        if (storyList && storyList.children.length > 0) {
+                            const firstStoryId = storyList.children[0].id;
+                            selectStory(firstStoryId, false); // Don't emit to avoid loops
+                        } else {
+                            // No stories left, reset currentStoryId
+                            currentStoryId = null;
+                        }
+                    }
+                    
+                    // Update card interactions after DOM changes
+                    setupStoryCardInteractions();
+                }
+            }
+            break;
+            
+        case 'votesRevealed':
+            // Handle votes revealed with improved state persistence
+            if (message.storyId) {
+                // First store the revealed state
+                votesRevealed[message.storyId] = true;
+                
+                // If this is the current story, update the UI
+                if (message.storyId === currentStoryId && votesPerStory[message.storyId]) {
+                    handleVotesRevealed(message.storyId, votesPerStory[message.storyId]);
+                }
+                
+                // If we don't have votes for this story yet, request them
+                if (!votesPerStory[message.storyId] && socket && socket.connected) {
+                    socket.emit('requestStoryVotes', { storyId: message.storyId });
+                }
+                
+                triggerGlobalEmojiBurst();
+            }
+            break;
+            
+        case 'votesReset':
+            // Handle votes reset
+            if (message.storyId) {
+                // Clear votes for the specified story
+                if (votesPerStory[message.storyId]) {
+                    votesPerStory[message.storyId] = {};
+                }
+                
+                // Reset revealed status
+                votesRevealed[message.storyId] = false;
+                
+                // Update UI if this is the current story
+                if (message.storyId === currentStoryId) {
+                    resetAllVoteVisuals();
+                    
+                    // Hide vote statistics and show planning cards again
+                    const planningCardsSection = document.querySelector('.planning-cards-section');
+                    const statsContainer = document.querySelector('.vote-statistics-container');
+                    
+                    if (planningCardsSection) planningCardsSection.style.display = 'block';
+                    if (statsContainer) statsContainer.style.display = 'none';
+                }
+            }
+            break;
+
+        case 'storySelected':
+            if (message.storyId) {
+                console.log('[SOCKET] Story selected from server:', message.storyId);
+                selectStory(message.storyId, false); // false to avoid re-emitting
+                // Fix the central UI after story selection
+                setTimeout(checkAndFixCentralUI, 100);
+            }
+            break;
+            
+        case 'storyVotes':
+            // Handle received votes for a specific story with improved state persistence
+            if (message.storyId && message.votes) {
+                // Store votes for this story
+                if (!votesPerStory[message.storyId]) {
+                    votesPerStory[message.storyId] = {};
+                }
+                
+                // Update with received votes
+                Object.assign(votesPerStory[message.storyId], message.votes);
+                
+                // Update UI if this is the current story
+                if (message.storyId === currentStoryId) {
+                    // If votes are revealed, show them; otherwise, just show that people voted
+                    if (votesRevealed[message.storyId]) {
+                        applyVotesToUI(message.votes, false);
+                        handleVotesRevealed(message.storyId, votesPerStory[message.storyId]);
+                    } else {
+                        applyVotesToUI(message.votes, true);
+                    }
+                }
+            }
+            break;
+            
+        case 'syncCSVData':
+            // Handle CSV data sync with improved state handling
+            if (Array.isArray(message.csvData)) {
+                console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
+                
+                // Store the CSV data
+                csvData = message.csvData;
+                csvDataLoaded = true;
+                
+                // Temporarily save manually added tickets to preserve them
+                const storyList = document.getElementById('storyList');
+                const manualTickets = [];
+                
+                if (storyList) {
+                    const manualStoryCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+                    manualStoryCards.forEach(card => {
+                        const title = card.querySelector('.story-title');
+                        if (title) {
+                            manualTickets.push({
+                                id: card.id,
+                                text: title.textContent
+                            });
+                        }
+                    });
+                }
+                
+                console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
+                
+                // Display CSV data (this will clear CSV stories but preserve manual ones)
+                displayCSVData(csvData);
+                
+                // We don't need to re-add manual tickets because displayCSVData now preserves them
+                
+                // Update UI
+                renderCurrentStory();
+                
+                // Fix central UI after CSV processing
+                setTimeout(checkAndFixCentralUI, 500);
+            }
+            break;
+
+        case 'connect':
+            // When connection is established
+            updateConnectionStatus('connected');
+            
+            // Request tickets and state after connection
+            setTimeout(() => {
+                if (socket && socket.connected) {
+                    if (!hasRequestedTickets) {
+                        console.log('[SOCKET] Connected, requesting all tickets');
+                        socket.emit('requestAllTickets');
+                        hasRequestedTickets = true;
+                    }
+                    
+                    // Also request votes for current story
+                    if (currentStoryId) {
+                        socket.emit('requestStoryVotes', { storyId: currentStoryId });
+                    }
+                    
+                    // Fix central UI after connection
+                    setTimeout(checkAndFixCentralUI, 500);
+                }
+            }, 500);
+            break;
+            
+        case 'reconnect_attempt':
+            // Show reconnecting status
+            updateConnectionStatus('reconnecting');
+            reconnectingInProgress = true;
+            break;
+            
+        case 'reconnect':
+            // Handle successful reconnection
+            updateConnectionStatus('connected');
+            reconnectingInProgress = false;
+            
+            // Request current state after reconnection
+            setTimeout(() => {
+                if (socket && socket.connected) {
+                    // Request votes for current story
+                    if (currentStoryId) {
+                        socket.emit('requestStoryVotes', { storyId: currentStoryId });
+                    }
+                    
+                    // Request all tickets if we don't have them
+                    if (!hasRequestedTickets) {
+                        socket.emit('requestAllTickets');
+                        hasRequestedTickets = true;
+                    }
+                    
+                    // Request current story selection
+                    socket.emit('requestCurrentStory');
+                    
+                    // Fix central UI after reconnection
+                    setTimeout(checkAndFixCentralUI, 500);
+                }
+            }, 500);
+            break;
+            
+        case 'error':
+            // Show connection error status
+            updateConnectionStatus('error');
+            break;
+    }
 }
-
-
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
