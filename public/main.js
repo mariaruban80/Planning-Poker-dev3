@@ -115,7 +115,36 @@ let votesRevealed = {};     // Track which stories have revealed votes { storyIn
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 
-
+// Adding  this function to main.js to be called whenever votes are revealed
+function fixRevealedVoteFontSizes() {
+  // Target all vote badges in revealed state
+  const voteCards = document.querySelectorAll('.vote-card-space.has-vote .vote-badge');
+  
+  voteCards.forEach(badge => {
+    // Get the text content
+    const text = badge.textContent || '';
+    
+    // Set base size
+    let fontSize = '18px';
+    
+    // Use smaller font for longer text
+    if (text.length >= 2) {
+      fontSize = '16px';
+    }
+    
+    // Even smaller for special cases
+    if (text.includes('XX')) {
+      fontSize = '14px';
+    }
+    
+    // Apply the styles directly
+    badge.style.fontSize = fontSize;
+    badge.style.fontWeight = '600';
+    badge.style.maxWidth = '80%';
+    badge.style.textAlign = 'center';
+    badge.style.display = 'block';
+  });
+}
 
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
@@ -618,6 +647,37 @@ function addNewLayoutStyles() {
     .hide-for-guests {
       display: none !important;
     }
+own-vote-space {
+      border: 2px dashed #673ab7;
+      position: relative;
+    }
+    
+    .own-vote-space::after {
+      content: 'Your vote';
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: #673ab7;
+      white-space: nowrap;
+    }
+    
+    /* Add styles for the drop-not-allowed state */
+    .vote-card-space.drop-not-allowed {
+      border-color: #f44336;
+      background-color: #ffebee;
+      position: relative;
+    }
+    
+    .vote-card-space.drop-not-allowed::before {
+      content: '✕';
+      position: absolute;
+      color: #f44336;
+      font-size: 24px;
+      font-weight: bold;
+      opacity: 0.8;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -850,6 +910,11 @@ function handleVotesRevealed(storyIndex, votes) {
   
   // Apply the vote visuals as normal too
   applyVotesToUI(votes, false);
+    // Add a delay to ensure the DOM is updated before fixing font sizes
+  setTimeout(fixRevealedVoteFontSizes, 100);
+  
+  // Run it again after a bit longer to be sure (sometimes the DOM updates can be delayed)
+  setTimeout(fixRevealedVoteFontSizes, 300);
 }
 /**
  * Setup Add Ticket button
@@ -1479,8 +1544,8 @@ function renderCurrentStory() {
 /**
  * Update the user list display with the new layout
  */
+
 function updateUserList(users) {
-  
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
   
@@ -1489,6 +1554,9 @@ function updateUserList(users) {
   // Clear existing content
   userListContainer.innerHTML = '';
   userCircleContainer.innerHTML = '';
+
+  // Store the current user's ID for comparison
+  const currentUserId = socket ? socket.id : null;
 
   // Create left sidebar user list
   users.forEach(user => {
@@ -1526,7 +1594,7 @@ function updateUserList(users) {
   topVoteRow.classList.add('vote-row');
   
   topUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
     topVoteRow.appendChild(voteCard);
   });
 
@@ -1562,7 +1630,7 @@ function updateUserList(users) {
   bottomVoteRow.classList.add('vote-row');
   
   bottomUsers.forEach(user => {
-    const voteCard = createVoteCardSpace(user);
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
     bottomVoteRow.appendChild(voteCard);
   });
 
@@ -1596,6 +1664,7 @@ function updateUserList(users) {
   }
 }
 
+
 /**
  * Create avatar container for a user
  */
@@ -1623,10 +1692,15 @@ function createAvatarContainer(user) {
 /**
  * Create vote card space for a user
  */
-function createVoteCardSpace(user) {
+function createVoteCardSpace(user, isCurrentUser) {
   const voteCard = document.createElement('div');
   voteCard.classList.add('vote-card-space');
   voteCard.id = `vote-space-${user.id}`;
+  
+  // Add visual indication if this is current user's vote space
+  if (isCurrentUser) {
+    voteCard.classList.add('own-vote-space');
+  }
   
   // Add vote badge inside the card space
   const voteBadge = document.createElement('span');
@@ -1634,26 +1708,35 @@ function createVoteCardSpace(user) {
   voteBadge.textContent = '';
   voteCard.appendChild(voteBadge);
   
-  // Make it a drop target for vote cards
-  voteCard.addEventListener('dragover', (e) => e.preventDefault());
-  voteCard.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const vote = e.dataTransfer.getData('text/plain');
-    const userId = user.id;
+  // Only allow drops on own vote space
+  if (isCurrentUser) {
+    voteCard.addEventListener('dragover', (e) => e.preventDefault());
+    voteCard.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const vote = e.dataTransfer.getData('text/plain');
+      const userId = user.id;
 
-    if (socket && vote) {
-      socket.emit('castVote', { vote, targetUserId: userId });
-    }
+      if (socket && vote) {
+        socket.emit('castVote', { vote, targetUserId: userId });
+      }
 
-    // Store vote locally
-    if (!votesPerStory[currentStoryIndex]) {
-      votesPerStory[currentStoryIndex] = {};
-    }
-    votesPerStory[currentStoryIndex][userId] = vote;
-    
-    // Update UI - show checkmark if votes aren't revealed
-    updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
-  });
+      // Store vote locally
+      if (!votesPerStory[currentStoryIndex]) {
+        votesPerStory[currentStoryIndex] = {};
+      }
+      votesPerStory[currentStoryIndex][userId] = vote;
+      
+      // Update UI - show checkmark if votes aren't revealed
+      updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
+    });
+  } else {
+    // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
+    voteCard.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      voteCard.classList.add('drop-not-allowed');
+      setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
+    });
+  }
   
   // Check if there's an existing vote for this user in the current story
   const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
@@ -1664,6 +1747,9 @@ function createVoteCardSpace(user) {
   
   return voteCard;
 }
+
+
+
 
 /**
  * Update vote visuals for a user
@@ -1990,6 +2076,12 @@ function handleSocketMessage(message) {
       }
       votesRevealed[currentStoryIndex] = false;
       resetAllVoteVisuals();
+      // ✅ Hide vote statistics and show planning cards again
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  const statsContainer = document.querySelector('.vote-statistics-container');
+  
+  if (planningCardsSection) planningCardsSection.style.display = 'block';
+  if (statsContainer) statsContainer.style.display = 'none';
       break;
 
          case 'storySelected':
