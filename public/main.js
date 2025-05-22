@@ -1450,6 +1450,8 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   const existingTicket = document.getElementById(ticketData.id);
   if (existingTicket) return;
   
+  console.log(`[TICKET] Adding ticket to UI: ${ticketData.id} - ${ticketData.text}`);
+  
   // Create new story card
   const storyCard = document.createElement('div');
   storyCard.className = 'story-card';
@@ -1491,6 +1493,25 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     });
   }
   
+  // IMPORTANT: Store in manually added tickets array if not already there
+  const ticketExists = manuallyAddedTickets.some(ticket => ticket.id === ticketData.id);
+  if (!ticketExists) {
+    manuallyAddedTickets.push(ticketData);
+    
+    // Also add to preservedManualTickets for persistence across CSV uploads
+    const preservedExists = preservedManualTickets.some(ticket => ticket.id === ticketData.id);
+    if (!preservedExists) {
+      preservedManualTickets.push(ticketData);
+    }
+    
+    // Emit to server if this is a newly created ticket (not just from the server)
+    // Only emit if we're not already handling a ticket that was added by another event
+    if (!selectAfterAdd && socket && socket.connected) {
+      console.log(`[TICKET] Emitting new ticket to server: ${ticketData.id}`);
+      socket.emit('addTicket', ticketData);
+    }
+  }
+  
   // Select the new story if requested (only for hosts)
   if (selectAfterAdd && !isGuestUser()) {
     selectStory(ticketData.id);
@@ -1509,6 +1530,10 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   });
   normalizeStoryIndexes();
 }
+
+
+
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
@@ -1655,6 +1680,7 @@ function setupRevealResetButtons() {
 /**
  * Setup CSV file uploader
  */
+
 function setupCSVUploader() {
   const csvInput = document.getElementById('csvInput');
   if (!csvInput) return;
@@ -1705,7 +1731,25 @@ function setupCSVUploader() {
       preservedManualTickets = [...existingTickets];
       
       // Emit the CSV data to server AFTER ensuring all UI is updated
-      emitCSVData(parsedData);
+      console.log(`[CSV] Emitting CSV data with ${parsedData.length} rows to server`);
+      
+      try {
+        // First try using the imported function
+        if (typeof emitCSVData === 'function') {
+          emitCSVData(parsedData);
+          console.log('[CSV] Emitted data using emitCSVData function');
+        } 
+        // Fallback to direct socket emit if the function isn't available
+        else if (socket && socket.connected) {
+          socket.emit('syncCSVData', parsedData);
+          console.log('[CSV] Emitted data using direct socket reference');
+        }
+        else {
+          console.error('[CSV] Failed to emit CSV data: no valid socket connection method available');
+        }
+      } catch (error) {
+        console.error('[CSV] Error emitting CSV data:', error);
+      }
       
       // Reset voting state for new data
       votesPerStory = {};
@@ -1723,6 +1767,7 @@ function setupCSVUploader() {
     reader.readAsText(file);
   });
 }
+
 
 /**
  * Parse CSV text into array structure
@@ -2110,7 +2155,7 @@ function createAvatarContainer(user) {
   avatarContainer.setAttribute('data-user-id', user.id);
   
   // Check if there's an existing vote for this user in the current story
-  const existingVote = votesPerStory[currentStoryIndex]?.[user.id];
+  const existingVote = votesPerStory[currentStoryId]?.[user.id];
   if (existingVote) {
     avatarContainer.classList.add('has-voted');
   }
@@ -2184,7 +2229,7 @@ function createVoteCardSpace(user, isCurrentUser) {
  * Update vote visuals for a user
  */
 function updateVoteVisuals(userId, vote, hasVoted = false) {
-   const displayVote = votesRevealed[currentStoryIndex] ? vote : '👍';
+ const displayVote = votesRevealed[currentStoryId] ? vote : '👍';
   
   // Update badges in sidebar
   const sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
@@ -2192,10 +2237,10 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
     // Only set content if the user has voted
     if (hasVoted) {
       sidebarBadge.textContent = displayVote;
-      sidebarBadge.style.color = '#673ab7'; // Make sure the text has a visible color
-      sidebarBadge.style.opacity = '1'; // Ensure full opacity
+      sidebarBadge.style.color = '#673ab7';
+      sidebarBadge.style.opacity = '1';
     } else {
-      sidebarBadge.textContent = ''; // Empty if no vote
+      sidebarBadge.textContent = '';
     }
   }
   
@@ -2256,11 +2301,12 @@ function updateStory(story) {
  * Setup story navigation
  */
 function setupStoryNavigation() {
-    const nextButton = document.getElementById('nextStory');
+  const nextButton = document.getElementById('nextStory');
   const prevButton = document.getElementById('prevStory');
 
   if (!nextButton || !prevButton) return;
-  // ✅ Disable for non-hosts
+  
+  // Disable for non-hosts
   const isHost = sessionStorage.getItem('isHost') === 'true';
   if (!isHost) {
     nextButton.disabled = true;
@@ -2269,45 +2315,47 @@ function setupStoryNavigation() {
     prevButton.classList.add('disabled-nav');
     return;
   }
-  // Prevent multiple event listeners from being added
+  
+  // Prevent multiple event listeners
   nextButton.replaceWith(nextButton.cloneNode(true));
   prevButton.replaceWith(prevButton.cloneNode(true));
 
   const newNextButton = document.getElementById('nextStory');
   const newPrevButton = document.getElementById('prevStory');
 
-  function getOrderedCards() {
-    return [...document.querySelectorAll('.story-card')];
+  function getOrderedCardIds() {
+    return [...document.querySelectorAll('.story-card')].map(card => card.id);
   }
 
-  function getSelectedCardIndex() {
-    const cards = getOrderedCards();
-    const selected = document.querySelector('.story-card.selected');
-    return cards.findIndex(card => card === selected);
+  function getCurrentCardIndex() {
+    const cardIds = getOrderedCardIds();
+    return cardIds.indexOf(currentStoryId);
   }
 
   newNextButton.addEventListener('click', () => {
-    const cards = getOrderedCards();
-    if (cards.length === 0) return;
+    const cardIds = getOrderedCardIds();
+    if (cardIds.length === 0) return;
 
-    const currentIndex = getSelectedCardIndex();
-    const nextIndex = (currentIndex + 1) % cards.length;
+    const currentIndex = getCurrentCardIndex();
+    const nextIndex = (currentIndex + 1) % cardIds.length;
 
-    console.log(`[NAV] Next from ${currentIndex} → ${nextIndex}`);
-    selectStory(nextIndex); // emit to server
+    console.log(`[NAV] Next from ${currentIndex} → ${nextIndex} (${cardIds[nextIndex]})`);
+    selectStory(cardIds[nextIndex]); // Use ID instead of index
   });
 
   newPrevButton.addEventListener('click', () => {
-    const cards = getOrderedCards();
-    if (cards.length === 0) return;
+    const cardIds = getOrderedCardIds();
+    if (cardIds.length === 0) return;
 
-    const currentIndex = getSelectedCardIndex();
-    const prevIndex = (currentIndex - 1 + cards.length) % cards.length;
+    const currentIndex = getCurrentCardIndex();
+    const prevIndex = (currentIndex - 1 + cardIds.length) % cardIds.length;
 
-    console.log(`[NAV] Previous from ${currentIndex} → ${prevIndex}`);
-    selectStory(prevIndex); // emit to server
+    console.log(`[NAV] Previous from ${currentIndex} → ${prevIndex} (${cardIds[prevIndex]})`);
+    selectStory(cardIds[prevIndex]); // Use ID instead of index
   });
 }
+
+
 
 
 /**
