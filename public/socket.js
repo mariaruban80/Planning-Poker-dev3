@@ -28,6 +28,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
         query: { roomId: roomIdentifier, userName: userNameValue }
     });
 
+    // Connection Event Handlers
     socket.on('connect', () => {
         console.log('[SOCKET] Connected:', socket.id);
         reconnectAttempts = 0;
@@ -46,6 +47,11 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
         socket.emit('joinRoom', { roomId, userName });
         handleMessage({ type: 'reconnect' });
         reconnectAttempts = 0;
+
+        // Request Current Story Selection on Reconnect
+        if (roomId && userName) {
+            requestCurrentStory();
+        }
     });
 
     socket.on('reconnect_error', (error) => {
@@ -68,82 +74,76 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
         handleMessage({ type: 'disconnect', reason });
     });
 
+
+
+    // Main Event Handlers — Updated for storyId
     socket.on('userList', (users) => handleMessage({ type: 'userList', users }));
     socket.on('votingSystemUpdate', data => handleMessage({ type: 'votingSystemUpdate', ...data }));
     socket.on('syncCSVData', (csvData) => {
         handleMessage({ type: 'syncCSVData', csvData });
-        socket.emit('csvDataLoaded');
+        if (socket) socket.emit('csvDataLoaded'); // Notify server after data load
     });
+
     socket.on('storySelected', ({ storyId }) => handleMessage({ type: 'storySelected', storyId }));
     socket.on('storyVotes', ({ storyId, votes }) => handleMessage({ type: 'storyVotes', storyId, votes }));
-    socket.on('votesRevealed', ({ storyId }) => handleMessage({ type: 'votesRevealed', storyId }));
+    socket.on('votesRevealed', ({ storyId, votes }) => handleMessage({ type: 'votesRevealed', storyId, votes }));
     socket.on('deleteStory', ({ storyId }) => handleMessage({ type: 'deleteStory', storyId }));
     socket.on('votesReset', ({ storyId }) => handleMessage({ type: 'votesReset', storyId }));
     socket.on('voteUpdate', ({ userId, vote, storyId }) => handleMessage({ type: 'voteUpdate', userId, vote, storyId }));
     socket.on('storyChange', ({ story }) => handleMessage({ type: 'storyChange', story }));
     socket.on('storyNavigation', ({ index }) => handleMessage({ type: 'storyNavigation', index }));
-    socket.on('connect_error', error => handleMessage({ type: 'error', error }));
-    socket.on('exportData', data => handleMessage({ type: 'exportData', data }));    
 
+    socket.on('connect_error', error => handleMessage({ type: 'error', error }));
+    socket.on('exportData', data => handleMessage({ type: 'exportData', data }));
 
     return socket;
 }
 
+
 export function emitDeleteStory(storyId) {
-    if (socket) {
-        console.log('[SOCKET] Deleting story:', storyId);
-        socket.emit('deleteStory', { storyId });
-    }
+  if (socket) {
+      socket.emit('deleteStory', { storyId });
+  }
 }
 
 export function emitCSVData(data) {
-    if (socket) {
-        console.log('[SOCKET] Sending CSV data:', data.length, 'rows');
-        socket.emit('syncCSVData', data);
-    }
+  if (socket) {
+      socket.emit('syncCSVData', data);
+  }
 }
 
 export function emitStorySelected(storyId) {
-    if (socket) {
-        console.log('[SOCKET] Emitting storySelected:', storyId);
-        socket.emit('storySelected', { storyId });
-    }
+  if (socket) {
+      socket.emit('storySelected', { storyId });
+  }
 }
 
-export function emitVote(vote, targetUserId, storyId) {  // Added storyId
-    if (socket) {
-        console.log('[SOCKET] Casting vote:', vote, 'for user', targetUserId, 'on story', storyId);
-        socket.emit('castVote', { vote, targetUserId, storyId });
-    }
+export function emitVote(vote, targetUserId, storyId) {
+  if (socket) {
+      socket.emit('castVote', { vote, targetUserId, storyId });
+  }
 }
-
 
 export function requestStoryVotes(storyId) {
     if (socket) {
-        console.log('[SOCKET] Requesting votes for story:', storyId);
         socket.emit('requestStoryVotes', { storyId });
     }
 }
 
-export function revealVotes(storyId) { // Add storyId here
+export function revealVotes(storyId) {
     if (socket) {
-        console.log('[SOCKET] Revealing votes for story:', storyId);
         socket.emit('revealVotes', { storyId });
     }
 }
 
-
-
-export function resetVotes(storyId) {  // Add storyId here
+export function resetVotes(storyId) {
     if (socket) {
-        console.log('[SOCKET] Resetting votes for story:', storyId);
         socket.emit('resetVotes', { storyId });
     }
 }
 
 export function requestExport() {
     if (socket) {
-        console.log('[SOCKET] Requesting vote data export');
         socket.emit('exportVotes');
     }
 }
@@ -154,7 +154,6 @@ export function isConnected() {
 
 export function emitAddTicket(ticketData) {
     if (socket) {
-        console.log('[SOCKET] Adding new ticket:', ticketData);
         socket.emit('addTicket', ticketData);
     }
 }
@@ -162,7 +161,6 @@ export function emitAddTicket(ticketData) {
 export function reconnect() {
     if (!socket) return false;
     if (!socket.connected && roomId && userName) {
-        console.log('[SOCKET] Reconnecting...');
         socket.connect();
         return true;
     }
@@ -171,7 +169,6 @@ export function reconnect() {
 
 export function setReconnectionEnabled(enable) {
     reconnectionEnabled = enable;
-    console.log(`[SOCKET] Reconnection ${enable ? 'enabled' : 'disabled'}`);
 }
 
 export function requestAllTickets() {
@@ -179,6 +176,14 @@ export function requestAllTickets() {
         socket.emit('requestAllTickets');
     }
 }
+
+export function requestCurrentStory () {
+    if (socket) {
+        console.log('[SOCKET] Requesting current story from server...');
+        socket.emit('requestCurrentStory');
+    }    
+}
+
 
 export function setMaxReconnectAttempts(max) {
     if (typeof max === 'number' && max > 0) {
