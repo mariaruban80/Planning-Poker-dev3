@@ -53,7 +53,8 @@ io.on('connection', (socket) => {
         csvData: [],
         selectedIndex: 0, // Default to first story
         votesPerStory: {},
-        votesRevealed: {} // Track which stories have revealed votes
+        votesRevealed: {}, // Track which stories have revealed votes
+        tickets: []  // Store manually added tickets
       };
     }
 
@@ -102,6 +103,16 @@ io.on('connection', (socket) => {
     }
   });
   
+  // Handle request for current story
+  socket.on('requestCurrentStory', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId] && typeof rooms[roomId].selectedIndex === 'number') {
+      console.log(`[SERVER] Sending current story ${rooms[roomId].selectedIndex} to client ${socket.id}`);
+      // Send the current story selection to the requesting client
+      socket.emit('storySelected', { storyIndex: rooms[roomId].selectedIndex });
+    }
+  });
+  
   // Handle reconnection
   socket.on('reconnect', () => {
     const roomId = socket.data.roomId;
@@ -134,6 +145,11 @@ io.on('connection', (socket) => {
           });
         }
       });
+      
+      // Send all tickets
+      if (rooms[roomId].tickets && rooms[roomId].tickets.length > 0) {
+        socket.emit('allTickets', { tickets: rooms[roomId].tickets });
+      }
     }
   });
   
@@ -259,36 +275,35 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle user votes
-socket.on('castVote', ({ vote, targetUserId, storyIndex }) => {
-  const roomId = socket.data.roomId;
-  
-  // Only allow users to vote for themselves
-  if (roomId && rooms[roomId] && targetUserId === socket.id) {
-    // Use provided storyIndex or current story
-    const currentStoryIndex = typeof storyIndex === 'number' ? 
-      storyIndex : rooms[roomId].selectedIndex;
+  // Handle user votes with story index parameter
+  socket.on('castVote', ({ vote, targetUserId, storyIndex }) => {
+    const roomId = socket.data.roomId;
+    
+    // Only allow users to vote for themselves
+    if (roomId && rooms[roomId] && targetUserId === socket.id) {
+      // Use provided storyIndex or current story
+      const currentStoryIndex = typeof storyIndex === 'number' ? 
+        storyIndex : rooms[roomId].selectedIndex;
 
-    // Initialize vote storage for this story if needed
-    if (!rooms[roomId].votesPerStory[currentStoryIndex]) {
-      rooms[roomId].votesPerStory[currentStoryIndex] = {};
+      // Initialize vote storage for this story if needed
+      if (!rooms[roomId].votesPerStory[currentStoryIndex]) {
+        rooms[roomId].votesPerStory[currentStoryIndex] = {};
+      }
+
+      // Store the vote
+      rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
+
+      // Broadcast vote to all clients in the room
+      io.to(roomId).emit('voteUpdate', {
+        userId: targetUserId,
+        vote,
+        storyIndex: currentStoryIndex
+      });
+    } else {
+      // Optionally notify the user that they can only vote for themselves
+      socket.emit('error', { message: 'You can only vote for yourself' });
     }
-
-    // Store the vote
-    rooms[roomId].votesPerStory[currentStoryIndex][targetUserId] = vote;
-
-    // Broadcast vote to all clients in the room
-    io.to(roomId).emit('voteUpdate', {
-      userId: targetUserId,
-      vote,
-      storyIndex: currentStoryIndex
-    });
-  } else {
-    // Optionally notify the user that they can only vote for themselves
-    socket.emit('error', { message: 'You can only vote for yourself' });
-  }
-});
-
+  });
   
   // Handle requests for votes for a specific story
   socket.on('requestStoryVotes', ({ storyIndex }) => {
