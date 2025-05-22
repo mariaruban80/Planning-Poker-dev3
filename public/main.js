@@ -41,22 +41,19 @@ window.notifyStoriesUpdated = function() {
  * @param {Object} ticketData - Ticket data {id, text}
  */
 window.addTicketFromModal = function(ticketData) {
-  if (!ticketData || !ticketData.id || !ticketData.text) return;
+  if (!ticketData || !ticketData.id || !ticketData.text) {
+    console.warn('[MODAL] Invalid ticket data from modal');
+    return;
+  }
   
   console.log('[MODAL] Adding ticket from modal:', ticketData);
   
-  // Emit to server for synchronization
-  if (typeof emitAddTicket === 'function') {
-    emitAddTicket(ticketData);
-  } else if (socket) {
-    socket.emit('addTicket', ticketData);
+  // Add to UI first, then emit to server
+  const newCard = addTicketToUI(ticketData, true, true);
+  
+  if (!newCard) {
+    console.warn('[MODAL] Failed to add ticket to UI');
   }
-  
-  // Add ticket locally
-  addTicketToUI(ticketData, true);
-  
-  // Store in manually added tickets
-  manuallyAddedTickets.push(ticketData);
 };
 
 /**
@@ -612,6 +609,10 @@ function appendRoomIdToURL(roomId) {
 /**
  * Check and fix central UI components
  */
+
+/**
+ * Check and fix central UI components
+ */
 function checkAndFixCentralUI() {
   console.log('[UI] Checking and fixing central UI components');
   
@@ -621,30 +622,45 @@ function checkAndFixCentralUI() {
     return;
   }
   
+  // Add the poker-table-layout wrapper if it doesn't exist
+  let pokerTableLayout = userCircleContainer.querySelector('.poker-table-layout');
+  if (!pokerTableLayout) {
+    console.log('[UI] Creating missing poker-table-layout');
+    pokerTableLayout = document.createElement('div');
+    pokerTableLayout.className = 'poker-table-layout';
+    
+    // Move all existing children into the new layout
+    while (userCircleContainer.firstChild) {
+      pokerTableLayout.appendChild(userCircleContainer.firstChild);
+    }
+    
+    userCircleContainer.appendChild(pokerTableLayout);
+  }
+  
   // Check if avatar row exists
-  let avatarRow = userCircleContainer.querySelector('.avatar-row');
+  let avatarRow = pokerTableLayout.querySelector('.avatar-row');
   if (!avatarRow) {
     console.log('[UI] Creating missing avatar row');
     avatarRow = document.createElement('div');
     avatarRow.className = 'avatar-row';
-    userCircleContainer.prepend(avatarRow);
+    pokerTableLayout.prepend(avatarRow);
   }
   
   // Check if vote row exists
-  let voteRow = userCircleContainer.querySelector('.vote-row');
+  let voteRow = pokerTableLayout.querySelector('.vote-row');
   if (!voteRow) {
     console.log('[UI] Creating missing vote row');
     voteRow = document.createElement('div');
     voteRow.className = 'vote-row';
     if (avatarRow.nextSibling) {
-      userCircleContainer.insertBefore(voteRow, avatarRow.nextSibling);
+      pokerTableLayout.insertBefore(voteRow, avatarRow.nextSibling);
     } else {
-      userCircleContainer.appendChild(voteRow);
+      pokerTableLayout.appendChild(voteRow);
     }
   }
   
   // Check if reveal button container exists
-  if (!userCircleContainer.querySelector('.reveal-button-container')) {
+  if (!pokerTableLayout.querySelector('.reveal-button-container') && !isGuestUser()) {
     console.log('[UI] Creating missing reveal button');
     const revealButtonContainer = document.createElement('div');
     revealButtonContainer.className = 'reveal-button-container';
@@ -658,12 +674,43 @@ function checkAndFixCentralUI() {
       }
     };
     
-    // Only show reveal button for hosts
-    if (!isGuestUser()) {
-      revealButtonContainer.appendChild(revealButton);
-    }
-    
-    userCircleContainer.appendChild(revealButtonContainer);
+    revealButtonContainer.appendChild(revealButton);
+    pokerTableLayout.appendChild(revealButtonContainer);
+  }
+  
+  // Fix any missing styles
+  const styles = document.getElementById('dynamic-center-layout-styles');
+  if (!styles) {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'dynamic-center-layout-styles';
+    styleElement.textContent = `
+      #userCircle {
+        width: 100%;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        margin: 20px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      }
+      
+      .poker-table-layout {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        gap: 20px;
+      }
+      
+      .avatar-row, .vote-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+        width: 100%;
+        margin: 10px 0;
+      }
+    `;
+    document.head.appendChild(styleElement);
   }
   
   // Request user list update if needed
@@ -681,6 +728,8 @@ function checkAndFixCentralUI() {
   
   console.log('[UI] Central UI check complete');
 }
+
+
 
 /**
  * Initialize the application
@@ -1516,15 +1565,25 @@ function getVoteEmoji(vote) {
  * @param {Object} ticketData - Ticket data { id, text }
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
-function addTicketToUI(ticketData, selectAfterAdd = false) {
-  if (!ticketData || !ticketData.id || !ticketData.text) return;
+
+function addTicketToUI(ticketData, selectAfterAdd = false, emitToServer = false) {
+  if (!ticketData || !ticketData.id || !ticketData.text) {
+    console.warn('[TICKET] Invalid ticket data:', ticketData);
+    return;
+  }
   
   const storyList = document.getElementById('storyList');
-  if (!storyList) return;
+  if (!storyList) {
+    console.warn('[TICKET] Story list container not found');
+    return;
+  }
   
   // Check if this ticket already exists (to avoid duplicates)
   const existingTicket = document.getElementById(ticketData.id);
-  if (existingTicket) return;
+  if (existingTicket) {
+    console.log(`[TICKET] Ticket ${ticketData.id} already exists, skipping`);
+    return;
+  }
   
   console.log(`[TICKET] Adding ticket to UI: ${ticketData.id} - ${ticketData.text}`);
   
@@ -1572,17 +1631,16 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   // IMPORTANT: Store in manually added tickets array if not already there
   const ticketExists = manuallyAddedTickets.some(ticket => ticket.id === ticketData.id);
   if (!ticketExists) {
-    manuallyAddedTickets.push(ticketData);
+    manuallyAddedTickets.push({...ticketData});
     
     // Also add to preservedManualTickets for persistence across CSV uploads
     const preservedExists = preservedManualTickets.some(ticket => ticket.id === ticketData.id);
     if (!preservedExists) {
-      preservedManualTickets.push(ticketData);
+      preservedManualTickets.push({...ticketData});
     }
     
-    // Emit to server if this is a newly created ticket (not just from the server)
-    // Only emit if we're not already handling a ticket that was added by another event
-    if (!selectAfterAdd && socket && socket.connected) {
+    // Emit to server if requested and we're connected
+    if (emitToServer && socket && socket.connected) {
       console.log(`[TICKET] Emitting new ticket to server: ${ticketData.id}`);
       socket.emit('addTicket', ticketData);
     }
@@ -1605,7 +1663,12 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.setAttribute('draggable', 'true');
   });
   normalizeStoryIndexes();
+  
+  return storyCard; // Return the created card for further manipulation if needed
 }
+
+
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
@@ -2034,22 +2097,61 @@ function displayCSVData(data) {
  * @param {string} storyId - The ID of the story to select
  * @param {boolean} emitToServer - Whether to emit to server (default: true)
  */
+
+/**
+ * Select a story by ID
+ * @param {string} storyId - The ID of the story to select
+ * @param {boolean} emitToServer - Whether to emit to server (default: true)
+ */
 function selectStory(storyId, emitToServer = true) {
-    console.log('[UI] Story selected:', storyId);
+    console.log('[UI] Attempting to select story:', storyId);
+
+    if (!storyId) {
+        console.warn('[UI] Cannot select story: No storyId provided');
+        return;
+    }
+
+    // Check if the story card exists in the DOM
+    const storyCard = document.getElementById(storyId);
+    if (!storyCard) {
+        console.warn(`[UI] Story card not found: ${storyId}. Checking if we need to create it...`);
+        
+        // Check if we need to request all tickets
+        if (socket && socket.connected && !hasRequestedTickets) {
+            console.log('[UI] Requesting all tickets due to missing story card');
+            socket.emit('requestAllTickets');
+            hasRequestedTickets = true;
+            
+            // Set a pending story ID to select after tickets are loaded
+            pendingStoryId = storyId;
+            return;
+        }
+        
+        // If we've already requested tickets but still don't have this story,
+        // try to select the first available story instead
+        const storyList = document.getElementById('storyList');
+        if (storyList && storyList.children.length > 0) {
+            const firstStoryId = storyList.children[0].id;
+            console.log(`[UI] Falling back to first available story: ${firstStoryId}`);
+            
+            // Recursive call with the available story ID
+            selectStory(firstStoryId, emitToServer);
+            return;
+        } else {
+            // No stories available at all
+            console.warn('[UI] No stories available to select');
+            currentStoryId = null;
+            return;
+        }
+    }
 
     // Update UI first
     document.querySelectorAll('.story-card').forEach(card => {
         card.classList.remove('selected', 'active');
     });
 
-    const storyCard = document.getElementById(storyId);
-    if (storyCard) {
-        storyCard.classList.add('selected', 'active');
-    } else {
-        console.warn('[UI] Story card not found:', storyId);
-        return; // Don't proceed if card isn't found
-    }
-
+    storyCard.classList.add('selected', 'active');
+    
     // Update local state
     currentStoryId = storyId;
     saveVotesToLocalStorage();
@@ -2078,12 +2180,20 @@ function selectStory(storyId, emitToServer = true) {
     // Check and fix the central UI
     setTimeout(checkAndFixCentralUI, 100);
 
-    if (emitToServer && socket) {
+    if (emitToServer && socket && socket.connected) {
         // Notify server about selection
+        console.log(`[UI] Emitting story selection to server: ${storyId}`);
         socket.emit('storySelected', { storyId: storyId });
         requestStoryVotes(storyId);
     }
+    
+    console.log(`[UI] Story selected: ${storyId}`);
 }
+
+
+
+
+
 
 /**
  * Reset or restore votes for a story by ID
@@ -2571,12 +2681,32 @@ function handleSocketMessage(message) {
             break;
 
         case 'allTickets':
-            // Handle receiving all tickets (used when joining a room)
-            if (Array.isArray(message.tickets)) {
-                console.log('[SOCKET] Received all tickets:', message.tickets.length);
-                processAllTickets(message.tickets);
-                applyGuestRestrictions();
-            }
+             // Handle receiving all tickets (used when joining a room)
+    if (Array.isArray(message.tickets)) {
+        console.log('[SOCKET] Received all tickets:', message.tickets.length);
+        processAllTickets(message.tickets);
+        applyGuestRestrictions();
+        
+        // If we have a pending story to select, try selecting it now
+        if (pendingStoryId) {
+            console.log(`[SOCKET] Attempting to select pending story after receiving tickets: ${pendingStoryId}`);
+            setTimeout(() => {
+                if (document.getElementById(pendingStoryId)) {
+                    selectStory(pendingStoryId, false); // Don't emit to avoid loops
+                    pendingStoryId = null;
+                } else {
+                    console.warn(`[SOCKET] Pending story ${pendingStoryId} still not available after receiving tickets`);
+                    // Fall back to first story if available
+                    const storyList = document.getElementById('storyList');
+                    if (storyList && storyList.children.length > 0) {
+                        const firstStoryId = storyList.children[0].id;
+                        selectStory(firstStoryId, false);
+                    }
+                    pendingStoryId = null;
+                }
+            }, 100);
+        }
+    }
             break;
             
         case 'userJoined':
