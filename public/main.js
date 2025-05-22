@@ -1525,20 +1525,23 @@ data.forEach((row, index) => {
   
   storyItem.appendChild(storyTitle);
   
-  // Add delete button for hosts only
+  // Add delete button for hosts only with the specialized function
   if (isCurrentUserHost()) {
-    const deleteButtonHtml = `<div class="story-delete-btn" title="Delete story">🗑</div>`;
-    storyItem.insertAdjacentHTML('beforeend', deleteButtonHtml);
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'story-delete-btn';
+    deleteButton.innerHTML = '🗑'; // dustbin symbol
+    deleteButton.title = 'Delete CSV story';
+    deleteButton.type = 'button'; // Ensure it doesn't submit forms
     
-    // Add the event handler after inserting HTML
-    const deleteBtn = storyItem.querySelector('.story-delete-btn');
-    if (deleteBtn) {
-      deleteBtn.onclick = function(e) {
-        e.stopPropagation();
-        console.log('[DELETE] Deleting CSV story:', csvStoryId);
-        deleteStory(csvStoryId);
-      };
-    }
+    // Use the specialized CSV delete function
+    deleteButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      console.log(`[DELETE] Delete button clicked for CSV story: ${csvStoryId}`);
+      deleteCSVStory(csvStoryId); // Use the specialized function
+    });
+    
+    storyItem.appendChild(deleteButton);
   }
   
   storyListContainer.appendChild(storyItem);
@@ -1550,6 +1553,9 @@ data.forEach((row, index) => {
     });
   }
 });
+
+
+    
     
     // Update preserved tickets list
     preservedManualTickets = existingStories;
@@ -2129,6 +2135,57 @@ function setupInviteButton() {
       alert(`Share this invite link: ${guestUrl}`);
     }
   };
+}
+
+/**
+ * Delete a CSV story by ID
+ * @param {string} csvStoryId - ID of the CSV story to delete
+ */
+function deleteCSVStory(csvStoryId) {
+  console.log('[DELETE] Attempting to delete CSV story:', csvStoryId);
+  
+  // Confirm deletion
+  if (!confirm('Are you sure you want to delete this CSV story?')) {
+    return;
+  }
+  
+  // Get the story element
+  const storyCard = document.getElementById(csvStoryId);
+  if (!storyCard) {
+    console.error('[DELETE] CSV story card not found:', csvStoryId);
+    return;
+  }
+  
+  // Get story index before removal
+  const index = parseInt(storyCard.dataset.index);
+  
+  // Try to get the CSV index
+  const csvIndex = csvStoryId.replace('story_csv_', '');
+  
+  // Emit deletion event to server with special flag for CSV
+  if (socket) {
+    console.log('[DELETE] Emitting CSV deleteStory event to server');
+    socket.emit('deleteCSVStory', { 
+      storyId: csvStoryId,
+      csvIndex: parseInt(csvIndex)
+    });
+  }
+  
+  // Remove directly from DOM
+  storyCard.remove();
+  console.log('[DELETE] Removed CSV story from DOM');
+  
+  // Renumber remaining stories
+  normalizeStoryIndexes();
+  
+  // Handle currently selected story if deleted
+  if (index === currentStoryIndex) {
+    const storyList = document.getElementById('storyList');
+    if (storyList && storyList.children.length > 0) {
+      const newIndex = Math.min(index, storyList.children.length - 1);
+      selectStory(newIndex);
+    }
+  }
 }
 
 /**
