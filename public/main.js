@@ -151,6 +151,82 @@ function fixRevealedVoteFontSizes() {
   });
 }
 
+/**
+ * Save votes to local storage
+ */
+function saveVotesToLocalStorage() {
+  try {
+    // Get current room ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId');
+    
+    if (!roomId) return;
+    
+    // Create a storage key specific to this room
+    const storageKey = `poker_votes_${roomId}`;
+    
+    // Store both votes and revealed state
+    const dataToStore = {
+      votesPerStory,
+      votesRevealed,
+      userId: socket ? socket.id : null,
+      username: userName,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // Save to localStorage
+    localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+    console.log('[STORAGE] Votes saved to local storage');
+  } catch (e) {
+    console.error('[STORAGE] Error saving votes to localStorage:', e);
+  }
+}
+
+/**
+ * Load votes from local storage
+ */
+function loadVotesFromLocalStorage() {
+  try {
+    // Get current room ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId');
+    
+    if (!roomId) return false;
+    
+    // Create a storage key specific to this room
+    const storageKey = `poker_votes_${roomId}`;
+    
+    // Retrieve from localStorage
+    const storedData = localStorage.getItem(storageKey);
+    if (!storedData) return false;
+    
+    const parsedData = JSON.parse(storedData);
+    
+    // Check if the stored data is for the current user
+    if (parsedData.username === userName) {
+      console.log('[STORAGE] Found stored votes for current user');
+      
+      // Restore the data
+      if (parsedData.votesPerStory) {
+        votesPerStory = parsedData.votesPerStory;
+      }
+      
+      if (parsedData.votesRevealed) {
+        votesRevealed = parsedData.votesRevealed;
+      }
+      
+      console.log('[STORAGE] Votes loaded from local storage');
+      
+      return true;
+    }
+    
+    return false;
+  } catch (e) {
+    console.error('[STORAGE] Error loading votes from localStorage:', e);
+    return false;
+  }
+}
+
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
   const existingStyle = document.getElementById('fixed-vote-statistics-styles');
@@ -394,11 +470,42 @@ function appendRoomIdToURL(roomId) {
 }
 
 /**
+ * Sync local votes to the server
+ */
+function syncLocalVotesToServer() {
+  if (!socket || !socket.connected) return;
+  
+  // Get current user ID
+  const userId = socket.id;
+  if (!userId) return;
+  
+  // Go through all story votes
+  Object.entries(votesPerStory).forEach(([storyIndex, votes]) => {
+    // Check if we have a vote for this story
+    if (votes[userId]) {
+      console.log(`[SYNC] Sending saved vote for story ${storyIndex}: ${votes[userId]}`);
+      
+      // Emit to server
+      socket.emit('castVote', {
+        vote: votes[userId],
+        targetUserId: userId,
+        storyIndex: parseInt(storyIndex)
+      });
+    }
+  });
+}
+
+
+/**
  * Initialize the application
  */
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+  
+  // Try to load saved votes first - needs to happen early
+  const votesLoaded = loadVotesFromLocalStorage();
+  console.log(`[INIT] Votes loaded from storage: ${votesLoaded}`);
   
   // Add reconnection handlers for socket
   if (socket) {
@@ -417,6 +524,9 @@ function initializeApp(roomId) {
       if (typeof currentStoryIndex === 'number') {
         setTimeout(() => {
           socket.emit('requestStoryVotes', { storyIndex: currentStoryIndex });
+          
+          // Also sync our locally stored votes with server after reconnection
+          syncLocalVotesToServer();
         }, 500);
       }
     });
@@ -454,7 +564,46 @@ function initializeApp(roomId) {
   
   // Add CSS for new layout
   addNewLayoutStyles();
+  
+  // After UI is set up, apply any loaded votes
+  if (votesLoaded && socket) {
+    // Wait a bit for the socket to be fully connected and UI to be ready
+    setTimeout(() => {
+      // If we have votes for the current story, apply them to UI
+      if (votesPerStory[currentStoryIndex]) {
+        console.log('[INIT] Applying saved votes for current story');
+        
+        // Check if votes are revealed for this story
+        if (votesRevealed[currentStoryIndex]) {
+          // Show revealed votes
+          applyVotesToUI(votesPerStory[currentStoryIndex], false);
+          
+          // Also show statistics
+          setTimeout(() => {
+            handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
+          }, 500);
+        } else {
+          // Just show vote indicators
+          applyVotesToUI(votesPerStory[currentStoryIndex], true);
+        }
+      }
+      
+      // Sync stored votes with the server when we're ready
+      syncLocalVotesToServer();
+    }, 1000);
+  }
+  
+  // Set up auto-save for votes
+  setInterval(saveVotesToLocalStorage, 30000); // Save every 30 seconds
+
+  // Also save votes when user leaves the page
+  window.addEventListener('beforeunload', () => {
+    saveVotesToLocalStorage();
+  });
 }
+
+
+
 
 function updateHeaderStyle() {
   // Implement if needed
@@ -1968,6 +2117,9 @@ function createVoteCardSpace(user, isCurrentUser) {
       
       // Update UI - show checkmark if votes aren't revealed
       updateVoteVisuals(userId, votesRevealed[currentStoryIndex] ? vote : '👍', true);
+      
+      // Save votes to local storage
+      saveVotesToLocalStorage();
     });
   } else {
     // For other users' vote spaces, add a "not-allowed" visual indicator on dragover
@@ -1987,6 +2139,8 @@ function createVoteCardSpace(user, isCurrentUser) {
   
   return voteCard;
 }
+
+
 
 /**
  * Update vote visuals for a user
@@ -2277,14 +2431,17 @@ function handleSocketMessage(message) {
     case 'voteReceived':
     case 'voteUpdate':
       // Handle vote received
-      if (message.userId && message.vote) {
-        if (!votesPerStory[currentStoryIndex]) {
-          votesPerStory[currentStoryIndex] = {};
-        }
-        votesPerStory[currentStoryIndex][message.userId] = message.vote;
-        updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
-      }
-      break;
+        if (message.userId && message.vote) {
+    if (!votesPerStory[currentStoryIndex]) {
+      votesPerStory[currentStoryIndex] = {};
+    }
+    votesPerStory[currentStoryIndex][message.userId] = message.vote;
+    updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
+    
+    // Save to local storage when votes change
+    saveVotesToLocalStorage();
+  }
+  break;
 
     case 'deleteStory':
       // Handle story deletion from another user
@@ -2319,47 +2476,53 @@ function handleSocketMessage(message) {
       
     case 'votesRevealed':
       // Handle votes revealed with improved state persistence
-      if (typeof message.storyIndex === 'number') {
-        // First store the revealed state
-        votesRevealed[message.storyIndex] = true;
-        
-        // If this is the current story, update the UI
-        if (message.storyIndex === currentStoryIndex && votesPerStory[message.storyIndex]) {
-          handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
-        }
-        
-        // If we don't have votes for this story yet, request them
-        if (!votesPerStory[message.storyIndex] && socket && socket.connected) {
-          socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
-        }
-        
-        triggerGlobalEmojiBurst();
-      }
+       if (typeof message.storyIndex === 'number') {
+    // First store the revealed state
+    votesRevealed[message.storyIndex] = true;
+    
+    // If this is the current story, update the UI
+    if (message.storyIndex === currentStoryIndex && votesPerStory[message.storyIndex]) {
+      handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
+    }
+    
+    // If we don't have votes for this story yet, request them
+    if (!votesPerStory[message.storyIndex] && socket && socket.connected) {
+      socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
+    }
+    
+    // Save to local storage when reveal state changes
+    saveVotesToLocalStorage();
+    
+    triggerGlobalEmojiBurst();
+  }
       break;
       
     case 'votesReset':
       // Handle votes reset
       if (typeof message.storyIndex === 'number') {
-        // Clear votes for the specified story
-        if (votesPerStory[message.storyIndex]) {
-          votesPerStory[message.storyIndex] = {};
-        }
-        
-        // Reset revealed status
-        votesRevealed[message.storyIndex] = false;
-        
-        // Update UI if this is the current story
-        if (message.storyIndex === currentStoryIndex) {
-          resetAllVoteVisuals();
-          
-          // ✅ Hide vote statistics and show planning cards again
-          const planningCardsSection = document.querySelector('.planning-cards-section');
-          const statsContainer = document.querySelector('.vote-statistics-container');
-          
-          if (planningCardsSection) planningCardsSection.style.display = 'block';
-          if (statsContainer) statsContainer.style.display = 'none';
-        }
-      }
+    // Clear votes for the specified story
+    if (votesPerStory[message.storyIndex]) {
+      votesPerStory[message.storyIndex] = {};
+    }
+    
+    // Reset revealed status
+    votesRevealed[message.storyIndex] = false;
+    
+    // Save to local storage when votes are reset
+    saveVotesToLocalStorage();
+    
+    // Update UI if this is the current story
+    if (message.storyIndex === currentStoryIndex) {
+      resetAllVoteVisuals();
+      
+      // ✅ Hide vote statistics and show planning cards again
+      const planningCardsSection = document.querySelector('.planning-cards-section');
+      const statsContainer = document.querySelector('.vote-statistics-container');
+      
+      if (planningCardsSection) planningCardsSection.style.display = 'block';
+      if (statsContainer) statsContainer.style.display = 'none';
+    }
+  }
       break;
 
     case 'storySelected':
@@ -2495,4 +2658,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   appendRoomIdToURL(roomId);
   initializeApp(roomId);
+});
+
+// Set up auto-save for votes
+setInterval(saveVotesToLocalStorage, 30000); // Save every 30 seconds
+
+// Also save votes when user leaves the page
+window.addEventListener('beforeunload', () => {
+  saveVotesToLocalStorage();
 });
