@@ -115,6 +115,12 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('requestUserList', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+        socket.emit('userList', rooms[roomId].users);
+    }
+});
 
 
     socket.on('storySelected', ({ storyId }) => {
