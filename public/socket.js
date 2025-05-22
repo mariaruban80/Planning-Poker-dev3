@@ -117,5 +117,124 @@ export function requestStoryVotes(storyId) {
         socket.emit('requestStoryVotes', { storyId });
     }
 }
+/**
+ * Reveal votes for the current story
+ * Triggers server to broadcast vote values to all clients
+ */
+export function revealVotes() {
+  if (socket) {
+    console.log('[SOCKET] Requesting to reveal votes');
+    socket.emit('revealVotes');
+  }
+}
 
-// ... other existing functions (revealVotes, resetVotes, etc.)
+/**
+ * Reset votes for the current story
+ * Clears all votes and resets the reveal state
+ */
+export function resetVotes() {
+  if (socket) {
+    console.log('[SOCKET] Requesting to reset votes');
+    socket.emit('resetVotes');
+  }
+}
+
+/**
+ * Request export of all votes data
+ */
+export function requestExport() {
+  if (socket) {
+    console.log('[SOCKET] Requesting vote data export');
+    socket.emit('exportVotes');
+  }
+}
+
+/**
+ * Get the currently selected story index
+ * @returns {number|null} - Selected story index or null if none selected
+ */
+export function getCurrentStoryIndex() {
+  return selectedStoryIndex;
+}
+
+/**
+ * Check if socket is connected
+ * @returns {boolean} - Connection status
+ */
+export function isConnected() {
+  return socket && socket.connected;
+}
+
+/**
+ * Add a new ticket and sync with other users
+ * @param {Object} ticketData - The ticket data {id, text}
+ */
+export function emitAddTicket(ticketData) {
+  if (socket) {
+    console.log('[SOCKET] Adding new ticket:', ticketData);
+    socket.emit('addTicket', ticketData);
+  }
+}
+
+/**
+ * Force reconnection if disconnected
+ * @returns {boolean} - Whether reconnection was attempted
+ */
+export function reconnect() {
+  if (!socket) {
+    console.warn('[SOCKET] Cannot reconnect: no socket instance');
+    return false;
+  }   
+  if (!socket.connected && roomId && userName) {
+    console.log('[SOCKET] Attempting to reconnect...');
+    socket.connect();
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Enable or disable automatic reconnection
+ * @param {boolean} enable - Whether to enable reconnection
+ */
+export function setReconnectionEnabled(enable) {
+  reconnectionEnabled = enable;
+  console.log(`[SOCKET] Reconnection ${enable ? 'enabled' : 'disabled'}`);
+}
+
+/**
+ * Request all tickets from the server
+ * Useful after reconnection to ensure all tickets are loaded
+ */
+export function requestAllTickets() {
+  if (socket) {
+    console.log('[SOCKET] Requesting all tickets');
+    socket.emit('requestAllTickets');
+  }
+}
+
+/**
+ * Set maximum reconnection attempts
+ * @param {number} max - Max number of reconnection attempts
+ */
+export function setMaxReconnectAttempts(max) {
+  if (typeof max === 'number' && max > 0) {
+    maxReconnectAttempts = max;
+    console.log(`[SOCKET] Max reconnection attempts set to ${max}`);
+  }
+}
+
+/**
+ * Get current reconnection status
+ * @returns {Object} - Reconnection status information
+ */
+export function getReconnectionStatus() {
+  return {
+    enabled: reconnectionEnabled,
+    attempts: reconnectAttempts,
+    maxAttempts: maxReconnectAttempts,
+    connected: socket ? socket.connected : false
+  };
+}
+
