@@ -105,6 +105,11 @@ export function emitDeleteStory(storyId) {
       socket.emit('deleteStory', { storyId });
   }
 }
+export function requestUserList() {
+    if (socket) {
+        socket.emit('requestUserList');
+    }
+}
 
 export function emitCSVData(data) {
   if (socket) {
