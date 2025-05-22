@@ -695,7 +695,7 @@ function addNewLayoutStyles() {
       top: 8px;
       width: 20px;
       height: 20px;
-      background-color: white;
+      
       color: white;
       border-radius: 50%;
       display: flex;
