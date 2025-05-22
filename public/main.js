@@ -1,5 +1,6 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
+let deleteConfirmationInProgress = false;
 let processingCSVData = false;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
@@ -147,21 +148,34 @@ function fixRevealedVoteFontSizes() {
 }
 
 function setupCSVDeleteButtons() {
-  // Use event delegation for better reliability
-  document.addEventListener('click', function(event) {
-    // Check if the click was on a delete button in a CSV story
-    if (event.target.closest('.story-card[id^="story_csv_"] .story-delete-btn')) {
-      event.stopPropagation();
-      const deleteBtn = event.target.closest('.story-delete-btn');
-      const storyCard = deleteBtn.closest('.story-card');
+  // Remove any existing delegated click handler first
+  document.removeEventListener('click', csvDeleteButtonHandler);
+  
+  // Define the handler function so we can refer to it for removal
+  window.csvDeleteButtonHandler = function(event) {
+    // Only handle clicks on CSV story delete buttons
+    if (event.target.matches('.story-card[id^="story_csv_"] .story-delete-btn') || 
+        event.target.closest('.story-card[id^="story_csv_"] .story-delete-btn')) {
       
-      if (storyCard && storyCard.id.startsWith('story_csv_')) {
-        console.log('[DELETE] Delegated click handler for CSV story:', storyCard.id);
-        deleteCSVStory(storyCard.id);
+      event.stopPropagation();
+      event.preventDefault();
+      
+      // Find the story card containing this button
+      const storyCard = event.target.closest('.story-card[id^="story_csv_"]');
+      
+      if (storyCard && storyCard.id) {
+        console.log('[DELETE] Delegated handler for CSV story:', storyCard.id);
+        // Call deletion function - but use regular deleteStory to avoid duplication
+        deleteStory(storyCard.id);
       }
     }
-  });
+  };
+  
+  // Add the new event listener
+  document.addEventListener('click', window.csvDeleteButtonHandler);
+  console.log('[SETUP] CSV delete button handler installed');
 }
+
 
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
@@ -418,10 +432,9 @@ const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
 if (isHost && socket) {
   socket.emit('votingSystemSelected', { roomId, votingSystem });
-}
-
-  
-  // removed this function addVoteStatisticsStyles();
+}  
+   cleanupDeleteButtonHandlers();
+  setupCSVDeleteButtons(); 
  updateHeaderStyle();
     addFixedVoteStatisticsStyles();
   setupCSVUploader();
@@ -1152,10 +1165,26 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
  * @param {string} storyId - ID of the story to delete
  */
 function deleteStory(storyId) {
-  console.log('[DELETE] Attempting to delete story:', storyId); // Add logging
+console.log('[DELETE] Attempting to delete story:', storyId);
+  
+  // Prevent multiple confirmation dialogs
+  if (deleteConfirmationInProgress) {
+    console.log('[DELETE] Delete confirmation already in progress, ignoring duplicate call');
+    return;
+  }
+  
+  deleteConfirmationInProgress = true;
   
   // Confirm deletion
-  if (!confirm('Are you sure you want to delete this story?')) {
+  const confirmResult = confirm('Are you sure you want to delete this story?');
+  
+  // Reset the flag regardless of result
+  setTimeout(() => {
+    deleteConfirmationInProgress = false;
+  }, 100);
+  
+  if (!confirmResult) {
+    console.log('[DELETE] User canceled deletion');
     return;
   }
   
@@ -1165,7 +1194,6 @@ function deleteStory(storyId) {
     console.error('[DELETE] Story card not found:', storyId);
     return;
   }
-
   console.log('[DELETE] Found story card, proceeding with deletion');
   
   // Get story index before removal (for selection adjustment)
@@ -1497,23 +1525,22 @@ function displayCSVData(data) {
       storyItem.appendChild(storyTitle);
       
       // Add delete button for hosts only
-       if (isCurrentUserHost()) {
-      const deleteButton = document.createElement('div');
-      deleteButton.className = 'story-delete-btn';
-      deleteButton.innerHTML = '🗑'; // dustbin symbol
-      deleteButton.title = 'Delete story';
-      
-      // Use a more explicit approach with a named function to ensure proper binding
-      const storyIdToDelete = `story_csv_${index}`; // Store ID in closure
-      deleteButton.onclick = function(e) {
-        e.stopPropagation(); // Prevent story selection
-        e.preventDefault();
-        console.log('[DELETE] Delete button clicked for CSV story:', storyIdToDelete);
-        deleteStory(storyIdToDelete);
-      };
-      
-      storyItem.appendChild(deleteButton);
-    }
+      if (isCurrentUserHost()) {
+        const deleteButton = document.createElement('div');
+        deleteButton.className = 'story-delete-btn';
+        deleteButton.innerHTML = '🗑'; // dustbin symbol
+        deleteButton.title = 'Delete story';
+        
+        // Use the CORRECT story ID - this was wrong before!
+        deleteButton.onclick = function(e) {
+          e.stopPropagation(); // Prevent story selection
+          e.preventDefault();
+          console.log('[DELETE] Delete button clicked for manual story:', story.id);
+          deleteStory(story.id);
+        };
+        
+        storyItem.appendChild(deleteButton);
+      }
       
       storyListContainer.appendChild(storyItem);
       
@@ -1521,59 +1548,55 @@ function displayCSVData(data) {
       const isHost = sessionStorage.getItem('isHost') === 'true';
       if (isHost) {
         storyItem.addEventListener('click', () => {
-          selectStory(index); // Fixed: should just be index, not startIndex + index
+          selectStory(index);
         });
       }
     });
     
     // Then add CSV data
-    
-let startIndex = existingStories.length;
-data.forEach((row, index) => {
-  const storyItem = document.createElement('div');
-  storyItem.classList.add('story-card');
-  
-  const csvStoryId = `story_csv_${index}`;
-  storyItem.id = csvStoryId;
-  storyItem.dataset.index = startIndex + index;
-  
-  const storyTitle = document.createElement('div');
-  storyTitle.classList.add('story-title');
-  storyTitle.textContent = row.join(' | ');
-  
-  storyItem.appendChild(storyTitle);
-  
-  // Add delete button for hosts only with the specialized function
-  if (isCurrentUserHost()) {
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'story-delete-btn';
-    deleteButton.innerHTML = '🗑'; // dustbin symbol
-    deleteButton.title = 'Delete CSV story';
-    deleteButton.type = 'button'; // Ensure it doesn't submit forms
-    
-    // Use the specialized CSV delete function
-    deleteButton.addEventListener('click', function(e) {
-      e.stopPropagation();
-      e.preventDefault();
-      console.log(`[DELETE] Delete button clicked for CSV story: ${csvStoryId}`);
-      deleteCSVStory(csvStoryId); // Use the specialized function
+    let startIndex = existingStories.length;
+    data.forEach((row, index) => {
+      const storyItem = document.createElement('div');
+      storyItem.classList.add('story-card');
+      
+      const csvStoryId = `story_csv_${index}`;
+      storyItem.id = csvStoryId;
+      storyItem.dataset.index = startIndex + index;
+      
+      const storyTitle = document.createElement('div');
+      storyTitle.classList.add('story-title');
+      storyTitle.textContent = row.join(' | ');
+      
+      storyItem.appendChild(storyTitle);
+      
+      // Add delete button for hosts only, but WITH proper event listener
+      if (isCurrentUserHost()) {
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'story-delete-btn';
+        deleteButton.innerHTML = '🗑'; // dustbin symbol
+        deleteButton.title = 'Delete CSV story';
+        deleteButton.type = 'button'; // Ensure it doesn't submit forms
+        
+        // Add direct click handler that references the correct ID
+        deleteButton.onclick = function(e) {
+          e.stopPropagation(); // Prevent story selection
+          e.preventDefault();
+          console.log('[DELETE] Delete button clicked for CSV story:', csvStoryId);
+          deleteStory(csvStoryId);
+        };
+        
+        storyItem.appendChild(deleteButton);
+      }
+      
+      storyListContainer.appendChild(storyItem);
+      
+      // Only add click events for hosts
+      if (isCurrentUserHost()) {
+        storyItem.addEventListener('click', () => {
+          selectStory(startIndex + index);
+        });
+      }
     });
-    
-    storyItem.appendChild(deleteButton);
-  }
-  
-  storyListContainer.appendChild(storyItem);
-  
-  // Only add click events for hosts
-  if (isCurrentUserHost()) {
-    storyItem.addEventListener('click', () => {
-      selectStory(startIndex + index);
-    });
-  }
-});
-
-
-    
     
     // Update preserved tickets list
     preservedManualTickets = existingStories;
@@ -1604,6 +1627,9 @@ data.forEach((row, index) => {
       storyListContainer.children[0].classList.add('selected');
       currentStoryIndex = 0;
     }
+      // Clean up and set up delete handlers
+    cleanupDeleteButtonHandlers();
+    setupCSVDeleteButtons();
   } finally {
     normalizeStoryIndexes();
     setupStoryCardInteractions();
@@ -1611,6 +1637,17 @@ data.forEach((row, index) => {
     processingCSVData = false;
   }
 }
+
+// This function removes all delete button direct event listeners
+function cleanupDeleteButtonHandlers() {
+  const deleteButtons = document.querySelectorAll('.story-delete-btn');
+  deleteButtons.forEach(btn => {
+    // Clone the button to remove all event listeners
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+  });
+}
+
 
 
 /**
@@ -2155,56 +2192,6 @@ function setupInviteButton() {
   };
 }
 
-/**
- * Delete a CSV story by ID
- * @param {string} csvStoryId - ID of the CSV story to delete
- */
-function deleteCSVStory(csvStoryId) {
-  console.log('[DELETE] Attempting to delete CSV story:', csvStoryId);
-  
-  // Confirm deletion
-  if (!confirm('Are you sure you want to delete this CSV story?')) {
-    return;
-  }
-  
-  // Get the story element
-  const storyCard = document.getElementById(csvStoryId);
-  if (!storyCard) {
-    console.error('[DELETE] CSV story card not found:', csvStoryId);
-    return;
-  }
-  
-  // Get story index before removal
-  const index = parseInt(storyCard.dataset.index);
-  
-  // Try to get the CSV index
-  const csvIndex = csvStoryId.replace('story_csv_', '');
-  
-  // Emit deletion event to server with special flag for CSV
-  if (socket) {
-    console.log('[DELETE] Emitting CSV deleteStory event to server');
-    socket.emit('deleteCSVStory', { 
-      storyId: csvStoryId,
-      csvIndex: parseInt(csvIndex)
-    });
-  }
-  
-  // Remove directly from DOM
-  storyCard.remove();
-  console.log('[DELETE] Removed CSV story from DOM');
-  
-  // Renumber remaining stories
-  normalizeStoryIndexes();
-  
-  // Handle currently selected story if deleted
-  if (index === currentStoryIndex) {
-    const storyList = document.getElementById('storyList');
-    if (storyList && storyList.children.length > 0) {
-      const newIndex = Math.min(index, storyList.children.length - 1);
-      selectStory(newIndex);
-    }
-  }
-}
 
 /**
  * Setup vote cards drag functionality
