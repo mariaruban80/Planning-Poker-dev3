@@ -87,6 +87,27 @@ socket.emit('votingSystemUpdate', { votingSystem });
     rooms[roomId].tickets.push(ticketData);
   }
 });
+
+socket.on('deleteCSVStory', ({ storyId, csvIndex }) => {
+  const roomId = socket.data.roomId;
+  
+  if (roomId && rooms[roomId]) {
+    console.log(`[SERVER] CSV story deleted in room ${roomId}: ${storyId}, csvIndex: ${csvIndex}`);
+    
+    // Update the CSV data by removing the entry
+    if (rooms[roomId].csvData && !isNaN(csvIndex) && csvIndex >= 0 && csvIndex < rooms[roomId].csvData.length) {
+      rooms[roomId].csvData.splice(csvIndex, 1);
+      
+      // Re-sync the CSV data to all clients
+      io.to(roomId).emit('syncCSVData', rooms[roomId].csvData);
+      console.log(`[SERVER] Resynced CSV data after deletion, ${rooms[roomId].csvData.length} items remain`);
+    }
+    
+    // Also send the standard deleteStory event to ensure UI is updated everywhere
+    io.to(roomId).emit('deleteStory', { storyId });
+  }
+});
+  
 // NEW: Store the selected voting system for the room
   socket.on('votingSystemSelected', ({ roomId, votingSystem }) => {
     if (roomId && votingSystem) {
