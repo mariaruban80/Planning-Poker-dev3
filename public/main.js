@@ -118,6 +118,7 @@ let votesPerStory = {};     // Track votes for each story { storyIndex: { userId
 let votesRevealed = {};     // Track which stories have revealed votes { storyIndex: boolean }
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
+let reconnectingInProgress = false; // Flag for reconnection logic
 
 // Adding this function to main.js to be called whenever votes are revealed
 function fixRevealedVoteFontSizes() {
@@ -398,6 +399,29 @@ function appendRoomIdToURL(roomId) {
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+  
+  // Add reconnection handlers for socket
+  if (socket) {
+    // New handler for reconnect attempts
+    socket.on('reconnect_attempt', (attempt) => {
+      console.log(`[SOCKET] Reconnection attempt ${attempt}`);
+      reconnectingInProgress = true;
+    });
+    
+    // Handle successful reconnection
+    socket.on('reconnect', () => {
+      console.log('[SOCKET] Reconnected to server');
+      reconnectingInProgress = false;
+      
+      // Request current state after reconnection
+      if (typeof currentStoryIndex === 'number') {
+        setTimeout(() => {
+          socket.emit('requestStoryVotes', { storyIndex: currentStoryIndex });
+        }, 500);
+      }
+    });
+  }
+  
   // Guest: Listen for host's voting system
   socket.on('votingSystemUpdate', ({ votingSystem }) => {
     console.log('[SOCKET] Received voting system from host:', votingSystem);
@@ -695,8 +719,8 @@ function addNewLayoutStyles() {
       top: 8px;
       width: 20px;
       height: 20px;
-      
-      color: #000000;
+      background-color: #f44336;
+      color: white;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -718,8 +742,84 @@ function addNewLayoutStyles() {
       position: relative;
       padding-right: 35px;
     }
+    
+    /* Connection status indicator */
+    .connection-status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: white;
+      background-color: #4caf50;
+      transition: all 0.3s ease;
+      opacity: 0;
+      z-index: 9999;
+    }
+    
+    .connection-status.reconnecting {
+      background-color: #ff9800;
+      opacity: 1;
+    }
+    
+    .connection-status.error {
+      background-color: #f44336;
+      opacity: 1;
+    }
+    
+    .connection-status.connected {
+      opacity: 1;
+      animation: fadeOut 2s ease 2s forwards;
+    }
+    
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
   `;
   document.head.appendChild(style);
+  
+  // Create connection status indicator
+  const statusIndicator = document.createElement('div');
+  statusIndicator.className = 'connection-status';
+  statusIndicator.id = 'connectionStatus';
+  statusIndicator.textContent = 'Connected';
+  document.body.appendChild(statusIndicator);
+  
+  // Show initial connected state briefly
+  statusIndicator.classList.add('connected');
+  setTimeout(() => {
+    statusIndicator.classList.remove('connected');
+  }, 4000);
+}
+
+/**
+ * Update connection status UI
+ * @param {string} status - 'connected', 'reconnecting', or 'error'
+ */
+function updateConnectionStatus(status) {
+  const statusIndicator = document.getElementById('connectionStatus');
+  if (!statusIndicator) return;
+  
+  // Remove all classes first
+  statusIndicator.classList.remove('connected', 'reconnecting', 'error');
+  
+  // Set text and add appropriate class
+  switch (status) {
+    case 'connected':
+      statusIndicator.textContent = 'Connected';
+      statusIndicator.classList.add('connected');
+      break;
+    case 'reconnecting':
+      statusIndicator.textContent = 'Reconnecting...';
+      statusIndicator.classList.add('reconnecting');
+      break;
+    case 'error':
+      statusIndicator.textContent = 'Connection Error';
+      statusIndicator.classList.add('error');
+      break;
+  }
 }
 
 /**
@@ -970,8 +1070,18 @@ function addVoteStatisticsStyles() {
  * @param {Object} votes - Vote data
  */
 function handleVotesRevealed(storyIndex, votes) {
+  console.log('[VOTES] Handling votes revealed for story:', storyIndex);
+  
   // Mark this story as having revealed votes
   votesRevealed[storyIndex] = true;
+  
+  // Store votes in local state for reconnection recovery
+  if (!votesPerStory[storyIndex]) {
+    votesPerStory[storyIndex] = {};
+  }
+  
+  // Merge in any new votes
+  Object.assign(votesPerStory[storyIndex], votes);
   
   // Get the planning cards container
   const planningCardsSection = document.querySelector('.planning-cards-section');
@@ -1597,6 +1707,18 @@ function resetOrRestoreVotes(index) {
   // If we have stored votes for this story and they've been revealed
   if (votesPerStory[index] && votesRevealed[index]) {
     applyVotesToUI(votesPerStory[index], false);
+    
+    // If votes were revealed, also show the statistics
+    setTimeout(() => {
+      if (votesRevealed[index]) {
+        handleVotesRevealed(index, votesPerStory[index]);
+      }
+    }, 100);
+  } else {
+    // If we have votes but they're not revealed, still show that people voted
+    if (votesPerStory[index]) {
+      applyVotesToUI(votesPerStory[index], true);
+    }
   }
 }
 
@@ -1667,7 +1789,7 @@ function updateUserList(users) {
     const userEntry = document.createElement('div');
     userEntry.classList.add('user-entry');
     userEntry.id = `user-${user.id}`;
-    userEntry.innerHTML = `
+      userEntry.innerHTML = `
       <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
       <span class="username">${user.name}</span>
       <span class="vote-badge"></span>
@@ -1766,6 +1888,21 @@ function updateUserList(users) {
       }
     }, 500);
   }
+  
+  // After updating users, also update votes
+  if (votesPerStory[currentStoryIndex]) {
+    // Apply the votes
+    const votes = votesPerStory[currentStoryIndex];
+    const reveal = votesRevealed[currentStoryIndex];
+    applyVotesToUI(votes, !reveal);
+    
+    // If votes were revealed, also show statistics
+    if (reveal) {
+      setTimeout(() => {
+        handleVotesRevealed(currentStoryIndex, votes);
+      }, 200);
+    }
+  }
 }
 
 /**
@@ -1776,7 +1913,7 @@ function createAvatarContainer(user) {
   avatarContainer.classList.add('avatar-container');
   avatarContainer.id = `user-circle-${user.id}`;
 
-      avatarContainer.innerHTML = `
+  avatarContainer.innerHTML = `
     <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
     <div class="user-name">${user.name}</div>
   `;
@@ -2089,7 +2226,7 @@ function triggerGlobalEmojiBurst() {
 }
 
 /**
- * Handle socket messages
+ * Handle socket messages with improved state persistence
  */
 function handleSocketMessage(message) {
   const eventType = message.type;
@@ -2181,32 +2318,48 @@ function handleSocketMessage(message) {
       break;
       
     case 'votesRevealed':
-      // Handle votes revealed
-      votesRevealed[currentStoryIndex] = true;
-      if (votesPerStory[currentStoryIndex]) {
-        handleVotesRevealed(currentStoryIndex, votesPerStory[currentStoryIndex]);
-      } else {
-        console.log('[WARN] Votes revealed but no votes found for story index:', currentStoryIndex);
+      // Handle votes revealed with improved state persistence
+      if (typeof message.storyIndex === 'number') {
+        // First store the revealed state
+        votesRevealed[message.storyIndex] = true;
         
-        // If no votes found, still show empty statistics
-        handleVotesRevealed(currentStoryIndex, {});
+        // If this is the current story, update the UI
+        if (message.storyIndex === currentStoryIndex && votesPerStory[message.storyIndex]) {
+          handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
+        }
+        
+        // If we don't have votes for this story yet, request them
+        if (!votesPerStory[message.storyIndex] && socket && socket.connected) {
+          socket.emit('requestStoryVotes', { storyIndex: message.storyIndex });
+        }
+        
+        triggerGlobalEmojiBurst();
       }
-      triggerGlobalEmojiBurst();
       break;
       
     case 'votesReset':
       // Handle votes reset
-      if (votesPerStory[currentStoryIndex]) {
-        votesPerStory[currentStoryIndex] = {};
+      if (typeof message.storyIndex === 'number') {
+        // Clear votes for the specified story
+        if (votesPerStory[message.storyIndex]) {
+          votesPerStory[message.storyIndex] = {};
+        }
+        
+        // Reset revealed status
+        votesRevealed[message.storyIndex] = false;
+        
+        // Update UI if this is the current story
+        if (message.storyIndex === currentStoryIndex) {
+          resetAllVoteVisuals();
+          
+          // ✅ Hide vote statistics and show planning cards again
+          const planningCardsSection = document.querySelector('.planning-cards-section');
+          const statsContainer = document.querySelector('.vote-statistics-container');
+          
+          if (planningCardsSection) planningCardsSection.style.display = 'block';
+          if (statsContainer) statsContainer.style.display = 'none';
+        }
       }
-      votesRevealed[currentStoryIndex] = false;
-      resetAllVoteVisuals();
-      // ✅ Hide vote statistics and show planning cards again
-      const planningCardsSection = document.querySelector('.planning-cards-section');
-      const statsContainer = document.querySelector('.vote-statistics-container');
-      
-      if (planningCardsSection) planningCardsSection.style.display = 'block';
-      if (statsContainer) statsContainer.style.display = 'none';
       break;
 
     case 'storySelected':
@@ -2217,18 +2370,31 @@ function handleSocketMessage(message) {
       break;
       
     case 'storyVotes':
-      // Handle received votes for a specific story
+      // Handle received votes for a specific story with improved state persistence
       if (message.storyIndex !== undefined && message.votes) {
-        votesPerStory[message.storyIndex] = message.votes;
-        // Update UI if this is the current story and votes are revealed
-        if (message.storyIndex === currentStoryIndex && votesRevealed[currentStoryIndex]) {
-          applyVotesToUI(message.votes, false);
+        // Store votes for this story
+        if (!votesPerStory[message.storyIndex]) {
+          votesPerStory[message.storyIndex] = {};
+        }
+        
+        // Update with received votes
+        Object.assign(votesPerStory[message.storyIndex], message.votes);
+        
+        // Update UI if this is the current story
+        if (message.storyIndex === currentStoryIndex) {
+          // If votes are revealed, show them; otherwise, just show that people voted
+          if (votesRevealed[message.storyIndex]) {
+            applyVotesToUI(message.votes, false);
+            handleVotesRevealed(message.storyIndex, votesPerStory[message.storyIndex]);
+          } else {
+            applyVotesToUI(message.votes, true);
+          }
         }
       }
       break;
       
     case 'syncCSVData':
-      // Handle CSV data sync with improved handling
+      // Handle CSV data sync with improved state handling
       if (Array.isArray(message.csvData)) {
         console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
         
@@ -2266,68 +2432,60 @@ function handleSocketMessage(message) {
       break;
 
     case 'connect':
-      // When connection is established, request tickets
+      // When connection is established
+      updateConnectionStatus('connected');
+      
+      // Request tickets and state after connection
       setTimeout(() => {
-        if (socket && socket.connected && !hasRequestedTickets) {
-          console.log('[SOCKET] Connected, requesting all tickets');
-          socket.emit('requestAllTickets');
-          hasRequestedTickets = true;
+        if (socket && socket.connected) {
+          if (!hasRequestedTickets) {
+            console.log('[SOCKET] Connected, requesting all tickets');
+            socket.emit('requestAllTickets');
+            hasRequestedTickets = true;
+          }
+          
+          // Also request votes for current story
+          if (typeof currentStoryIndex === 'number') {
+            socket.emit('requestStoryVotes', { storyIndex: currentStoryIndex });
+          }
         }
       }, 500);
       break;
+      
+    case 'reconnect_attempt':
+      // Show reconnecting status
+      updateConnectionStatus('reconnecting');
+      reconnectingInProgress = true;
+      break;
+      
+    case 'reconnect':
+      // Handle successful reconnection
+      updateConnectionStatus('connected');
+      reconnectingInProgress = false;
+      
+      // Request current state after reconnection
+      setTimeout(() => {
+        if (socket && socket.connected) {
+          // Request votes for current story
+          if (typeof currentStoryIndex === 'number') {
+            socket.emit('requestStoryVotes', { storyIndex: currentStoryIndex });
+          }
+          
+          // Request all tickets if we don't have them
+          if (!hasRequestedTickets) {
+            socket.emit('requestAllTickets');
+            hasRequestedTickets = true;
+          }
+        }
+      }, 500);
+      break;
+      
+    case 'error':
+      // Show connection error status
+      updateConnectionStatus('error');
+      break;
   }
 }
-
-// Add utility function for debugging
-window.debugStoryCards = function() {
-  const allStories = document.querySelectorAll('.story-card');
-  const csvStories = document.querySelectorAll('.story-card[id^="story_csv_"]');
-  const manualStories = document.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
-  const deleteButtons = document.querySelectorAll('.story-delete-btn');
-  
-  console.log(`Total story cards: ${allStories.length}`);
-  console.log(`CSV story cards: ${csvStories.length}`);
-  console.log(`Manual story cards: ${manualStories.length}`);
-  console.log(`Delete buttons: ${deleteButtons.length}`);
-  
-  // Check each story
-  allStories.forEach(story => {
-    const id = story.id;
-    const hasDeleteBtn = story.querySelector('.story-delete-btn') !== null;
-    console.log(`Story ${id}: has delete button = ${hasDeleteBtn}`);
-  });
-  
-  return {
-    total: allStories.length,
-    csv: csvStories.length,
-    manual: manualStories.length,
-    deleteButtons: deleteButtons.length
-  };
-};
-
-// Emergency delete function for troubleshooting
-window.emergencyDeleteCSV = function(index) {
-  const id = `story_csv_${index}`;
-  console.log('EMERGENCY: Attempting to delete CSV story:', id);
-  
-  // Get the element
-  const element = document.getElementById(id);
-  if (!element) {
-    console.error('Element not found');
-    return false;
-  }
-  
-  try {
-    // Replace with direct DOM API call
-    element.parentNode.removeChild(element);
-    normalizeStoryIndexes();
-    console.log('SUCCESS: Story removed via emergency function');
-    return true;
-  } catch (e) {
-    console.error('ERROR in emergency delete:', e);
-    return false;
-  }
-};
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -2337,4 +2495,4 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   appendRoomIdToURL(roomId);
   initializeApp(roomId);
-});  
+});
