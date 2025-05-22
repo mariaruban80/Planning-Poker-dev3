@@ -696,7 +696,7 @@ function addNewLayoutStyles() {
       width: 20px;
       height: 20px;
       
-      color: white;
+      color: #000000;
       border-radius: 50%;
       display: flex;
       align-items: center;
