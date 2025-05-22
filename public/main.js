@@ -2149,6 +2149,37 @@ function handleSocketMessage(message) {
         updateVoteVisuals(message.userId, votesRevealed[currentStoryIndex] ? message.vote : '👍', true);
       }
       break;
+
+       case 'deleteStory':
+      // Handle story deletion from another user
+      if (message.storyId) {
+        console.log('[SOCKET] Story deletion received:', message.storyId);
+        
+        // Get the story element
+        const storyCard = document.getElementById(message.storyId);
+        if (storyCard) {
+          // Get the index for potential reselection
+          const index = parseInt(storyCard.dataset.index);
+          
+          // Remove the story
+          storyCard.remove();
+          
+          // Renumber remaining stories
+          normalizeStoryIndexes();
+          
+          // If this was the current story, select another one
+          if (index === currentStoryIndex) {
+            const storyList = document.getElementById('storyList');
+            if (storyList && storyList.children.length > 0) {
+              const newIndex = Math.min(index, storyList.children.length - 1);
+              selectStory(newIndex, false); // Don't emit selection to avoid loops
+            }
+          }
+           // Update card interactions after DOM changes
+      setupStoryCardInteractions();
+        }
+      }
+      break;
       
     case 'votesRevealed':
       // Handle votes revealed
