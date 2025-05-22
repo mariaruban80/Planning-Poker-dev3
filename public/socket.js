@@ -6,6 +6,9 @@ let socket = null;
 let selectedStoryIndex = null;
 let roomId = null;
 let userName = null;
+let reconnectionEnabled = true;
+let reconnectAttempts = 0;
+let maxReconnectAttempts = 10;
 
 /**
  * Initialize WebSocket connection to server
@@ -15,51 +18,112 @@ let userName = null;
  * @returns {Object} - Socket instance for external reference
  */
 export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage) {
-   // First verify that we have a valid username
+  // First verify that we have a valid username
   if (!userNameValue) {
     console.error('[SOCKET] Cannot initialize without a username');
     return null;
   }
+  
   // Store params for potential reconnection
   roomId = roomIdentifier;
   userName = userNameValue;
+  reconnectAttempts = 0;
   
-  // Initialize socket connection
+  // Initialize socket connection with improved reconnection settings
   socket = io({
     transports: ['websocket'],
     reconnection: true,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: maxReconnectAttempts,
     reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
 
   socket.on('addTicket', ({ ticketData }) => {
-  console.log('[SOCKET] Received new ticket from another user:', ticketData);
-  handleMessage({ type: 'addTicket', ticketData });
-});
+    console.log('[SOCKET] Received new ticket from another user:', ticketData);
+    handleMessage({ type: 'addTicket', ticketData });
+  });
 
-socket.on('allTickets', ({ tickets }) => {
-  console.log('[SOCKET] Received all tickets:', tickets.length);
-  handleMessage({ type: 'allTickets', tickets });
-});
+  socket.on('allTickets', ({ tickets }) => {
+    console.log('[SOCKET] Received all tickets:', tickets.length);
+    handleMessage({ type: 'allTickets', tickets });
+  });
 
   // Socket event handlers
   socket.on('connect', () => {
     console.log('[SOCKET] Connected to server with ID:', socket.id);
+    reconnectAttempts = 0;
+    
+    // When connecting, explicitly join the room
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+    
+    // Notify UI of successful connection
+    handleMessage({ type: 'connect' });
+  });
+
+  // Add reconnect event handlers
+  socket.on('reconnect_attempt', (attempt) => {
+    console.log(`[SOCKET] Reconnection attempt ${attempt}`);
+    reconnectAttempts = attempt;
+    
+    // Notify UI of reconnection attempt
+    handleMessage({ type: 'reconnect_attempt', attempt });
+  });
+
+  socket.on('reconnect', () => {
+    console.log('[SOCKET] Reconnected to server after disconnect');
+    
+    // Re-join room and request current state
+    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+    
+    // Notify UI of successful reconnection
+    handleMessage({ type: 'reconnect' });
+    
+    // Reset reconnection attempts counter
+    reconnectAttempts = 0;
+  });
+  
+  socket.on('reconnect_error', (error) => {
+    console.error('[SOCKET] Reconnection error:', error);
+    
+    // Notify UI of reconnection error
+    handleMessage({ type: 'error', error });
+    
+    // Try again if below the max attempts
+    if (reconnectAttempts < maxReconnectAttempts && reconnectionEnabled) {
+      console.log(`[SOCKET] Will attempt reconnection again (${reconnectAttempts}/${maxReconnectAttempts})`);
+    } else {
+      console.error('[SOCKET] Maximum reconnection attempts reached');
+      // Notify UI that no further reconnection attempts will be made
+      handleMessage({ type: 'reconnection_failed' });
+    }
+  });
+  
+  socket.on('disconnect', (reason) => {
+    console.log('[SOCKET] Disconnected from server. Reason:', reason);
+    
+    // Auto-reconnect for these specific reasons
+    if (reason === 'io server disconnect' && reconnectionEnabled) {
+      // The server intentionally disconnected us
+      console.log('[SOCKET] Server disconnected us, attempting reconnect');
+      socket.connect();
+    }
+    
+    // Notify UI of disconnect
+    handleMessage({ type: 'disconnect', reason });
   });
 
   socket.on('userList', (users) => {
     handleMessage({ type: 'userList', users });
   });
-   // ADD THE NEW HANDLER RIGHT HERE, among the other socket.on handlers
+  
+  // Handle voting system updates from server
   socket.on('votingSystemUpdate', data => {
     console.log('[SOCKET DEBUG] votingSystemUpdate received:', data);
     // Forward this to the handler
     handleMessage({ type: 'votingSystemUpdate', ...data });
   });
-
-   
 
   socket.on('syncCSVData', (csvData) => {
     console.log('[SOCKET] Received CSV data:', Array.isArray(csvData) ? csvData.length : 'invalid', 'rows');
@@ -93,7 +157,7 @@ socket.on('allTickets', ({ tickets }) => {
     handleMessage({ type: 'votesRevealed', storyIndex });
   });
 
-     socket.on('deleteStory', ({ storyId }) => {
+  socket.on('deleteStory', ({ storyId }) => {
     console.log('[SOCKET] Story deletion event received:', storyId);
     handleMessage({ type: 'deleteStory', storyId });
   });
@@ -121,11 +185,6 @@ socket.on('allTickets', ({ tickets }) => {
       data.stories ? data.stories.length : 0, 'stories and',
       data.votes ? Object.keys(data.votes).length : 0, 'vote sets');
     handleMessage({ type: 'exportData', data });
-  });
-
-  socket.on('disconnect', () => {
-    console.log('[SOCKET] Disconnected from server');
-    handleMessage({ type: 'disconnect' });
   });
 
   socket.on('connect_error', (error) => {
@@ -269,4 +328,48 @@ export function reconnect() {
   }
   
   return false;
+}
+
+/**
+ * Enable or disable automatic reconnection
+ * @param {boolean} enable - Whether to enable reconnection
+ */
+export function setReconnectionEnabled(enable) {
+  reconnectionEnabled = enable;
+  console.log(`[SOCKET] Reconnection ${enable ? 'enabled' : 'disabled'}`);
+}
+
+/**
+ * Request all tickets from the server
+ * Useful after reconnection to ensure all tickets are loaded
+ */
+export function requestAllTickets() {
+  if (socket) {
+    console.log('[SOCKET] Requesting all tickets');
+    socket.emit('requestAllTickets');
+  }
+}
+
+/**
+ * Set maximum reconnection attempts
+ * @param {number} max - Max number of reconnection attempts
+ */
+export function setMaxReconnectAttempts(max) {
+  if (typeof max === 'number' && max > 0) {
+    maxReconnectAttempts = max;
+    console.log(`[SOCKET] Max reconnection attempts set to ${max}`);
+  }
+}
+
+/**
+ * Get current reconnection status
+ * @returns {Object} - Reconnection status information
+ */
+export function getReconnectionStatus() {
+  return {
+    enabled: reconnectionEnabled,
+    attempts: reconnectAttempts,
+    maxAttempts: maxReconnectAttempts,
+    connected: socket ? socket.connected : false
+  };
 }
