@@ -1,12 +1,13 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
-let deleteConfirmationInProgress = false;
 let processingCSVData = false;
 // Import socket functionality
-import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket  } from './socket.js'; 
+import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket } from './socket.js'; 
 
 // Flag to track manually added tickets that need to be preserved
 let preservedManualTickets = [];
+// Flag to prevent duplicate delete confirmation dialogs
+let deleteConfirmationInProgress = false;
 
 // Add a window function for index.html to call
 window.notifyStoriesUpdated = function() {
@@ -34,6 +35,7 @@ window.notifyStoriesUpdated = function() {
   
   console.log(`Preserved ${preservedManualTickets.length} manual tickets`);
 };
+
 /**
  * Handle adding a ticket from the modal
  * @param {Object} ticketData - Ticket data {id, text}
@@ -56,7 +58,6 @@ window.addTicketFromModal = function(ticketData) {
   // Store in manually added tickets
   manuallyAddedTickets.push(ticketData);
 };
-
 
 /**
  * Initialize socket with a specific name (used when joining via invite)
@@ -82,6 +83,8 @@ window.initializeSocketWithName = function(roomId, name) {
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions();
+  cleanupDeleteButtonHandlers();
+  setupCSVDeleteButtons();
   
   // Add CSS for new layout
   addNewLayoutStyles();
@@ -116,7 +119,7 @@ let votesRevealed = {};     // Track which stories have revealed votes { storyIn
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 
-// Adding  this function to main.js to be called whenever votes are revealed
+// Adding this function to main.js to be called whenever votes are revealed
 function fixRevealedVoteFontSizes() {
   // Target all vote badges in revealed state
   const voteCards = document.querySelectorAll('.vote-card-space.has-vote .vote-badge');
@@ -147,36 +150,6 @@ function fixRevealedVoteFontSizes() {
   });
 }
 
-function setupCSVDeleteButtons() {
-  // Remove any existing delegated click handler first
-  document.removeEventListener('click', csvDeleteButtonHandler);
-  
-  // Define the handler function so we can refer to it for removal
-  window.csvDeleteButtonHandler = function(event) {
-    // Only handle clicks on CSV story delete buttons
-    if (event.target.matches('.story-card[id^="story_csv_"] .story-delete-btn') || 
-        event.target.closest('.story-card[id^="story_csv_"] .story-delete-btn')) {
-      
-      event.stopPropagation();
-      event.preventDefault();
-      
-      // Find the story card containing this button
-      const storyCard = event.target.closest('.story-card[id^="story_csv_"]');
-      
-      if (storyCard && storyCard.id) {
-        console.log('[DELETE] Delegated handler for CSV story:', storyCard.id);
-        // Call deletion function - but use regular deleteStory to avoid duplication
-        deleteStory(storyCard.id);
-      }
-    }
-  };
-  
-  // Add the new event listener
-  document.addEventListener('click', window.csvDeleteButtonHandler);
-  console.log('[SETUP] CSV delete button handler installed');
-}
-
-
 function addFixedVoteStatisticsStyles() {
   // Remove any existing vote statistics styles to avoid conflicts
   const existingStyle = document.getElementById('fixed-vote-statistics-styles');
@@ -191,7 +164,6 @@ function addFixedVoteStatisticsStyles() {
     .fixed-vote-display {
       background-color: white;
       border-radius: 8px;
-    //  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
       max-width: 300px;
       margin: 20px auto;
       padding: 20px;
@@ -316,7 +288,7 @@ function createFixedVoteDisplay(votes) {
       <div class="fixed-stat-group">
         <div class="fixed-stat-label">Agreement:</div>
         <div class="fixed-agreement-circle">
-       <div class="agreement-icon">👍</div>
+          <div class="agreement-icon">👍</div>
         </div>
       </div>
     </div>
@@ -332,6 +304,14 @@ function isGuestUser() {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
 }
+
+/**
+ * Determines if current user is the host
+ */
+function isCurrentUserHost() {
+  return sessionStorage.getItem('isHost') === 'true';
+}
+
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
   if (!container) return;
@@ -362,7 +342,6 @@ function setupPlanningCards() {
   // ✅ Enable drag after cards are added
   setupVoteCardsDrag();
 }
-
 
 /**
  * Set up guest mode restrictions
@@ -419,42 +398,44 @@ function appendRoomIdToURL(roomId) {
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-//  Guest: Listen for host's voting system
-socket.on('votingSystemUpdate', ({ votingSystem }) => {
-  console.log('[SOCKET] Received voting system from host:', votingSystem);
-  sessionStorage.setItem('votingSystem', votingSystem);
-  setupPlanningCards(); // Dynamically regenerate vote cards
-});
+  // Guest: Listen for host's voting system
+  socket.on('votingSystemUpdate', ({ votingSystem }) => {
+    console.log('[SOCKET] Received voting system from host:', votingSystem);
+    sessionStorage.setItem('votingSystem', votingSystem);
+    setupPlanningCards(); // Dynamically regenerate vote cards
+  });
 
-// Host: Emit selected voting system to server
-const isHost = sessionStorage.getItem('isHost') === 'true';
-const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+  // Host: Emit selected voting system to server
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
-if (isHost && socket) {
-  socket.emit('votingSystemSelected', { roomId, votingSystem });
-}  
-   cleanupDeleteButtonHandlers();
-  setupCSVDeleteButtons(); 
- updateHeaderStyle();
-    addFixedVoteStatisticsStyles();
+  if (isHost && socket) {
+    socket.emit('votingSystemSelected', { roomId, votingSystem });
+  }
+
+  updateHeaderStyle();
+  addFixedVoteStatisticsStyles();
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
-//  setupVoteCardsDrag();
   setupPlanningCards(); // generates the cards AND sets up drag listeners
-
   setupRevealResetButtons();
   setupAddTicketButton();
   setupGuestModeRestrictions(); // Add guest mode restrictions
-   // Add this line
   setupStoryCardInteractions();
+  
+  // Add these cleanup and setup calls for delete buttons
+  cleanupDeleteButtonHandlers();
+  setupCSVDeleteButtons();
+  
   // Add CSS for new layout
   addNewLayoutStyles();
-  setupCSVDeleteButtons();
 }
-function isCurrentUserHost() {
-  return sessionStorage.getItem('isHost') === 'true';
+
+function updateHeaderStyle() {
+  // Implement if needed
 }
+
 /**
  * Add CSS styles for the new layout
  */
@@ -480,11 +461,10 @@ function addNewLayoutStyles() {
       flex-wrap: wrap;
     }
     .disabled-nav {
-  opacity: 0.4;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
+      opacity: 0.4;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
     
     .vote-row {
       display: flex;
@@ -586,7 +566,7 @@ function addNewLayoutStyles() {
     }
     
     .vote-badge {
-   font-size: 18px;
+      font-size: 18px;
       font-weight: bold;
       color: #673ab7 !important; /* Purple color matching your theme */
       opacity: 1 !important;
@@ -611,19 +591,19 @@ function addNewLayoutStyles() {
       justify-content: center;
     }
     .global-emoji-burst {
-  position: fixed;
-  font-size: 2rem;
-  pointer-events: none;
-  opacity: 0;
-  transform: scale(0.5) translateY(0);
-  transition: transform 0.8s ease-out, opacity 0.8s ease-out;
-  z-index: 9999;
-}
+      position: fixed;
+      font-size: 2rem;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.5) translateY(0);
+      transition: transform 0.8s ease-out, opacity 0.8s ease-out;
+      z-index: 9999;
+    }
 
-.global-emoji-burst.burst-go {
-  opacity: 1;
-  transform: scale(1.5) translateY(-100px);
-}
+    .global-emoji-burst.burst-go {
+      opacity: 1;
+      transform: scale(1.5) translateY(-100px);
+    }
 
     .reveal-votes-button {
       padding: 12px 24px;
@@ -651,11 +631,10 @@ function addNewLayoutStyles() {
       justify-content: center;
     }
     .disabled-story {
-  pointer-events: none;
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+      pointer-events: none;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     
     .card {
       padding: 10px 20px;
@@ -678,7 +657,7 @@ function addNewLayoutStyles() {
     .hide-for-guests {
       display: none !important;
     }
-own-vote-space {
+    .own-vote-space {
       border: 2px dashed #673ab7;
       position: relative;
     }
@@ -742,33 +721,150 @@ own-vote-space {
   `;
   document.head.appendChild(style);
 }
+
 /**
- * Add delete buttons to all story cards for host users
+ * This function removes all delete button direct event listeners
  */
-function refreshDeleteButtons() {
-  // Only proceed if user is a host
-  if (!isCurrentUserHost()) return;
-  
-  const storyCards = document.querySelectorAll('.story-card');
-  
-  storyCards.forEach(card => {
-    // Skip if card already has a delete button
-    if (card.querySelector('.story-delete-btn')) return;
-    
-    const deleteButton = document.createElement('div');
-    deleteButton.className = 'story-delete-btn';
-    deleteButton.innerHTML = '🗑'; // dustbin symbol
-    deleteButton.title = 'Delete story';
-    
-    // Add click handler for delete button
-    deleteButton.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent story selection when clicking delete
-      deleteStory(card.id);
-    });
-    
-    card.appendChild(deleteButton);
+function cleanupDeleteButtonHandlers() {
+  const deleteButtons = document.querySelectorAll('.story-delete-btn');
+  deleteButtons.forEach(btn => {
+    // Clone the button to remove all event listeners
+    const newBtn = btn.cloneNode(true);
+    if (btn.parentNode) {
+      btn.parentNode.replaceChild(newBtn, btn);
+    }
   });
+  console.log(`[CLEANUP] Removed event listeners from ${deleteButtons.length} delete buttons`);
 }
+
+/**
+ * Setup delegation-based event handling for CSV story delete buttons
+ */
+function setupCSVDeleteButtons() {
+  // Define the handler function if it doesn't exist yet
+  if (!window.csvDeleteButtonHandler) {
+    window.csvDeleteButtonHandler = function(event) {
+      // Only handle clicks on delete buttons inside CSV stories
+      const deleteBtn = event.target.closest('.story-delete-btn');
+      const storyCard = event.target.closest('.story-card[id^="story_csv_"]');
+      
+      if (deleteBtn && storyCard && storyCard.id) {
+        event.stopPropagation();
+        event.preventDefault();
+        
+        console.log('[DELETE] Delegated handler for CSV story:', storyCard.id);
+        deleteStory(storyCard.id);
+      }
+    };
+  }
+  
+  // Remove any existing delegated click handler first (safely)
+  try {
+    document.removeEventListener('click', window.csvDeleteButtonHandler);
+  } catch (e) {
+    console.log('[SETUP] No existing handler to remove');
+  }
+  
+  // Add the new event listener
+  document.addEventListener('click', window.csvDeleteButtonHandler);
+  console.log('[SETUP] CSV delete button handler installed');
+}
+
+/**
+ * Delete a story by ID with duplicate confirmation prevention
+ */
+function deleteStory(storyId) {
+  console.log('[DELETE] Attempting to delete story:', storyId);
+  
+  // Prevent multiple confirmation dialogs
+  if (deleteConfirmationInProgress) {
+    console.log('[DELETE] Delete confirmation already in progress, ignoring duplicate call');
+    return;
+  }
+  
+  deleteConfirmationInProgress = true;
+  
+  // Confirm deletion
+  const confirmResult = confirm('Are you sure you want to delete this story?');
+  
+  // Reset the flag regardless of result
+  setTimeout(() => {
+    deleteConfirmationInProgress = false;
+  }, 100);
+  
+  if (!confirmResult) {
+    console.log('[DELETE] User canceled deletion');
+    return;
+  }
+  
+  // Get the story element
+  const storyCard = document.getElementById(storyId);
+  if (!storyCard) {
+    console.error('[DELETE] Story card not found:', storyId);
+    return;
+  }
+
+  console.log('[DELETE] Found story card, proceeding with deletion');
+  
+  // Get story index before removal (for selection adjustment)
+  const index = parseInt(storyCard.dataset.index);
+  
+  // Check if this is a CSV story
+  const isCsvStory = storyId.startsWith('story_csv_');
+  
+  // Emit deletion event to server (with special handling for CSV stories)
+  if (socket) {
+    console.log('[DELETE] Emitting deleteStory event to server');
+    
+    if (isCsvStory) {
+      // For CSV stories, extract the index and send additional info
+      const csvIndex = parseInt(storyId.replace('story_csv_', ''));
+      socket.emit('deleteStory', { storyId, isCsvStory: true, csvIndex });
+    } else {
+      // For regular stories
+      socket.emit('deleteStory', { storyId });
+    }
+  } else {
+    console.warn('[DELETE] Socket not available, deleting locally only');
+  }
+  
+  // Remove from DOM
+  storyCard.remove();
+  
+  // Remove from preserved manual tickets if applicable
+  preservedManualTickets = preservedManualTickets.filter(ticket => ticket.id !== storyId);
+  
+  // If this was a manually added ticket, remove it from that list too
+  manuallyAddedTickets = manuallyAddedTickets.filter(ticket => ticket.id !== storyId);
+  
+  // Renumber remaining stories
+  normalizeStoryIndexes();
+  
+  // If the deleted story was the current selection, select another one if available
+  if (index === currentStoryIndex) {
+    const storyList = document.getElementById('storyList');
+    if (storyList && storyList.children.length > 0) {
+      // If we deleted the last story, select the new last one
+      const newIndex = Math.min(index, storyList.children.length - 1);
+      selectStory(newIndex);
+    } else {
+      // No stories left, hide cards and show message
+      const noStoriesMessage = document.getElementById('noStoriesMessage');
+      if (noStoriesMessage) {
+        noStoriesMessage.style.display = 'block';
+      }
+      
+      // Disable planning cards
+      document.querySelectorAll('#planningCards .card').forEach(card => {
+        card.classList.add('disabled');
+        card.setAttribute('draggable', 'false');
+      });
+    }
+  }
+  
+  console.log('[DELETE] Deletion completed for story:', storyId);
+}
+
 function createVoteStatisticsDisplay(votes) {
   // Create container
   const container = document.createElement('div');
@@ -863,100 +959,11 @@ function getAgreementColor(percentage) {
   if (percentage >= 0) return '#FFEB3B';
   return '#ff9100';  // Low agreement - orange
 }
-function addVoteStatisticsStyles() 
-{
-    // Remove any existing vote statistics styles first to avoid duplication
-  const existingStyle = document.getElementById('vote-statistics-styles');
-  if (existingStyle) {
-    existingStyle.remove();
-  }
-  const style = document.createElement('style');
-  style.textContent = `
-    .vote-statistics-display {
-      display: flex;
-      background-color: white;
-      border-radius: 8px;
-      border: white;
-      padding: 20px;
-      margin: 20px auto;
-      max-width: 350px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .vote-chart {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-right: 30px;
-    }
-    
-    .vote-card-box {
-      width: 60px;
-      height: 90px;
-      border: 2px solid #000;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: white;
-      font-weight: bold;
-    }
-    
-    .vote-value {
-      font-size: 28px;
-      font-weight: bold;
-    }
-    
-    .vote-count {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #555;
-    }
-    
-    .vote-stats {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    
-    .stat-row {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    
-    .stat-label {
-      font-size: 16px;
-      color: #333;
-      margin-bottom: 5px;
-    }
-    
-    .stat-value {
-      font-size: 24px;
-      font-weight: bold;
-      color: #111;
-    }
-    
-    .stat-circle {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 18px;
-    }
-    
-    .agreement-icon {
-      font-size: 20px;
-      color: white;
-    }
-  `;
-  document.head.appendChild(style);
+
+function addVoteStatisticsStyles() {
+  // Implement if needed
 }
+
 /**
  * Handle votes revealed event by showing statistics
  * @param {number} storyIndex - Index of the story
@@ -968,11 +975,9 @@ function handleVotesRevealed(storyIndex, votes) {
   
   // Get the planning cards container
   const planningCardsSection = document.querySelector('.planning-cards-section');
-    // Make sure the fixed styles are added
+  // Make sure the fixed styles are added
   addFixedVoteStatisticsStyles();
   // Create vote statistics display
-//  const voteStats = createVoteStatisticsDisplay(votes);
-  // removed the above old function and add the new onw 
   const voteStats = createFixedVoteDisplay(votes);
   // Hide planning cards and show statistics
   if (planningCardsSection) {
@@ -997,44 +1002,13 @@ function handleVotesRevealed(storyIndex, votes) {
   
   // Apply the vote visuals as normal too
   applyVotesToUI(votes, false);
-    // Add a delay to ensure the DOM is updated before fixing font sizes
+  // Add a delay to ensure the DOM is updated before fixing font sizes
   setTimeout(fixRevealedVoteFontSizes, 100);
   
   // Run it again after a bit longer to be sure (sometimes the DOM updates can be delayed)
   setTimeout(fixRevealedVoteFontSizes, 300);
 }
-/**
- * Setup Add Ticket button
- 
-function setupAddTicketButton() {
-  const addTicketBtn = document.getElementById('addTicketBtn');
-  if (addTicketBtn) {
-      // Set flag to prevent double handling
-    window.ticketHandlerAttached = true;
-    addTicketBtn.addEventListener('click', () => {
-      const storyText = prompt("Enter the story details:");
-      if (storyText && storyText.trim()) {
-        // Create ticket data
-        const ticketData = {
-          id: `story_${Date.now()}`,
-          text: storyText.trim()
-        };
-        
-        // Emit to server for synchronization
-         emitAddTicket(ticketData);
-       // if (socket) {
-          //socket.emit('addTicket', ticketData);
-        //}
-        
-        // Add ticket locally
-        addTicketToUI(ticketData, true);
-        
-        // Store in manually added tickets
-        manuallyAddedTickets.push(ticketData);
-      }
-    });
-  }
-} */
+
 /**
  * Setup Add Ticket button
  */
@@ -1161,91 +1135,6 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 }
 
 /**
- * Delete a story by ID
- * @param {string} storyId - ID of the story to delete
- */
-function deleteStory(storyId) {
-console.log('[DELETE] Attempting to delete story:', storyId);
-  
-  // Prevent multiple confirmation dialogs
-  if (deleteConfirmationInProgress) {
-    console.log('[DELETE] Delete confirmation already in progress, ignoring duplicate call');
-    return;
-  }
-  
-  deleteConfirmationInProgress = true;
-  
-  // Confirm deletion
-  const confirmResult = confirm('Are you sure you want to delete this story?');
-  
-  // Reset the flag regardless of result
-  setTimeout(() => {
-    deleteConfirmationInProgress = false;
-  }, 100);
-  
-  if (!confirmResult) {
-    console.log('[DELETE] User canceled deletion');
-    return;
-  }
-  
-  // Get the story element
-  const storyCard = document.getElementById(storyId);
-  if (!storyCard) {
-    console.error('[DELETE] Story card not found:', storyId);
-    return;
-  }
-  console.log('[DELETE] Found story card, proceeding with deletion');
-  
-  // Get story index before removal (for selection adjustment)
-  const index = parseInt(storyCard.dataset.index);
-  
-  // Emit deletion event to server
-  if (socket) {
-    console.log('[DELETE] Emitting deleteStory event to server');
-    socket.emit('deleteStory', { storyId });
-  } else {
-    console.warn('[DELETE] Socket not available, deleting locally only');
-  }
-  
-  // Remove from DOM
-  storyCard.remove();
-  
-  // Remove from preserved manual tickets if applicable
-  preservedManualTickets = preservedManualTickets.filter(ticket => ticket.id !== storyId);
-  
-  // If this was a manually added ticket, remove it from that list too
-  manuallyAddedTickets = manuallyAddedTickets.filter(ticket => ticket.id !== storyId);
-  
-  // Renumber remaining stories
-  normalizeStoryIndexes();
-  
-  // If the deleted story was the current selection, select another one if available
-  if (index === currentStoryIndex) {
-    const storyList = document.getElementById('storyList');
-    if (storyList && storyList.children.length > 0) {
-      // If we deleted the last story, select the new last one
-      const newIndex = Math.min(index, storyList.children.length - 1);
-      selectStory(newIndex);
-    } else {
-      // No stories left, hide cards and show message
-      const noStoriesMessage = document.getElementById('noStoriesMessage');
-      if (noStoriesMessage) {
-        noStoriesMessage.style.display = 'block';
-      }
-      
-      // Disable planning cards
-      document.querySelectorAll('#planningCards .card').forEach(card => {
-        card.classList.add('disabled');
-        card.setAttribute('draggable', 'false');
-      });
-    }
-  }
-  
-  console.log('[DELETE] Deletion completed for story:', storyId);
-}
-
-
-/**
  * Set up a mutation observer to catch any newly added story cards
  */
 function setupStoryCardObserver() {
@@ -1328,13 +1217,18 @@ function processAllTickets(tickets) {
     currentStoryIndex = 0;
     selectStory(0, false); // Don't emit to avoid loops
   }
-   // Fix indexes to ensure navigation works
+  // ✅ Fix indexes to ensure navigation works
   normalizeStoryIndexes();
    
   setupStoryCardInteractions();
-  refreshDeleteButtons(); // Add this line to ensure delete buttons
+  
+  // Add delete button handling
+  cleanupDeleteButtonHandlers();
+  setupCSVDeleteButtons();
+  
+  // Apply guest restrictions if needed
+  applyGuestRestrictions();
 }
-
 
 /**
  * Setup reveal and reset buttons
@@ -1376,9 +1270,6 @@ function setupRevealResetButtons() {
   }
 }
 
-/**
- * Setup CSV file uploader
- */
 /**
  * Setup CSV file uploader
  */
@@ -1447,6 +1338,7 @@ function setupCSVUploader() {
     reader.readAsText(file);
   });
 }
+
 /**
  * Parse CSV text into array structure
  */
@@ -1466,11 +1358,9 @@ function normalizeStoryIndexes() {
   });
 }
 
-
 /**
  * Display CSV data in the story list
  */
-
 function displayCSVData(data) {
   // Prevent reentrant calls that could cause flickering or data loss
   if (processingCSVData) {
@@ -1569,13 +1459,13 @@ function displayCSVData(data) {
       
       storyItem.appendChild(storyTitle);
       
-      // Add delete button for hosts only, but WITH proper event listener
+      // Add delete button for hosts only
       if (isCurrentUserHost()) {
-        const deleteButton = document.createElement('button');
+        console.log('[CSV] Adding delete button to CSV story:', csvStoryId);
+        const deleteButton = document.createElement('div'); // Changed to div
         deleteButton.className = 'story-delete-btn';
         deleteButton.innerHTML = '🗑'; // dustbin symbol
         deleteButton.title = 'Delete CSV story';
-        deleteButton.type = 'button'; // Ensure it doesn't submit forms
         
         // Add direct click handler that references the correct ID
         deleteButton.onclick = function(e) {
@@ -1590,8 +1480,11 @@ function displayCSVData(data) {
       
       storyListContainer.appendChild(storyItem);
       
-      // Only add click events for hosts
-      if (isCurrentUserHost()) {
+      // For guests, add 'disabled-story' class and no click handler
+      if (isGuestUser()) {
+        storyItem.classList.add('disabled-story');
+      } else {
+        // Only hosts can select stories
         storyItem.addEventListener('click', () => {
           selectStory(startIndex + index);
         });
@@ -1627,9 +1520,11 @@ function displayCSVData(data) {
       storyListContainer.children[0].classList.add('selected');
       currentStoryIndex = 0;
     }
-      // Clean up and set up delete handlers
+    
+    // Add cleanup and setup for delete buttons
     cleanupDeleteButtonHandlers();
     setupCSVDeleteButtons();
+    
   } finally {
     normalizeStoryIndexes();
     setupStoryCardInteractions();
@@ -1637,18 +1532,6 @@ function displayCSVData(data) {
     processingCSVData = false;
   }
 }
-
-// This function removes all delete button direct event listeners
-function cleanupDeleteButtonHandlers() {
-  const deleteButtons = document.querySelectorAll('.story-delete-btn');
-  deleteButtons.forEach(btn => {
-    // Clone the button to remove all event listeners
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-  });
-}
-
-
 
 /**
  * Select a story by index
@@ -1674,7 +1557,7 @@ function selectStory(index, emitToServer = true) {
   if (typeof votesRevealed[index] === 'undefined') {
     votesRevealed[index] = false;
   }
- // Show planning cards again and hide statistics when changing stories
+  // Show planning cards again and hide statistics when changing stories
   const planningCardsSection = document.querySelector('.planning-cards-section');
   const statsContainer = document.querySelector('.vote-statistics-container');
   
@@ -1722,31 +1605,9 @@ function resetOrRestoreVotes(index) {
  */
 function applyVotesToUI(votes, hideValues) {
   Object.entries(votes).forEach(([userId, vote]) => {
-  updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
- //     updateVoteVisuals(userId, vote, true);
-  //  showEmojiBurst(userId, vote);
+    updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
   });
 }
-
-/** function showEmojiBurst(userId, vote) {
-  const voteSpace = document.getElementById(`vote-space-${userId}`);
-  if (!voteSpace) return;
-
-  const burst = document.createElement('div');
-  burst.className = 'emoji-burst';
-  burst.textContent = getVoteEmoji(vote); // 🎯 customizable emoji
-
-  voteSpace.appendChild(burst);
-
-  // Animate and remove after
-  setTimeout(() => {
-    burst.classList.add('burst-animate');
-  }, 10); // allow DOM insert
-
-  setTimeout(() => {
-    burst.remove();
-  }, 1000); // remove after animation
-} */
 
 /**
  * Reset all vote visuals
@@ -1788,7 +1649,6 @@ function renderCurrentStory() {
 /**
  * Update the user list display with the new layout
  */
-
 function updateUserList(users) {
   const userListContainer = document.getElementById('userList');
   const userCircleContainer = document.getElementById('userCircle');
@@ -1908,7 +1768,6 @@ function updateUserList(users) {
   }
 }
 
-
 /**
  * Create avatar container for a user
  */
@@ -1916,8 +1775,8 @@ function createAvatarContainer(user) {
   const avatarContainer = document.createElement('div');
   avatarContainer.classList.add('avatar-container');
   avatarContainer.id = `user-circle-${user.id}`;
-  
-  avatarContainer.innerHTML = `
+
+      avatarContainer.innerHTML = `
     <img src="${generateAvatarUrl(user.name)}" class="avatar-circle" alt="${user.name}" />
     <div class="user-name">${user.name}</div>
   `;
@@ -1991,9 +1850,6 @@ function createVoteCardSpace(user, isCurrentUser) {
   
   return voteCard;
 }
-
-
-
 
 /**
  * Update vote visuals for a user
@@ -2074,7 +1930,7 @@ function setupStoryNavigation() {
   const prevButton = document.getElementById('prevStory');
 
   if (!nextButton || !prevButton) return;
-// ✅ Disable for non-hosts
+  // ✅ Disable for non-hosts
   const isHost = sessionStorage.getItem('isHost') === 'true';
   if (!isHost) {
     nextButton.disabled = true;
@@ -2140,22 +1996,25 @@ function setupStoryCardInteractions() {
       
       // Remove any existing click handlers by cloning and replacing
       const newCard = card.cloneNode(true);
-      card.parentNode.replaceChild(newCard, card);
+      if (card.parentNode) {
+        card.parentNode.replaceChild(newCard, card);
+      }
     } else {
       // For hosts: maintain normal selection behavior
       // Remove existing handlers first to prevent duplicates
       const newCard = card.cloneNode(true);
-      card.parentNode.replaceChild(newCard, card);
+      if (card.parentNode) {
+        card.parentNode.replaceChild(newCard, card);
       
-      // Add fresh click event listener
-      newCard.addEventListener('click', () => {
-        const index = parseInt(newCard.dataset.index || 0);
-        selectStory(index);
-      });
+        // Add fresh click event listener
+        newCard.addEventListener('click', () => {
+          const index = parseInt(newCard.dataset.index || 0);
+          selectStory(index);
+        });
+      }
     }
   });
 }
-
 
 /**
  * Generate avatar URL
@@ -2167,7 +2026,6 @@ function generateAvatarUrl(name) {
 /**
  * Setup invite button
  */
-
 function setupInviteButton() {
   const inviteButton = document.getElementById('inviteButton');
   if (!inviteButton) return;
@@ -2191,7 +2049,6 @@ function setupInviteButton() {
     }
   };
 }
-
 
 /**
  * Setup vote cards drag functionality
@@ -2231,7 +2088,6 @@ function triggerGlobalEmojiBurst() {
   }
 }
 
-
 /**
  * Handle socket messages
  */
@@ -2254,22 +2110,22 @@ function handleSocketMessage(message) {
         console.log('[SOCKET] New ticket received:', message.ticketData);
         // Add ticket to UI without selecting it (to avoid loops)
         addTicketToUI(message.ticketData, false);
-         applyGuestRestrictions();
+        applyGuestRestrictions();
       }
       break;
-     case 'votingSystemUpdate':
+      
+    case 'votingSystemUpdate':
       console.log('[DEBUG] Got voting system update:', message.votingSystem);
       sessionStorage.setItem('votingSystem', message.votingSystem);
       setupPlanningCards(); // Regenerate cards
       break;
 
-
-      case 'allTickets':
+    case 'allTickets':
       // Handle receiving all tickets (used when joining a room)
       if (Array.isArray(message.tickets)) {
         console.log('[SOCKET] Received all tickets:', message.tickets.length);
         processAllTickets(message.tickets);
-         applyGuestRestrictions();
+        applyGuestRestrictions();
       }
       break;
       
@@ -2293,7 +2149,7 @@ function handleSocketMessage(message) {
       }
       break;
 
-       case 'deleteStory':
+    case 'deleteStory':
       // Handle story deletion from another user
       if (message.storyId) {
         console.log('[SOCKET] Story deletion received:', message.storyId);
@@ -2318,20 +2174,13 @@ function handleSocketMessage(message) {
               selectStory(newIndex, false); // Don't emit selection to avoid loops
             }
           }
-           // Update card interactions after DOM changes
-      setupStoryCardInteractions();
+          // Update card interactions after DOM changes
+          setupStoryCardInteractions();
         }
       }
       break;
       
     case 'votesRevealed':
-      // Handle votes revealed
-     // votesRevealed[currentStoryIndex] = true;
-     // if (votesPerStory[currentStoryIndex]) {
-       // applyVotesToUI(votesPerStory[currentStoryIndex], false);
-     // }
-      //triggerGlobalEmojiBurst();
-
       // Handle votes revealed
       votesRevealed[currentStoryIndex] = true;
       if (votesPerStory[currentStoryIndex]) {
@@ -2353,17 +2202,17 @@ function handleSocketMessage(message) {
       votesRevealed[currentStoryIndex] = false;
       resetAllVoteVisuals();
       // ✅ Hide vote statistics and show planning cards again
-  const planningCardsSection = document.querySelector('.planning-cards-section');
-  const statsContainer = document.querySelector('.vote-statistics-container');
-  
-  if (planningCardsSection) planningCardsSection.style.display = 'block';
-  if (statsContainer) statsContainer.style.display = 'none';
+      const planningCardsSection = document.querySelector('.planning-cards-section');
+      const statsContainer = document.querySelector('.vote-statistics-container');
+      
+      if (planningCardsSection) planningCardsSection.style.display = 'block';
+      if (statsContainer) statsContainer.style.display = 'none';
       break;
 
-         case 'storySelected':
+    case 'storySelected':
       if (typeof message.storyIndex === 'number') {
-      console.log('[SOCKET] Story selected from server:', message.storyIndex);
-      selectStory(message.storyIndex, false); // false to avoid re-emitting
+        console.log('[SOCKET] Story selected from server:', message.storyIndex);
+        selectStory(message.storyIndex, false); // false to avoid re-emitting
       }
       break;
       
@@ -2379,60 +2228,43 @@ function handleSocketMessage(message) {
       break;
       
     case 'syncCSVData':
-       // Handle CSV data sync with improved handling
-  if (Array.isArray(message.csvData)) {
-    console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
-    
-    // Store the CSV data
-    csvData = message.csvData;
-    csvDataLoaded = true;
-    
-    // Temporarily save manually added tickets to preserve them
-    const storyList = document.getElementById('storyList');
-    const manualTickets = [];
-    
-    if (storyList) {
-      const manualStoryCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
-      manualStoryCards.forEach(card => {
-        const title = card.querySelector('.story-title');
-        if (title) {
-          manualTickets.push({
-            id: card.id,
-            text: title.textContent
+      // Handle CSV data sync with improved handling
+      if (Array.isArray(message.csvData)) {
+        console.log('[SOCKET] Received CSV data, length:', message.csvData.length);
+        
+        // Store the CSV data
+        csvData = message.csvData;
+        csvDataLoaded = true;
+        
+        // Temporarily save manually added tickets to preserve them
+        const storyList = document.getElementById('storyList');
+        const manualTickets = [];
+        
+        if (storyList) {
+          const manualStoryCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+          manualStoryCards.forEach(card => {
+            const title = card.querySelector('.story-title');
+            if (title) {
+              manualTickets.push({
+                id: card.id,
+                text: title.textContent
+              });
+            }
           });
         }
-      });
-    }
-    
-    console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
-    
-    // Display CSV data (this will clear CSV stories but preserve manual ones)
-    displayCSVData(csvData);
-    
-    // We don't need to re-add manual tickets because displayCSVData now preserves them
-    
-    // Update UI
-    renderCurrentStory();
-  }
-  break;
+        
+        console.log(`[SOCKET] Preserved ${manualTickets.length} manually added tickets before CSV processing`);
+        
+        // Display CSV data (this will clear CSV stories but preserve manual ones)
+        displayCSVData(csvData);
+        
+        // We don't need to re-add manual tickets because displayCSVData now preserves them
+        
+        // Update UI
+        renderCurrentStory();
+      }
+      break;
 
-    case 'addTicket':
-      // Handle new ticket added by another user
-      if (message.ticketData) {
-        console.log('[SOCKET] New ticket received:', message.ticketData);
-        // Add ticket to UI without selecting it (to avoid loops)
-        addTicketToUI(message.ticketData, false);
-      }
-      break;
-      
-    case 'allTickets':
-      // Handle receiving all tickets (used when joining a room)
-      if (Array.isArray(message.tickets)) {
-        console.log('[SOCKET] Received all tickets:', message.tickets.length);
-        processAllTickets(message.tickets);
-      }
-      break;
-      
     case 'connect':
       // When connection is established, request tickets
       setTimeout(() => {
@@ -2446,85 +2278,34 @@ function handleSocketMessage(message) {
   }
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-  let roomId = getRoomIdFromURL();
-  if (!roomId) {
-    roomId = 'room-' + Math.floor(Math.random() * 10000);
-  }
-  appendRoomIdToURL(roomId);
-  initializeApp(roomId);
-});
-
-// Temporary debugging function - call from browser console
-// Add this debugging function near the end of main.js
-window.forceDeleteCSVStory = function(csvStoryId) {
-  console.log('Force deleting CSV story:', csvStoryId);
-  
-  // Extract the CSV index
-  const csvIndex = parseInt(csvStoryId.replace('story_csv_', ''));
-  console.log('CSV index:', csvIndex);
-  
-  // Get the element
-  const storyCard = document.getElementById(csvStoryId);
-  if (!storyCard) {
-    console.error('CSV story element not found in DOM');
-    return false;
-  }
-  
-  console.log('Found element:', storyCard);
-  
-  // Try direct DOM removal
-  try {
-    const parent = storyCard.parentNode;
-    parent.removeChild(storyCard);
-    console.log('Removed successfully via parentNode');
-  } catch (e) {
-    console.error('Error removing via parentNode:', e);
-    
-    // Fallback
-    try {
-      storyCard.remove();
-      console.log('Removed successfully via element.remove()');
-    } catch (e2) {
-      console.error('Error removing via element.remove():', e2);
-    }
-  }
-  
-  // Check if it's still in DOM
-  if (document.getElementById(csvStoryId)) {
-    console.error('FAILED: Element still exists in DOM after removal attempt');
-    return false;
-  } else {
-    console.log('SUCCESS: Element no longer in DOM');
-    normalizeStoryIndexes();
-    return true;
-  }
-};
-// Add this debugging function to main.js
-window.checkCSVDeleteButtons = function() {
+// Add utility function for debugging
+window.debugStoryCards = function() {
+  const allStories = document.querySelectorAll('.story-card');
   const csvStories = document.querySelectorAll('.story-card[id^="story_csv_"]');
-  console.log(`Found ${csvStories.length} CSV story cards`);
+  const manualStories = document.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+  const deleteButtons = document.querySelectorAll('.story-delete-btn');
   
-  let buttonCount = 0;
-  csvStories.forEach(card => {
-    const btn = card.querySelector('.story-delete-btn');
-    if (btn) {
-      buttonCount++;
-      console.log(`Story ${card.id} has delete button`);
-    } else {
-      console.error(`Story ${card.id} is MISSING delete button`);
-    }
+  console.log(`Total story cards: ${allStories.length}`);
+  console.log(`CSV story cards: ${csvStories.length}`);
+  console.log(`Manual story cards: ${manualStories.length}`);
+  console.log(`Delete buttons: ${deleteButtons.length}`);
+  
+  // Check each story
+  allStories.forEach(story => {
+    const id = story.id;
+    const hasDeleteBtn = story.querySelector('.story-delete-btn') !== null;
+    console.log(`Story ${id}: has delete button = ${hasDeleteBtn}`);
   });
   
-  console.log(`${buttonCount} out of ${csvStories.length} CSV stories have delete buttons`);
   return {
-    totalCards: csvStories.length,
-    withButtons: buttonCount,
-    missing: csvStories.length - buttonCount
+    total: allStories.length,
+    csv: csvStories.length,
+    manual: manualStories.length,
+    deleteButtons: deleteButtons.length
   };
 };
-// Add this emergency function to main.js
+
+// Emergency delete function for troubleshooting
 window.emergencyDeleteCSV = function(index) {
   const id = `story_csv_${index}`;
   console.log('EMERGENCY: Attempting to delete CSV story:', id);
@@ -2547,3 +2328,13 @@ window.emergencyDeleteCSV = function(index) {
     return false;
   }
 };
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+  let roomId = getRoomIdFromURL();
+  if (!roomId) {
+    roomId = 'room-' + Math.floor(Math.random() * 10000);
+  }
+  appendRoomIdToURL(roomId);
+  initializeApp(roomId);
+});  
