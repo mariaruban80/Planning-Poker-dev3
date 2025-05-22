@@ -711,7 +711,33 @@ own-vote-space {
   `;
   document.head.appendChild(style);
 }
-
+/**
+ * Add delete buttons to all story cards for host users
+ */
+function refreshDeleteButtons() {
+  // Only proceed if user is a host
+  if (!isCurrentUserHost()) return;
+  
+  const storyCards = document.querySelectorAll('.story-card');
+  
+  storyCards.forEach(card => {
+    // Skip if card already has a delete button
+    if (card.querySelector('.story-delete-btn')) return;
+    
+    const deleteButton = document.createElement('div');
+    deleteButton.className = 'story-delete-btn';
+    deleteButton.innerHTML = '🗑'; // dustbin symbol
+    deleteButton.title = 'Delete story';
+    
+    // Add click handler for delete button
+    deleteButton.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent story selection when clicking delete
+      deleteStory(card.id);
+    });
+    
+    card.appendChild(deleteButton);
+  });
+}
 function createVoteStatisticsDisplay(votes) {
   // Create container
   const container = document.createElement('div');
@@ -1225,13 +1251,9 @@ function processAllTickets(tickets) {
   // Clear the story list first
   const storyList = document.getElementById('storyList');
   if (storyList) {
- //   storyList.innerHTML = '';
     const manualCards = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
-  manualCards.forEach(card => card.remove());
+    manualCards.forEach(card => card.remove());
   }
-  
-  // Reset csvData
-//  csvData = [];
   
   // Add all tickets to the UI
   tickets.forEach((ticket, index) => {
@@ -1247,11 +1269,13 @@ function processAllTickets(tickets) {
     currentStoryIndex = 0;
     selectStory(0, false); // Don't emit to avoid loops
   }
-   // ✅ Fix indexes to ensure navigation works
+   // Fix indexes to ensure navigation works
   normalizeStoryIndexes();
    
   setupStoryCardInteractions();
+  refreshDeleteButtons(); // Add this line to ensure delete buttons
 }
+
 
 /**
  * Setup reveal and reset buttons
@@ -1387,6 +1411,7 @@ function normalizeStoryIndexes() {
 /**
  * Display CSV data in the story list
  */
+
 function displayCSVData(data) {
   // Prevent reentrant calls that could cause flickering or data loss
   if (processingCSVData) {
@@ -1439,18 +1464,33 @@ function displayCSVData(data) {
       storyTitle.textContent = story.text;
       
       storyItem.appendChild(storyTitle);
+      
+      // Add delete button for hosts only
+      if (isCurrentUserHost()) {
+        const deleteButton = document.createElement('div');
+        deleteButton.className = 'story-delete-btn';
+        deleteButton.innerHTML = '🗑'; // dustbin symbol
+        deleteButton.title = 'Delete story';
+        
+        // Add click handler for delete button
+        deleteButton.addEventListener('click', (e) => {
+          e.stopPropagation(); // Prevent story selection when clicking delete
+          deleteStory(story.id);
+        });
+        
+        storyItem.appendChild(deleteButton);
+      }
+      
       storyListContainer.appendChild(storyItem);
       
-  /**  storyItem.addEventListener('click', () => {
-        selectStory(index);
-      }); */
-const isHost = sessionStorage.getItem('isHost') === 'true';
-if (isHost) {
-  storyItem.addEventListener('click', () => {
-    selectStory(startIndex + index);
-  });
-}      
-});
+      // Add click event for story selection (for hosts only)
+      const isHost = sessionStorage.getItem('isHost') === 'true';
+      if (isHost) {
+        storyItem.addEventListener('click', () => {
+          selectStory(index); // Fixed: should just be index, not startIndex + index
+        });
+      }
+    });
     
     // Then add CSV data
     let startIndex = existingStories.length;
@@ -1465,11 +1505,31 @@ if (isHost) {
       storyTitle.textContent = row.join(' | ');
       
       storyItem.appendChild(storyTitle);
+      
+      // Add delete button for hosts only
+      if (isCurrentUserHost()) {
+        const deleteButton = document.createElement('div');
+        deleteButton.className = 'story-delete-btn';
+        deleteButton.innerHTML = '🗑'; // dustbin symbol
+        deleteButton.title = 'Delete story';
+        
+        // Add click handler for delete button
+        deleteButton.addEventListener('click', (e) => {
+          e.stopPropagation(); // Prevent story selection when clicking delete
+          deleteStory(storyItem.id);
+        });
+        
+        storyItem.appendChild(deleteButton);
+      }
+      
       storyListContainer.appendChild(storyItem);
       
-      storyItem.addEventListener('click', () => {
-        selectStory(startIndex + index);
-      });
+      // Add click event for story selection
+      if (isCurrentUserHost()) {
+        storyItem.addEventListener('click', () => {
+          selectStory(startIndex + index);
+        });
+      }
     });
     
     // Update preserved tickets list
@@ -1508,6 +1568,8 @@ if (isHost) {
     processingCSVData = false;
   }
 }
+
+
 /**
  * Select a story by index
  * @param {number} index - Story index to select
