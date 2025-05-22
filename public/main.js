@@ -1060,7 +1060,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   if (isCurrentUserHost()) {
     const deleteButton = document.createElement('div');
     deleteButton.className = 'story-delete-btn';
-    deleteButton.innerHTML = '&times;'; // × symbol
+    deleteButton.innerHTML = '🗑'; // dustbin symbol
     deleteButton.title = 'Delete story';
     
     // Add click handler for delete button
