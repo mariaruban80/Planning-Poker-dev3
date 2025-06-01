@@ -124,6 +124,29 @@ function loadDeletedStoriesFromStorage(roomId) {
   }
 }
 
+/**
+ * Safely merge a vote for a story by replacing older votes with the same value.
+ * This avoids duplicate votes when a user refreshes and gets a new socket ID.
+ */
+function mergeVote(storyId, userId, vote) {
+  if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
+
+  // 🛡️ Remove any other socket IDs that have the same vote value
+  for (const existingId of Object.keys(votesPerStory[storyId])) {
+    if (
+      existingId !== userId &&
+      votesPerStory[storyId][existingId] === vote
+    ) {
+      console.log(`[MERGE] Removing duplicate vote from socket ${existingId} for story ${storyId}`);
+      delete votesPerStory[storyId][existingId];
+    }
+  }
+
+  // Add or update the current user's vote
+  votesPerStory[storyId][userId] = vote;
+  window.currentVotesPerStory = votesPerStory;
+}
+
 
 
 function refreshVoteDisplay() {
@@ -501,19 +524,7 @@ function initializeApp(roomId) {
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
 
 socket.on('voteUpdate', ({ userId, vote, storyId }) => {
-  // ✅ Skip if vote already exists and is identical
-  if (
-    votesPerStory[storyId] &&
-    votesPerStory[storyId][userId] === vote
-  ) {
-    console.log(`[SKIP] Duplicate vote update ignored for ${userId} on story ${storyId}`);
-    return;
-  }
-
-  // Proceed to merge the vote
-  if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-  votesPerStory[storyId][userId] = vote;
-  window.currentVotesPerStory = votesPerStory;
+  mergeVote(storyId, userId, vote);
 
   const currentId = getCurrentStoryId();
   if (storyId === currentId) {
@@ -522,6 +533,7 @@ socket.on('voteUpdate', ({ userId, vote, storyId }) => {
 
   refreshVoteDisplay();
 });
+
 
   
   socket.on('storyVotes', ({ storyId, votes }) => {
@@ -614,41 +626,34 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
   }
 
   // Update local vote state for non-deleted stories
-  if (serverVotes) {
-    for (const [storyId, votes] of Object.entries(serverVotes)) {
-      if (deletedStoryIds.has(storyId)) continue;
 
-      if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-      votesPerStory[storyId] = { ...votes };
-      window.currentVotesPerStory = votesPerStory;
+if (serverVotes) {
+  for (const [storyId, votes] of Object.entries(serverVotes)) {
+    if (deletedStoryIds.has(storyId)) continue;
 
- if (serverRevealed && serverRevealed[storyId]) {
-  votesRevealed[storyId] = true;
+    // Ensure votesPerStory entry
+    if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
 
-  // Merge in local vote from session storage if available
-  const allVotes = { ...(votes || {}) };
+    for (const [userId, vote] of Object.entries(votes)) {
+      mergeVote(storyId, userId, vote);
+    }
 
-  if (socket && socket.id && votesPerStory[storyId]?.[socket.id]) {
-    allVotes[socket.id] = votesPerStory[storyId][socket.id];
-  }
+    window.currentVotesPerStory = votesPerStory;
 
-  // Save the merged result
-  votesPerStory[storyId] = allVotes;
-  window.currentVotesPerStory = votesPerStory;
-
-  // Apply to UI if current story
-  const currentId = getCurrentStoryId();
-  if (storyId === currentId) {
-    applyVotesToUI(allVotes, false);
-  }
-
-  // Always regenerate vote stats with full vote list
-  handleVotesRevealed(storyId, allVotes);
-}
+    // UI update for current story
+    const currentId = getCurrentStoryId();
+    if (storyId === currentId) {
+      if (serverRevealed && serverRevealed[storyId]) {
+        applyVotesToUI(votes, false);
+        handleVotesRevealed(storyId, votes);
+      } else {
+        applyVotesToUI(votes, true);
+      }
     }
   }
+}
 
-  // Restore saved personal votes from session storage
+// Restore saved personal votes from session storage
   try {
     const savedUserVotes = getUserVotes ? getUserVotes() : {};
 
