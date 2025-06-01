@@ -128,22 +128,9 @@ function loadDeletedStoriesFromStorage(roomId) {
  * Safely merge a vote for a story by replacing older votes with the same value.
  * This avoids duplicate votes when a user refreshes and gets a new socket ID.
  */
-function mergeVote(storyId, userId, vote) {
+function mergeVote(storyId, userName, vote) {
   if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-
-  // 🛡️ Remove any other socket IDs that have the same vote value
-  for (const existingId of Object.keys(votesPerStory[storyId])) {
-    if (
-      existingId !== userId &&
-      votesPerStory[storyId][existingId] === vote
-    ) {
-      console.log(`[MERGE] Removing duplicate vote from socket ${existingId} for story ${storyId}`);
-      delete votesPerStory[storyId][existingId];
-    }
-  }
-
-  // Add or update the current user's vote
-  votesPerStory[storyId][userId] = vote;
+  votesPerStory[storyId][userName] = vote;
   window.currentVotesPerStory = votesPerStory;
 }
 
@@ -523,12 +510,13 @@ function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
 
-socket.on('voteUpdate', ({ userId, vote, storyId }) => {
-  mergeVote(storyId, userId, vote);
+socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
+  const name = userName || userId;
+  mergeVote(storyId, name, vote);
 
   const currentId = getCurrentStoryId();
   if (storyId === currentId) {
-    updateVoteVisuals(userId, votesRevealed[storyId] ? vote : '👍', true);
+    updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
   }
 
   refreshVoteDisplay();
@@ -567,46 +555,10 @@ socket.on('voteUpdate', ({ userId, vote, storyId }) => {
   
   // Updated handler for restored user votes
 socket.on('restoreUserVote', ({ storyId, vote }) => {
-  if (deletedStoryIds.has(storyId)) {
-    console.log(`[VOTE] Ignoring vote restoration for deleted story: ${storyId}`);
-    return;
-  }
-
-  if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-
-  // ✅ Ensure the vote is stored under this user's socket.id
-  votesPerStory[storyId][socket.id] = vote;
-  window.currentVotesPerStory = votesPerStory;
-
-  const currentStoryId = getCurrentStoryId();
-  const isRevealed = votesRevealed[storyId];
-
-  // ✅ Apply vote visuals
-  if (storyId === currentStoryId) {
-    updateVoteVisuals(socket.id, isRevealed ? vote : '👍', true);
-
-    if (isRevealed) {
-      // Also regenerate statistics if this is the current story
-      handleVotesRevealed(storyId, votesPerStory[storyId]);
-    }
-  }
-
-  // ✅ Persist to sessionStorage
-  try {
-    const stored = sessionStorage.getItem(`votes_${getRoomIdFromURL()}`) || '{}';
-    const parsed = JSON.parse(stored);
-    parsed[storyId] = vote;
-    sessionStorage.setItem(`votes_${getRoomIdFromURL()}`, JSON.stringify(parsed));
-    console.log(`[CLIENT] Stored restored vote for ${storyId}: ${vote}`);
-  } catch (err) {
-    console.warn('[CLIENT] Failed to store restored vote:', err);
-  }
-
-  refreshVoteDisplay(); // Refresh UI and badges
+  const name = sessionStorage.getItem('userName') || socket.id;
+  mergeVote(storyId, name, vote);
+  refreshVoteDisplay();
 });
-
-
-  
 
   
   // Updated resyncState handler to restore votes
@@ -1477,26 +1429,27 @@ function addVoteStatisticsStyles() {
 function handleVotesRevealed(storyId, votes) {
   if (!votes || typeof votes !== 'object') return;
 
-  // ✅ Deduplicate by userId
+  // ✅ Deduplicate by userName
   const uniqueVotes = new Map();
-  for (const [userId, vote] of Object.entries(votes)) {
-    if (!uniqueVotes.has(userId)) {
-      uniqueVotes.set(userId, vote);
+  for (const [userName, vote] of Object.entries(votes)) {
+    if (!uniqueVotes.has(userName)) {
+      uniqueVotes.set(userName, vote);
     }
   }
- function parseNumericVote(vote) {
+
+  const voteValues = Array.from(uniqueVotes.values());
+
+  // ✅ Parse numeric vote values
+  function parseNumericVote(vote) {
     if (typeof vote !== 'string') return NaN;
 
-    // Handle common symbols
     if (vote === '½') return 0.5;
-    if (vote === '?') return NaN;
-    if (vote === '☕' || vote === '∞') return NaN;
+    if (vote === '?' || vote === '☕' || vote === '∞') return NaN;
 
-    // Extract number from formats like "XS (1)", "L (5)"
-    const match = vote.match(/\((\d+(\.\d+)?)\)$/);
+    // Support formats like "XS (1)", "L (5)"
+    const match = vote.match(/\((\\d+(\\.\\d+)?)\\)$/);
     if (match) return parseFloat(match[1]);
 
-    // Try parsing directly
     const parsed = parseFloat(vote);
     return isNaN(parsed) ? NaN : parsed;
   }
@@ -1505,7 +1458,7 @@ function handleVotesRevealed(storyId, votes) {
     .map(parseNumericVote)
     .filter(v => !isNaN(v));
 
-  // Determine most common vote
+  // 🔢 Calculate most common vote and average
   let mostCommonVote = voteValues.length > 0 ? voteValues[0] : '0';
   let averageValue = null;
 
@@ -1527,7 +1480,7 @@ function handleVotesRevealed(storyId, votes) {
     }
   }
 
-  // 🔄 Update the UI
+  // 🎨 Render UI
   const statsContainer = document.querySelector('.vote-statistics-container') || document.createElement('div');
   statsContainer.className = 'vote-statistics-container';
   statsContainer.innerHTML = `
@@ -1553,7 +1506,6 @@ function handleVotesRevealed(storyId, votes) {
     </div>
   `;
 
-  // Insert in DOM
   const planningCardsSection = document.querySelector('.planning-cards-section');
   if (planningCardsSection && planningCardsSection.parentNode) {
     planningCardsSection.style.display = 'none';
@@ -1563,6 +1515,7 @@ function handleVotesRevealed(storyId, votes) {
 
   setTimeout(fixRevealedVoteFontSizes, 100);
 }
+
 
 
 /**
