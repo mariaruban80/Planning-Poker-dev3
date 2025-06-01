@@ -322,7 +322,8 @@ for (const sid of Object.keys(rooms[roomId].votesPerStory[storyId] || {})) {
 const existingVote = rooms[roomId].votesPerStory[storyId]?.[socket.id];
 
 if (existingVote !== vote) {
-  rooms[roomId].votesPerStory[storyId][socket.id] = vote;
+//  rooms[roomId].votesPerStory[storyId][socket.id] = vote;
+      rooms[roomId].votesPerStory[storyId][userName] = vote;
 
   // Broadcast only if it's a new vote
   socket.broadcast.to(roomId).emit('voteUpdate', {
@@ -783,10 +784,17 @@ socket.emit('restoreUserVote', { storyId, vote });
     }
     
     // Store the vote
-    rooms[roomId].votesPerStory[storyId][targetUserId] = vote;
-    
+    //rooms[roomId].votesPerStory[storyId][targetUserId] = vote;
+        rooms[roomId].votesPerStory[storyId][userName] = vote;
     // Broadcast to all clients
-    io.to(roomId).emit('voteUpdate', { userId: targetUserId, vote, storyId });
+   // io.to(roomId).emit('voteUpdate', { userId: targetUserId, vote, storyId });
+ io.to(roomId).emit('voteUpdate', {
+      userId: socket.id,
+      userName: socket.data.userName,
+      vote,
+      storyId
+    });
+    
   });
   
   // Handle requests for votes for a specific story
