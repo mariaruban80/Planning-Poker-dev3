@@ -271,7 +271,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     }, 100);
   });
 
-  socket.on('voteUpdate', ({ userId, vote, storyId }) => {
+  socket.on('voteUpdate', ({ userId, userName, vote, storyId  }) => {
     // Check if we should ignore this because the story is deleted
     if (lastKnownRoomState.deletedStoryIds.includes(storyId)) {
       console.log(`[SOCKET] Ignoring vote for deleted story: ${storyId}`);
@@ -300,8 +300,8 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
       }
     }
     
-    handleMessage({ type: 'voteUpdate', userId, vote, storyId });
-  });
+    handleMessage({ type: 'voteUpdate', userId,userName, vote, storyId });
+   });
 
   socket.on('storyVotes', ({ storyId, votes }) => {
     // Check if we should ignore this because the story is deleted
