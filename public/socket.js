@@ -352,7 +352,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     // This ensures other clients see the vote without host interaction
     if (socket && socket.connected) {
       console.log(`[SOCKET] Broadcasting restored vote to all users: ${storyId} = ${vote}`);
-      socket.emit('castVote', { vote, targetUserId: socket.id, storyId });
+     // socket.emit('castVote', { vote, targetUserId: socket.id, storyId });
     }
     
     handleMessage({ type: 'restoreUserVote', storyId, vote });
