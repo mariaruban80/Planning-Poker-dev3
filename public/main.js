@@ -1470,55 +1470,94 @@ function addVoteStatisticsStyles() {
  * @param {Object} votes - Vote data
  */
 function handleVotesRevealed(storyId, votes) {
-  console.log('[VOTES] Handling votes revealed for story:', storyId);
+  if (!votes || typeof votes !== 'object') return;
 
-  if (deletedStoryIds.has(storyId)) {
-    console.log(`[VOTE] Not revealing votes for deleted story: ${storyId}`);
-    return;
-  }
-
-  let statsContainer = document.querySelector('.vote-statistics-container'); // ⬅️ CHANGED FROM const to let
-  const statsAlreadyVisible = statsContainer && statsContainer.style.display === 'block';
-  const planningCardsSection = document.querySelector('.planning-cards-section');
-  const planningCardsHidden = planningCardsSection && planningCardsSection.style.display === 'none';
-
-  if (statsAlreadyVisible && planningCardsHidden) {
-    console.log('[VOTES] Statistics already shown, skipping duplicate reveal');
-    return;
-  }
-
-  votesRevealed[storyId] = true;
-
-  if (!votesPerStory[storyId]) {
-    votesPerStory[storyId] = {};
-  }
-
-  votesPerStory[storyId] = { ...votes };
-  window.currentVotesPerStory = votesPerStory;
-
-  addFixedVoteStatisticsStyles();
-
-  const voteStats = createFixedVoteDisplay(votes);
-
-  if (planningCardsSection) {
-    if (!statsContainer) {
-      statsContainer = document.createElement('div'); // ✅ Safe now
-      statsContainer.className = 'vote-statistics-container';
-      planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
+  // ✅ Deduplicate by userId
+  const uniqueVotes = new Map();
+  for (const [userId, vote] of Object.entries(votes)) {
+    if (!uniqueVotes.has(userId)) {
+      uniqueVotes.set(userId, vote);
     }
+  }
+ function parseNumericVote(vote) {
+    if (typeof vote !== 'string') return NaN;
 
-    statsContainer.innerHTML = '';
-    statsContainer.appendChild(voteStats);
+    // Handle common symbols
+    if (vote === '½') return 0.5;
+    if (vote === '?') return NaN;
+    if (vote === '☕' || vote === '∞') return NaN;
 
+    // Extract number from formats like "XS (1)", "L (5)"
+    const match = vote.match(/\((\d+(\.\d+)?)\)$/);
+    if (match) return parseFloat(match[1]);
+
+    // Try parsing directly
+    const parsed = parseFloat(vote);
+    return isNaN(parsed) ? NaN : parsed;
+  }
+
+  const numericValues = voteValues
+    .map(parseNumericVote)
+    .filter(v => !isNaN(v));
+
+  // Determine most common vote
+  let mostCommonVote = voteValues.length > 0 ? voteValues[0] : '0';
+  let averageValue = null;
+
+  if (voteValues.length > 0) {
+    const frequency = {};
+    let maxFreq = 0;
+
+    voteValues.forEach(vote => {
+      frequency[vote] = (frequency[vote] || 0) + 1;
+      if (frequency[vote] > maxFreq) {
+        maxFreq = frequency[vote];
+        mostCommonVote = vote;
+      }
+    });
+
+    if (numericValues.length > 0) {
+      averageValue = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+      averageValue = Math.round(averageValue * 10) / 10;
+    }
+  }
+
+  // 🔄 Update the UI
+  const statsContainer = document.querySelector('.vote-statistics-container') || document.createElement('div');
+  statsContainer.className = 'vote-statistics-container';
+  statsContainer.innerHTML = `
+    <div class="fixed-vote-display">
+      <div class="fixed-vote-card">
+        ${mostCommonVote}
+        <div class="fixed-vote-count">${voteValues.length} Vote${voteValues.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="fixed-vote-stats">
+        ${averageValue !== null ? `
+          <div class="fixed-stat-group">
+            <div class="fixed-stat-label">Average:</div>
+            <div class="fixed-stat-value">${averageValue}</div>
+          </div>` : ''
+        }
+        <div class="fixed-stat-group">
+          <div class="fixed-stat-label">Agreement:</div>
+          <div class="fixed-agreement-circle">
+            <div class="agreement-icon">👍</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Insert in DOM
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  if (planningCardsSection && planningCardsSection.parentNode) {
     planningCardsSection.style.display = 'none';
+    planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
     statsContainer.style.display = 'block';
   }
 
-  applyVotesToUI(votes, false);
   setTimeout(fixRevealedVoteFontSizes, 100);
-  setTimeout(fixRevealedVoteFontSizes, 300);
 }
-
 
 
 /**
