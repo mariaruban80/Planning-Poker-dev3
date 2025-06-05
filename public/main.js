@@ -347,8 +347,15 @@ function createFixedVoteDisplay(votes) {
   container.className = 'fixed-vote-display';
 
   // Deduplicate by userId (even if sent twice)
+  
   const userVotes = new Map();
+  const socketIdToUserNameMap = window.userMap || {}; // provide this via socket 'userList'
   for (const [userId, vote] of Object.entries(votes)) {
+    const userName = socketIdToUserNameMap[userId] || userId;
+    if (!userVotes.has(userName)) {
+      userVotes.set(userName, vote);
+    }
+  
     if (!userVotes.has(userId)) {
       userVotes.set(userId, vote);
     }
@@ -423,7 +430,15 @@ function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
 }
 
+
+let allowCardRendering = false;
+
 function setupPlanningCards() {
+  if (!allowCardRendering) {
+    document.querySelector('.planning-cards-section')?.classList.add('hidden-until-init');
+    return;
+  }
+
   const container = document.getElementById('planningCards');
   if (!container) return;
 
