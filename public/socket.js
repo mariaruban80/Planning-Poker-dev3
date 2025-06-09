@@ -204,28 +204,37 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     }
   });
   
-  socket.on('disconnect', (reason) => {
-    console.log('[SOCKET] Disconnected from server. Reason:', reason);
-    
-    // Auto-reconnect for these specific reasons
-    if (reason === 'io server disconnect' && reconnectionEnabled) {
-      // The server intentionally disconnected us
-      console.log('[SOCKET] Server disconnected us, attempting reconnect');
-      socket.connect();
-    } else if (reconnectionEnabled) {
-      // Set a backup timer for reconnection
-      clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(() => {
-        if (!socket.connected) {
-          console.log('[SOCKET] Attempting reconnect after disconnect...');
-          socket.connect();
-        }
-      }, 3000);
-    }
-    
-    // Notify UI of disconnect
-    handleMessage({ type: 'disconnect', reason });
-  });
+socket.on('disconnect', (reason) => {
+  console.log('[SOCKET] Disconnected from server. Reason:', reason);
+
+  // ✅ Save current state to sessionStorage to prevent data loss on reconnect
+  try {
+    sessionStorage.setItem(`votes_${roomId}`, JSON.stringify(lastKnownRoomState.userVotes));
+    sessionStorage.setItem(`revealed_${roomId}`, JSON.stringify(lastKnownRoomState.votesRevealed));
+    sessionStorage.setItem(`deleted_${roomId}`, JSON.stringify(lastKnownRoomState.deletedStoryIds));
+    console.log('[SOCKET] Saved full state to sessionStorage on disconnect');
+  } catch (err) {
+    console.warn('[SOCKET] Could not save full state on disconnect:', err);
+  }
+
+  // Auto-reconnect for these specific reasons
+  if (reason === 'io server disconnect' && reconnectionEnabled) {
+    console.log('[SOCKET] Server disconnected us, attempting reconnect');
+    socket.connect();
+  } else if (reconnectionEnabled) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => {
+      if (!socket.connected) {
+        console.log('[SOCKET] Attempting reconnect after disconnect...');
+        socket.connect();
+      }
+    }, 3000);
+  }
+
+  // Notify UI of disconnect
+  handleMessage({ type: 'disconnect', reason });
+});
+
 
   
   socket.on('userList', (users) => {
