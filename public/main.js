@@ -191,19 +191,35 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[APP] Waiting for username before initializing app');
     return; // Exit early, we'll initialize after username is provided
   }
-  
+
   // Normal initialization for users who already have a name
   let roomId = getRoomIdFromURL();
   if (!roomId) {
     roomId = 'room-' + Math.floor(Math.random() * 10000);
   }
   appendRoomIdToURL(roomId);
-  
+
+  // ✅ Inject guest-specific layout before initializing the app
+  if (isGuestUser()) {
+    const target = document.querySelector('.poker-table-layout');
+    if (target) {
+      const tableHTML = `
+        <div class="virtual-table">
+          <div class="avatar-row top" id="guestAvatarsTop"></div>
+          <div class="table-center">Place the votes on your cards</div>
+          <div class="avatar-row bottom" id="guestAvatarsBottom"></div>
+        </div>
+      `;
+      target.innerHTML = tableHTML;
+    }
+  }
+
   // Load deleted stories from sessionStorage first
   loadDeletedStoriesFromStorage(roomId);
-  
+
   initializeApp(roomId);
 });
+
 
 // Global state variables
 let pendingStoryIndex = null;
@@ -537,6 +553,16 @@ socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
   refreshVoteDisplay();
 });
 
+socket.on('userList', (users) => {
+  window.userMap = {};
+  users.forEach(u => window.userMap[u.id] = u.name);
+
+  if (isGuestUser()) {
+    renderGuestUserAvatars(users);
+  } else {
+    renderUserAvatars(users); // existing function for host layout
+  }
+});
 
   
   socket.on('storyVotes', ({ storyId, votes }) => {
@@ -1155,6 +1181,41 @@ function addNewLayoutStyles() {
       from { opacity: 1; }
       to { opacity: 0; }
     }
+.virtual-table {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 700px;
+  height: 300px;
+  margin: 30px auto;
+  padding: 20px;
+  border: 2px solid #ccc;
+  border-radius: 16px;
+  background: #f9f9f9;
+  position: relative;
+}
+
+.avatar-row.top,
+.avatar-row.bottom {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.table-center {
+  padding: 30px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #444;
+  text-align: center;
+  background-color: #fff;
+  border: 2px dashed #aaa;
+  border-radius: 12px;
+  width: 80%;
+}   
   `;
   document.head.appendChild(style);
   
@@ -2254,6 +2315,30 @@ function applyVotesToUI(votes, hideValues) {
     updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
   });
 }
+function renderGuestUserAvatars(userList) {
+  const topContainer = document.getElementById('guestAvatarsTop');
+  const bottomContainer = document.getElementById('guestAvatarsBottom');
+  if (!topContainer || !bottomContainer) return;
+
+  topContainer.innerHTML = '';
+  bottomContainer.innerHTML = '';
+
+  userList.forEach((user, index) => {
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar-container visible';
+    avatar.innerHTML = `
+      <div class="avatar-circle"></div>
+      <div class="user-name">${user.name}</div>
+    `;
+
+    if (index % 2 === 0) {
+      topContainer.appendChild(avatar);
+    } else {
+      bottomContainer.appendChild(avatar);
+    }
+  });
+}
+
 
 /**
  * Reset all vote visuals
