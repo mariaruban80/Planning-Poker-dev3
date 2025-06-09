@@ -242,6 +242,34 @@ io.on('connection', (socket) => {
       }
     }
   });
+  socket.on('requestFullStateResync', () => {
+  const roomId = socket.data.roomId;
+  if (!roomId || !rooms[roomId]) return;
+
+  const room = rooms[roomId];
+  const activeTickets = room.tickets.filter(t => !room.deletedStoryIds.has(t.id));
+  const activeVotes = {};
+  const revealedVotes = {};
+
+  for (const [storyId, votes] of Object.entries(room.votesPerStory || {})) {
+    if (!room.deletedStoryIds.has(storyId)) {
+      activeVotes[storyId] = votes;
+      if (room.votesRevealed?.[storyId]) {
+        revealedVotes[storyId] = true;
+      }
+    }
+  }
+
+  socket.emit('resyncState', {
+    tickets: activeTickets,
+    votesPerStory: activeVotes,
+    votesRevealed: revealedVotes,
+    deletedStoryIds: Array.from(room.deletedStoryIds)
+  });
+
+  console.log(`[SERVER] Full state resync sent to ${socket.id} in room ${roomId}`);
+});
+
 
   console.log(`[SERVER] New client connected: ${socket.id}`);
   
