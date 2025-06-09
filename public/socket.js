@@ -117,7 +117,21 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     clearTimeout(reconnectTimer);
 
     // When connecting, explicitly join the room
+
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
+
+// ✅ Optimistically add current user to UI immediately
+if (typeof window !== 'undefined') {
+  if (!window.userMap) window.userMap = {};
+  window.userMap[socket.id] = userNameValue;
+
+  // Inform the UI immediately
+  handleMessage({
+    type: 'userList',
+    users: Object.entries(window.userMap).map(([id, name]) => ({ id, name }))
+  });
+}
+
 
     // Listen for votes updates from server
     socket.on('votesUpdate', (votesData) => {
