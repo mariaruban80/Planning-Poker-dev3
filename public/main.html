@@ -60,7 +60,6 @@
       left: 0;
       right: 0;
       z-index: 1000;
-      height: 70px;
     }
     
     .logo {
@@ -95,9 +94,9 @@
       border: none;
       cursor: pointer;
       transition: all 0.3s ease;
-      padding: 0.7rem 1.2rem;
-      border-radius: 30px;
-      font-size: 0.9rem;
+      padding: 0.7rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.95rem;
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -105,33 +104,30 @@
     }
     
     .primary-button {
-      background-image: var(--primary-gradient);
+      background-color: var(--primary);
       color: white;
-      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.3);
+      box-shadow: 0 2px 4px rgba(103, 58, 183, 0.2);
     }
     
     .primary-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 15px rgba(103, 58, 183, 0.4);
+      background-color: var(--primary-dark);
     }
     
     .secondary-button {
       background-color: white;
-      color: var(--primary);
-      border: 2px solid var(--primary);
+      color: var(--text);
+      border: 1px solid #e5e7eb;
     }
     
     .secondary-button:hover {
-      background-color: var(--primary-light);
-      transform: translateY(-2px);
+      background-color: #f9fafb;
     }
     
     main {
-      padding-top: 70px;
-      min-height: calc(100vh - 70px);
+      padding-top: 72px;
+      min-height: calc(100vh - 72px);
       display: flex;
       justify-content: center;
-      align-items: center;
     }
     
     .content-container {
@@ -140,8 +136,9 @@
       align-items: center;
       width: 100%;
       max-width: 1400px;
-      height: calc(100vh - 70px);
-      padding: 1.5rem;
+      height: calc(100vh - 72px);
+      padding: 2rem;
+      gap: 3rem;
     }
     
     .card-display-container {
@@ -151,53 +148,45 @@
       justify-content: center;
       align-items: center;
       position: relative;
-      padding: 1.5rem;
     }
     
-    .card-container {
+    .floating-cards-wrapper {
       width: 100%;
       height: 100%;
       max-width: 600px;
       max-height: 600px;
-      background-color: white;
-      border-radius: var(--border-radius-lg);
-      box-shadow: var(--shadow-lg);
       position: relative;
-      overflow: hidden;
     }
     
     .poker-card {
       position: absolute;
       background-color: white;
-      border-radius: 10px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 600;
-      font-size: 2rem;
+      font-size: 1.8rem;
       font-family: 'Poppins', sans-serif;
-      color: var(--primary);
+      color: var(--text);
       box-shadow: var(--shadow-md);
-      border: 2px solid var(--primary-light);
       animation: floatCard 6s infinite ease-in-out;
     }
     
     .poker-card:nth-child(1) {
       width: 80px;
       height: 120px;
-      top: 10%;
+      top: 15%;
       left: 20%;
       animation-delay: 0s;
-      transform: rotate(-15deg);
     }
     
     .poker-card:nth-child(2) {
       width: 80px;
       height: 120px;
       top: 20%;
-      right: 25%;
+      right: 30%;
       animation-delay: 0.5s;
-      transform: rotate(5deg);
     }
     
     .poker-card:nth-child(3) {
@@ -206,7 +195,6 @@
       bottom: 40%;
       left: 30%;
       animation-delay: 1s;
-      transform: rotate(10deg);
     }
     
     .poker-card:nth-child(4) {
@@ -215,17 +203,16 @@
       bottom: 30%;
       right: 20%;
       animation-delay: 1.5s;
-      transform: rotate(-8deg);
       z-index: 2;
     }
     
     .poker-card:nth-child(5) {
       width: 80px;
       height: 120px;
-      top: 50%;
+      top: 60%;
       left: 50%;
       animation-delay: 2s;
-      transform: rotate(12deg) translateX(-50%);
+      transform: translateX(-50%);
     }
     
     .poker-card:nth-child(6) {
@@ -234,9 +221,8 @@
       bottom: 15%;
       left: 42%;
       animation-delay: 2.5s;
-      transform: rotate(-5deg);
       z-index: 3;
-      font-size: 2.5rem;
+      font-size: 2.2rem;
     }
     
     .poker-card:nth-child(7) {
@@ -245,7 +231,6 @@
       top: 25%;
       left: 40%;
       animation-delay: 3s;
-      transform: rotate(8deg);
       z-index: 1;
     }
     
@@ -258,34 +243,19 @@
     .forms-container {
       flex: 1;
       max-width: 480px;
-      position: relative;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
     }
     
     .session-box {
       background: white;
-      border-radius: var(--border-radius-lg);
-      box-shadow: var(--shadow-lg);
-      padding: 1.8rem 2.2rem;
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-md);
+      padding: 2rem;
       width: 100%;
       transition: all 0.3s ease;
-      position: absolute;
-      top: 50%;
-      left: 0;
-      width: 100%;
-      transform: translateY(-50%);
-      opacity: 0;
-      pointer-events: none;
-      max-height: 90%;
-      overflow-y: auto;
     }
     
-    .session-box.active {
-      opacity: 1;
-      pointer-events: all;
+    .session-box.hidden {
+      display: none;
     }
     
     .session-box h2 {
@@ -293,38 +263,33 @@
       font-size: 1.8rem;
       color: var(--text);
       font-weight: 600;
-      margin-bottom: 1.5rem;
-      position: relative;
-      display: inline-block;
+      margin-bottom: 1.8rem;
     }
     
-    .session-box h2::after {
-      content: '';
-      position: absolute;
-      bottom: -8px;
-      left: 0;
+    .green-underline {
+      display: block;
       width: 60px;
       height: 3px;
-      background-image: var(--primary-gradient);
-      border-radius: 3px;
+      margin-top: 0.5rem;
+      background-color: var(--success);
     }
     
     .form-group {
-      margin-bottom: 1.2rem;
+      margin-bottom: 1.5rem;
     }
     
     .form-group label {
       display: block;
       font-size: 0.95rem;
       font-weight: 500;
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.5rem;
       color: var(--text);
     }
     
     .form-group input {
       width: 100%;
-      padding: 0.75rem 1rem;
-      border: 1px solid var(--border);
+      padding: 0.9rem 1rem;
+      border: 1px solid #e5e7eb;
       border-radius: var(--border-radius-sm);
       font-size: 0.95rem;
       box-sizing: border-box;
@@ -339,49 +304,39 @@
     }
     
     .scale-options {
-      margin-bottom: 1.2rem;
+      margin-bottom: 1.5rem;
     }
     
     .scale-options h3 {
       font-size: 0.95rem;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.8rem;
       font-weight: 500;
     }
     
     .radio-group {
       display: flex;
       align-items: center;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.8rem;
       cursor: pointer;
-      padding: 0.2rem 0;
-    }
-    
-    .radio-group:hover {
-      color: var(--primary);
     }
     
     .radio-group input[type="radio"] {
-      margin-right: 0.6rem;
+      margin-right: 0.8rem;
       cursor: pointer;
       accent-color: var(--primary);
       width: auto;
     }
     
     .radio-group label {
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       cursor: pointer;
     }
     
     .checkbox-container {
       display: flex;
       align-items: center;
-      margin: 1rem 0 1.2rem;
+      margin: 1.5rem 0;
       cursor: pointer;
-      padding: 0.2rem 0;
-    }
-    
-    .checkbox-container:hover {
-      color: var(--primary);
     }
     
     .checkbox-container input {
@@ -392,86 +347,43 @@
     }
     
     .checkbox-container label {
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       cursor: pointer;
     }
     
     .action-button {
-      display: inline-block;
+      width: 100%;
       padding: 0.9rem 1.5rem;
-      background-image: var(--primary-gradient);
+      border-radius: 50px;
+      background-color: var(--primary);
       color: white;
-      border-radius: 30px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.3);
-      transition: transform 0.3s, box-shadow 0.3s;
+      font-weight: 500;
+      font-size: 1rem;
       border: none;
       cursor: pointer;
-      width: 100%;
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
+      transition: background-color 0.2s;
     }
     
     .action-button:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 15px rgba(103, 58, 183, 0.4);
-    }
-    
-    .bg-decoration {
-      position: fixed;
-      z-index: -1;
-    }
-    
-    .bg-circle-1 {
-      width: 400px;
-      height: 400px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, rgba(103, 58, 183, 0.05), rgba(156, 39, 176, 0.05));
-      bottom: -100px;
-      right: -100px;
-    }
-    
-    .bg-circle-2 {
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, rgba(103, 58, 183, 0.05), rgba(156, 39, 176, 0.05));
-      top: -50px;
-      left: -50px;
+      background-color: var(--primary-dark);
     }
     
     /* Responsive styles */
     @media (max-width: 1200px) {
       .content-container {
-        padding: 1.2rem;
+        padding: 1.5rem;
       }
     }
     
     @media (max-width: 992px) {
       .content-container {
         flex-direction: column;
+        align-items: center;
       }
       
       .card-display-container {
         height: 350px;
-        padding-bottom: 0;
-      }
-      
-      .forms-container {
-        width: 100%;
-        max-width: 550px;
-      }
-      
-      .session-box {
-        position: relative;
-        transform: none;
-        top: auto;
-        display: none;
-      }
-      
-      .session-box.active {
-        display: block;
+        margin-bottom: 2rem;
       }
     }
     
@@ -524,18 +436,12 @@
   </style>
 </head>
 <body>
-  <div class="bg-decoration bg-circle-1"></div>
-  <div class="bg-decoration bg-circle-2"></div>
-  
   <header>
     <div class="logo">
       <img src="spade.png" alt="Planning Poker" />
       <span class="logo-text">Planning Poker</span>
     </div>
     <div class="header-buttons">
-      <a href="about.html" class="button secondary-button">
-        <i class="fas fa-info-circle"></i> About
-      </a>     
       <button id="newSessionBtn" class="button primary-button">
         <i class="fas fa-plus"></i> NEW SESSION
       </button>
@@ -548,7 +454,7 @@
   <main>
     <div class="content-container">
       <div class="card-display-container">
-        <div class="card-container">
+        <div class="floating-cards-wrapper">
           <div class="poker-card" style="--rotation: -15deg;">0</div>
           <div class="poker-card" style="--rotation: 5deg;">1</div>
           <div class="poker-card" style="--rotation: 10deg;">2</div>
@@ -560,8 +466,8 @@
       </div>
       
       <div class="forms-container">
-        <div class="session-box active" id="createSessionBox">
-          <h2>Create new session</h2>
+        <div class="session-box" id="createSessionBox">
+          <h2>Create new session<span class="green-underline"></span></h2>
 
           <div class="form-group">
             <label for="sessionNameInput">Session name *</label>
@@ -606,8 +512,8 @@
           <button class="action-button" onclick="createRoom()">Start new session</button>
         </div>
         
-        <div class="session-box" id="joinSessionBox">
-          <h2>Join a Session</h2>
+        <div class="session-box hidden" id="joinSessionBox">
+          <h2>Join a Session<span class="green-underline"></span></h2>
           
           <div class="form-group">
             <label for="sessionIdInput">Session ID *</label>
@@ -630,33 +536,32 @@
     document.addEventListener("DOMContentLoaded", function() {
       // Setup event listeners for the navigation buttons
       document.getElementById("newSessionBtn").addEventListener("click", function() {
-        document.getElementById("createSessionBox").classList.add("active");
-        document.getElementById("joinSessionBox").classList.remove("active");
+        document.getElementById("createSessionBox").classList.remove("hidden");
+        document.getElementById("joinSessionBox").classList.add("hidden");
       });
       
       document.getElementById("joinSessionBtn").addEventListener("click", function() {
-        document.getElementById("createSessionBox").classList.remove("active");
-        document.getElementById("joinSessionBox").classList.add("active");
+        document.getElementById("createSessionBox").classList.add("hidden");
+        document.getElementById("joinSessionBox").classList.remove("hidden");
       });
       
-      // Add custom animation for Poker cards
+      // Add hover effects for the cards
       const cards = document.querySelectorAll('.poker-card');
       cards.forEach(card => {
-        const rotation = getComputedStyle(card).getPropertyValue('--rotation');
-        card.style.animation = `floatCard 6s infinite ease-in-out`;
+        const rotation = card.style.getPropertyValue('--rotation');
         
         card.addEventListener('mouseover', function() {
-          this.style.transform = 'translateY(-20px) scale(1.1) rotate(' + rotation + ')';
+          this.style.transform = `scale(1.1) rotate(${rotation})`;
           this.style.zIndex = '10';
-          this.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.2)';
+          this.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.15)';
+          this.style.transition = 'transform 0.3s, box-shadow 0.3s';
         });
         
         card.addEventListener('mouseout', function() {
           this.style.transform = '';
           this.style.zIndex = '';
-          this.style
-            .boxShadow = '';
-          this.style.animation = `floatCard 6s infinite ease-in-out`;
+          this.style.boxShadow = '';
+          this.style.transition = '';
         });
       });
     });
