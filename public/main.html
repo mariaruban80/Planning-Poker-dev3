@@ -84,7 +84,7 @@
     
     .header-buttons {
       display: flex;
-      gap: 1rem;
+      gap: 0.7rem;
       align-items: center;
     }
     
@@ -101,6 +101,7 @@
       align-items: center;
       gap: 0.5rem;
       text-decoration: none;
+      height: 40px;
     }
     
     .primary-button {
@@ -123,6 +124,15 @@
       background-color: #f9fafb;
     }
     
+    .home-button {
+      background-color: #f3f4f6;
+      color: var(--text);
+    }
+    
+    .home-button:hover {
+      background-color: #e5e7eb;
+    }
+    
     main {
       padding-top: 72px;
       min-height: calc(100vh - 72px);
@@ -141,105 +151,189 @@
       gap: 3rem;
     }
     
-    .card-display-container {
+    /* Innovative Left Panel Design */
+    .visual-container {
       flex: 1;
-      height: 100%;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       position: relative;
+      height: 100%;
+      max-width: 650px;
     }
     
-    .floating-cards-wrapper {
+    .agile-visualization {
       width: 100%;
-      height: 100%;
-      max-width: 600px;
-      max-height: 600px;
+      height: 500px;
       position: relative;
-    }
-    
-    .poker-card {
-      position: absolute;
-      background-color: white;
-      border-radius: 8px;
       display: flex;
-      align-items: center;
       justify-content: center;
-      font-weight: 600;
-      font-size: 1.8rem;
+      align-items: center;
+    }
+    
+    .concept-title {
+      margin-bottom: 0.5rem;
       font-family: 'Poppins', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 600;
       color: var(--text);
+      text-align: center;
+    }
+    
+    .purple-underline {
+      display: block;
+      width: 60px;
+      height: 3px;
+      margin: 0.5rem auto 2rem;
+      background-color: var(--primary);
+      border-radius: 3px;
+    }
+    
+    .collaboration-diagram {
+      position: relative;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+    }
+    
+    .team-member {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       box-shadow: var(--shadow-md);
-      animation: floatCard 6s infinite ease-in-out;
+      font-weight: 600;
+      color: var(--primary);
+      cursor: pointer;
+      transition: all 0.3s ease;
     }
     
-    .poker-card:nth-child(1) {
-      width: 80px;
-      height: 120px;
-      top: 15%;
-      left: 20%;
-      animation-delay: 0s;
+    .team-member:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-md);
+      background-color: var(--primary);
+      color: white;
     }
     
-    .poker-card:nth-child(2) {
-      width: 80px;
-      height: 120px;
-      top: 20%;
-      right: 30%;
-      animation-delay: 0.5s;
-    }
-    
-    .poker-card:nth-child(3) {
-      width: 80px;
-      height: 120px;
-      bottom: 40%;
-      left: 30%;
-      animation-delay: 1s;
-    }
-    
-    .poker-card:nth-child(4) {
-      width: 90px;
-      height: 135px;
-      bottom: 30%;
-      right: 20%;
-      animation-delay: 1.5s;
-      z-index: 2;
-    }
-    
-    .poker-card:nth-child(5) {
-      width: 80px;
-      height: 120px;
-      top: 60%;
+    .team-member:nth-child(1) {
+      top: 0;
       left: 50%;
-      animation-delay: 2s;
       transform: translateX(-50%);
     }
     
-    .poker-card:nth-child(6) {
-      width: 100px;
-      height: 150px;
+    .team-member:nth-child(2) {
+      top: 15%;
+      right: 15%;
+    }
+    
+    .team-member:nth-child(3) {
+      top: 50%;
+      right: 0;
+    }
+    
+    .team-member:nth-child(4) {
       bottom: 15%;
-      left: 42%;
-      animation-delay: 2.5s;
-      z-index: 3;
-      font-size: 2.2rem;
+      right: 15%;
     }
     
-    .poker-card:nth-child(7) {
-      width: 90px;
-      height: 135px;
-      top: 25%;
-      left: 40%;
-      animation-delay: 3s;
-      z-index: 1;
+    .team-member:nth-child(5) {
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
     }
     
-    @keyframes floatCard {
-      0% { transform: translateY(0) rotate(var(--rotation, 0deg)); }
-      50% { transform: translateY(-15px) rotate(var(--rotation, 0deg)); }
-      100% { transform: translateY(0) rotate(var(--rotation, 0deg)); }
+    .team-member:nth-child(6) {
+      bottom: 15%;
+      left: 15%;
     }
     
+    .team-member:nth-child(7) {
+      top: 50%;
+      left: 0;
+    }
+    
+    .team-member:nth-child(8) {
+      top: 15%;
+      left: 15%;
+    }
+    
+    .central-node {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background-image: var(--primary-gradient);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.2rem;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+      z-index: 10;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 10px;
+    }
+    
+    .central-node:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      box-shadow: 0 15px 30px rgba(103, 58, 183, 0.3);
+    }
+    
+    .connection-line {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      height: 2px;
+      background-color: rgba(103, 58, 183, 0.2);
+      transform-origin: left center;
+    }
+    
+    .estimate-bubble {
+      position: absolute;
+      padding: 10px 16px;
+      background-color: white;
+      border-radius: 20px;
+      box-shadow: var(--shadow-md);
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--primary);
+      opacity: 0;
+      transform: scale(0);
+      transition: all 0.3s ease;
+      z-index: 5;
+    }
+    
+    .feature-text {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      color: var(--text-light);
+      font-size: 1rem;
+      text-align: center;
+      width: 90%;
+    }
+    
+    .feature-text span {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    
+    /* Forms Container Styles */
     .forms-container {
       flex: 1;
       max-width: 480px;
@@ -372,6 +466,23 @@
     @media (max-width: 1200px) {
       .content-container {
         padding: 1.5rem;
+        gap: 1.5rem;
+      }
+      
+      .collaboration-diagram {
+        width: 320px;
+        height: 320px;
+      }
+      
+      .team-member {
+        width: 50px;
+        height: 50px;
+      }
+      
+      .central-node {
+        width: 100px;
+        height: 100px;
+        font-size: 1rem;
       }
     }
     
@@ -381,9 +492,50 @@
         align-items: center;
       }
       
-      .card-display-container {
-        height: 350px;
+      .visual-container {
+        width: 100%;
         margin-bottom: 2rem;
+      }
+      
+      .forms-container {
+        width: 100%;
+      }
+      
+      .agile-visualization {
+        height: 400px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .header-buttons {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      
+      .button {
+        font-size: 0.85rem;
+        padding: 0.6rem 1rem;
+      }
+      
+      .collaboration-diagram {
+        width: 280px;
+        height: 280px;
+      }
+      
+      .team-member {
+        width: 45px;
+        height: 45px;
+        font-size: 0.9rem;
+      }
+      
+      .central-node {
+        width: 90px;
+        height: 90px;
+        font-size: 0.9rem;
+      }
+      
+      .feature-text {
+        font-size: 0.9rem;
       }
     }
     
@@ -397,36 +549,33 @@
       }
       
       .button {
-        padding: 0.6rem 1rem;
+        padding: 0.5rem 0.8rem;
         font-size: 0.8rem;
       }
       
-      .card-display-container {
-        height: 300px;
+      .agile-visualization {
+        height: 320px;
       }
       
-      .poker-card {
-        font-size: 1.5rem;
+      .collaboration-diagram {
+        width: 240px;
+        height: 240px;
       }
       
-      .poker-card:nth-child(1),
-      .poker-card:nth-child(2),
-      .poker-card:nth-child(3),
-      .poker-card:nth-child(5),
-      .poker-card:nth-child(7) {
-        width: 60px;
-        height: 90px;
+      .team-member {
+        width: 40px;
+        height: 40px;
+        font-size: 0.8rem;
       }
       
-      .poker-card:nth-child(4) {
-        width: 70px;
-        height: 105px;
-      }
-      
-      .poker-card:nth-child(6) {
+      .central-node {
         width: 80px;
-        height: 120px;
-        font-size: 2rem;
+        height: 80px;
+        font-size: 0.8rem;
+      }
+      
+      .feature-text {
+        font-size: 0.85rem;
       }
       
       .session-box {
@@ -442,6 +591,9 @@
       <span class="logo-text">Planning Poker</span>
     </div>
     <div class="header-buttons">
+      <a href="about.html" class="button home-button">
+        <i class="fas fa-home"></i> HOME
+      </a>
       <button id="newSessionBtn" class="button primary-button">
         <i class="fas fa-plus"></i> NEW SESSION
       </button>
@@ -453,15 +605,23 @@
 
   <main>
     <div class="content-container">
-      <div class="card-display-container">
-        <div class="floating-cards-wrapper">
-          <div class="poker-card" style="--rotation: -15deg;">0</div>
-          <div class="poker-card" style="--rotation: 5deg;">1</div>
-          <div class="poker-card" style="--rotation: 10deg;">2</div>
-          <div class="poker-card" style="--rotation: -8deg;">3</div>
-          <div class="poker-card" style="--rotation: 12deg;">5</div>
-          <div class="poker-card" style="--rotation: -5deg;">8</div>
-          <div class="poker-card" style="--rotation: 8deg;">13</div>
+      <div class="visual-container">
+        <h2 class="concept-title">Collaborative Estimation</h2>
+        <span class="purple-underline"></span>
+        <div class="agile-visualization" id="agileVisualization">
+          <div class="collaboration-diagram">
+            <div class="team-member" data-estimate="3">TM1</div>
+            <div class="team-member" data-estimate="5">TM2</div>
+            <div class="team-member" data-estimate="8">TM3</div>
+            <div class="team-member" data-estimate="5">TM4</div>
+            <div class="team-member" data-estimate="3">TM5</div>
+            <div class="team-member" data-estimate="5">TM6</div>
+            <div class="team-member" data-estimate="8">TM7</div>
+            <div class="team-member" data-estimate="3">TM8</div>
+            <div class="central-node">Planning<br>Poker</div>
+          </div>
+          
+          <p class="feature-text">Create a <span>collaborative environment</span> where team members can estimate together in real-time</p>
         </div>
       </div>
       
@@ -545,26 +705,124 @@
         document.getElementById("joinSessionBox").classList.remove("hidden");
       });
       
-      // Add hover effects for the cards
-      const cards = document.querySelectorAll('.poker-card');
-      cards.forEach(card => {
-        const rotation = card.style.getPropertyValue('--rotation');
+      // Initialize the collaboration diagram
+      initCollaborationDiagram();
+    });
+    
+    // Function to initialize the collaboration diagram
+    function initCollaborationDiagram() {
+      const visualization = document.getElementById('agileVisualization');
+      if (!visualization) return;
+      
+      const teamMembers = visualization.querySelectorAll('.team-member');
+      const centralNode = visualization.querySelector('.central-node');
+      const diagram = visualization.querySelector('.collaboration-diagram');
+      
+      // Create connection lines between team members and central node
+      teamMembers.forEach((member, index) => {
+        const line = document.createElement('div');
+        line.className = 'connection-line';
         
-        card.addEventListener('mouseover', function() {
-          this.style.transform = `scale(1.1) rotate(${rotation})`;
-          this.style.zIndex = '10';
-          this.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.15)';
-          this.style.transition = 'transform 0.3s, box-shadow 0.3s';
-        });
+        // Calculate the angle and position for this team member
+        const angle = (index * (360 / teamMembers.length)) * (Math.PI / 180);
+        const centerX = diagram.offsetWidth / 2;
+        const centerY = diagram.offsetHeight / 2;
+        const radius = centerX - 30; // Adjust based on member size
         
-        card.addEventListener('mouseout', function() {
-          this.style.transform = '';
-          this.style.zIndex = '';
-          this.style.boxShadow = '';
-          this.style.transition = '';
+        // Calculate the length of the line
+        const lineLength = radius - 30; // Adjust to connect to central node
+        
+        // Position and rotate the line
+        line.style.width = `${lineLength}px`;
+        line.style.transform = `rotate(${angle}rad)`;
+        
+        // Add line to the diagram
+        diagram.appendChild(line);
+        
+        // Create estimate bubble for this member
+        const estimate = document.createElement('div');
+        estimate.className = 'estimate-bubble';
+        estimate.textContent = member.getAttribute('data-estimate');
+        estimate.id = `estimate-${index}`;
+        
+        // Position the estimate bubble
+        const bubbleX = Math.cos(angle) * (radius / 1.5);
+        const bubbleY = Math.sin(angle) * (radius / 1.5);
+        
+        estimate.style.left = `calc(50% + ${bubbleX}px - 20px)`;
+        estimate.style.top = `calc(50% + ${bubbleY}px - 15px)`;
+        
+        diagram.appendChild(estimate);
+        
+        // Add interaction to team members
+        member.addEventListener('click', function() {
+          // Show the corresponding estimate
+          const estimateBubble = document.getElementById(`estimate-${index}`);
+          if (estimateBubble) {
+            // Hide all other bubbles first
+            document.querySelectorAll('.estimate-bubble').forEach(bubble => {
+              bubble.style.opacity = '0';
+              bubble.style.transform = 'scale(0)';
+            });
+            
+            // Show this estimate
+            estimateBubble.style.opacity = '1';
+            estimateBubble.style.transform = 'scale(1)';
+          }
+          
+          // Highlight this team member
+          teamMembers.forEach(tm => {
+            tm.style.backgroundColor = '';
+            tm.style.color = '';
+            tm.style.transform = '';
+          });
+          
+          this.style.backgroundColor = 'var(--primary)';
+          this.style.color = 'white';
+          this.style.transform = 'scale(1.1)';
         });
       });
-    });
+      
+      // Add interaction to the central node
+      centralNode.addEventListener('click', function() {
+        // Show all estimates at once with a staggered animation
+        const estimates = diagram.querySelectorAll('.estimate-bubble');
+        
+        estimates.forEach((bubble, idx) => {
+          setTimeout(() => {
+            bubble.style.opacity = '1';
+            bubble.style.transform = 'scale(1)';
+          }, idx * 100);
+        });
+        
+        // Pulse animation for central node
+        this.animate([
+          { transform: 'translate(-50%, -50%) scale(1)' },
+          { transform: 'translate(-50%, -50%) scale(1.15)' },
+          { transform: 'translate(-50%, -50%) scale(1)' }
+        ], {
+          duration: 600,
+          iterations: 1
+        });
+      });
+      
+      // Start with a brief demonstration animation after a short delay
+      setTimeout(() => {
+        teamMembers[0].click();
+        
+        setTimeout(() => {
+          teamMembers[2].click();
+          
+          setTimeout(() => {
+            teamMembers[4].click();
+            
+            setTimeout(() => {
+              centralNode.click();
+            }, 1000);
+          }, 800);
+        }, 800);
+      }, 1000);
+    }
     
     function createRoom() {
       const name = document.getElementById("createNameInput").value.trim();
