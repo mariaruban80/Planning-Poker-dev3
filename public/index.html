@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">     
 <title>Planning Poker Interactive</title>
 <style>
      body {
@@ -1477,6 +1480,424 @@ white-space: nowrap;
 .reveal-button-container {
   position: relative;
   z-index: 1001;
+}
+ 
+:root {
+  --primary: #673ab7;
+  --primary-light: #e1d4f9;
+  --primary-dark: #5c33a4;
+  --primary-gradient: linear-gradient(135deg, #673ab7, #9c27b0);
+  --text: #2d2d2d;
+  --text-light: #5e5e5e;
+  --background: #f8f9fe;
+  --section-bg: #F8F9FE;
+  --card: #ffffff;
+  --card-hover: #f9f7fe;
+  --border: #e8e8e8;
+  --accent: #FF6B6B;
+  --success: #4CAF50;
+  --info: #2196F3;
+  --warning: #FF9800;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --border-radius-sm: 6px;
+  --border-radius-md: 10px;
+  --border-radius-lg: 16px;
+}
+
+/* Typography updates */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif !important;
+  color: var(--text);
+  background-color: var(--background);
+}
+
+h1, h2, h3, h4, h5, .logo-text, .story-container h3 {
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.logo-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Header styling updates */
+header {
+  box-shadow: var(--shadow-sm);
+  border-bottom: none;
+}
+
+/* Update button styling */
+.button, 
+.primary-button, 
+.secondary-button,
+.action-button,
+.invite-button,
+.file-button,
+#logOffBtn,
+.add-ticket-btn,
+.draw-button,
+#revealVotesBtn,
+#resetVotesBtn,
+#exportCsvBtn,
+.reveal-votes-button {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-radius: 50px !important;
+}
+
+/* Primary button style updates */
+.button.primary-button, 
+.action-button,
+.reveal-votes-button, 
+#revealVotesBtn, 
+#resetVotesBtn, 
+#exportCsvBtn {
+  background-color: var(--primary) !important;
+  background-image: none !important;
+  color: white !important;
+  box-shadow: 0 2px 4px rgba(103, 58, 183, 0.2) !important;
+  border: none !important;
+}
+
+.button.primary-button:hover, 
+.action-button:hover,
+.reveal-votes-button:hover, 
+#revealVotesBtn:hover, 
+#resetVotesBtn:hover, 
+#exportCsvBtn:hover {
+  background-color: var(--primary-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(103, 58, 183, 0.3) !important;
+}
+
+/* Secondary button style updates */
+.button.secondary-button, 
+.invite-button, 
+.file-button {
+  background-color: white !important;
+  color: var(--text) !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.button.secondary-button:hover, 
+.invite-button:hover, 
+.file-button:hover {
+  background-color: #f9fafb !important;
+  transform: translateY(-2px);
+}
+
+/* Home/log off button style */
+#logOffBtn {
+  background-color: #f3f4f6 !important;
+  color: var(--text) !important;
+  border: none !important;
+}
+
+#logOffBtn:hover {
+  background-color: #e5e7eb !important;
+  transform: translateY(-2px);
+}
+
+/* Update add ticket button */
+.add-ticket-btn {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500;
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  border-radius: 8px !important;
+  transition: all 0.2s;
+}
+
+.add-ticket-btn:hover {
+  background-color: var(--primary-light) !important;
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(103, 58, 183, 0.15);
+}
+
+.add-ticket-btn span {
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+/* Update voting cards styling */
+.card, .poker-card, .vote-card-space, .drawn-card {
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.card:hover, .poker-card:hover, .drawn-card:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Vote badge styling */
+.vote-badge {
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 600;
+}
+
+body.votes-revealed .vote-badge {
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 600;
+  color: var(--primary) !important;
+}
+
+/* User list styling */
+#userList .user-entry {
+  font-family: 'Inter', sans-serif !important;
+  transition: all 0.3s ease;
+}
+
+.username, .user-name, #headerUsername {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500;
+}
+
+.avatar, .avatar-circle, .user-avatar, .avatar-container, #headerUserAvatar {
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 600;
+}
+
+/* Story cards container improvements */
+#storyListContainer {
+  padding: 1.5rem;
+}
+
+/* Enhanced story cards styling */
+.story-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* Scrollbar styling for the story container */
+.story-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.story-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.story-container::-webkit-scrollbar-thumb {
+  background: rgba(103, 58, 183, 0.3);
+  border-radius: 10px;
+}
+
+.story-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(103, 58, 183, 0.5);
+}
+
+/* Improved story card design */
+.story-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  background-color: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px !important;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.story-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  border-color: #d0d0d0;
+}
+
+.story-card.selected {
+  background-color: var(--primary-light) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 4px 12px rgba(103, 58, 183, 0.15) !important;
+}
+
+.story-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background-color: transparent;
+  transition: background-color 0.2s;
+}
+
+.story-card:hover::before {
+  background-color: rgba(103, 58, 183, 0.3);
+}
+
+.story-card.selected::before {
+  background-color: var(--primary);
+}
+
+/* Story title improvements */
+.story-title {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.story-card.selected .story-title {
+  color: var(--text) !important;
+  font-weight: 500;
+}
+
+/* Add a visual indicator for voting status */
+.story-card[data-voted="true"]::after {
+  content: '✓';
+  position: absolute;
+  right: 15px;
+  top: 12px;
+  color: var(--success);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Vote badge styling */
+.story-card .vote-badge {
+  position: absolute;
+  right: 15px;
+  bottom: 12px;
+  background-color: var(--primary-light);
+  color: var(--primary) !important;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 600;
+  font-size: 14px;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+body.votes-revealed .story-card .vote-badge,
+.story-card:hover .vote-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Navigation buttons improvements */
+.navigation-buttons {
+  padding: 15px 0;
+  display: flex;
+  gap: 12px;
+}
+
+.navigation-buttons .button {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500;
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px !important;
+  text-align: center;
+  justify-content: center;
+  background-color: white;
+  border: 1px solid #e8e8e8;
+  color: var(--text);
+  transition: all 0.2s;
+}
+
+.navigation-buttons .button:hover {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+  color: var(--primary);
+  transform: translateY(-2px);
+}
+
+/* Form element styling */
+input[type="text"], 
+#sessionNameInput,
+#createNameInput,
+#sessionIdInput,
+#joinNameInput,
+#userNameInput,
+#ticketNameInput,
+#ticketDescriptionInput {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: var(--border-radius-sm) !important;
+  border: 1px solid #e5e7eb !important;
+  padding: 0.8rem 1rem !important;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input[type="text"]:focus,
+#sessionNameInput:focus,
+#createNameInput:focus,
+#sessionIdInput:focus,
+#joinNameInput:focus,
+#userNameInput:focus,
+#ticketNameInput:focus,
+#ticketDescriptionInput:focus {
+  outline: none;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(103, 58, 183, 0.1) !important;
+}
+
+/* Modal styling */
+.modal-content {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: var(--border-radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.modal-content h3 {
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.modal-content button {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 500;
+  border-radius: 50px !important;
+  background-color: var(--primary) !important;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+.modal-content button:hover {
+  background-color: var(--primary-dark) !important;
+  transform: translateY(-2px);
+}
+
+/* Section headers */
+.section-heading, .sidebar h3, .rightbar h3 {
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* Connection status color update */
+.connection-status {
+  background-color: var(--success);
+}
+.connection-status.connecting {
+  background-color: var(--warning);
+}
+.connection-status.disconnected {
+  background-color: var(--accent);
 }
      </style>
 
