@@ -59,6 +59,35 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     timeout: 20000,
     query: { roomId: roomIdentifier, userName: userNameValue }
   });
+// Reconnection behavior tuning
+socket.on('reconnect', () => {
+  console.log('[SOCKET] Reconnected to server');
+  socket.emit('joinRoom', { roomId, userName });
+  socket.emit('requestAllTickets');
+  socket.emit('requestCurrentStory');
+  setTimeout(() => {
+    socket.emit('requestFullStateResync');
+  }, 500);
+});
+
+socket.on('disconnect', (reason) => {
+  console.warn('[SOCKET] Disconnected. Reason:', reason);
+});
+
+socket.on('connect_error', (error) => {
+  console.error('[SOCKET] Connection error:', error);
+});
+
+
+socket.on('disconnect', (reason) => {
+  console.warn('[SOCKET] Disconnected from server. Reason:', reason);
+  handleMessage({ type: 'disconnect', reason });
+});
+
+socket.on('connect_error', (error) => {
+  console.error('[SOCKET] Connection error:', error);
+  handleMessage({ type: 'connect_error', error });
+});
 
   // ------------------------------
   // Socket Event Handlers
@@ -117,21 +146,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     clearTimeout(reconnectTimer);
 
     // When connecting, explicitly join the room
-
     socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue });
-
-// ✅ Optimistically add current user to UI immediately
-if (typeof window !== 'undefined') {
-  if (!window.userMap) window.userMap = {};
-  window.userMap[socket.id] = userNameValue;
-
-  // Inform the UI immediately
-  handleMessage({
-    type: 'userList',
-    users: Object.entries(window.userMap).map(([id, name]) => ({ id, name }))
-  });
-}
-
 
     // Listen for votes updates from server
     socket.on('votesUpdate', (votesData) => {
@@ -218,37 +233,28 @@ if (typeof window !== 'undefined') {
     }
   });
   
-socket.on('disconnect', (reason) => {
-  console.log('[SOCKET] Disconnected from server. Reason:', reason);
-
-  // ✅ Save current state to sessionStorage to prevent data loss on reconnect
-  try {
-    sessionStorage.setItem(`votes_${roomId}`, JSON.stringify(lastKnownRoomState.userVotes));
-    sessionStorage.setItem(`revealed_${roomId}`, JSON.stringify(lastKnownRoomState.votesRevealed));
-    sessionStorage.setItem(`deleted_${roomId}`, JSON.stringify(lastKnownRoomState.deletedStoryIds));
-    console.log('[SOCKET] Saved full state to sessionStorage on disconnect');
-  } catch (err) {
-    console.warn('[SOCKET] Could not save full state on disconnect:', err);
-  }
-
-  // Auto-reconnect for these specific reasons
-  if (reason === 'io server disconnect' && reconnectionEnabled) {
-    console.log('[SOCKET] Server disconnected us, attempting reconnect');
-    socket.connect();
-  } else if (reconnectionEnabled) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(() => {
-      if (!socket.connected) {
-        console.log('[SOCKET] Attempting reconnect after disconnect...');
-        socket.connect();
-      }
-    }, 3000);
-  }
-
-  // Notify UI of disconnect
-  handleMessage({ type: 'disconnect', reason });
-});
-
+  socket.on('disconnect', (reason) => {
+    console.log('[SOCKET] Disconnected from server. Reason:', reason);
+    
+    // Auto-reconnect for these specific reasons
+    if (reason === 'io server disconnect' && reconnectionEnabled) {
+      // The server intentionally disconnected us
+      console.log('[SOCKET] Server disconnected us, attempting reconnect');
+      socket.connect();
+    } else if (reconnectionEnabled) {
+      // Set a backup timer for reconnection
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(() => {
+        if (!socket.connected) {
+          console.log('[SOCKET] Attempting reconnect after disconnect...');
+          socket.connect();
+        }
+      }, 3000);
+    }
+    
+    // Notify UI of disconnect
+    handleMessage({ type: 'disconnect', reason });
+  });
 
   
   socket.on('userList', (users) => {
