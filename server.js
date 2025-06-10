@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // added to call the main.html file
 app.get('/', (req, res) => {
-  res.sendFile(join(__dirname, 'public', 'About.html'));
+  res.sendFile(join(__dirname, 'public', 'main.html'));
 });
 app.use(express.static(join(__dirname, 'public')));
 
@@ -242,34 +242,6 @@ io.on('connection', (socket) => {
       }
     }
   });
-  socket.on('requestFullStateResync', () => {
-  const roomId = socket.data.roomId;
-  if (!roomId || !rooms[roomId]) return;
-
-  const room = rooms[roomId];
-  const activeTickets = room.tickets.filter(t => !room.deletedStoryIds.has(t.id));
-  const activeVotes = {};
-  const revealedVotes = {};
-
-  for (const [storyId, votes] of Object.entries(room.votesPerStory || {})) {
-    if (!room.deletedStoryIds.has(storyId)) {
-      activeVotes[storyId] = votes;
-      if (room.votesRevealed?.[storyId]) {
-        revealedVotes[storyId] = true;
-      }
-    }
-  }
-
-  socket.emit('resyncState', {
-    tickets: activeTickets,
-    votesPerStory: activeVotes,
-    votesRevealed: revealedVotes,
-    deletedStoryIds: Array.from(room.deletedStoryIds)
-  });
-
-  console.log(`[SERVER] Full state resync sent to ${socket.id} in room ${roomId}`);
-});
-
 
   console.log(`[SERVER] New client connected: ${socket.id}`);
   
