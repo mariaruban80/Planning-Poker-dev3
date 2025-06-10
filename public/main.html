@@ -45,7 +45,6 @@
       line-height: 1.6;
       background-color: var(--background);
       overflow-x: hidden;
-      min-height: 100vh;
     }
     
     header {
@@ -147,55 +146,81 @@
     }
     
     main {
-      min-height: calc(100vh - 60px);
       display: flex;
-      flex-direction: column;
+      min-height: calc(100vh - 60px);
+      background-color: var(--section-bg);
+    }
+    
+    .card-animation-container {
+      flex: 1;
+      background-image: var(--primary-gradient);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .floating-cards {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .floating-card {
+      position: absolute;
+      width: 80px;
+      height: 120px;
+      background-color: white;
+      border-radius: 10px;
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2rem 1rem;
-      background-color: var(--section-bg);
-      background-image: linear-gradient(135deg, rgba(103, 58, 183, 0.1) 0%, rgba(156, 39, 176, 0.1) 100%);
+      font-weight: 600;
+      font-size: 2rem;
+      color: var(--primary);
+      box-shadow: var(--shadow-lg);
+      animation: floatingCards 6s infinite ease-in-out;
+      animation-delay: var(--delay);
+      transform: rotate(var(--rotation));
     }
     
-    .hero-text {
-      text-align: center;
-      max-width: 800px;
-      margin-bottom: 3rem;
+    .floating-card.question {
+      font-size: 3rem;
+      width: 100px;
+      height: 150px;
+      background: white;
+      color: var(--primary);
     }
     
-    .hero-text h1 {
-      font-family: 'Poppins', sans-serif;
-      font-size: clamp(2rem, 5vw, 3rem);
-      margin-bottom: 1rem;
-      background-image: var(--primary-gradient);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      display: inline-block;
+    @keyframes floatingCards {
+      0% { transform: rotate(var(--rotation)) translateY(0); opacity: 0.7; }
+      50% { transform: rotate(var(--rotation)) translateY(-20px); opacity: 1; }
+      100% { transform: rotate(var(--rotation)) translateY(0); opacity: 0.7; }
     }
     
-    .hero-text p {
-      font-size: 1.2rem;
-      color: var(--text-light);
-      max-width: 600px;
-      margin: 0 auto;
-    }
+    .floating-cards .floating-card:nth-child(1) { top: 20%; left: 20%; }
+    .floating-cards .floating-card:nth-child(2) { top: 60%; left: 30%; }
+    .floating-cards .floating-card:nth-child(3) { top: 30%; left: 50%; }
+    .floating-cards .floating-card:nth-child(4) { top: 70%; left: 70%; }
+    .floating-cards .floating-card:nth-child(5) { top: 20%; left: 70%; }
+    .floating-cards .floating-card:nth-child(6) { top: 40%; left: 20%; }
+    .floating-cards .floating-card:nth-child(7) { top: 80%; left: 50%; }
+    .floating-cards .floating-card:nth-child(8) { top: 50%; left: 50%; }
     
-    .sessions-container {
+    .forms-container {
+      flex: 1;
       display: flex;
-      gap: 2rem;
       justify-content: center;
-      flex-wrap: wrap;
-      width: 100%;
-      max-width: 1200px;
+      align-items: center;
+      padding: 40px;
     }
     
     .session-box {
       background: white;
       border-radius: var(--border-radius-md);
       box-shadow: var(--shadow-md);
-      width: 100%;
-      max-width: 450px;
+      width: 450px;
       padding: 2.5rem;
       transition: transform 0.3s, box-shadow 0.3s;
     }
@@ -337,74 +362,52 @@
       display: none;
     }
     
-    /* Card design elements for visual interest */
-    .card-decorations {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: -1;
-    }
-    
-    .card {
-      position: absolute;
-      width: 70px;
-      height: 100px;
-      background-color: white;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      color: var(--primary);
-      box-shadow: var(--shadow-md);
-      opacity: 0.3;
-      font-size: 1.5rem;
-    }
-    
-    .card:nth-child(1) {
-      top: 15%;
-      left: 10%;
-      transform: rotate(-15deg);
-    }
-    
-    .card:nth-child(2) {
-      top: 20%;
-      right: 15%;
-      transform: rotate(10deg);
-    }
-    
-    .card:nth-child(3) {
-      bottom: 10%;
-      left: 20%;
-      transform: rotate(5deg);
-    }
-    
-    .card:nth-child(4) {
-      bottom: 15%;
-      right: 10%;
-      transform: rotate(-10deg);
-    }
-    
     /* Responsive styles */
-    @media (max-width: 768px) {
-      .sessions-container {
+    @media (max-width: 1024px) {
+      .forms-container {
+        padding: 20px;
+      }
+    }
+    
+    @media (max-width: 900px) {
+      main {
         flex-direction: column;
-        align-items: center;
       }
       
+      .card-animation-container {
+        height: 300px;
+      }
+    }
+    
+    @media (max-width: 600px) {
       .session-box {
-        max-width: 100%;
+        width: 100%;
+        padding: 1.5rem;
+      }
+      
+      header {
+        padding: 0.8rem 1rem;
       }
       
       nav a {
         display: none;
       }
       
-      .hero-text {
-        margin-bottom: 2rem;
+      .session-button {
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+      }
+      
+      .floating-card {
+        width: 60px;
+        height: 90px;
+        font-size: 1.5rem;
+      }
+      
+      .floating-card.question {
+        width: 80px;
+        height: 120px;
+        font-size: 2.5rem;
       }
     }
   </style>
@@ -416,7 +419,7 @@
       <span class="logo-text">Planning Poker</span>
     </div>
     <nav>
-      <a href="about.html">WHAT IS PLANNING POKER?</a>     
+      <a href="About.html">HOME</a>     
       <button id="newSessionBtn" class="session-button new-session">
         <i class="fas fa-plus"></i> NEW SESSION
       </button>
@@ -427,12 +430,20 @@
   </header>
 
   <main>
-    <div class="hero-text">
-      <h1>Estimate Projects with Confidence</h1>
-      <p>Planning Poker helps agile teams make better, more accurate estimations together—even when working remotely.</p>
+    <div class="card-animation-container">
+      <div class="floating-cards">
+        <div class="floating-card" style="--delay: 0s; --rotation: -15deg;">1</div>
+        <div class="floating-card" style="--delay: 1.1s; --rotation: 10deg;">2</div>
+        <div class="floating-card" style="--delay: 2.2s; --rotation: -5deg;">3</div>
+        <div class="floating-card" style="--delay: 1.5s; --rotation: 12deg;">5</div>
+        <div class="floating-card" style="--delay: 0.7s; --rotation: -8deg;">8</div>
+        <div class="floating-card" style="--delay: 2.5s; --rotation: 5deg;">13</div>
+        <div class="floating-card" style="--delay: 1.8s; --rotation: -10deg;">21</div>
+        <div class="floating-card question" style="--delay: 3s; --rotation: 0deg;">?</div>
+      </div>
     </div>
     
-    <div class="sessions-container">
+    <div class="forms-container">
       <div class="session-box" id="createSessionBox">
         <h2>Create new session</h2>
 
@@ -494,13 +505,6 @@
         
         <button class="action-button" onclick="joinRoom()">Join session</button>
       </div>
-    </div>
-    
-    <div class="card-decorations">
-      <div class="card">1</div>
-      <div class="card">5</div>
-      <div class="card">8</div>
-      <div class="card">13</div>
     </div>
   </main>
   
