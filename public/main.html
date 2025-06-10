@@ -3,121 +3,176 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Planning Poker</title>
+  <title>Planning Poker | Create or Join Session</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
+    :root {
+      --primary: #673ab7;
+      --primary-light: #e1d4f9;
+      --primary-dark: #5c33a4;
+      --primary-gradient: linear-gradient(135deg, #673ab7, #9c27b0);
+      --text: #2d2d2d;
+      --text-light: #5e5e5e;
+      --background: #ffffff;
+      --section-bg: #F8F9FE;
+      --card: #ffffff;
+      --card-hover: #f9f7fe;
+      --border: #e8e8e8;
+      --accent: #FF6B6B;
+      --success: #4CAF50;
+      --info: #2196F3;
+      --warning: #FF9800;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+      --border-radius-sm: 6px;
+      --border-radius-md: 10px;
+      --border-radius-lg: 16px;
+    }
+    
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      background: white;
     }
-
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      background-color: var(--background);
+      overflow-x: hidden;
+    }
+    
     header {
+      background-color: var(--background);
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 0.8rem 1.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 20px;
-      background: white;
-      border-bottom: 1px solid #e5e7eb;
     }
-
+    
     .logo {
       display: flex;
       align-items: center;
+      gap: 0.8rem;
     }
-
+    
     .logo img {
-      width: 24px;
-      height: 24px;
-      margin-right: 8px;
+      width: 36px;
+      height: auto;
+      box-shadow: none;
+      border-radius: 0;
     }
-
-    .logo span {
-      font-size: 18px;
-      font-weight: bold;
+    
+    .logo-text {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
     }
-
-    .nav-links {
+    
+    nav {
       display: flex;
+      gap: 1.5rem;
       align-items: center;
-      gap: 15px;
-      font-size: 14px;
     }
-
-    .nav-links a {
+    
+    nav a {
+      font-weight: 500;
+      color: var(--text);
+      padding: 0.5rem 0.2rem;
+      position: relative;
       text-decoration: none;
-      color: #6b7280;
-      padding: 5px;
+      font-size: 0.9rem;
     }
-
+    
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary-gradient);
+      transition: width 0.3s;
+    }
+    
+    nav a:hover::after {
+      width: 100%;
+    }
+    
     .session-button {
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 0.7rem 1.2rem;
+      border-radius: 30px;
+      font-size: 0.9rem;
       display: flex;
       align-items: center;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
+      gap: 0.5rem;
     }
-
+    
     .new-session {
-      background-color: #f3f4f6;
-      color: #111827;
+      background-image: var(--primary-gradient);
+      color: white;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.3);
     }
-
-    .new-session:before {
-      content: "+";
-      margin-right: 4px;
-      font-weight: bold;
+    
+    .new-session:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(103, 58, 183, 0.4);
     }
-
+    
     .join-session {
-      background-color: transparent;
-      color: #111827;
+      background-color: white;
+      color: var(--primary);
+      border: 2px solid var(--primary);
     }
-
-    .join-session:before {
-      content: "🧭";
-      margin-right: 4px;
-      font-size: 14px;
+    
+    .join-session:hover {
+      background-color: var(--primary-light);
+      transform: translateY(-2px);
     }
-
-    .github-icon {
-      width: 20px;
-      height: 20px;
-      margin-right: 10px;
-    }
-
-    .country-selector {
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      padding: 3px 8px;
-      font-weight: 500;
-      font-size: 14px;
-    }
-
+    
     main {
       display: flex;
-      height: calc(100vh - 60px);
-      overflow: hidden;
+      min-height: calc(100vh - 60px);
+      background-color: var(--section-bg);
     }
-
+    
     .image-container {
       flex: 1;
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 40px;
-      max-width: 50%;
     }
-
+    
     .image-container img {
       max-width: 100%;
       max-height: 80vh;
       object-fit: contain;
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.5s;
+      transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
     }
-
+    
+    .image-container img:hover {
+      transform: perspective(1000px) rotateY(-5deg) rotateX(5deg);
+    }
+    
     .forms-container {
       flex: 1;
       display: flex;
@@ -125,93 +180,197 @@
       align-items: center;
       padding: 40px;
     }
-
+    
     .session-box {
       background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
-      width: 400px;
-      padding: 30px;
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-md);
+      width: 450px;
+      padding: 2.5rem;
+      transition: transform 0.3s, box-shadow 0.3s;
     }
-
+    
+    .session-box:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    
     .session-box h2 {
-      margin-top: 0;
-      font-size: 24px;
-      margin-bottom: 24px;
-      color: #111827;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.8rem;
+      margin-bottom: 1.8rem;
+      color: var(--text);
       font-weight: 600;
+      position: relative;
+      display: inline-block;
     }
-
+    
+    .session-box h2::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      width: 60px;
+      height: 3px;
+      background-image: var(--primary-gradient);
+      border-radius: 3px;
+    }
+    
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 1.5rem;
     }
-
+    
     .form-group label {
       display: block;
-      font-size: 14px;
+      font-size: 0.95rem;
       font-weight: 500;
-      margin-bottom: 5px;
-      color: #374151;
+      margin-bottom: 0.5rem;
+      color: var(--text);
     }
-
+    
     .form-group input {
       width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 14px;
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius-sm);
+      font-size: 1rem;
       box-sizing: border-box;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      font-family: 'Inter', sans-serif;
     }
-
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(103, 58, 183, 0.1);
+    }
+    
+    .scale-options {
+      margin-bottom: 1.5rem;
+    }
+    
+    .scale-options h3 {
+      font-size: 1rem;
+      margin-bottom: 0.8rem;
+      font-weight: 500;
+    }
+    
     .radio-group {
       display: flex;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 0.7rem;
+      cursor: pointer;
     }
-
+    
+    .radio-group:hover {
+      color: var(--primary);
+    }
+    
     .radio-group input[type="radio"] {
-      margin-right: 8px;
+      margin-right: 0.8rem;
+      cursor: pointer;
+      accent-color: var(--primary);
+      width: auto;
     }
-
+    
+    .radio-group label {
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    
     .checkbox-container {
       display: flex;
       align-items: center;
-      margin: 15px 0;
+      margin: 1.5rem 0;
+      cursor: pointer;
     }
-
+    
+    .checkbox-container:hover {
+      color: var(--primary);
+    }
+    
     .checkbox-container input {
-      margin-right: 8px;
+      margin-right: 0.8rem;
+      cursor: pointer;
+      accent-color: var(--primary);
+      width: auto;
     }
-
+    
+    .checkbox-container label {
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    
     .action-button {
-      background-color: #3b82f6;
+      display: inline-block;
+      padding: 0.9rem 2rem;
+      background-image: var(--primary-gradient);
       color: white;
-      padding: 12px;
+      border-radius: 30px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.3);
+      transition: transform 0.3s, box-shadow 0.3s;
       border: none;
-      border-radius: 25px;
-      font-size: 16px;
-      font-weight: 500;
       cursor: pointer;
       width: 100%;
-      text-align: center;
-      transition: background-color 0.2s;
+      font-size: 1rem;
+      font-family: 'Inter', sans-serif;
     }
-
+    
     .action-button:hover {
-      background-color: #2563eb;
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(103, 58, 183, 0.4);
     }
-
+    
     #joinSessionBox {
       display: none;
-      text-align: center;
     }
-
-    #joinSessionBox h2 {
-      text-align: center;
+    
+    /* Responsive styles */
+    @media (max-width: 1024px) {
+      .image-container {
+        padding: 20px;
+      }
+      
+      .forms-container {
+        padding: 20px;
+      }
     }
-
-    #joinSessionBox .action-button {
-      margin-top: 10px;
+    
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+      }
+      
+      .image-container {
+        max-width: 100%;
+        padding-bottom: 0;
+      }
+      
+      .image-container img {
+        max-height: 40vh;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .session-box {
+        width: 100%;
+        padding: 1.5rem;
+      }
+      
+      header {
+        padding: 0.8rem 1rem;
+      }
+      
+      nav a {
+        display: none;
+      }
+      
+      .session-button {
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+      }
     }
   </style>
 </head>
@@ -219,13 +378,17 @@
   <header>
     <div class="logo">
       <img src="spade.png" alt="Planning Poker" />
-      <span>Planning Poker</span>
+      <span class="logo-text">Planning Poker</span>
     </div>
-    <div class="nav-links">
-      <a href="#">WHAT IS PLANNING POKER?</a>     
-      <button id="newSessionBtn" class="session-button new-session">NEW SESSION</button>
-      <button id="joinSessionBtn" class="session-button join-session">JOIN SESSION</button>    
-    </div>
+    <nav>
+    <!--  <a href="about.html">WHAT IS PLANNING POKER?</a>    -->
+      <button id="newSessionBtn" class="session-button new-session">
+        <i class="fas fa-plus"></i> NEW SESSION
+      </button>
+      <button id="joinSessionBtn" class="session-button join-session">
+        <i class="fas fa-sign-in-alt"></i> JOIN SESSION
+      </button>    
+    </nav>
   </header>
 
   <main>
@@ -238,34 +401,38 @@
         <h2>Create new session</h2>
 
         <div class="form-group">
-          <label>Session name *</label>
-          <input type="text" id="sessionNameInput" placeholder="Session Name" />
+          <label for="sessionNameInput">Session name *</label>
+          <input type="text" id="sessionNameInput" placeholder="Give your session a memorable name" />
         </div>
 
         <div class="form-group">
-          <label>Your name *</label>
-          <input type="text" id="createNameInput" placeholder="Your Name" />
+          <label for="createNameInput">Your name *</label>
+          <input type="text" id="createNameInput" placeholder="How should we call you?" />
         </div>
 
-        <div class="radio-group">
-          <input type="radio" name="scale" id="fibonacci" checked value="fibonacci" />
-          <label for="fibonacci">Fibonacci (0, 1, 2, 3, 5, 8, 13, 21...)</label>
-        </div>
-        <div class="radio-group">
-          <input type="radio" name="scale" id="shortFib" value="shortFib" />
-          <label for="shortFib">Short Fibonacci (0, ½, 1, 2, 3...)</label>
-        </div>
-        <div class="radio-group">
-          <input type="radio" name="scale" id="tshirt" value="tshirt" />
-          <label for="tshirt">T-Shirt (XXS, XS, S, M...)</label>
-        </div>
-        <div class="radio-group">
-          <input type="radio" name="scale" id="tshirtNum" value="tshirtNum" />
-          <label for="tshirtNum">T-Shirt & Numbers</label>
-        </div>
-        <div class="radio-group">
-          <input type="radio" name="scale" id="custom" value="custom" />
-          <label for="custom">Custom</label>
+        <div class="scale-options">
+          <h3>Choose your estimation scale:</h3>
+          
+          <div class="radio-group">
+            <input type="radio" name="scale" id="fibonacci" checked value="fibonacci" />
+            <label for="fibonacci">Fibonacci (0, 1, 2, 3, 5, 8, 13, 21...)</label>
+          </div>
+          <div class="radio-group">
+            <input type="radio" name="scale" id="shortFib" value="shortFib" />
+            <label for="shortFib">Short Fibonacci (0, ½, 1, 2, 3...)</label>
+          </div>
+          <div class="radio-group">
+            <input type="radio" name="scale" id="tshirt" value="tshirt" />
+            <label for="tshirt">T-Shirt Sizes (XXS, XS, S, M...)</label>
+          </div>
+          <div class="radio-group">
+            <input type="radio" name="scale" id="tshirtNum" value="tshirtNum" />
+            <label for="tshirtNum">T-Shirt & Numbers</label>
+          </div>
+          <div class="radio-group">
+            <input type="radio" name="scale" id="custom" value="custom" />
+            <label for="custom">Custom</label>
+          </div>
         </div>
 
         <div class="checkbox-container">
@@ -273,21 +440,23 @@
           <label for="allowManage">Allow members to manage session</label>
         </div> 
 
-        <button class="action-button" onclick="createRoom()">Start new game</button>
+        <button class="action-button" onclick="createRoom()">Start new session</button>
       </div>
       
       <div class="session-box" id="joinSessionBox">
         <h2>Join a Session</h2>
         
         <div class="form-group">
-          <input type="text" id="sessionIdInput" placeholder="Session ID *" />
+          <label for="sessionIdInput">Session ID *</label>
+          <input type="text" id="sessionIdInput" placeholder="Enter the session ID you received" />
         </div>
         
         <div class="form-group">
-          <input type="text" id="joinNameInput" placeholder="Your Name *" />
+          <label for="joinNameInput">Your name *</label>
+          <input type="text" id="joinNameInput" placeholder="How should we call you?" />
         </div>
         
-        <button class="action-button" onclick="joinRoom()">JOIN</button>
+        <button class="action-button" onclick="joinRoom()">Join session</button>
       </div>
     </div>
   </main>
@@ -304,6 +473,18 @@
       document.getElementById("joinSessionBtn").addEventListener("click", function() {
         document.getElementById("createSessionBox").style.display = "none";
         document.getElementById("joinSessionBox").style.display = "block";
+      });
+      
+      // Add hover effect to the planning poker image
+      const image = document.querySelector(".image-container img");
+      image.addEventListener("mousemove", function(e) {
+        const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+        const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+        image.style.transform = `perspective(1000px) rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+      });
+      
+      image.addEventListener("mouseleave", function() {
+        image.style.transform = "perspective(1000px) rotateY(0) rotateX(0)";
       });
     });
     
@@ -337,7 +518,6 @@
       sessionStorage.setItem("isHost", "true");
       
       // Navigate to the room with the generated ID
-    //  window.location.href = `/index.html?roomId=${roomId}`;
       window.location.href = `/index.html?roomId=${roomId}&host=true`;
     }
     
