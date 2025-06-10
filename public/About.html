@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Planning Poker</title>
+  <style>
+    /* Modern, clean styling with zigzag layout */
+    :root {
+      --primary: #673ab7;
+      --primary-light: #e1d4f9;
+      --primary-dark: #5c33a4;
+      --text: #333;
+      --background: #fff;
+      --card: #f9f9f9;
+      --border: #e0e0e0;
+      --success: #4CAF50;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      background-color: var(--background);
+    }
+    
+    header {
+      background-color: var(--background);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .logo-icon {
+      width: 30px;
+      height: 30px;
+      fill: var(--text);
+    }
+    
+    .logo-text {
+      font-size: 20px;
+      font-weight: bold;
+      color: var(--text);
+    }
+    
+    nav {
+      display: flex;
+      gap: 20px;
+    }
+    
+    nav a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+      padding: 5px;
+      transition: color 0.2s;
+    }
+    
+    nav a:hover {
+      color: var(--primary);
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    h1, h2, h3 {
+      color: var(--primary);
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+      text-align: center;
+      color: var(--text);
+    }
+    
+    h2 {
+      font-size: 1.8rem;
+      margin-top: 60px;
+      margin-bottom: 30px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--primary-light);
+    }
+    
+    h3 {
+      font-size: 1.3rem;
+      margin-top: 30px;
+    }
+    
+    p {
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+      line-height: 1.7;
+    }
+    
+    .cta-center {
+      text-align: center;
+      margin: 40px 0;
+    }
+    
+    .cta-button {
+      display: inline-block;
+      background-color: var(--primary);
+      color: white;
+      font-weight: bold;
+      text-decoration: none;
+      padding: 16px 36px;
+      border-radius: 30px;
+      transition: all 0.3s;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 10px rgba(103, 58, 183, 0.3);
+    }
+    
+    .cta-button:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(103, 58, 183, 0.4);
+    }
+    
+    /* Zigzag layout styling */
+    .feature-section {
+      margin: 100px 0;
+    }
+    
+    .zigzag-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 120px;
+      flex-direction: row;
+      gap: 60px;
+    }
+    
+    .zigzag-item:nth-child(even) {
+      flex-direction: row-reverse;
+    }
+    
+    .zigzag-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .zigzag-text {
+      flex: 1;
+      padding: 20px;
+    }
+    
+    .zigzag-image {
+      flex: 1.3;
+      border-radius: 12px;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow: hidden;
+      max-width: 600px;
+    }
+    
+    .zigzag-image img {
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      display: block;
+      border-radius: 12px;
+      transform: translateZ(0); /* Prevents weird blur in Safari */
+    }
+    
+    .zigzag-title {
+      color: var(--primary);
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      position: relative;
+      display: inline-block;
+    }
+    
+    .zigzag-title:after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      height: 3px;
+      width: 70px;
+      background-color: var(--primary-light);
+    }
+    
+    .zigzag-description {
+      color: var(--text);
+      margin-bottom: 25px;
+      font-size: 1.1rem;
+      line-height: 1.7;
+    }
+    
+    .zigzag-features {
+      list-style-type: none;
+      padding: 0;
+      margin: 30px 0;
+    }
+    
+    .zigzag-features li {
+      padding: 5px 5px 5px 30px;
+      position: relative;
+      margin-bottom: 15px;
+    }
+    
+    .zigzag-features li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--success);
+      font-weight: bold;
+    }
+    
+    /* Card styles for voting scales */
+    .scale-cards {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    
+    .card {
+      background-color: var(--primary-light);
+      color: var(--primary-dark);
+      width: 50px;
+      height: 70px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      margin: 5px;
+    }
+    
+    /* FAQ Section */
+    .faq-section {
+      margin: 60px 0;
+    }
+    
+    .faq-item {
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .faq-question {
+      padding: 20px;
+      background-color: var(--card);
+      cursor: pointer;
+      font-weight: bold;
+      position: relative;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    
+    .faq-question:hover {
+      background-color: #f0f0f0;
+    }
+    
+    .faq-question::after {
+      content: "+";
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 20px;
+    }
+    
+    .faq-question.active::after {
+      content: "−";
+    }
+    
+    .faq-answer {
+      padding: 0 20px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+    }
+    
+    .faq-question.active + .faq-answer {
+      padding: 20px;
+      max-height: 500px;
+    }
+    
+    /* Testimonials */
+    .testimonials {
+      margin: 80px 0;
+      text-align: center;
+    }
+    
+    .testimonial-cards {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 40px;
+    }
+    
+    .testimonial-card {
+      background-color: white;
+      border-radius: 10px;
+      padding: 30px;
+      max-width: 350px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    
+    .testimonial-text {
+      font-style: italic;
+      margin-bottom: 20px;
+      color: #444;
+      position: relative;
+    }
+    
+    .testimonial-text::before {
+      content: '"';
+      font-size: 60px;
+      color: var(--primary-light);
+      position: absolute;
+      top: -20px;
+      left: -15px;
+      opacity: 0.7;
+    }
+    
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+    }
+    
+    .testimonial-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-right: 15px;
+      background-color: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--primary);
+    }
+    
+    .testimonial-info {
+      line-height: 1.4;
+    }
+    
+    .testimonial-name {
+      font-weight: bold;
+    }
+    
+    .testimonial-title {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    
+    footer {
+      background-color: var(--card);
+      padding: 40px 20px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      margin-top: 80px;
+    }
+    
+    footer p {
+      margin: 5px 0;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 1024px) {
+      .zigzag-item {
+        gap: 40px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .zigzag-item {
+        flex-direction: column !important;
+        gap: 30px;
+        margin-bottom: 80px;
+      }
+      
+      .zigzag-text {
+        order: 2;
+      }
+      
+      .zigzag-item:nth-child(even) .zigzag-text {
+        order: 2;
+      }
+      
+      .zigzag-image {
+        order: 1;
+        max-width: 100%;
+      }
+      
+      .zigzag-item:nth-child(even) .zigzag-image {
+        order: 1;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .zigzag-title {
+        font-size: 1.5rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      .container {
+        padding: 30px 15px;
+      }
+      
+      .zigzag-item {
+        margin-bottom: 60px;
+      }
+      
+      .testimonial-cards {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 24 24">
+        <path d="M12,2C6.477,2,2,6.477,2,12s4.477,10,10,10s10-4.477,10-10S17.523,2,12,2z M17.293,17.293L12,12l-5.293,5.293 C5.54,16.126,5,14.141,5,12c0-3.866,3.134-7,7-7s7,3.134,7,7C19,14.141,18.46,16.126,17.293,17.293z M12,6.586l-2.707,2.707 C9.923,8.474,10.416,8,11,8h2c0.584,0,1.077,0.474,1.707,1.293L12,6.586z"></path>
+      </svg>
+      <span class="logo-text">Planning Poker</span>
+    </div>
+    <nav>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#features">Features</a>
+      <a href="#faq">FAQ</a>
+      <a href="#testimonials">Testimonials</a>
+    </nav>
+  </header>
+  
+  <div class="container">
+    <h1>Planning Poker: Estimate Your Projects with Confidence</h1>
+    
+    <div class="cta-center">
+      <a href="#start-session" class="cta-button">Start Your First Session</a>
+    </div>
+    
+    <p class="intro-text" style="text-align: center; max-width: 800px; margin: 0 auto 50px; font-size: 1.2rem;">
+      Planning Poker is a collaborative estimation technique used by agile teams to estimate the effort of user stories. 
+      Our digital Planning Poker app brings this experience online, allowing distributed teams to estimate together in real-time—no matter where your team members are located.
+    </p>
+    
+    <!-- Zigzag Section - How It Works -->
+    <h2 id="how-it-works">How Planning Poker Works</h2>
+    
+    <div class="feature-section">
+      <!-- First item -->
+      <div class="zigzag-item">
+        <div class="zigzag-text">
+          <h3 class="zigzag-title">Create a New Session</h3>
+          <p class="zigzag-description">
+            Start by creating a new Planning Poker session. Choose your preferred voting scale (Fibonacci, T-shirt sizes, etc.) and set up your session name. You'll become the host with full control over the session.
+          </p>
+          <ul class="zigzag-features">
+            <li>Multiple voting systems to choose from</li>
+            <li>Simple session creation process</li>
+            <li>Automatic room creation with secure link</li>
+          </ul>
+        </div>
+        <div class="zigzag-image">
+          <img src="https://i.postimg.cc/HnxggQbL/create-session.jpg" alt="Create a new Planning Poker session">
+        </div>
+      </div>
+      
+      <!-- Second item -->
+      <div class="zigzag-item">
+        <div class="zigzag-text">
+          <h3 class="zigzag-title">Invite Your Team</h3>
+          <p class="zigzag-description">
+            Once your session is created, share the invitation link with your team members. They'll join the session instantly without needing to create an account. Everyone will be able to see who's in the session.
+          </p>
+          <ul class="zigzag-features">
+            <li>Simple one-click invitation links</li>
+            <li>No account creation needed for participants</li>
+            <li>Real-time participant list updates</li>
+          </ul>
+        </div>
+        <div class="zigzag-image">
+          <img src="https://i.postimg.cc/htFLyTdZ/invite-link.jpg" alt="Invite team members with a link">
+        </div>
+      </div>
+      
+      <!-- Third item -->
+      <div class="zigzag-item">
+        <div class="zigzag-text">
+          <h3 class="zigzag-title">Add User Stories</h3>
+          <p class="zigzag-description">
+            Add your user stories or tasks one by one using the "Add Ticket" feature, or import multiple stories at once using the CSV upload option. This lets you quickly populate your session with items to estimate.
+          </p>
+          <ul class="zigzag-features">
+            <li>Individual story/task creation</li>
+            <li>Bulk import via CSV file</li>
+            <li>Easy navigation between stories</li>
+          </ul>
+        </div>
+        <div class="zigzag-image">
+          <img src="https://i.postimg.cc/hvMtpdmp/add-ticket.jpg" alt="Add user stories or tasks">
+        </div>
+      </div>
+      
+      <!-- Fourth item -->
+      <div class="zigzag-item">
+        <div class="zigzag-text">
+          <h3 class="zigzag-title">Vote Together</h3>
+          <p class="zigzag-description">
+            Team members select their estimates by choosing a card from the available options. Everyone votes independently and the votes remain hidden until revealed. You can see who has voted without seeing their actual votes.
+          </p>
+          <ul class="zigzag-features">
+            <li>Anonymous voting prevents anchoring bias</li>
+            <li>Visual indicators show who has voted</li>
+            <li>Multiple estimation scales available</li>
+          </ul>
+        </div>
+        <div class="zigzag-image">
+          <img src="https://i.postimg.cc/90d4MBJw/voting.jpg" alt="Team members voting on stories">
+        </div>
+      </div>
+      
+      <!-- Fifth item -->
+      <div class="zigzag-item">
+        <div class="zigzag-text">
+          <h3 class="zigzag-title">Reveal and Discuss</h3>
+          <p class="zigzag-description">
+            Once everyone has voted, the host can reveal all votes simultaneously. The app displays each person's estimate along with helpful statistics like the average and level of agreement. This information helps facilitate discussions about differences in estimates.
+          </p>
+          <ul class="zigzag-features">
+            <li>Simultaneous vote reveal</li>
+            <li>Automatic calculation of statistics</li>
+            <li>Easy identification of estimation outliers</li>
+          </ul>
+        </div>
+        <div class="zigzag-image">
+          <img src="https://i.postimg.cc/zXjVt23g/revealed-votes.jpg" alt="Revealed votes with statistics">
+        </div>
+      </div>
+    </div>
+    
+    <div class="cta-center">
+      <a href="#start-session" class="cta-button">Start Estimating Now</a>
+    </div>
+    
+    <!-- Features Section -->
+    <h2 id="features">Key Features</h2>
+    
+    <div class="feature-section">
+      <!-- First feature -->
+      <div class="zigzag-item">
+        <div class="zigzag-text">
+          <h3 class="zigzag-title">Multiple Estimation Scales</h3>
+          <p class="zigzag-description">
+            Choose from several popular estimation scales to match your team's preferred approach. Options include Fibonacci sequence, modified Fibonacci, T-shirt sizes, and more.
+          </p>
+          
+          <div class="scale-cards">
+            <div class="card">0</div>
+            <div class="card">1</div>
+            <div class="card">2</div>
+            <div class="card">3</div>
+            <div class="card">5</div>
+            <div class="card">8</div>
+            <div class="card">13</div>
+            <div class="card">21</div>
+          </div>
+          
+          <p>Fibonacci sequence cards shown above. Other scales include:</p>
+          <ul class="zigzag-features">
+            <li>Short Fibonacci (0, ½, 1, 2, 3)</li>
+            <li>T-Shirt Sizes (XXS, XS, S, M, L, XL, XXL)</li>
+            <li>T-Shirt & Numbers combined</li>
+          </ul>
+        </div>
+        <div class="zigzag-image">
+          <img src="https://i.postimg.cc/90KDppM1/planning-cards.jpg" alt="Various planning poker card scales">
+        </div>
+      </div>
+      
+      <!-- Second feature -->
+      <div class="zigzag-item">
+        <div class="zigzag-text">
+          <h3 class="zigzag-title">Real-Time Collaboration</h3>
+          <p class="zigzag-description">
+            Our app provides a seamless real-time experience. See who's in the session, who has voted, and instantly reveal votes to everyone. Changes sync automatically across all participants.
+          </p>
+          <ul class="zigzag-features">
+            <li>Live updates without page refreshes</li>
+            <li>Automatic reconnection if connectivity drops</li>
+            <li>Vote status indicators show team progress</li>
+            <li>Host controls for managing the session flow</li>
+          </ul>
+        </div>
+        <div class="zigzag-image">
+          <img src="https://i.postimg.cc/vTzfDGwh/thumbs-up.jpg" alt="Real-time collaboration with vote indicators">
+        </div>
+      </div>
+      
+      <!-- Third feature -->
+      <div class="zigzag-item">
+        <div class="zigzag-text">
+          <h3 class="zigzag-title">No Installation Required</h3>
+          <p class="zigzag-description">
+            Planning Poker runs in your web browser with no downloads or installations needed. Works on desktop, tablet, and mobile devices so your team can participate from anywhere.
+          </p>
+          <ul class="zigzag-features">
+            <li>Works in all modern browsers</li>
+            <li>Responsive design adapts to any screen size</li>
+            <li>No account creation required</li>
+            <li>No software to install or maintain</li>
+          </ul>
+        </div>
+        <div class="zigzag-image">
+          <img src="https://i.postimg.cc/SsJcVzP0/main-app.jpg" alt="Planning Poker running in browser">
+        </div>
+      </div>
+    </div>
+    
+    <!-- FAQ Section -->
+    <h2 id="faq">Frequently Asked Questions</h2>
+    
+    <div class="faq-section">
+      <div class="faq-item">
+        <div class="faq-question">What is Planning Poker and why should we use it?</div>
+        <div class="faq-answer">
+          <p>Planning Poker is a consensus-based estimation technique used by agile teams. Team members make estimates individually, reducing influence bias. It's effective because it:</p>
+          <ul>
+            <li>Brings multiple perspectives into the estimation process</li>
+            <li>Reduces anchoring bias by revealing all votes simultaneously</li>
+            <li>Encourages discussion when estimates differ</li>
+            <li>Creates team ownership of the estimates</li>
+            <li>Makes the estimation process more engaging and interactive</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">How many people can join a Planning Poker session?</div>
+        <div class="faq-answer">
+          <p>The Planning Poker app supports teams of all sizes. We've optimized for 3-12 participants, which is typical for most agile teams, but larger groups are supported as well. The interface automatically adapts to accommodate the number of participants in your session.</p>
+        </div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">Is my data stored on your servers?</div>
+        <div class="faq-answer">
+          <p>Session data is temporarily stored only for the duration of the active session. We don't permanently store your stories or votes. For added privacy, you can export your results at the end of the session if you need to keep a record.</p>
+        </div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">What's the difference between the various voting scales?</div>
+        <div class="faq-answer">
+          <p>Different teams prefer different scales based on their workflow:</p>
+          <ul>
+            <li><strong>Fibonacci (0, 1, 2, 3, 5, 8, 13, 21...)</strong>: Reflects the uncertainty in larger estimates with bigger gaps between higher numbers.</li>
+            <li><strong>Short Fibonacci (0, ½, 1, 2, 3)</strong>: Better for teams working with smaller, more granular stories.</li>
+            <li><strong>T-Shirt Sizes (XXS to XXL)</strong>: Intuitive for teams that prefer non-numeric, relative sizing.</li>
+            <li><strong>T-Shirt & Numbers</strong>: Combines the intuitiveness of t-shirt sizes with numeric values for easier tracking.</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">How can I import my backlog from Jira or other tools?</div>
+        <div class="faq-answer">
+          <p>Export your stories from Jira or other tools as a CSV file, then use the "Upload Ticket" feature to import them. The CSV format should have one story per line, with details separated by commas.</p>
+        </div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">What happens if someone gets disconnected during a session?</div>
+        <div class="faq-answer">
+          <p>The app automatically attempts to reconnect users who lose their connection. When they rejoin, they'll see the current state of the session and their previous votes will be preserved.</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Testimonials Section -->
+    <h2 id="testimonials">What Teams Say About Planning Poker</h2>
+    
+    <div class="testimonials">
+      <div class="testimonial-cards">
+        <div class="testimonial-card">
+          <p class="testimonial-text">"Planning Poker completely transformed our estimation process. Our remote team members now feel just as engaged as those in the office, and we've seen much more accurate sprint planning."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">JM</div>
+            <div class="testimonial-info">
+              <div class="testimonial-name">Jennifer Miller</div>
+              <div class="testimonial-title">Scrum Master, FinTech Solutions</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="testimonial-card">
+          <p class="testimonial-text">"We were struggling with estimation consistency across our distributed team. This app solved that problem instantly. The interface is intuitive and the real-time collaboration features are excellent."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">DT</div>
+            <div class="testimonial-info">
+              <div class="testimonial-name">David Thompson</div>
+              <div class="testimonial-title">Product Owner, Cloud Services Inc.</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="testimonial-card">
+          <p class="testimonial-text">"The ability to import user stories directly from our backlog and the visualized consensus data have made our planning sessions much more productive. We love how easy it is to get everyone involved."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">AS</div>
+            <div class="testimonial-info">
+              <div class="testimonial-name">Amanda Singh</div>
+              <div class="testimonial-title">Agile Coach, Tech Innovations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="cta-center" style="margin-top: 60px;">
+      <h2>Ready to improve your team's estimation process?</h2>
+      <a href="#start-session" class="cta-button">Start Your First Session</a>
+    </div>
+  </div>
+  
+  <footer>
+    <p>Planning Poker - A collaborative estimation tool for agile teams</p>
+    <p>© 2023 Planning Poker App. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // Toggle FAQ answers
+    document.querySelectorAll('.faq-question').forEach(question => {
+      question.addEventListener('click', () => {
+        question.classList.toggle('active');
+      });
+    });
+  </script>
+</body>
+</html>
