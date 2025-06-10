@@ -128,79 +128,164 @@
     
     main {
       padding-top: 70px;
-      min-height: 100vh;
+      min-height: calc(100vh - 70px);
       display: flex;
       justify-content: center;
       align-items: center;
-      padding-bottom: 2rem;
     }
     
     .content-container {
       display: flex;
       justify-content: center;
-      align-items: stretch;
-      max-width: 1400px;
+      align-items: center;
       width: 100%;
-      padding: 2rem;
-      gap: 3rem;
+      max-width: 1400px;
+      height: calc(100vh - 70px);
+      padding: 1.5rem;
     }
     
-    .illustration-container {
+    .card-display-container {
       flex: 1;
-      max-width: 650px;
+      height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
+      position: relative;
+      padding: 1.5rem;
     }
     
-    .illustration-card {
+    .card-container {
+      width: 100%;
+      height: 100%;
+      max-width: 600px;
+      max-height: 600px;
       background-color: white;
       border-radius: var(--border-radius-lg);
       box-shadow: var(--shadow-lg);
-      padding: 1rem;
-      width: 100%;
-      overflow: hidden;
       position: relative;
-      transition: transform 0.3s;
+      overflow: hidden;
     }
     
-    .illustration-card:hover {
-      transform: translateY(-5px);
+    .poker-card {
+      position: absolute;
+      background-color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 2rem;
+      font-family: 'Poppins', sans-serif;
+      color: var(--primary);
+      box-shadow: var(--shadow-md);
+      border: 2px solid var(--primary-light);
+      animation: floatCard 6s infinite ease-in-out;
     }
     
-    .illustration-card img {
-      width: 100%;
-      height: auto;
-      border-radius: var(--border-radius-md);
-      display: block;
+    .poker-card:nth-child(1) {
+      width: 80px;
+      height: 120px;
+      top: 10%;
+      left: 20%;
+      animation-delay: 0s;
+      transform: rotate(-15deg);
+    }
+    
+    .poker-card:nth-child(2) {
+      width: 80px;
+      height: 120px;
+      top: 20%;
+      right: 25%;
+      animation-delay: 0.5s;
+      transform: rotate(5deg);
+    }
+    
+    .poker-card:nth-child(3) {
+      width: 80px;
+      height: 120px;
+      bottom: 40%;
+      left: 30%;
+      animation-delay: 1s;
+      transform: rotate(10deg);
+    }
+    
+    .poker-card:nth-child(4) {
+      width: 90px;
+      height: 135px;
+      bottom: 30%;
+      right: 20%;
+      animation-delay: 1.5s;
+      transform: rotate(-8deg);
+      z-index: 2;
+    }
+    
+    .poker-card:nth-child(5) {
+      width: 80px;
+      height: 120px;
+      top: 50%;
+      left: 50%;
+      animation-delay: 2s;
+      transform: rotate(12deg) translateX(-50%);
+    }
+    
+    .poker-card:nth-child(6) {
+      width: 100px;
+      height: 150px;
+      bottom: 15%;
+      left: 42%;
+      animation-delay: 2.5s;
+      transform: rotate(-5deg);
+      z-index: 3;
+      font-size: 2.5rem;
+    }
+    
+    .poker-card:nth-child(7) {
+      width: 90px;
+      height: 135px;
+      top: 25%;
+      left: 40%;
+      animation-delay: 3s;
+      transform: rotate(8deg);
+      z-index: 1;
+    }
+    
+    @keyframes floatCard {
+      0% { transform: translateY(0) rotate(var(--rotation, 0deg)); }
+      50% { transform: translateY(-15px) rotate(var(--rotation, 0deg)); }
+      100% { transform: translateY(0) rotate(var(--rotation, 0deg)); }
     }
     
     .forms-container {
       flex: 1;
-      max-width: 500px;
+      max-width: 480px;
       position: relative;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
     
     .session-box {
       background: white;
       border-radius: var(--border-radius-lg);
       box-shadow: var(--shadow-lg);
-      padding: 2.5rem;
+      padding: 1.8rem 2.2rem;
       width: 100%;
       transition: all 0.3s ease;
       position: absolute;
-      top: 0;
+      top: 50%;
       left: 0;
       width: 100%;
+      transform: translateY(-50%);
       opacity: 0;
       pointer-events: none;
-      transform: translateY(10px);
+      max-height: 90%;
+      overflow-y: auto;
     }
     
     .session-box.active {
       opacity: 1;
       pointer-events: all;
-      transform: translateY(0);
     }
     
     .session-box h2 {
@@ -208,7 +293,7 @@
       font-size: 1.8rem;
       color: var(--text);
       font-weight: 600;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       position: relative;
       display: inline-block;
     }
@@ -225,23 +310,23 @@
     }
     
     .form-group {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.2rem;
     }
     
     .form-group label {
       display: block;
       font-size: 0.95rem;
       font-weight: 500;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.35rem;
       color: var(--text);
     }
     
     .form-group input {
       width: 100%;
-      padding: 0.9rem 1rem;
+      padding: 0.75rem 1rem;
       border: 1px solid var(--border);
       border-radius: var(--border-radius-sm);
-      font-size: 1rem;
+      font-size: 0.95rem;
       box-sizing: border-box;
       transition: border-color 0.3s, box-shadow 0.3s;
       font-family: 'Inter', sans-serif;
@@ -254,21 +339,21 @@
     }
     
     .scale-options {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.2rem;
     }
     
     .scale-options h3 {
-      font-size: 1rem;
-      margin-bottom: 1rem;
+      font-size: 0.95rem;
+      margin-bottom: 0.6rem;
       font-weight: 500;
     }
     
     .radio-group {
       display: flex;
       align-items: center;
-      margin-bottom: 0.9rem;
+      margin-bottom: 0.6rem;
       cursor: pointer;
-      padding: 0.4rem 0;
+      padding: 0.2rem 0;
     }
     
     .radio-group:hover {
@@ -276,23 +361,23 @@
     }
     
     .radio-group input[type="radio"] {
-      margin-right: 0.8rem;
+      margin-right: 0.6rem;
       cursor: pointer;
       accent-color: var(--primary);
       width: auto;
     }
     
     .radio-group label {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       cursor: pointer;
     }
     
     .checkbox-container {
       display: flex;
       align-items: center;
-      margin: 1.8rem 0;
+      margin: 1rem 0 1.2rem;
       cursor: pointer;
-      padding: 0.5rem 0;
+      padding: 0.2rem 0;
     }
     
     .checkbox-container:hover {
@@ -304,18 +389,16 @@
       cursor: pointer;
       accent-color: var(--primary);
       width: auto;
-      height: 16px;
-      width: 16px;
     }
     
     .checkbox-container label {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       cursor: pointer;
     }
     
     .action-button {
       display: inline-block;
-      padding: 1rem 2rem;
+      padding: 0.9rem 1.5rem;
       background-image: var(--primary-gradient);
       color: white;
       border-radius: 30px;
@@ -358,54 +441,32 @@
       left: -50px;
     }
     
-    /* Rotating card animation in corner */
-    .corner-card {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 60px;
-      height: 90px;
-      background-color: white;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: var(--primary);
-      box-shadow: var(--shadow-md);
-      font-size: 1.5rem;
-      animation: rotateCard 10s infinite linear;
-      z-index: 1;
-    }
-    
-    @keyframes rotateCard {
-      0% { transform: rotate(0deg); }
-      25% { transform: rotate(10deg); }
-      75% { transform: rotate(-10deg); }
-      100% { transform: rotate(0deg); }
-    }
-    
     /* Responsive styles */
     @media (max-width: 1200px) {
       .content-container {
-        padding: 1.5rem;
-        gap: 2rem;
+        padding: 1.2rem;
       }
     }
     
     @media (max-width: 992px) {
       .content-container {
         flex-direction: column;
-        align-items: center;
       }
       
-      .illustration-container, .forms-container {
-        max-width: 600px;
+      .card-display-container {
+        height: 350px;
+        padding-bottom: 0;
+      }
+      
+      .forms-container {
         width: 100%;
+        max-width: 550px;
       }
       
       .session-box {
         position: relative;
+        transform: none;
+        top: auto;
         display: none;
       }
       
@@ -428,12 +489,36 @@
         font-size: 0.8rem;
       }
       
-      .session-box {
-        padding: 1.5rem;
+      .card-display-container {
+        height: 300px;
       }
       
-      .content-container {
-        padding: 1rem;
+      .poker-card {
+        font-size: 1.5rem;
+      }
+      
+      .poker-card:nth-child(1),
+      .poker-card:nth-child(2),
+      .poker-card:nth-child(3),
+      .poker-card:nth-child(5),
+      .poker-card:nth-child(7) {
+        width: 60px;
+        height: 90px;
+      }
+      
+      .poker-card:nth-child(4) {
+        width: 70px;
+        height: 105px;
+      }
+      
+      .poker-card:nth-child(6) {
+        width: 80px;
+        height: 120px;
+        font-size: 2rem;
+      }
+      
+      .session-box {
+        padding: 1.5rem;
       }
     }
   </style>
@@ -462,9 +547,15 @@
 
   <main>
     <div class="content-container">
-      <div class="illustration-container">
-        <div class="illustration-card">
-          <img src="planning-poker-illustration.jpg" alt="Planning Poker Session" />
+      <div class="card-display-container">
+        <div class="card-container">
+          <div class="poker-card" style="--rotation: -15deg;">0</div>
+          <div class="poker-card" style="--rotation: 5deg;">1</div>
+          <div class="poker-card" style="--rotation: 10deg;">2</div>
+          <div class="poker-card" style="--rotation: -8deg;">3</div>
+          <div class="poker-card" style="--rotation: 12deg;">5</div>
+          <div class="poker-card" style="--rotation: -5deg;">8</div>
+          <div class="poker-card" style="--rotation: 8deg;">13</div>
         </div>
       </div>
       
@@ -534,8 +625,6 @@
     </div>
   </main>
   
-  <div class="corner-card">8</div>
-  
   <script>
     // Add event listeners when the DOM is fully loaded
     document.addEventListener("DOMContentLoaded", function() {
@@ -548,6 +637,27 @@
       document.getElementById("joinSessionBtn").addEventListener("click", function() {
         document.getElementById("createSessionBox").classList.remove("active");
         document.getElementById("joinSessionBox").classList.add("active");
+      });
+      
+      // Add custom animation for Poker cards
+      const cards = document.querySelectorAll('.poker-card');
+      cards.forEach(card => {
+        const rotation = getComputedStyle(card).getPropertyValue('--rotation');
+        card.style.animation = `floatCard 6s infinite ease-in-out`;
+        
+        card.addEventListener('mouseover', function() {
+          this.style.transform = 'translateY(-20px) scale(1.1) rotate(' + rotation + ')';
+          this.style.zIndex = '10';
+          this.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.2)';
+        });
+        
+        card.addEventListener('mouseout', function() {
+          this.style.transform = '';
+          this.style.zIndex = '';
+          this.style
+            .boxShadow = '';
+          this.style.animation = `floatCard 6s infinite ease-in-out`;
+        });
       });
     });
     
