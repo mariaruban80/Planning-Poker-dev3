@@ -222,6 +222,7 @@ function restoreUserVotesToCurrentSocket(roomId, socket) {
 
 
 
+
 io.on('connection', (socket) => {
   socket.on('requestCurrentStory', () => {
     const roomId = socket.data.roomId;
