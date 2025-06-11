@@ -15,6 +15,20 @@ let hasReceivedStorySelection = false;
 window.currentVotesPerStory = {}; // Ensure global reference for UI
 let heartbeatInterval; // Store interval reference for cleanup
 
+
+// === VOTE NORMALIZATION FIX ===
+function normalizeVotesByUsername(votesBySocket) {
+  const normalized = {};
+  const userMap = window.userMap || {};
+  for (const [socketId, vote] of Object.entries(votesBySocket)) {
+    const name = userMap[socketId] || socketId;
+    if (!normalized[name]) {
+      normalized[name] = vote;
+    }
+  }
+  return normalized;
+}
+
 // Add a window function for index.html to call
 window.notifyStoriesUpdated = function() {
   const storyList = document.getElementById('storyList');
@@ -584,7 +598,8 @@ socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
     }
     
     // Store the votes
-    votesPerStory[storyId] = { ...votes };
+    const normalized = normalizeVotesByUsername(votes);
+        votesPerStory[storyId] = normalized;
     window.currentVotesPerStory = votesPerStory;
     
     // Update UI immediately if this is the current story
@@ -3043,7 +3058,8 @@ function handleSocketMessage(message) {
           }
           
           // Merge in the votes from server
-          votesPerStory[storyId] = { ...votes };
+          const normalized = normalizeVotesByUsername(votes);
+        votesPerStory[storyId] = normalized;
           window.currentVotesPerStory = votesPerStory;
         }
       }
