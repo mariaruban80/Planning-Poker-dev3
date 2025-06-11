@@ -2118,46 +2118,281 @@ input[type="text"]:focus,
     max-width: 100%;
   }
 }
-/* Positioning adjustments for the upload section */
-.upload-section {
+          /* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: flex-end;
-  align-items: start;
-  padding: 15px 20px;
-  gap: 15px;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.upload-right {
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* File Upload Modal */
+.file-upload-modal {
+  background-color: white;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 500px;
+  overflow: hidden;
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.modal-overlay.show .file-upload-modal {
+  transform: scale(1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.close-modal-button {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #9e9e9e;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-modal-button:hover {
+  background-color: #f5f5f5;
+  color: var(--text);
+}
+
+.modal-content {
+  padding: 20px;
+}
+
+/* Upload Dropzone Styling */
+.upload-dropzone {
+  padding: 30px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #e0e0e0;
+  border-radius: var(--border-radius-sm);
+  background-color: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 200px;
+}
+
+.upload-dropzone:hover, 
+.upload-dropzone.drag-over {
+  background-color: #f0f0f5;
+  border-color: var(--primary-light);
+}
+
+.upload-dropzone.drag-over {
+  transform: scale(0.99);
+  box-shadow: inset 0 0 0 2px var(--primary-light);
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: var(--primary);
+  margin-bottom: 20px;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+}
+
+.upload-dropzone:hover .upload-icon {
+  transform: translateY(-5px);
+  opacity: 1;
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.primary-text {
+  font-family: 'Poppins', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.secondary-text {
+  font-size: 14px;
+  color: var(--text-light);
+}
+
+.browse-button {
+  background-color: white;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 8px 24px;
+  border-radius: 50px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 5px;
+}
+
+.browse-button:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.file-restrictions {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-top: 15px;
+}
+
+/* Selected File Container */
+.selected-file-container {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f9fafb;
+  border: 1px solid #e0e0e0;
+  border-radius: var(--border-radius-sm);
+}
+
+.selected-file-info {
+  display: flex;
+  align-items: center;
   gap: 15px;
 }
 
-/* Make sure the custom upload doesn't get too wide */
-.custom-file-upload {
-  max-width: 350px;
+.file-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 20px;
 }
 
-/* Modal positioning adjustments if needed */
-#uploadModal {
-  z-index: 1050;
+.file-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .upload-right {
-    width: 100%;
-  }
-  
-  .custom-file-upload {
-    max-width: 100%;
-  }
-  
-  .upload-section {
-    flex-direction: column;
-    align-items: stretch;
-  }
+.file-name {
+  font-weight: 500;
+  color: var(--text);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.file-size {
+  color: var(--text-light);
+  font-size: 12px;
+}
+
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.remove-file-button, .process-file-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-file-button {
+  background-color: #ffebee;
+  color: #f44336;
+}
+
+.remove-file-button:hover {
+  background-color: #ffcdd2;
+  transform: scale(1.05);
+}
+
+.process-file-button {
+  background-color: #e8f5e9;
+  color: #4caf50;
+}
+
+.process-file-button:hover {
+  background-color: #c8e6c9;
+  transform: scale(1.05);
+}
+
+/* Hidden File Input */
+.hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Loading Indicator */
+.upload-dropzone.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.upload-dropzone.loading .upload-icon {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
           
 </style>
@@ -2226,46 +2461,12 @@ input[type="text"]:focus,
     </div>
   </div>
 </div>    
-<!-- Updated Upload Section - moved to right side as per screenshot -->
-<div class="upload-section">
-  <div class="upload-right">
-    <!-- Replace the old file input with this new custom upload interface -->
-    <div class="custom-file-upload" id="fileInputContainer">
-      <div class="file-upload-interface">
-        <input type="file" id="csvInput" accept=".csv" class="hidden-file-input" />
-        <div class="upload-dropzone" id="uploadDropzone">
-          <div class="upload-icon">
-            <i class="fas fa-cloud-upload-alt"></i>
-          </div>
-          <div class="upload-text">
-            <span class="primary-text">Drop your CSV file here</span>
-            <span class="secondary-text">or</span>
-            <button class="browse-button" id="browseButton">Browse Files</button>
-          </div>
-          <div class="file-restrictions">Supports: CSV files</div>
-        </div>
-        <div class="selected-file-container" id="selectedFileContainer">
-          <div class="selected-file-info">
-            <div class="file-icon">
-              <i class="fas fa-file-csv"></i>
-            </div>
-            <div class="file-details">
-              <span class="file-name" id="selectedFileName">No file selected</span>
-              <span class="file-size" id="selectedFileSize"></span>
-            </div>
-          </div>
-          <div class="file-actions">
-            <button class="remove-file-button" id="removeFileButton">
-              <i class="fas fa-times"></i>
-            </button>
-            <button class="process-file-button" id="processFileButton">
-              <i class="fas fa-check"></i>
-            </button>
-          </div>
-        </div>
-      </div>
+    <div class="upload-section">
+     <div class="upload-right">
+    <div class="file-input" id="fileInputContainer">
+      <span class="file-button">Upload Ticket</span>
+      <input accept=".csv" id="csvInput" type="file"/>
     </div>
-    <!-- Keep the Invite Others button unchanged -->
     <button class="invite-button" id="inviteButton">Invite Others</button>
   </div>
 </div> 
@@ -3814,206 +4015,281 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('loginModalCustom').style.display = 'none';
   });
 </script>
-<script>
-    // Custom file upload handling
-    document.addEventListener('DOMContentLoaded', function() {
-      const fileInput = document.getElementById('csvInput');
-      const dropzone = document.getElementById('uploadDropzone');
-      const browseButton = document.getElementById('browseButton');
-      const fileContainer = document.getElementById('selectedFileContainer');
-      const fileName = document.getElementById('selectedFileName');
-      const fileSize = document.getElementById('selectedFileSize');
-      const removeButton = document.getElementById('removeFileButton');
-      const processButton = document.getElementById('processFileButton');
-      
-      if (!fileInput || !dropzone || !browseButton) return;
-      
-      // Click browse button to trigger file input
-      browseButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        fileInput.click();
-      });
-      
-      // Click on dropzone to trigger file input
-      dropzone.addEventListener('click', function() {
-        fileInput.click();
-      });
-      
-      // Handle file selection
-      fileInput.addEventListener('change', function() {
-        handleFileSelection(this.files);
-      });
-      
-      // Handle drag and drop
-      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, preventDefaults, false);
-      });
-      
-      function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
+<!-- File Upload Modal -->
+<div id="fileUploadModal" style="display: none;" class="modal-overlay">
+  <div class="file-upload-modal">
+    <div class="modal-header">
+      <h3>Upload CSV File</h3>
+      <button class="close-modal-button" id="closeFileUploadModal">×</button>
+    </div>
+    <div class="modal-content">
+      <div class="upload-dropzone" id="uploadDropzone">
+        <div class="upload-icon">
+          <i class="fas fa-cloud-upload-alt"></i>
+        </div>
+        <div class="upload-text">
+          <span class="primary-text">Drop your CSV file here</span>
+          <span class="secondary-text">or</span>
+          <button class="browse-button" id="browseButton">Browse Files</button>
+        </div>
+        <div class="file-restrictions">Supports: CSV files</div>
+      </div>
+      <div class="selected-file-container" id="selectedFileContainer" style="display: none;">
+        <div class="selected-file-info">
+          <div class="file-icon">
+            <i class="fas fa-file-csv"></i>
+          </div>
+          <div class="file-details">
+            <span class="file-name" id="selectedFileName">No file selected</span>
+            <span class="file-size" id="selectedFileSize"></span>
+          </div>
+        </div>
+        <div class="file-actions">
+          <button class="remove-file-button" id="removeFileButton">
+            <i class="fas fa-times"></i>
+          </button>
+          <button class="process-file-button" id="processFileButton">
+            <i class="fas fa-check"></i>
+          </button>
+        </div>
+      </div>
+      <input type="file" id="csvInput" accept=".csv" class="hidden-file-input" />
+    </div>
+  </div>
+</div>     
+     <script>
+  // File Upload Modal Functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const uploadButton = document.getElementById('uploadTicketBtn');
+    const fileUploadModal = document.getElementById('fileUploadModal');
+    const closeModalButton = document.getElementById('closeFileUploadModal');
+    const fileInput = document.getElementById('csvInput');
+    const dropzone = document.getElementById('uploadDropzone');
+    const browseButton = document.getElementById('browseButton');
+    const fileContainer = document.getElementById('selectedFileContainer');
+    const fileName = document.getElementById('selectedFileName');
+    const fileSize = document.getElementById('selectedFileSize');
+    const removeButton = document.getElementById('removeFileButton');
+    const processButton = document.getElementById('processFileButton');
+    
+    if (!uploadButton || !fileUploadModal) return;
+    
+    // Show modal when upload button is clicked
+    uploadButton.addEventListener('click', function() {
+      fileUploadModal.style.display = 'flex';
+      setTimeout(() => {
+        fileUploadModal.classList.add('show');
+      }, 10);
+    });
+    
+    // Close modal when close button is clicked
+    closeModalButton.addEventListener('click', function() {
+      closeModal();
+    });
+    
+    // Close when clicking outside the modal
+    fileUploadModal.addEventListener('click', function(e) {
+      if (e.target === fileUploadModal) {
+        closeModal();
       }
-      
-      ['dragenter', 'dragover'].forEach(eventName => {
-        dropzone.addEventListener(eventName, function() {
-          dropzone.classList.add('drag-over');
-        }, false);
-      });
-      
-      ['dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, function() {
-          dropzone.classList.remove('drag-over');
-        }, false);
-      });
-      
-      dropzone.addEventListener('drop', function(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        handleFileSelection(files);
+    });
+    
+    // Close modal function
+    function closeModal() {
+      fileUploadModal.classList.remove('show');
+      setTimeout(() => {
+        fileUploadModal.style.display = 'none';
+      }, 300);
+    }
+    
+    // Click browse button to trigger file input
+    browseButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      fileInput.click();
+    });
+    
+    // Click on dropzone to trigger file input
+    dropzone.addEventListener('click', function() {
+      fileInput.click();
+    });
+    
+    // Handle file selection
+    fileInput.addEventListener('change', function() {
+      handleFileSelection(this.files);
+    });
+    
+    // Handle drag and drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, function() {
+        dropzone.classList.add('drag-over');
       }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, function() {
+        dropzone.classList.remove('drag-over');
+      }, false);
+    });
+    
+    dropzone.addEventListener('drop', function(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      handleFileSelection(files);
+    });
+    
+    // Process selected file
+    function handleFileSelection(files) {
+      if (files.length === 0) return;
       
-      // Process selected file
-      function handleFileSelection(files) {
-        if (files.length === 0) return;
-        
-        const file = files[0];
-        
-        // Check file type
-        if (!file.name.endsWith('.csv')) {
-          alert('Please select a CSV file.');
-          return;
-        }
-        
-        // Display file information
-        fileName.textContent = file.name;
-        fileSize.textContent = formatFileSize(file.size);
-        fileContainer.style.display = 'flex';
-        dropzone.style.display = 'none';
-        
-        // Store file for later processing
-        fileInput.file = file;
+      const file = files[0];
+      
+      // Check file type
+      if (!file.name.endsWith('.csv')) {
+        alert('Please select a CSV file.');
+        return;
       }
       
-      // Remove selected file
-      removeButton.addEventListener('click', function() {
-        fileInput.value = '';
-        fileInput.file = null;
-        fileContainer.style.display = 'none';
-        dropzone.style.display = 'flex';
-      });
+      // Display file information
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      fileContainer.style.display = 'block';
+      dropzone.style.display = 'none';
       
-      // Process the file
-      processButton.addEventListener('click', function() {
-        if (!fileInput.file) return;
-        
-        // Show loading state
-        dropzone.classList.add('loading');
-        
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          const csvData = event.target.result;
-          processCSV(csvData);
-          
-          // Reset UI after processing
-          setTimeout(() => {
-            fileInput.value = '';
-            fileInput.file = null;
-            fileContainer.style.display = 'none';
-            dropzone.style.display = 'flex';
-            dropzone.classList.remove('loading');
-          }, 500);
-        };
-        
-        reader.readAsText(fileInput.file);
-      });
+      // Store file for later processing
+      fileInput.file = file;
+    }
+    
+    // Remove selected file
+    removeButton.addEventListener('click', function() {
+      fileInput.value = '';
+      fileInput.file = null;
+      fileContainer.style.display = 'none';
+      dropzone.style.display = 'flex';
+    });
+    
+    // Process the file
+    processButton.addEventListener('click', function() {
+      if (!fileInput.file) return;
       
-      // Helper function to format file size
-      function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-      }
+      // Show loading state
+      dropzone.classList.add('loading');
       
-      // Process CSV data
-      function processCSV(csvData) {
-        const storyList = document.getElementById('storyList');
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const csvData = event.target.result;
+        processCSV(csvData);
         
-        // Save existing manually added stories before processing CSV
-        const existingStories = [];
-        if (storyList) {
-          const manualStories = storyList.querySelectorAll('.story-card[id^="story_"]');
-          manualStories.forEach(card => {
-            // Only save non-CSV stories (using ID pattern)
-            if (card.id && !card.id.includes('story_csv_')) {
-              existingStories.push({
-                id: card.id,
-                text: card.querySelector('.story-title').textContent
-              });
-            }
-          });
-          
-          console.log(`Saved ${existingStories.length} existing stories before CSV processing`);
-          
-          // Now clear the list for new content
-          storyList.innerHTML = '';
-        }
-        
-        // First, restore the manually added stories
-        existingStories.forEach((story, index) => {
-          const storyCard = document.createElement('div');
-          storyCard.className = 'story-card';
-          storyCard.id = story.id;
-          storyCard.dataset.index = index;
-          
-          const storyTitle = document.createElement('div');
-          storyTitle.className = 'story-title';
-          storyTitle.textContent = story.text;
-          
-          storyCard.appendChild(storyTitle);
-          storyList.appendChild(storyCard);
-        });
-        
-        // Then add the CSV stories
-        const stories = csvData.split('\n');
-        let startIndex = existingStories.length;
-        
-        stories.forEach(function(story, index) {
-          if (story.trim()) {
-            const storyCard = document.createElement('div');
-            storyCard.className = 'story-card';
-            storyCard.id = `story_csv_${index}`;
-            storyCard.dataset.index = startIndex + index;
-            
-            const storyTitle = document.createElement('div');
-            storyTitle.className = 'story-title';
-            storyTitle.textContent = story.trim();
-            
-            storyCard.appendChild(storyTitle);
-            storyList.appendChild(storyCard);
+        // Reset UI after processing
+        setTimeout(() => {
+          fileInput.value = '';
+          fileInput.file = null;
+          fileContainer.style.display = 'none';
+          dropzone.style.display = 'flex';
+          dropzone.classList.remove('loading');
+          closeModal(); // Close modal after processing
+        }, 500);
+      };
+      
+      reader.readAsText(fileInput.file);
+    });
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Process CSV data
+    function processCSV(csvData) {
+      const storyList = document.getElementById('storyList');
+      
+      // Save existing manually added stories before processing CSV
+      const existingStories = [];
+      if (storyList) {
+        const manualStories = storyList.querySelectorAll('.story-card[id^="story_"]');
+        manualStories.forEach(card => {
+          // Only save non-CSV stories (using ID pattern)
+          if (card.id && !card.id.includes('story_csv_')) {
+            existingStories.push({
+              id: card.id,
+              text: card.querySelector('.story-title').textContent
+            });
           }
         });
         
-        // Check for stories after CSV upload if function exists
-        if (typeof checkForStories === 'function') {
-          checkForStories();
-        }
+        console.log(`Saved ${existingStories.length} existing stories before CSV processing`);
         
-        // Select the first story if there are any
-        const firstStory = storyList.querySelector('.story-card');
-        if (firstStory) {
-          firstStory.classList.add('selected');
-        }
-        
-        // Notify main.js about the combined stories if possible
-        if (window.notifyStoriesUpdated && typeof window.notifyStoriesUpdated === 'function') {
-          window.notifyStoriesUpdated();
-        }
+        // Now clear the list for new content
+        storyList.innerHTML = '';
       }
-    });
-  </script>      
+      
+      // First, restore the manually added stories
+      existingStories.forEach((story, index) => {
+        const storyCard = document.createElement('div');
+        storyCard.className = 'story-card';
+        storyCard.id = story.id;
+        storyCard.dataset.index = index;
+        
+        const storyTitle = document.createElement('div');
+        storyTitle.className = 'story-title';
+        storyTitle.textContent = story.text;
+        
+        storyCard.appendChild(storyTitle);
+        storyList.appendChild(storyCard);
+      });
+      
+      // Then add the CSV stories
+      const stories = csvData.split('\n');
+      let startIndex = existingStories.length;
+      
+      stories.forEach(function(story, index) {
+        if (story.trim()) {
+          const storyCard = document.createElement('div');
+          storyCard.className = 'story-card';
+          storyCard.id = `story_csv_${index}`;
+          storyCard.dataset.index = startIndex + index;
+          
+          const storyTitle = document.createElement('div');
+          storyTitle.className = 'story-title';
+          storyTitle.textContent = story.trim();
+          
+          storyCard.appendChild(storyTitle);
+          storyList.appendChild(storyCard);
+        }
+      });
+      
+      // Check for stories after CSV upload if function exists
+      if (typeof checkForStories === 'function') {
+        checkForStories();
+      }
+      
+      // Select the first story if there are any
+      const firstStory = storyList.querySelector('.story-card');
+      if (firstStory) {
+        firstStory.classList.add('selected');
+      }
+      
+      // Notify main.js about the combined stories if possible
+      if (window.notifyStoriesUpdated && typeof window.notifyStoriesUpdated === 'function') {
+        window.notifyStoriesUpdated();
+      }
+    }
+  });
+</script>
+    
 </body>
 </html>
         
