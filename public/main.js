@@ -2266,15 +2266,14 @@ function selectStory(index, emitToServer = true, forceSelection = false) {
     });
 
     const storyCard = document.querySelector(`.story-card[data-index="${index}"]`);
+
     if (storyCard) {
         storyCard.classList.add('selected', 'active');
 
-        // Update local state
+        // Update local state for what is ACTUALLY selected
         currentStoryIndex = index;
 
-        // Get the story ID from the selected card
-        let storyId = getCurrentStoryId();
-
+		let storyId = storyCard? storyCard.id: null;
         // Skip for deleted stories
         if (storyId && deletedStoryIds.has(storyId)) {
             console.log(`[UI] Selected story ${storyId} is marked as deleted, skipping further processing`);
@@ -2288,68 +2287,43 @@ function selectStory(index, emitToServer = true, forceSelection = false) {
 
         // Check if votes are revealed for this story
         const areVotesRevealed = storyId && votesRevealed[storyId] === true;
-        
-        if (areVotesRevealed) {
-            // If votes are revealed, hide planning cards and show stats
-            const planningCardsSection = document.querySelector('.planning-cards-section');
-            if (planningCardsSection) {
-                planningCardsSection.classList.add('hidden-until-init');
-                planningCardsSection.style.display = 'none';
-            }
-            
-            // Show statistics for this story
-            setTimeout(() => {
-                handleVotesRevealed(storyId, votesPerStory[storyId] || {});
-            }, 100);
-        } else {
-            // Otherwise, ensure planning cards are visible and stats are hidden
-            const planningCardsSection = document.querySelector('.planning-cards-section');
-            if (planningCardsSection) {
-                planningCardsSection.classList.remove('hidden-until-init');
-                planningCardsSection.style.display = 'block';
-            }
-            
-            // Hide all vote statistics containers
-            const allStatsContainers = document.querySelectorAll('.vote-statistics-container');
-            allStatsContainers.forEach(container => {
-                container.style.display = 'none';
-            });
-        }
+        // remove code
 
         renderCurrentStory();
+		// clear cache state + re-init badge
         resetOrRestoreVotes(storyId);
 
-        // Notify server about selection if requested
-        const storyCards = document.querySelectorAll('.story-card');
-        const storyCardFromList = storyCards[index];
-        storyId = storyCardFromList ? storyCardFromList.id : null;
-
+		// Only fire updates for valid socket and card
         if (emitToServer && socket) {
+               	const storyCards = document.querySelectorAll('.story-card');
+
+       		 	if (!storyId) {
+        		    const storyCardFromList = storyCards[index];
+                	storyId = storyCardFromList ? storyCardFromList.id : null;	// if not found card; clear and return
+
+        		 };
+
             console.log('[EMIT] Broadcasting story selection:', index);
 
-            // Emit both storyIndex and storyId
-            socket.emit('storySelected', { 
-                storyIndex: index, 
-                storyId: storyId 
-            });
-
-            // Request votes for this story
-            if (storyId) {
-                if (typeof requestStoryVotes === 'function') {
-                    requestStoryVotes(storyId);
-                } else {
-                    socket.emit('requestStoryVotes', { storyId });
-                }
-            }
+				if (storyId) {
+        	    	socket.emit('storySelected', {storyIndex: index, storyId: storyId});	   // Emit both storyIndex and storyId
+					if (typeof requestStoryVotes === 'function') {                                           // Request votes for this story
+        	        	requestStoryVotes(storyId);
+               		} else {
+                     	socket.emit('requestStoryVotes', { storyId });			   // emit valid and good call
+                	}
+				}
         }
+        //If card doeesnt load
     } else if (forceSelection) {
         console.log(`[UI] Story card with index ${index} not found yet, retrying selection soon...`);
-        // Retry selection after short delay
+
         setTimeout(() => {
             const retryCard = document.querySelector(`.story-card[data-index="${index}"]`);
             if (retryCard) {
                 selectStory(index, emitToServer, false);
             } else {
+              							  // force story / id and re-init
                 const allCards = document.querySelectorAll('.story-card');
                 let found = false;
 
@@ -2362,19 +2336,19 @@ function selectStory(index, emitToServer = true, forceSelection = false) {
                         let storyId = card.id;
                         if (storyId && !deletedStoryIds.has(storyId)) {
                             if (typeof votesRevealed[storyId] === 'undefined') {
-                                votesRevealed[storyId] = false;
+                                votesRevealed[storyId] = false;		// create if doesnt exit
                             }
                             resetOrRestoreVotes(storyId);
                         }
                     }
-                });
-
+                });												// load in UI is still DNE load
                 if (!found) {
                     console.log(`[UI] Could not find story with index ${index} after retries`);
                     currentStoryIndex = index;
                 }
             }
         }, 300);
+      				  // card is null stop and error card
     } else {
         console.log(`[UI] Story card with index ${index} not found`);
     }
