@@ -3638,7 +3638,100 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('loginModalCustom').style.display = 'none';
   });
 </script>
+<script>
+// Function to check if user is a guest (not host)
+function isGuestUser() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
+}
 
+// Function to add only the rectangular table in the middle
+function addMiddleRectangleForGuests() {
+  if (!isGuestUser()) return; // Only apply for guests
+  
+  // Get the user circle container
+  const userCircle = document.getElementById('userCircle');
+  if (!userCircle) return;
+  
+  // Check if the rectangle already exists
+  if (document.querySelector('.middle-rectangle-container')) {
+    return; // Already exists, don't add another one
+  }
+  
+  // Get the direct children of userCircle (keep existing avatars)
+  const existingChildren = Array.from(userCircle.children);
+  
+  // Create the rectangle container
+  const rectangleContainer = document.createElement('div');
+  rectangleContainer.className = 'middle-rectangle-container';
+  rectangleContainer.style.cssText = `
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  `;
+  
+  // Create the rectangle
+  const rectangle = document.createElement('div');
+  rectangle.className = 'middle-rectangle';
+  rectangle.style.cssText = `
+    width: 100%;
+    height: 100px;
+    border: 1px solid #e0e0e0;
+    border-radius: 15px;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  `;
+  
+  // Add the text
+  const text = document.createElement('div');
+  text.textContent = 'Pick a card below';
+  text.style.cssText = `
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    color: #333;
+  `;
+  
+  // Add red dot indicator
+  const redDot = document.createElement('div');
+  redDot.style.cssText = `
+    position: absolute;
+    top: 25px;
+    right: 20px;
+    width: 8px;
+    height: 8px;
+    background-color: #F44336;
+    border-radius: 50%;
+  `;
+  
+  // Assemble the components
+  rectangle.appendChild(text);
+  rectangle.appendChild(redDot);
+  rectangleContainer.appendChild(rectangle);
+  
+  // Add the rectangle to the userCircle without removing existing elements
+  userCircle.appendChild(rectangleContainer);
+}
+
+// Initialize and update
+document.addEventListener('DOMContentLoaded', function() {
+  if (isGuestUser()) {
+    // Add the rectangle
+    setTimeout(addMiddleRectangleForGuests, 500); // Wait for other elements to load first
+    
+    // Set up periodic check to ensure rectangle is present
+    setInterval(addMiddleRectangleForGuests, 3000);
+  }
+});
+</script>
   
      
 </body>
