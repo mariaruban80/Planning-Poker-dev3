@@ -2426,7 +2426,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Expose function for main.js
 window.showAddTicketModal = showAddTicketModal;
-    function isGuestUser() {
+  /**  function isGuestUser() {
      // Check if URL contains 'roomId' parameter but not 'host=true'
       const urlParams = new URLSearchParams(window.location.search);
       
@@ -2434,7 +2434,7 @@ window.showAddTicketModal = showAddTicketModal;
       // 1. There's no 'host' parameter, or
       // 2. The 'host' parameter is anything other than 'true'
       return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
-    }
+    }*/
 
     function setupGuestModeOnLoad() {
       if (isGuestUser()) {
@@ -3645,41 +3645,49 @@ function isGuestUser() {
   return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
 }
 
-// Function to add only the rectangular table in the middle
-function addMiddleRectangleForGuests() {
+// Reorganize the entire layout for guests to match the screenshot exactly
+function createGuestPokerLayout() {
   if (!isGuestUser()) return; // Only apply for guests
   
   // Get the user circle container
   const userCircle = document.getElementById('userCircle');
   if (!userCircle) return;
   
-  // Check if the rectangle already exists
-  if (document.querySelector('.middle-rectangle-container')) {
-    return; // Already exists, don't add another one
-  }
+  // Clear existing layout
+  userCircle.innerHTML = '';
   
-  // Get the direct children of userCircle (keep existing avatars)
-  const existingChildren = Array.from(userCircle.children);
-  
-  // Create the rectangle container
-  const rectangleContainer = document.createElement('div');
-  rectangleContainer.className = 'middle-rectangle-container';
-  rectangleContainer.style.cssText = `
+  // Create an organized layout container
+  const layoutContainer = document.createElement('div');
+  layoutContainer.className = 'guest-poker-layout';
+  layoutContainer.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 400px;
     width: 100%;
-    max-width: 350px;
+    max-width: 400px;
     margin: 0 auto;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
+    position: relative;
   `;
   
-  // Create the rectangle
+  // Create top position for opponent
+  const topPosition = document.createElement('div');
+  topPosition.className = 'top-position-guest';
+  topPosition.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100px;
+    width: 100%;
+  `;
+  
+  // Create middle rectangle
   const rectangle = document.createElement('div');
   rectangle.className = 'middle-rectangle';
   rectangle.style.cssText = `
-    width: 100%;
+    width: 90%;
     height: 100px;
     border: 1px solid #e0e0e0;
     border-radius: 15px;
@@ -3689,6 +3697,7 @@ function addMiddleRectangleForGuests() {
     justify-content: center;
     position: relative;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin: 20px 0;
   `;
   
   // Add the text
@@ -3699,6 +3708,7 @@ function addMiddleRectangleForGuests() {
     font-size: 16px;
     color: #333;
   `;
+  rectangle.appendChild(text);
   
   // Add red dot indicator
   const redDot = document.createElement('div');
@@ -3711,24 +3721,330 @@ function addMiddleRectangleForGuests() {
     background-color: #F44336;
     border-radius: 50%;
   `;
-  
-  // Assemble the components
-  rectangle.appendChild(text);
   rectangle.appendChild(redDot);
-  rectangleContainer.appendChild(rectangle);
   
-  // Add the rectangle to the userCircle without removing existing elements
-  userCircle.appendChild(rectangleContainer);
+  // Create bottom position for current user
+  const bottomPosition = document.createElement('div');
+  bottomPosition.className = 'bottom-position-guest';
+  bottomPosition.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100px;
+    width: 100%;
+  `;
+  
+  // Assemble the layout
+  layoutContainer.appendChild(topPosition);
+  layoutContainer.appendChild(rectangle);
+  layoutContainer.appendChild(bottomPosition);
+  userCircle.appendChild(layoutContainer);
+  
+  // Create empty card slots
+  const topCardSlot = document.createElement('div');
+  topCardSlot.className = 'card-slot-guest';
+  topCardSlot.style.cssText = `
+    width: 40px;
+    height: 60px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background-color: white;
+    margin: 10px 0;
+  `;
+  topPosition.appendChild(topCardSlot);
+  
+  const bottomCardSlot = document.createElement('div');
+  bottomCardSlot.className = 'card-slot-guest';
+  bottomCardSlot.style.cssText = `
+    width: 40px;
+    height: 60px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background-color: white;
+    margin: 10px 0;
+  `;
+  bottomPosition.appendChild(bottomCardSlot);
+  
+  return {
+    topPosition,
+    bottomPosition, 
+    rectangle
+  };
 }
 
-// Initialize and update
+// Function to place users in the correct positions
+function placeUsersInGuestLayout() {
+  if (!isGuestUser()) return;
+  
+  // Get the layout elements
+  let layout = document.querySelector('.guest-poker-layout');
+  let topPosition, bottomPosition;
+  
+  // If layout doesn't exist, create it
+  if (!layout) {
+    const newLayout = createGuestPokerLayout();
+    if (!newLayout) return;
+    
+    topPosition = newLayout.topPosition;
+    bottomPosition = newLayout.bottomPosition;
+    layout = document.querySelector('.guest-poker-layout');
+  } else {
+    topPosition = layout.querySelector('.top-position-guest');
+    bottomPosition = layout.querySelector('.bottom-position-guest');
+  }
+  
+  if (!topPosition || !bottomPosition) return;
+  
+  // Get current username
+  const currentUserName = sessionStorage.getItem('userName');
+  if (!currentUserName) return;
+  
+  // Clear existing avatars but keep card slots
+  const topCardSlot = topPosition.querySelector('.card-slot-guest');
+  const bottomCardSlot = bottomPosition.querySelector('.card-slot-guest');
+  
+  // Save existing elements we need to keep
+  if (topCardSlot) topCardSlot.remove();
+  if (bottomCardSlot) bottomCardSlot.remove();
+  
+  // Clear positions
+  topPosition.innerHTML = '';
+  bottomPosition.innerHTML = '';
+  
+  // Add card slots back
+  if (topCardSlot) topPosition.appendChild(topCardSlot);
+  if (bottomCardSlot) bottomPosition.appendChild(bottomCardSlot);
+  
+  // Get all users
+  const userEntries = document.querySelectorAll('#userList .user-entry');
+  let users = [];
+  userEntries.forEach(entry => {
+    const nameEl = entry.querySelector('.username');
+    if (nameEl) {
+      users.push({
+        name: nameEl.textContent.trim(),
+        id: nameEl.textContent.trim().replace(/\s+/g, '-')
+      });
+    }
+  });
+  
+  if (users.length === 0) return;
+  
+  // Sort users so current user is always at the bottom
+  users.sort((a, b) => {
+    if (a.name === currentUserName) return 1;
+    if (b.name === currentUserName) return -1;
+    return 0;
+  });
+  
+  // Create avatars
+  const otherUsers = users.filter(user => user.name !== currentUserName);
+  
+  // Place current user at the bottom
+  const currentUserIndex = users.findIndex(user => user.name === currentUserName);
+  if (currentUserIndex !== -1) {
+    createUserAvatarGuest(bottomPosition, users[currentUserIndex], true, bottomCardSlot);
+  }
+  
+  // Place first other user at the top
+  if (otherUsers.length > 0) {
+    createUserAvatarGuest(topPosition, otherUsers[0], false, topCardSlot);
+  }
+}
+
+// Create user avatar for guest layout
+function createUserAvatarGuest(container, user, isCurrent, cardSlot) {
+  // Create avatar container
+  const avatarContainer = document.createElement('div');
+  avatarContainer.className = 'avatar-container-guest';
+  avatarContainer.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  `;
+  
+  // Create avatar circle
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar-circle';
+  
+  // Get initials for avatar
+  const initials = user.name.split(' ')
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+  
+  // Generate color based on name
+  const hue = Math.abs(user.name.split('').reduce((a, b) => {
+    return a + b.charCodeAt(0);
+  }, 0) % 360);
+  
+  avatar.style.cssText = `
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: hsl(${hue}, 70%, 60%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border: ${isCurrent ? '2px solid #4CAF50' : 'none'};
+  `;
+  avatar.textContent = initials;
+  
+  // Add emoji for current user
+  if (isCurrent) {
+    const emojiContainer = document.createElement('div');
+    emojiContainer.innerHTML = '😊';
+    emojiContainer.style.cssText = `
+      position: absolute;
+      bottom: -5px;
+      right: -5px;
+      font-size: 20px;
+    `;
+    avatar.style.position = 'relative';
+    avatar.appendChild(emojiContainer);
+  }
+  
+  // Add name label
+  const nameLabel = document.createElement('div');
+  nameLabel.className = 'user-name';
+  nameLabel.textContent = user.name;
+  nameLabel.style.cssText = `
+    font-size: 14px;
+    text-align: center;
+    margin-top: 5px;
+    width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: ${isCurrent ? 'bold' : 'normal'};
+    color: #333;
+  `;
+  
+  // Create vote space with ID for identifying during voting
+  const voteSpace = document.createElement('div');
+  voteSpace.className = 'vote-card-space'; // Keep original class for compatibility
+  voteSpace.id = `vote-space-${user.id || user.name.replace(/\s+/g, '-')}`;
+  voteSpace.style.cssText = `
+    width: 40px;
+    height: 60px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background-color: white;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+  
+  // Add elements to container
+  avatarContainer.appendChild(avatar);
+  avatarContainer.appendChild(nameLabel);
+  
+  // Place avatar before card slot if it exists
+  if (cardSlot && cardSlot.parentNode === container) {
+    container.insertBefore(avatarContainer, cardSlot);
+    
+    // Replace the card slot with our vote space
+    container.replaceChild(voteSpace, cardSlot);
+  } else {
+    container.appendChild(avatarContainer);
+    container.appendChild(voteSpace);
+  }
+}
+
+// Hook into user updates for real-time synchronization
+function listenForUserChanges() {
+  // Hook into socket events if available
+  if (window.socket) {
+    // Listen for user joining/leaving
+    window.socket.on('userJoined', () => {
+      setTimeout(updateGuestLayout, 100);
+    });
+    
+    window.socket.on('userLeft', () => {
+      setTimeout(updateGuestLayout, 100);
+    });
+    
+    // Listen for vote updates
+    window.socket.on('voteUpdate', () => {
+      setTimeout(updateGuestLayout, 100);
+    });
+  }
+  
+  // Intercept existing update functions
+  if (window.updateUserList) {
+    const originalUpdateUserList = window.updateUserList;
+    window.updateUserList = function(...args) {
+      const result = originalUpdateUserList.apply(this, args);
+      if (isGuestUser()) {
+        setTimeout(updateGuestLayout, 50); // Update immediately after original function
+      }
+      return result;
+    };
+  }
+}
+
+// Combined function to update guest layout
+function updateGuestLayout() {
+  if (!isGuestUser()) return;
+  
+  // If layout doesn't exist, create it first
+  if (!document.querySelector('.guest-poker-layout')) {
+    createGuestPokerLayout();
+  }
+  
+  // Then place users in the layout
+  placeUsersInGuestLayout();
+}
+
+// Initialize immediately and monitor for changes
 document.addEventListener('DOMContentLoaded', function() {
   if (isGuestUser()) {
-    // Add the rectangle
-    setTimeout(addMiddleRectangleForGuests, 500); // Wait for other elements to load first
+    // Create layout immediately
+    updateGuestLayout();
     
-    // Set up periodic check to ensure rectangle is present
-    setInterval(addMiddleRectangleForGuests, 3000);
+    // Hook into user changes
+    listenForUserChanges();
+    
+    // Set backup interval to ensure layout is maintained
+    setInterval(updateGuestLayout, 2000);
+    
+    // Add specific styles for guest layout
+    const styles = document.createElement('style');
+    styles.textContent = `
+      /* Guest layout specific styles */
+      .guest-poker-layout {
+        padding: 20px 0;
+      }
+      
+      /* Ensure vote spaces show votes correctly */
+      .vote-card-space {
+        position: relative;
+      }
+      
+      .vote-badge {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 18px;
+        font-weight: bold;
+      }
+      
+      /* Fix for mobile view */
+      @media (max-width: 768px) {
+        .guest-poker-layout {
+          height: 350px;
+        }
+      }
+    `;
+    document.head.appendChild(styles);
   }
 });
 </script>
