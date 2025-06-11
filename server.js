@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // added to call the main.html file
 app.get('/', (req, res) => {
-  res.sendFile(join(__dirname, 'public', 'About.html'));
+  res.sendFile(join(__dirname, 'public', 'main.html'));
 });
 app.use(express.static(join(__dirname, 'public')));
 
@@ -187,41 +187,44 @@ function findExistingVotesForUser(roomId, userName) {
   
   return result;
 }
+
+// Restore user votes to current socket, cleaning up old duplicates
 function restoreUserVotesToCurrentSocket(roomId, socket) {
   const userName = socket.data.userName;
   const currentId = socket.id;
   const ids = userNameToIdMap[userName]?.socketIds || [];
-
-  const userVotes = rooms[roomId].userNameVotes?.[userName] || {};
+  
+  // Get all user's votes from userName-based storage
+  let userVotes = rooms[roomId].userNameVotes?.[userName] || {};
+  
+  // Track if we removed any votes that need to be resynced
   let removedOldVotes = false;
-
+  
   for (const [storyId, vote] of Object.entries(userVotes)) {
     if (rooms[roomId].deletedStoryIds.has(storyId)) continue;
-
+    
     if (!rooms[roomId].votesPerStory[storyId]) {
       rooms[roomId].votesPerStory[storyId] = {};
     }
 
-    for (const sid of ids) {
-      if (sid !== currentId && rooms[roomId].votesPerStory[storyId][sid]) {
+    // CRITICAL: Remove votes from any old socket IDs for this user
+    for (const sid of Object.keys(rooms[roomId].votesPerStory[storyId])) {
+      if (ids.includes(sid) && sid !== currentId) {
+        console.log(`[SERVER] Removing old vote from ${sid} for user ${userName}`);
         delete rooms[roomId].votesPerStory[storyId][sid];
         removedOldVotes = true;
-        console.log(`[SERVER] Removed old vote for ${userName} (socket: ${sid}) on story ${storyId}`);
       }
     }
-
+    
+    // Add the new vote with current socket ID
     rooms[roomId].votesPerStory[storyId][currentId] = vote;
     socket.emit('restoreUserVote', { storyId, vote });
   }
+io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
+  io.to(roomId).emit('triggerStateResync');
 
-  if (removedOldVotes || Object.keys(userVotes).length > 0) {
-    cleanupRoomVotes(roomId);
-    io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
-  }
+
 }
-
-
-
 
 io.on('connection', (socket) => {
   socket.on('requestCurrentStory', () => {
