@@ -15,20 +15,6 @@ let hasReceivedStorySelection = false;
 window.currentVotesPerStory = {}; // Ensure global reference for UI
 let heartbeatInterval; // Store interval reference for cleanup
 
-
-// === VOTE NORMALIZATION FIX ===
-function normalizeVotesByUsername(votesBySocket) {
-  const normalized = {};
-  const userMap = window.userMap || {};
-  for (const [socketId, vote] of Object.entries(votesBySocket)) {
-    const name = userMap[socketId] || socketId;
-    if (!normalized[name]) {
-      normalized[name] = vote;
-    }
-  }
-  return normalized;
-}
-
 // Add a window function for index.html to call
 window.notifyStoriesUpdated = function() {
   const storyList = document.getElementById('storyList');
@@ -181,16 +167,10 @@ function loadDeletedStoriesFromStorage(roomId) {
  * This avoids duplicate votes when a user refreshes and gets a new socket ID.
  */
 function mergeVote(storyId, userName, vote) {
-  // Fallback if userName is not defined
-  if (!userName) {
-    userName = sessionStorage.getItem("userName") || (socket && socket.id) || "unknown";
-  }
-
   if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
   votesPerStory[storyId][userName] = vote;
   window.currentVotesPerStory = votesPerStory;
 }
-
 
 function refreshVoteDisplay() {
   // Clear existing vote visuals, e.g. clear vote counts, badges, etc.
@@ -573,18 +553,17 @@ function initializeApp(roomId) {
   // Setup heartbeat mechanism to prevent timeouts
   setupHeartbeat();
 
-socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
-  const name = userName || (window.userMap && window.userMap[userId]) || sessionStorage.getItem('userName') || userId;
-  mergeVote(storyId, name, vote);
+  socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
+    const name = userName || userId;
+    mergeVote(storyId, name, vote);
 
-  const currentId = getCurrentStoryId();
-  if (storyId === currentId) {
-    updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
-  }
+    const currentId = getCurrentStoryId();
+    if (storyId === currentId) {
+      updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
+    }
 
-  refreshVoteDisplay();
-});
-
+    refreshVoteDisplay();
+  });
   
   socket.on('storyVotes', ({ storyId, votes }) => {
     // Don't process votes for deleted stories
@@ -598,8 +577,7 @@ socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
     }
     
     // Store the votes
-    const normalized = normalizeVotesByUsername(votes);
-        votesPerStory[storyId] = normalized;
+    votesPerStory[storyId] = { ...votes };
     window.currentVotesPerStory = votesPerStory;
     
     // Update UI immediately if this is the current story
@@ -617,7 +595,7 @@ socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
   
   // Updated handler for restored user votes
   socket.on('restoreUserVote', ({ storyId, vote }) => {
-    const name = sessionStorage.getItem('userName') || userName || socket.id;
+    const name = sessionStorage.getItem('userName') || socket.id;
     mergeVote(storyId, name, vote);
     refreshVoteDisplay();
   });
@@ -646,7 +624,7 @@ socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
         if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
 
         for (const [userId, vote] of Object.entries(votes)) {
-          mergeVote(storyId, userName || sessionStorage.getItem("userName") || (socket && socket.id) || "unknown", vote);
+          mergeVote(storyId, userId, vote);
         }
 
         const isRevealed = serverRevealed && serverRevealed[storyId];
@@ -676,7 +654,7 @@ socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
         if (deletedStoryIds.has(storyId)) continue;
 
         if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-        votesPerStory[storyId][userName] = vote;
+        votesPerStory[storyId][socket.id] = vote;
 
         const currentId = getCurrentStoryId();
         if (storyId === currentId) {
@@ -847,7 +825,7 @@ socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
             if (deletedStoryIds.has(storyId)) continue;
 
             if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-            votesPerStory[storyId][userName] = vote;
+            votesPerStory[storyId][socket.id] = vote;
             window.currentVotesPerStory = votesPerStory;
 
             const currentId = getCurrentStoryId();
@@ -3058,8 +3036,7 @@ function handleSocketMessage(message) {
           }
           
           // Merge in the votes from server
-          const normalized = normalizeVotesByUsername(votes);
-        votesPerStory[storyId] = normalized;
+          votesPerStory[storyId] = { ...votes };
           window.currentVotesPerStory = votesPerStory;
         }
       }
@@ -3511,11 +3488,3 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
-
-
-// Ensure clearAllVoteVisuals is defined to avoid runtime error
-function clearAllVoteVisuals() {
-  document.querySelectorAll('.vote-badge').forEach(badge => badge.textContent = '');
-  document.querySelectorAll('.has-vote').forEach(el => el.classList.remove('has-vote'));
-  document.querySelectorAll('.has-voted').forEach(el => el.classList.remove('has-voted'));
-}
