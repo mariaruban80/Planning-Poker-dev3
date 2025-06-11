@@ -595,7 +595,7 @@ function initializeApp(roomId) {
   
   // Updated handler for restored user votes
   socket.on('restoreUserVote', ({ storyId, vote }) => {
-    const name = sessionStorage.getItem('userName') || socket.id;
+    const name = sessionStorage.getItem('userName') || userName || socket.id;
     mergeVote(storyId, name, vote);
     refreshVoteDisplay();
   });
@@ -624,7 +624,7 @@ function initializeApp(roomId) {
         if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
 
         for (const [userId, vote] of Object.entries(votes)) {
-          mergeVote(storyId, userId, vote);
+          mergeVote(storyId, userName, vote);
         }
 
         const isRevealed = serverRevealed && serverRevealed[storyId];
@@ -654,7 +654,7 @@ function initializeApp(roomId) {
         if (deletedStoryIds.has(storyId)) continue;
 
         if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-        votesPerStory[storyId][socket.id] = vote;
+        votesPerStory[storyId][userName] = vote;
 
         const currentId = getCurrentStoryId();
         if (storyId === currentId) {
@@ -825,7 +825,7 @@ function initializeApp(roomId) {
             if (deletedStoryIds.has(storyId)) continue;
 
             if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-            votesPerStory[storyId][socket.id] = vote;
+            votesPerStory[storyId][userName] = vote;
             window.currentVotesPerStory = votesPerStory;
 
             const currentId = getCurrentStoryId();
