@@ -212,18 +212,21 @@ function refreshVoteDisplay() {
 }
 
 function updateVoteBadges(storyId, votes) {
+  // Normalize votes to count by username, not socket ID
+  const normalized = normalizeVotesByUsername(votes);
+  
   // Count how many unique users have voted for this story
-  const voteCount = Object.keys(votes).length;
-
-  console.log(`Story ${storyId} has ${voteCount} votes`);
-
-  // Find the vote badge element for the story (adjust selector as per your HTML)
+  const voteCount = Object.keys(normalized).length;
+  
+  console.log(`Story ${storyId} has ${voteCount} votes (normalized from ${Object.keys(votes).length})`);
+  
+  // Find the vote badge element for the story
   const voteBadge = document.querySelector(`#vote-badge-${storyId}`);
-
+  
   if (voteBadge) {
     // Update the badge text to show number of votes
     voteBadge.textContent = voteCount;
-
+    
     // Optionally update a tooltip or aria-label for accessibility
     voteBadge.setAttribute('title', `${voteCount} vote${voteCount !== 1 ? 's' : ''}`);
   }
@@ -579,16 +582,22 @@ function initializeApp(roomId) {
 
   // Setup heartbeat mechanism to prevent timeouts
   setupHeartbeat();
-
 socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
-  const name = userName || (window.userMap && window.userMap[userId]) || sessionStorage.getItem('userName') || userId;
-  mergeVote(storyId, name, vote);
-
+  const name = userName || (window.userMap && window.userMap[userId]) || userId;
+  
+  // Use the actual username, not socket ID for storing votes
+  if (!votesPerStory[storyId]) {
+    votesPerStory[storyId] = {};
+  }
+  
+  votesPerStory[storyId][name] = vote;
+  window.currentVotesPerStory = votesPerStory;
+  
   const currentId = getCurrentStoryId();
   if (storyId === currentId) {
     updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
   }
-
+  
   refreshVoteDisplay();
 });
 socket.on('storyVotes', ({ storyId, votes }) => {
