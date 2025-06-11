@@ -166,7 +166,7 @@ function loadDeletedStoriesFromStorage(roomId) {
  * Safely merge a vote for a story by replacing older votes with the same value.
  * This avoids duplicate votes when a user refreshes and gets a new socket ID.
  */
-function mergeVote(storyId, userName, vote) {
+function mergeVote(storyId, userName || sessionStorage.getItem("userName") || (socket && socket.id) || "unknown", vote) {
   if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
   votesPerStory[storyId][userName] = vote;
   window.currentVotesPerStory = votesPerStory;
@@ -624,7 +624,7 @@ function initializeApp(roomId) {
         if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
 
         for (const [userId, vote] of Object.entries(votes)) {
-          mergeVote(storyId, userName, vote);
+          mergeVote(storyId, userName || sessionStorage.getItem("userName") || (socket && socket.id) || "unknown", vote);
         }
 
         const isRevealed = serverRevealed && serverRevealed[storyId];
