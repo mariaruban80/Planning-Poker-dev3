@@ -3511,3 +3511,11 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
+
+// Ensure clearAllVoteVisuals is defined to avoid runtime error
+function clearAllVoteVisuals() {
+  document.querySelectorAll('.vote-badge').forEach(badge => badge.textContent = '');
+  document.querySelectorAll('.has-vote').forEach(el => el.classList.remove('has-vote'));
+  document.querySelectorAll('.has-voted').forEach(el => el.classList.remove('has-voted'));
+}
