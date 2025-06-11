@@ -559,17 +559,18 @@ function initializeApp(roomId) {
   // Setup heartbeat mechanism to prevent timeouts
   setupHeartbeat();
 
-  socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
-    const name = userName || userId;
-    mergeVote(storyId, name, vote);
+socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
+  const name = userName || (window.userMap && window.userMap[userId]) || sessionStorage.getItem('userName') || userId;
+  mergeVote(storyId, name, vote);
 
-    const currentId = getCurrentStoryId();
-    if (storyId === currentId) {
-      updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
-    }
+  const currentId = getCurrentStoryId();
+  if (storyId === currentId) {
+    updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
+  }
 
-    refreshVoteDisplay();
-  });
+  refreshVoteDisplay();
+});
+
   
   socket.on('storyVotes', ({ storyId, votes }) => {
     // Don't process votes for deleted stories
