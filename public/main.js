@@ -197,11 +197,8 @@ function clearAllVoteVisuals() {
   });
 }
 function refreshVoteDisplay() {
-  // Ensure clearAllVoteVisuals is defined
-  if (typeof clearAllVoteVisuals === 'function') {
-    clearAllVoteVisuals();
-  } else {
-    // Fallback implementation if the function isn't available
+  try {
+    // Clear all vote visuals
     const badges = document.querySelectorAll('.vote-badge');
     badges.forEach(badge => {
       badge.textContent = '';
@@ -213,20 +210,54 @@ function refreshVoteDisplay() {
     voteSpaces.forEach(space => {
       space.classList.remove('has-vote');
     });
-  }
 
-  for (const [storyId, votes] of Object.entries(window.currentVotesPerStory || {})) {
-    // Use a Map to ensure each user only has one vote
-    const uniqueVotes = new Map();
-    for (const [id, vote] of Object.entries(votes)) {
-      const name = userMap?.[id] || id;
-      if (!uniqueVotes.has(name)) {
-        uniqueVotes.set(name, vote);
-        updateVoteVisuals(name, vote, storyId);
+    // Track processed usernames to avoid duplicates
+    const processedUsernames = new Set();
+    
+    // Get all currently active users with their socket IDs
+    const activeUsers = new Map();
+    document.querySelectorAll('.avatar-container').forEach(container => {
+      const userId = container.getAttribute('data-user-id');
+      const userName = container.querySelector('.user-name')?.textContent;
+      if (userId && userName) {
+        activeUsers.set(userName, userId);
+      }
+    });
+
+    // Process votes for the current story
+    const currentVotes = window.currentVotesPerStory || {};
+    for (const [storyId, votes] of Object.entries(currentVotes)) {
+      // Map username → vote
+      const userVotes = {};
+      
+      // Group votes by username
+      for (const [socketId, vote] of Object.entries(votes)) {
+        const name = userMap?.[socketId] || socketId;
+        userVotes[name] = { socketId, vote };
+      }
+      
+      // Apply one vote per username, preferring active socket IDs
+      for (const [username, data] of Object.entries(userVotes)) {
+        // Skip if already processed this username for this story
+        if (processedUsernames.has(`${storyId}_${username}`)) {
+          continue;
+        }
+        
+        processedUsernames.add(`${storyId}_${username}`);
+        
+        // Get the active socket ID for this username if available
+        const activeSocketId = activeUsers.get(username);
+        const socketIdToUse = activeSocketId || data.socketId;
+        
+        // Update the visuals for this user
+        updateVoteVisuals(socketIdToUse, data.vote, true);
       }
     }
+  } catch (error) {
+    console.error('[VOTE] Error in refreshVoteDisplay:', error);
   }
 }
+
 
 
 function updateVoteBadges(storyId, votes) {
