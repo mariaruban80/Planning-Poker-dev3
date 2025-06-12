@@ -2684,10 +2684,8 @@ function createVoteCardSpace(user, isCurrentUser) {
  */
 function updateVoteVisuals(userId, vote, hasVoted = false) {
   console.log(`[DEBUG] updateVoteVisuals: userId=${userId}, vote=${vote}, hasVoted=${hasVoted}`);
-  
+
   const storyId = getCurrentStoryId();
-  
-  // Skip for deleted stories or when no story is selected
   if (!storyId || deletedStoryIds.has(storyId)) {
     console.log('[VOTE] Not updating vote visuals for deleted story');
     return;
@@ -2696,69 +2694,48 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   const isRevealed = votesRevealed[storyId] === true;
   const displayVote = isRevealed ? vote : '👍';
 
-  console.log(`[DEBUG] Story ${storyId} revealed state:`, isRevealed);
+  console.log(`[DEBUG] Story ${storyId} revealed state: ${isRevealed}`);
   console.log(`[DEBUG] Will display: ${displayVote}`);
 
-  // 🔐 Fallback: if socket.id DOM elements don't exist, try using userName instead
-  let safeUserId = userId;
-  if (!document.querySelector(`#vote-space-${userId}`)) {
-    const fallbackName = window.userMap?.[userId] || sessionStorage.getItem('userName');
-    if (fallbackName) {
-      console.log(`[FALLBACK] No DOM for socket ID ${userId}, trying fallback userId="${fallbackName}"`);
-      safeUserId = fallbackName;
-    }
-  }
+  // Get display name from userMap or fallback to userId
+  const displayName = window.userMap?.[userId] || userId;
 
-  // Update sidebar badge
-  const sidebarBadge = document.querySelector(`#user-${safeUserId} .vote-badge`);
-  if (sidebarBadge) {
-    if (hasVoted) {
-      sidebarBadge.textContent = displayVote;
-      sidebarBadge.style.color = '#673ab7';
-      sidebarBadge.style.opacity = '1';
-    } else {
-      sidebarBadge.textContent = '';
-    }
-  }
+  const containers = document.querySelectorAll('.avatar-container');
 
-  // Update vote card space
-  const voteSpace = document.querySelector(`#vote-space-${safeUserId}`);
-  if (voteSpace) {
-    const voteBadge = voteSpace.querySelector('.vote-badge');
+  containers.forEach(container => {
+    const nameEl = container.querySelector('.user-name');
+    const voteSpace = container.querySelector('.vote-card-space');
+    const voteBadge = container.querySelector('.vote-badge');
+
+    const name = nameEl?.textContent?.trim();
+    if (name !== displayName) return;
+
+    // Apply visual update
+    if (voteSpace) {
+      if (hasVoted) {
+        voteSpace.classList.add('has-vote');
+      } else {
+        voteSpace.classList.remove('has-vote');
+      }
+    }
+
     if (voteBadge) {
       if (hasVoted) {
         voteBadge.textContent = displayVote;
         voteBadge.style.color = '#673ab7';
         voteBadge.style.opacity = '1';
-        console.log(`[DEBUG] Updated vote badge for ${safeUserId} to "${displayVote}"`);
+        console.log(`[DEBUG] Updated vote badge for "${name}" to "${displayVote}"`);
       } else {
         voteBadge.textContent = '';
       }
     }
 
-    if (hasVoted) {
-      voteSpace.classList.add('has-vote');
-    } else {
-      voteSpace.classList.remove('has-vote');
+    // Green highlight avatar circle
+    const avatarCircle = container.querySelector('.avatar-circle');
+    if (hasVoted && avatarCircle) {
+      avatarCircle.style.backgroundColor = '#c1e1c1';
     }
-  }
-
-  // Update avatar styling
-  if (hasVoted) {
-    const avatarContainer = document.querySelector(`#user-circle-${safeUserId}`);
-    if (avatarContainer) {
-      avatarContainer.classList.add('has-voted');
-      const avatar = avatarContainer.querySelector('.avatar-circle');
-      if (avatar) {
-        avatar.style.backgroundColor = '#c1e1c1'; // Light green
-      }
-    }
-
-    const sidebarAvatar = document.querySelector(`#user-${safeUserId} img.avatar`);
-    if (sidebarAvatar) {
-      sidebarAvatar.style.backgroundColor = '#c1e1c1';
-    }
-  }
+  });
 }
 
 
