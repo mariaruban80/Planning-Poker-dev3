@@ -173,21 +173,61 @@ function mergeVote(storyId, userName, vote) {
   window.currentVotesPerStory = votesPerStory;
 }
 
+function clearAllVoteVisuals() {
+  const badges = document.querySelectorAll('.vote-badge');
+  badges.forEach(badge => {
+    badge.textContent = '';
+    badge.removeAttribute('title');
+    badge.innerHTML = '';
+  });
 
-function refreshVoteDisplay() {
-  // Clear existing vote visuals, e.g. clear vote counts, badges, etc.
-  clearAllVoteVisuals();
-
-  // Loop over all stories and their votes
-  for (const [storyId, votes] of Object.entries(window.currentVotesPerStory || {})) {
-    for (const [userId, vote] of Object.entries(votes)) {
-      // Update UI for each user vote on each story
-      updateVoteVisuals(userId, vote, storyId);
-          
+  const voteSpaces = document.querySelectorAll('.vote-card-space');
+  voteSpaces.forEach(space => {
+    space.classList.remove('has-vote');
+  });
+  
+  // Also clear the "has-voted" class from user avatars
+  const avatarContainers = document.querySelectorAll('.avatar-container');
+  avatarContainers.forEach(container => {
+    container.classList.remove('has-voted');
+    const avatar = container.querySelector('.avatar-circle');
+    if (avatar) {
+      avatar.style.backgroundColor = ''; // Reset background color
     }
-    updateVoteBadges(storyId, votes);
+  });
+}
+function refreshVoteDisplay() {
+  // Ensure clearAllVoteVisuals is defined
+  if (typeof clearAllVoteVisuals === 'function') {
+    clearAllVoteVisuals();
+  } else {
+    // Fallback implementation if the function isn't available
+    const badges = document.querySelectorAll('.vote-badge');
+    badges.forEach(badge => {
+      badge.textContent = '';
+      badge.removeAttribute('title');
+      badge.innerHTML = '';
+    });
+
+    const voteSpaces = document.querySelectorAll('.vote-card-space');
+    voteSpaces.forEach(space => {
+      space.classList.remove('has-vote');
+    });
+  }
+
+  for (const [storyId, votes] of Object.entries(window.currentVotesPerStory || {})) {
+    // Use a Map to ensure each user only has one vote
+    const uniqueVotes = new Map();
+    for (const [id, vote] of Object.entries(votes)) {
+      const name = userMap?.[id] || id;
+      if (!uniqueVotes.has(name)) {
+        uniqueVotes.set(name, vote);
+        updateVoteVisuals(name, vote, storyId);
+      }
+    }
   }
 }
+
 
 function updateVoteBadges(storyId, votes) {
   // Count how many unique users have voted for this story
@@ -734,55 +774,42 @@ console.log('[RESTORE] Skipped manual session restoration — server handles vot
     console.log(`[VOTE] Votes reset for story: ${storyId}, planning cards should now be visible`);
   });
   
-  socket.on('storySelected', ({ storyIndex, storyId }) => {
-    console.log('[SOCKET] storySelected received:', storyIndex, storyId);
-    hasReceivedStorySelection = true;
-
-    // Fallback: get storyId from index if missing
-    if (!storyId && typeof storyIndex === 'number') {
-      const storyCards = document.querySelectorAll('.story-card');
-      const target = storyCards[storyIndex];
-      if (target) {
-        storyId = target.id;
-        console.log('[SOCKET] Fallback resolved storyId from index:', storyId);
+// Improve the storySelected event handler
+socket.on('storySelected', ({ storyIndex, storyId }) => {
+  console.log('[SOCKET] storySelected received:', storyIndex, storyId);
+  
+  // If storyId is provided directly, use it
+  if (storyId) {
+    // Select the story
+    selectStory(storyIndex, false);
+    return;
+  }
+  
+  // If no storyId was provided, try to resolve it from the index
+  if (typeof storyIndex === 'number') {
+    // Try to find the story card by index
+    const storyCards = document.querySelectorAll('.story-card');
+    if (storyIndex >= 0 && storyIndex < storyCards.length) {
+      const targetCard = storyCards[storyIndex];
+      if (targetCard && targetCard.id) {
+        console.log(`[SOCKET] Resolved storyId from index ${storyIndex}: ${targetCard.id}`);
+        selectStory(storyIndex, false);
+        return;
       }
     }
-
-    if (!storyId) {
-      console.warn(`[storySelected] Could not resolve storyId`);
+    
+    // If we still can't find the story, try one more approach:
+    // Find any story card with the matching data-index attribute
+    const indexCard = document.querySelector(`.story-card[data-index="${storyIndex}"]`);
+    if (indexCard && indexCard.id) {
+      console.log(`[SOCKET] Found story card using data-index=${storyIndex}: ${indexCard.id}`);
+      selectStory(storyIndex, false);
       return;
     }
-
-    selectStory(storyIndex, false);
-    
-    // For guests, ensure planning cards are visible when changing stories
-    const planningCardsSection = document.querySelector('.planning-cards-section');
-    if (planningCardsSection) {
-      planningCardsSection.classList.remove('hidden-until-init');
-      planningCardsSection.style.display = 'block';
-    }
-    
-    // Hide all vote statistics containers when changing stories
-    const allStatsContainers = document.querySelectorAll('.vote-statistics-container');
-    allStatsContainers.forEach(container => {
-      container.style.display = 'none';
-    });
-    
-    // After story selection, request votes and check if they're already revealed
-    const currentStoryId = getCurrentStoryId();
-    if (currentStoryId && socket && socket.connected && !deletedStoryIds.has(currentStoryId)) {
-      setTimeout(() => {
-        socket.emit('requestStoryVotes', { storyId: currentStoryId });
-        
-        // If votes are already revealed for this story, show them
-        if (votesRevealed[currentStoryId] && votesPerStory[currentStoryId]) {
-          setTimeout(() => {
-            handleVotesRevealed(currentStoryId, votesPerStory[currentStoryId]);
-          }, 200);
-        }
-      }, 100);
-    }
-  });
+  }
+  
+  console.warn(`[SOCKET] Could not resolve story for index ${storyIndex}`);
+});
   
   // Add reconnection handlers for socket
   if (socket) {
@@ -2765,8 +2792,10 @@ function createVoteCardSpace(user, isCurrentUser) {
  */
 function updateVoteVisuals(userId, vote, hasVoted = false) {
   console.log(`[DEBUG] updateVoteVisuals: userId=${userId}, vote=${vote}, hasVoted=${hasVoted}`);
-
+  
   const storyId = getCurrentStoryId();
+  
+  // Skip for deleted stories or when no story is selected
   if (!storyId || deletedStoryIds.has(storyId)) {
     console.log('[VOTE] Not updating vote visuals for deleted story');
     return;
@@ -2775,49 +2804,85 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
   const isRevealed = votesRevealed[storyId] === true;
   const displayVote = isRevealed ? vote : '👍';
 
-  console.log(`[DEBUG] Story ${storyId} revealed state: ${isRevealed}`);
+  console.log(`[DEBUG] Story ${storyId} revealed state:`, isRevealed);
   console.log(`[DEBUG] Will display: ${displayVote}`);
 
-  // Get display name from userMap or fallback to userId
-  const displayName = window.userMap?.[userId] || userId;
-
-  const containers = document.querySelectorAll('.avatar-container');
-
-  containers.forEach(container => {
-    const nameEl = container.querySelector('.user-name');
-    const voteSpace = container.querySelector('.vote-card-space');
-    const voteBadge = container.querySelector('.vote-badge');
-
-    const name = nameEl?.textContent?.trim();
-    if (name !== displayName) return;
-
-    // Apply visual update
-    if (voteSpace) {
-      if (hasVoted) {
-        voteSpace.classList.add('has-vote');
-      } else {
-        voteSpace.classList.remove('has-vote');
+  // Multiple selector attempts for better reliability
+  // Try direct user ID first
+  let voteSpace = document.querySelector(`#vote-space-${userId}`);
+  let sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
+  let avatarContainer = document.querySelector(`#user-circle-${userId}`);
+  
+  // If not found by socket ID, try username lookup
+  if (!voteSpace || !sidebarBadge) {
+    const userName = window.userMap?.[userId] || userId;
+    
+    // Try to find elements by username-based attributes
+    const userElements = document.querySelectorAll(`.user-name`);
+    userElements.forEach(el => {
+      if (el.textContent === userName) {
+        // Found element with matching username
+        const container = el.closest('.avatar-container');
+        if (container) {
+          avatarContainer = container;
+          const userId = container.getAttribute('data-user-id');
+          if (userId) {
+            voteSpace = document.querySelector(`#vote-space-${userId}`);
+            sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
+          }
+        }
       }
-    }
+    });
+  }
 
+  // Update sidebar badge if found
+  if (sidebarBadge) {
+    if (hasVoted) {
+      sidebarBadge.textContent = displayVote;
+      sidebarBadge.style.color = '#673ab7';
+      sidebarBadge.style.opacity = '1';
+    } else {
+      sidebarBadge.textContent = '';
+    }
+  } else {
+    console.log(`[DEBUG] Could not find sidebar badge for ${userId}`);
+  }
+
+  // Update vote card space if found
+  if (voteSpace) {
+    const voteBadge = voteSpace.querySelector('.vote-badge');
     if (voteBadge) {
       if (hasVoted) {
         voteBadge.textContent = displayVote;
         voteBadge.style.color = '#673ab7';
         voteBadge.style.opacity = '1';
-        console.log(`[DEBUG] Updated vote badge for "${name}" to "${displayVote}"`);
       } else {
         voteBadge.textContent = '';
       }
     }
 
-    // Green highlight avatar circle
-    const avatarCircle = container.querySelector('.avatar-circle');
-    if (hasVoted && avatarCircle) {
-      avatarCircle.style.backgroundColor = '#c1e1c1';
+    if (hasVoted) {
+      voteSpace.classList.add('has-vote');
+    } else {
+      voteSpace.classList.remove('has-vote');
     }
-  });
+  } else {
+    console.log(`[DEBUG] Could not find vote space for ${userId}`);
+  }
+
+  // Update avatar styling
+  if (hasVoted && avatarContainer) {
+    avatarContainer.classList.add('has-voted');
+    const avatar = avatarContainer.querySelector('.avatar-circle');
+    if (avatar) {
+      avatar.style.backgroundColor = '#c1e1c1'; // Light green
+    }
+  } else if (!avatarContainer) {
+    console.log(`[DEBUG] Could not find avatar container for ${userId}`);
+  }
 }
+
+
 
 
 
