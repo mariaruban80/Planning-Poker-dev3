@@ -1552,6 +1552,7 @@ function addVoteStatisticsStyles() {
  * @param {number} storyId - ID of the story
  * @param {Object} votes - Vote data
  */
+
 function handleVotesRevealed(storyId, votes) {
   if (!votes || typeof votes !== 'object') return;
   
@@ -1563,73 +1564,79 @@ function handleVotesRevealed(storyId, votes) {
   // First, apply the votes to the UI
   applyVotesToUI(votes, false);
 
-  // Create a mapping of username → socketIds
-  const userSocketMap = new Map();
+  // CRITICAL PART: Create a username → vote map that completely ignores socket IDs
   const userMap = window.userMap || {};
-  
-  // Step 1: First organize socket IDs by username
-  for (const socketId in votes) {
-    const userName = userMap[socketId] || socketId;
-    if (!userSocketMap.has(userName)) {
-      userSocketMap.set(userName, []);
-    }
-    userSocketMap.get(userName).push(socketId);
-  }
+  const usernameToVoteMap = new Map();
 
-  // Step 2: Create a deduplicated votes object - one vote per user
-  const uniqueUserVotes = new Map();
-  
-  // For each username, only take the most recent vote (i.e., the one visible in UI)
-  userSocketMap.forEach((socketIds, userName) => {
-    // Find which socketId is actually in the UI
-    let activeSocketId = null;
-    for (const socketId of socketIds) {
-      // Check if this socket ID has UI elements
-      if (document.querySelector(`#vote-space-${socketId}`) || 
-          document.querySelector(`#user-${socketId}`) || 
-          document.querySelector(`#user-circle-${socketId}`)) {
-        activeSocketId = socketId;
-        break;
-      }
+  // -----------------------------------------------------
+  // FIRST STEP: Build a complete mapping of user → votes
+  // -----------------------------------------------------
+  // For each vote in the input, map it to a username
+  Object.entries(votes).forEach(([socketId, vote]) => {
+    const userName = userMap[socketId] || socketId;
+    
+    // Store this vote for this username
+    if (!usernameToVoteMap.has(userName)) {
+      usernameToVoteMap.set(userName, { vote, socketIds: [socketId] });
+    } else {
+      // User already has a vote registered, record this socket ID
+      usernameToVoteMap.get(userName).socketIds.push(socketId);
     }
-    
-    // If we found an active socket ID, use it; otherwise use the first one
-    const socketIdToUse = activeSocketId || socketIds[0];
-    uniqueUserVotes.set(userName, votes[socketIdToUse]);
-    
-    console.log(`[DEDUP] User ${userName} has ${socketIds.length} socket IDs, using vote from ${socketIdToUse}`);
   });
 
-  // Now proceed with the deduplicated votes
-  const voteValues = Array.from(uniqueUserVotes.values());
+  // -----------------------------------------------------
+  // SECOND STEP: Log the deduplication for debugging
+  // -----------------------------------------------------
+  let duplicateVotesFound = false;
+  usernameToVoteMap.forEach((data, userName) => {
+    if (data.socketIds.length > 1) {
+      duplicateVotesFound = true;
+      console.log(`[DEDUP] User ${userName} has ${data.socketIds.length} socket IDs with votes`);
+    }
+  });
 
-  // Parse vote values for statistics
+  if (duplicateVotesFound) {
+    console.log('[DEDUP] Found duplicate votes! Original count:', Object.keys(votes).length, 
+      'Deduplicated count:', usernameToVoteMap.size);
+  }
+
+  // -----------------------------------------------------
+  // THIRD STEP: Extract ONLY unique votes (one per user)
+  // -----------------------------------------------------
+  const uniqueVoteValues = Array.from(usernameToVoteMap.values()).map(data => data.vote);
+
+  // -----------------------------------------------------
+  // FOURTH STEP: Calculate statistics
+  // -----------------------------------------------------
+  // Parse numeric values for average calculation
   function parseNumericVote(vote) {
-    if (typeof vote !== 'string') return NaN;
+    if (typeof vote !== 'string' && typeof vote !== 'number') return NaN;
     if (vote === '½') return 0.5;
     if (vote === '?' || vote === '☕' || vote === '∞') return NaN;
 
-    const match = vote.match(/\((\d+(?:\.\d+)?)\)$/);
-    if (match) return parseFloat(match[1]);
+    // Handle T-shirt sizes with numbers in parentheses
+    if (typeof vote === 'string') {
+      const match = vote.match(/\((\d+(?:\.\d+)?)\)$/);
+      if (match) return parseFloat(match[1]);
+    }
 
     const parsed = parseFloat(vote);
     return isNaN(parsed) ? NaN : parsed;
   }
 
-  // Calculate numeric values for average
-  const numericValues = voteValues.map(parseNumericVote).filter(v => !isNaN(v));
+  const numericValues = uniqueVoteValues.map(parseNumericVote).filter(v => !isNaN(v));
 
   // Default values
-  let mostCommonVote = voteValues.length > 0 ? voteValues[0] : '0';
+  let mostCommonVote = uniqueVoteValues.length > 0 ? uniqueVoteValues[0] : '0';
   let averageValue = null;
 
   // Calculate statistics if we have votes
-  if (voteValues.length > 0) {
+  if (uniqueVoteValues.length > 0) {
     // Find most common vote
     const frequency = {};
     let maxFreq = 0;
 
-    voteValues.forEach(vote => {
+    uniqueVoteValues.forEach(vote => {
       frequency[vote] = (frequency[vote] || 0) + 1;
       if (frequency[vote] > maxFreq) {
         maxFreq = frequency[vote];
@@ -1644,10 +1651,13 @@ function handleVotesRevealed(storyId, votes) {
     }
   }
 
-  // Log debug info about vote count
-  console.log(`[VOTES] Showing stats for ${uniqueUserVotes.size} unique users (${Object.keys(votes).length} total socket IDs)`);
+  // Log final statistics data
+  console.log(`[VOTES] Showing stats for ${usernameToVoteMap.size} unique users (${Object.keys(votes).length} total votes)`);
   console.log(`[VOTES] Most common: ${mostCommonVote}, Average: ${averageValue}`);
 
+  // -----------------------------------------------------
+  // FIFTH STEP: Create statistics UI
+  // -----------------------------------------------------
   // Remove any existing stats containers for this story
   const existingStatsContainers = document.querySelectorAll(`.vote-statistics-container[data-story-id="${storyId}"]`);
   existingStatsContainers.forEach(el => el.remove());
@@ -1657,8 +1667,8 @@ function handleVotesRevealed(storyId, votes) {
   statsContainer.className = 'vote-statistics-container';
   statsContainer.setAttribute('data-story-id', storyId);
   
-  // Use the deduplicated count for the UI display
-  const voteCount = uniqueUserVotes.size;
+  // Use the deduplicated count for the UI display - this is critical!
+  const voteCount = usernameToVoteMap.size;
   
   statsContainer.innerHTML = `
     <div class="fixed-vote-display">
@@ -1698,7 +1708,6 @@ function handleVotesRevealed(storyId, votes) {
 
   statsContainer.style.display = 'block';
 }
-
 
 
 /**
