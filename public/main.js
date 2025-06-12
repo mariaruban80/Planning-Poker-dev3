@@ -168,9 +168,11 @@ function loadDeletedStoriesFromStorage(roomId) {
  */
 function mergeVote(storyId, userName, vote) {
   if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
+  if (votesPerStory[storyId][userName] === vote) return; // avoid unnecessary overwrite
   votesPerStory[storyId][userName] = vote;
   window.currentVotesPerStory = votesPerStory;
 }
+
 
 function refreshVoteDisplay() {
   // Clear existing vote visuals, e.g. clear vote counts, badges, etc.
@@ -544,6 +546,12 @@ function appendRoomIdToURL(roomId) {
 function initializeApp(roomId) {
   // Initialize socket with userName from sessionStorage
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+  socket.on('connect', () => {
+  // Immediately map own socket ID to username
+  if (!window.userMap) window.userMap = {};
+  window.userMap[socket.id] = userName;
+});
+
   if (socket && socket.io) {
     socket.io.reconnectionAttempts = 10;
     socket.io.timeout = 20000;
@@ -645,26 +653,9 @@ function initializeApp(roomId) {
         }
       }
     }
+console.log('[RESTORE] Skipped manual session restoration — server handles vote recovery');
 
-    // Restore saved personal votes from session storage
-    try {
-      const savedUserVotes = getUserVotes ? getUserVotes() : {};
-
-      for (const [storyId, vote] of Object.entries(savedUserVotes)) {
-        if (deletedStoryIds.has(storyId)) continue;
-
-        if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
-        votesPerStory[storyId][socket.id] = vote;
-
-        const currentId = getCurrentStoryId();
-        if (storyId === currentId) {
-          updateVoteVisuals(socket.id, votesRevealed[storyId] ? vote : '👍', true);
-        }
-      }
-    } catch (err) {
-      console.warn('[SOCKET] Error restoring user votes:', err);
-    }
-
+   
     window.currentVotesPerStory = votesPerStory;
     refreshVoteDisplay();
   });
