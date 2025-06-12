@@ -34,59 +34,52 @@ const userNameToIdMap = {}; // userName → { socketIds: [Array of past socket I
 function cleanupRoomVotes(roomId) {
   if (!rooms[roomId]) return false;
 
-  // Create a map of username -> socketId for the LATEST connection only
-  const currentUserSocketMap = {};
-  
-  // Build the current user-to-socketId map (keeping only latest socket)
-  rooms[roomId].users.forEach(user => {
-    currentUserSocketMap[user.name] = user.id;
-  });
-  
   let changesDetected = false;
   
+  // Build a map of username → currently active socketId
+  const usernameActiveSocketMap = {};
+  
+  // Track the newest socket ID for each username
+  rooms[roomId].users.forEach(user => {
+    usernameActiveSocketMap[user.name] = user.id;
+  });
+
   // Process each story's votes
   for (const storyId in rooms[roomId].votesPerStory || {}) {
     if (rooms[roomId].deletedStoryIds?.has(storyId)) continue;
     
-    // Track unique usernames and their votes
-    const usernameVotes = {};
+    // Track which usernames have already been processed
+    const processedUsernames = new Set();
+    // Build up a clean votes object
+    const cleanedVotes = {};
     
-    // Find the username for each vote (using socket ID)
+    // First pass: Add votes from active socket IDs
     for (const socketId in rooms[roomId].votesPerStory[storyId]) {
       const user = rooms[roomId].users.find(u => u.id === socketId);
       
       if (user) {
-        // If this username already has a different vote from a different socket,
-        // keep only the vote from the current socket
-        if (usernameVotes[user.name] && currentUserSocketMap[user.name] === socketId) {
+        // This socket belongs to an active user
+        const username = user.name;
+        // Only include the vote from the active socket ID for this user
+        if (usernameActiveSocketMap[username] === socketId) {
+          cleanedVotes[socketId] = rooms[roomId].votesPerStory[storyId][socketId];
+          processedUsernames.add(username);
+        } else {
+          // This is an old socket ID for a user who's still active
           changesDetected = true;
+          console.log(`[CLEANUP] Removing old socket vote for ${username} (${socketId})`);
         }
-        
-        // Always track the latest vote for this username
-        usernameVotes[user.name] = {
-          socketId,
-          vote: rooms[roomId].votesPerStory[storyId][socketId]
-        };
       }
     }
     
-    // Create a completely new votes object with exactly one vote per username
-    const cleanedVotes = {};
+    // Replace the votes object with our cleaned version
+    const oldCount = Object.keys(rooms[roomId].votesPerStory[storyId]).length;
+    const newCount = Object.keys(cleanedVotes).length;
     
-    for (const [username, voteData] of Object.entries(usernameVotes)) {
-      // If this user has a current socket connection, use that socket ID
-      const socketIdToUse = currentUserSocketMap[username] || voteData.socketId;
-      cleanedVotes[socketIdToUse] = voteData.vote;
-    }
-    
-    // Replace the entire votes object for this story
-    const oldVoteCount = Object.keys(rooms[roomId].votesPerStory[storyId]).length;
-    const newVoteCount = Object.keys(cleanedVotes).length;
-    
-    if (oldVoteCount !== newVoteCount || JSON.stringify(rooms[roomId].votesPerStory[storyId]) !== JSON.stringify(cleanedVotes)) {
-      rooms[roomId].votesPerStory[storyId] = cleanedVotes;
+    if (oldCount !== newCount) {
       changesDetected = true;
-      console.log(`[CLEANUP] Story ${storyId} votes changed from ${oldVoteCount} to ${newVoteCount} unique votes`);
+      console.log(`[CLEANUP] Story ${storyId}: Reduced votes from ${oldCount} to ${newCount}`);
+      rooms[roomId].votesPerStory[storyId] = cleanedVotes;
     }
   }
   
