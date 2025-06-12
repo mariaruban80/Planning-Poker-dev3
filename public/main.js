@@ -1495,24 +1495,99 @@ function addVoteStatisticsStyles() {
  * @param {Object} votes - Vote data
  */
 function handleVotesRevealed(storyId, votes) {
- 
   if (!votes || typeof votes !== 'object') return;
-   // 🧩 Ensure style block is added for vote statistics
+  
+  // 🧩 Ensure style block is added for vote statistics
   if (typeof addFixedVoteStatisticsStyles === 'function') {
     addFixedVoteStatisticsStyles();
   }
 
-  applyVotesToUI(votes, false);
-
+  // Create a map to deduplicate votes by username
+  // This is crucial for accurate vote counting
   const uniqueVotes = new Map();
   const userMap = window.userMap || {};
+  
+  // First pass - collect all votes by username
+  const userVotes = {};
   for (const [socketId, vote] of Object.entries(votes)) {
     const userName = userMap[socketId] || socketId;
-    if (!uniqueVotes.has(userName)) {
-      uniqueVotes.set(userName, vote);
+    if (!userVotes[userName]) {
+      userVotes[userName] = [];
+    }
+    userVotes[userName].push({ socketId, vote });
+  }
+  
+  // Second pass - for each user, use their most recent vote
+  // This ensures we don't double-count users who refreshed the page
+  for (const [userName, votesList] of Object.entries(userVotes)) {
+    // If a user has multiple votes, we need to determine which one to use
+    if (votesList.length > 1) {
+      console.log(`Found ${votesList.length} votes for user ${userName} - deduplicating`);
+      
+      // Find the most recent socket ID for this user
+      // We assume the socket IDs closest to the current active ones are most recent
+      // This is a simplification - ideally we'd have timestamps
+      let mostRecentVote = votesList[0];
+      
+      // Check if any of these socket IDs match current active users
+      const activeUsers = document.querySelectorAll('.avatar-container');
+      const activeSocketIds = [];
+      activeUsers.forEach(user => {
+        const userId = user.getAttribute('data-user-id');
+        if (userId) activeSocketIds.push(userId);
+      });
+      
+      // Check if any vote's socket ID is in the active users list
+      for (const voteData of votesList) {
+        if (activeSocketIds.includes(voteData.socketId)) {
+          mostRecentVote = voteData;
+          break;
+        }
+      }
+      
+      // Use only the most recent vote for this user
+      uniqueVotes.set(userName, mostRecentVote.vote);
+    } else {
+      // User has only one vote, use it directly
+      uniqueVotes.set(userName, votesList[0].vote);
     }
   }
-
+  
+  // Apply votes to UI after deduplication
+  // Create a deduplicated votes object for UI update
+  const deduplicatedVotes = {};
+  const activeUsers = {};
+  
+  // Create a map of active users' socket IDs
+  document.querySelectorAll('.avatar-container').forEach(user => {
+    const userId = user.getAttribute('data-user-id');
+    const userName = user.querySelector('.user-name')?.textContent;
+    if (userId && userName) {
+      activeUsers[userName] = userId;
+    }
+  });
+  
+  // Create a deduplicated votes object with most current socket IDs
+  uniqueVotes.forEach((vote, userName) => {
+    // If this user is active, use their current socket ID
+    // Otherwise, use any socket ID associated with them
+    if (activeUsers[userName]) {
+      deduplicatedVotes[activeUsers[userName]] = vote;
+    } else {
+      // Find any socket ID for this user in the original votes
+      for (const [socketId, voteValue] of Object.entries(votes)) {
+        if ((userMap[socketId] || socketId) === userName) {
+          deduplicatedVotes[socketId] = vote;
+          break;
+        }
+      }
+    }
+  });
+  
+  // Apply the deduplicated votes to the UI
+  applyVotesToUI(deduplicatedVotes, false);
+  
+  // Now proceed with vote statistics using the deduplicated votes
   const voteValues = Array.from(uniqueVotes.values());
 
   function parseNumericVote(vote) {
@@ -1550,6 +1625,10 @@ function handleVotesRevealed(storyId, votes) {
     }
   }
 
+  // Log some debugging info
+  console.log(`[VOTES] Showing stats for ${uniqueVotes.size} unique users (${Object.keys(votes).length} total votes)`);
+  console.log(`[VOTES] Most common: ${mostCommonVote}, Average: ${averageValue}`);
+
   const existingStatsContainers = document.querySelectorAll(`.vote-statistics-container[data-story-id="${storyId}"]`);
   existingStatsContainers.forEach(el => el.remove());
 
@@ -1560,7 +1639,7 @@ function handleVotesRevealed(storyId, votes) {
     <div class="fixed-vote-display">
       <div class="fixed-vote-card">
         ${mostCommonVote}
-        <div class="fixed-vote-count">${voteValues.length} Vote${voteValues.length !== 1 ? 's' : ''}</div>
+        <div class="fixed-vote-count">${uniqueVotes.size} Vote${uniqueVotes.size !== 1 ? 's' : ''}</div>
       </div>
       <div class="fixed-vote-stats">
         ${averageValue !== null ? `
@@ -1593,6 +1672,8 @@ function handleVotesRevealed(storyId, votes) {
 
   statsContainer.style.display = 'block';
 }
+
+
 
 /**
  * Setup Add Ticket button
