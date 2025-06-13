@@ -528,38 +528,8 @@ function isGuestUser() {
  * Determines if current user is the host
  */
 function isCurrentUserHost() {
-  // IMPORTANT: First check sessionStorage as this is set by createRoom
-  if (sessionStorage.getItem('isHost') === 'true') {
-    return true;
-  }
-  
-  // Fallback verification through URL (this is our new checksum approach)
-  const urlParams = new URLSearchParams(window.location.search);
-  const roomId = urlParams.get('roomId');
-  
-  if (roomId && roomId.length > 6) {
-    const baseRoomId = roomId.slice(0, -1);  // Remove last character
-    const verificationChar = roomId.slice(-1); // Get last character
-    
-    // Calculate expected checksum
-    let checksum = 0;
-    for (let i = 0; i < baseRoomId.length; i++) {
-      checksum += baseRoomId.charCodeAt(i);
-    }
-    const expectedVerification = (checksum % 36).toString(36);
-    
-    // If verification passes, update sessionStorage to ensure consistency
-    if (verificationChar === expectedVerification) {
-      sessionStorage.setItem('isHost', 'true');
-      return true;
-    }
-  }
-  
-  // If we got here, user is definitely not a host
-  sessionStorage.setItem('isHost', 'false');
-  return false;
+  return sessionStorage.getItem('isHost') === 'true';
 }
-
 
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
@@ -596,34 +566,23 @@ function setupPlanningCards() {
  * Set up guest mode restrictions
  */
 function setupGuestModeRestrictions() {
-  // First check if user is a host or guest
-  const isHost = isCurrentUserHost();
-  console.log("Setting up permissions. User is host:", isHost);
-  
-  // Show or hide host elements
-  const hostElements = [
-    document.getElementById('revealVotesBtn'),
-    document.getElementById('resetVotesBtn'),
-    document.getElementById('fileInputContainer'),
-    document.getElementById('addTicketBtn')
-  ];
-  
-  hostElements.forEach(el => {
-    if (el) {
-      if (isHost) {
-        // Host sees the controls
-        el.classList.remove('hide-for-guests');
-      } else {
-        // Guest has controls hidden
-        el.classList.add('hide-for-guests');
-      }
-    }
-  });
-  
-  // Also update story card interaction permissions
-  setupStoryCardInteractions();
-  
-  console.log(`${isHost ? 'Host' : 'Guest'} mode activated - controls ${isHost ? 'visible' : 'restricted'}`);
+  if (isGuestUser()) {
+    // Hide sidebar control buttons
+    const revealVotesBtn = document.getElementById('revealVotesBtn');
+    const resetVotesBtn = document.getElementById('resetVotesBtn');
+    if (revealVotesBtn) revealVotesBtn.classList.add('hide-for-guests');
+    if (resetVotesBtn) resetVotesBtn.classList.add('hide-for-guests');
+    
+    // Hide upload ticket button
+    const fileInputContainer = document.getElementById('fileInputContainer');
+    if (fileInputContainer) fileInputContainer.classList.add('hide-for-guests');
+    
+    // Hide add ticket button
+    const addTicketBtn = document.getElementById('addTicketBtn');
+    if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
+    
+    console.log('Guest mode activated - voting controls restricted');
+  }
 }
 
 /**
@@ -927,7 +886,6 @@ socket.on('storySelected', ({ storyIndex, storyId }) => {
           refreshVoteDisplay();
         }
       }, 500);
-      setupGuestModeRestrictions(); 
     });
   }
   
