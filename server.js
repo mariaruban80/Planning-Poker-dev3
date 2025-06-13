@@ -805,7 +805,7 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
         });
       }
       
-      // Clean up all votes one more time
+      // Clean up any duplicate votes one more time
       if (cleanupRoomVotes(roomId)) {
         votesChanged = true;
       }
@@ -822,8 +822,7 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
     const roomId = socket.data.roomId;
     const userName = socket.data.userName;
     if (!roomId || !rooms[roomId]) return;
-    
-    console.log(`[SERVER] Client ${socket.id} reconnected to room ${roomId}`);
+        console.log(`[SERVER] Client ${socket.id} reconnected to room ${roomId}`);
     
     // Update room activity timestamp
     rooms[roomId].lastActivity = Date.now();
@@ -935,7 +934,7 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
         // Send the restored vote to the user
         socket.emit('restoreUserVote', { storyId, vote });
         
-        // IMPORTANT: Also broadcast to all other users in the room
+        // IMPORTANT: Also broadcast to all other users
         socket.broadcast.to(roomId).emit('voteUpdate', {
           userId: socket.id,
           vote,
@@ -1381,22 +1380,6 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
           vote: foundVote,
           storyId
         });
-        
-        // Ensure it's stored in the username-based system
-        if (!rooms[roomId].userNameVotes) {
-          rooms[roomId].userNameVotes = {};
-        }
-        if (!rooms[roomId].userNameVotes[userName]) {
-          rooms[roomId].userNameVotes[userName] = {};
-        }
-        rooms[roomId].userNameVotes[userName][storyId] = foundVote;
-        
-        // Broadcast updated vote stats if changes were made
-        if (removedOldVotes || isNewVote) {
-          // Clean up all votes to ensure they're username-based deduplicated
-          cleanupRoomVotes(roomId);
-          io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
-        }
       }
     }
   });
@@ -1643,4 +1626,4 @@ const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
-      
+    
