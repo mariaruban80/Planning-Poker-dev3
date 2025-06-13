@@ -41,7 +41,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   lastKnownRoomState = {
     votesPerStory: {},
     votesRevealed: {},
-    deletedStoryIds: [], // Using an array instead of a Set
+    deletedStoryIds[];  
     tickets: [],
     userVotes: {}      // Track user's own votes by storyId
   };
@@ -307,7 +307,7 @@ socket.on('connect_error', (error) => {
       if (selectedCard && socket && socket.connected) {
         const storyId = selectedCard.id; 
         if (storyId && !lastKnownRoomState.deletedStoryIds.includes(storyId)) {
-          console.log(`[SOCKET] Requesting votes for newly selected story: ${storyId}`);
+          console.log(`[SOCKET] Requesting votes for selected story: ${storyId}`);
           socket.emit('requestStoryVotes', { storyId });
         }
       }
@@ -386,7 +386,6 @@ socket.on('connect_error', (error) => {
     try {
       const votesData = JSON.stringify(lastKnownRoomState.userVotes);
       sessionStorage.setItem(`votes_${roomIdentifier}`, votesData);
-      console.log(`[SOCKET] Saved restored vote to session storage: ${storyId} = ${vote}`);
     } catch (err) {
       console.warn('[SOCKET] Could not save restored vote to sessionStorage:', err);
     }
@@ -427,11 +426,10 @@ socket.on('connect_error', (error) => {
     if (!lastKnownRoomState.deletedStoryIds.includes(storyId)) {
       lastKnownRoomState.deletedStoryIds.push(storyId);
       
-      // Save deleted story IDs to session storage
+      // Save to session storage
       try {
         const deletedData = JSON.stringify(lastKnownRoomState.deletedStoryIds);
         sessionStorage.setItem(`deleted_${roomIdentifier}`, deletedData);
-        console.log(`[SOCKET] Saved deleted story to session storage: ${storyId}`);
       } catch (err) {
         console.warn('[SOCKET] Could not save deleted story to sessionStorage:', err);
       }
@@ -452,18 +450,19 @@ socket.on('connect_error', (error) => {
     // Clear from last known state - ensure initialization
     if (!lastKnownRoomState.votesPerStory) lastKnownRoomState.votesPerStory = {};
     if (!lastKnownRoomState.votesRevealed) lastKnownRoomState.votesRevealed = {};
+    if (!lastKnownRoomState.userVotes) lastKnownRoomState.userVotes = {};
     
     lastKnownRoomState.votesPerStory[storyId] = {};
     lastKnownRoomState.votesRevealed[storyId] = false;
     
-    // Also clear from user's personal votes
-    if (lastKnownRoomState.userVotes && lastKnownRoomState.userVotes[storyId]) {
+    // Also clear from user votes
+    if (lastKnownRoomState.userVotes[storyId]) {
       delete lastKnownRoomState.userVotes[storyId];
       
       // Update sessionStorage
       try {
         const votesData = JSON.stringify(lastKnownRoomState.userVotes);
-        sessionStorage.setItem(`votes_${roomIdentifier}`, votesData);
+        sessionStorage.setItem(`votes_${roomId}`, votesData);
       } catch (err) {
         console.warn('[SOCKET] Could not update session storage after vote reset:', err);
       }
@@ -922,7 +921,7 @@ export function requestAllTickets() {
   if (socket) {
     console.log('[SOCKET] Requesting all tickets');
     socket.emit('requestAllTickets');
-  }
+      }
 }
 
 /**
