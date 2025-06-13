@@ -1608,6 +1608,38 @@ white-space: nowrap;
 <script src="main.js" type="module"></script>
 <script>
 
+// Add this early in the script execution
+(function checkHostStatus() {
+  // If we already have a definitive host status, keep it
+  if (sessionStorage.getItem('isHost') === 'true') {
+    return;
+  }
+  
+  // Otherwise check URL for host verification
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomId = urlParams.get('roomId');
+  
+  if (roomId && roomId.length > 6) {
+    const baseRoomId = roomId.slice(0, -1);
+    const verificationChar = roomId.slice(-1);
+    
+    // Calculate expected checksum
+    let checksum = 0;
+    for (let i = 0; i < baseRoomId.length; i++) {
+      checksum += baseRoomId.charCodeAt(i);
+    }
+    const expectedVerification = (checksum % 36).toString(36);
+    
+    // If verification passes, set host status
+    if (verificationChar === expectedVerification) {
+      console.log("Host verification passed via URL checksum.");
+      sessionStorage.setItem('isHost', 'true');
+      // Also store the shareable version for consistency
+      sessionStorage.setItem('shareableRoomId', baseRoomId);
+    }
+  }
+})();     
+
 function updateHeaderStyle() {
   const style = document.createElement('style');
   style.textContent = `
@@ -2688,14 +2720,22 @@ function generateInviteLink() {
   const urlParams = new URLSearchParams(window.location.search);
   const roomId = urlParams.get('roomId');
   
-  // If we're the host, use the saved shareable ID without verification char
-  // or strip the verification character from the current roomId
-  const shareableRoomId = sessionStorage.getItem("shareableRoomId") || 
-                          (roomId && roomId.length > 6 ? roomId.slice(0, -1) : roomId);
+  let shareableRoomId = roomId;
   
-  return `${window.location.origin}${window.location.pathname}?roomId=${shareableRoomId || roomId}`;
+  // If we're the host, generate a clean URL for guests
+  if (isCurrentUserHost()) {
+    // If we have a stored shareable ID, use that
+    if (sessionStorage.getItem("shareableRoomId")) {
+      shareableRoomId = sessionStorage.getItem("shareableRoomId");
+    } 
+    // Otherwise, strip the verification character if it exists
+    else if (roomId && roomId.length > 6) {
+      shareableRoomId = roomId.slice(0, -1);
+    }
+  }
+  
+  return `${window.location.origin}${window.location.pathname}?roomId=${shareableRoomId}`;
 }
-  
   window.hideInviteModalCustom = function() {
     document.getElementById('inviteModalCustom').style.display = 'none';
   };
