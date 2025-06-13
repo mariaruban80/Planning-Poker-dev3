@@ -311,14 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   initializeApp(roomId);
 });
-// Strip host=true from URL if present (cleanup)
-document.addEventListener('DOMContentLoaded', () => {
-  const url = new URL(window.location.href);
-  if (url.searchParams.has('host')) {
-    url.searchParams.delete('host');
-    window.history.replaceState({}, '', url.pathname + '?' + url.searchParams.toString());
-  }
-});
+
 // Global state variables
 let pendingStoryIndex = null;
 let csvData = [];
@@ -523,21 +516,19 @@ function createFixedVoteDisplay(votes) {
   return container;
 }
 
-
+/**
+ * Determines if current user is a guest
+ */
+function isGuestUser() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
+}
 
 /**
  * Determines if current user is the host
  */
 function isCurrentUserHost() {
   return sessionStorage.getItem('isHost') === 'true';
-}
-/**
- * Determines if current user is a guest
- */
-function isGuestUser() {
-  //const urlParams = new URLSearchParams(window.location.search);
-  //return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
-  return !isCurrentUserHost();
 }
 
 function setupPlanningCards() {
@@ -581,18 +572,16 @@ function setupGuestModeRestrictions() {
     const resetVotesBtn = document.getElementById('resetVotesBtn');
     if (revealVotesBtn) revealVotesBtn.classList.add('hide-for-guests');
     if (resetVotesBtn) resetVotesBtn.classList.add('hide-for-guests');
-
+    
     // Hide upload ticket button
     const fileInputContainer = document.getElementById('fileInputContainer');
     if (fileInputContainer) fileInputContainer.classList.add('hide-for-guests');
-
+    
     // Hide add ticket button
     const addTicketBtn = document.getElementById('addTicketBtn');
     if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
-
+    
     console.log('Guest mode activated - voting controls restricted');
-  } else {
-    console.log('Host mode activated - full controls enabled');
   }
 }
 
