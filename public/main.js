@@ -166,30 +166,17 @@ function loadDeletedStoriesFromStorage(roomId) {
  * Safely merge a vote for a story by replacing older votes with the same value.
  * This avoids duplicate votes when a user refreshes and gets a new socket ID.
  */
-function mergeVote(storyId, userName, vote) {
-  if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
+socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
+  const name = userName || userId;
+  mergeVote(storyId, name, vote);
 
-  // Deduplicate: remove any other vote entries from same user with a different socketId
-  for (const [socketId, existingVote] of Object.entries(votesPerStory[storyId])) {
-    const existingName = window.userMap?.[socketId];
-    if (existingName === userName && votesPerStory[storyId][socketId] !== vote) {
-      delete votesPerStory[storyId][socketId];
-    }
+  const currentId = getCurrentStoryId();
+  if (storyId === currentId) {
+    updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
   }
 
-  // Store the vote using latest socketId from userMap (or fallback to userName)
-  for (const [socketId, name] of Object.entries(window.userMap || {})) {
-    if (name === userName) {
-      votesPerStory[storyId][socketId] = vote;
-      window.currentVotesPerStory = votesPerStory;
-      return;
-    }
-  }
-
-  // If no socket ID is known (edge case), use username as fallback
-  votesPerStory[storyId][userName] = vote;
-  window.currentVotesPerStory = votesPerStory;
-}
+  refreshVoteDisplay();
+});
 
 
 function clearAllVoteVisuals() {
@@ -217,53 +204,26 @@ function clearAllVoteVisuals() {
 }
 function refreshVoteDisplay() {
   try {
-    // Clear all vote visuals
     clearAllVoteVisuals();
-
-    const processedUsernames = new Set();
-
-    // Build map: username -> active socket ID (from visible avatars)
-    const activeUsers = new Map();
-    document.querySelectorAll('.avatar-container').forEach(container => {
-      const userId = container.getAttribute('data-user-id');
-      const name = container.querySelector('.user-name')?.textContent;
-      if (userId && name) {
-        activeUsers.set(name, userId);
-      }
-    });
 
     const currentVotes = window.currentVotesPerStory || {};
 
     for (const [storyId, votes] of Object.entries(currentVotes)) {
-      const userVotes = new Map();
+      const processedUsernames = new Set();
 
-      // Convert socketId → username, and store only first vote per username
-      for (const [socketId, vote] of Object.entries(votes)) {
-        const name = window.userMap?.[socketId] || socketId;
+      for (const [userName, vote] of Object.entries(votes)) {
+        if (processedUsernames.has(userName)) continue;
+        processedUsernames.add(userName);
 
-        // Only store the first vote for each user (avoid duplicates)
-        if (!userVotes.has(name)) {
-          userVotes.set(name, { socketId, vote });
-        }
-      }
-
-      // Apply one visual update per unique username
-      for (const [username, { socketId, vote }] of userVotes.entries()) {
-        const key = `${storyId}_${username}`;
-        if (processedUsernames.has(key)) continue;
-        processedUsernames.add(key);
-
-        // Prefer currently active socket ID if present
-        const activeSocketId = activeUsers.get(username);
-        const socketIdToUse = activeSocketId || socketId;
-
-        updateVoteVisuals(socketIdToUse, vote, true);
+        // Render vote using userName instead of socketId
+        updateVoteVisuals(userName, vote, true);
       }
     }
   } catch (error) {
     console.error('[VOTE] Error in refreshVoteDisplay:', error);
   }
 }
+
 
 
 
