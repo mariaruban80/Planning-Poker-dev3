@@ -510,15 +510,16 @@ socket.on('connect_error', (error) => {
   });
   
   // Enhanced state sync handling
-  socket.on('resyncState', (state) => {
+socket.on('resyncState', (state) => {
     console.log('[SOCKET] Received full state resync from server');
-    
+
+        const userName = userNameValue //<<==
     // Initialize the state objects if they don't exist
     if (!lastKnownRoomState.votesPerStory) lastKnownRoomState.votesPerStory = {};
     if (!lastKnownRoomState.votesRevealed) lastKnownRoomState.votesRevealed = {};
     if (!lastKnownRoomState.deletedStoryIds) lastKnownRoomState.deletedStoryIds = [];
     if (!lastKnownRoomState.userVotes) lastKnownRoomState.userVotes = {};
-    
+
     // Update deleted story IDs first (so we can filter correctly)
     if (Array.isArray(state.deletedStoryIds)) {
         state.deletedStoryIds.forEach(id => {
@@ -526,7 +527,7 @@ socket.on('connect_error', (error) => {
                 lastKnownRoomState.deletedStoryIds.push(id);
             }
         });
-        
+
         // Save to session storage for persistence
         try {
             const deletedData = JSON.stringify(lastKnownRoomState.deletedStoryIds);
@@ -535,34 +536,34 @@ socket.on('connect_error', (error) => {
             console.warn('[SOCKET] Could not save deleted story IDs to sessionStorage:', err);
         }
     }
-    
+
     // Filter out any deleted tickets
     const filteredTickets = (state.tickets || []).filter(
         ticket => !lastKnownRoomState.deletedStoryIds.includes(ticket.id)
     );
-    
+
     // Store selected index for later use after tickets are processed
     const selectedIndex = state.selectedIndex;
-    
+
     // Now store the filtered state
-    lastKnownRoomState = { 
+    lastKnownRoomState = {
         ...lastKnownRoomState,
         tickets: filteredTickets,
         votesPerStory: state.votesPerStory || {},
         votesRevealed: state.votesRevealed || {},
         selectedIndex: selectedIndex
     };
-    
+
     // Forward to message handler
-    handleMessage({ 
-        type: 'resyncState', 
+    handleMessage({
+        type: 'resyncState',
         tickets: filteredTickets,  // Use filtered tickets
         votesPerStory: state.votesPerStory || {},
         votesRevealed: state.votesRevealed || {},
         deletedStoryIds: lastKnownRoomState.deletedStoryIds, // Use our complete list
         selectedIndex: selectedIndex
     });
-    
+
     // Apply story selection after a delay to ensure DOM is ready
     setTimeout(() => {
         if (typeof selectedIndex === 'number') {
@@ -573,11 +574,11 @@ socket.on('connect_error', (error) => {
             });
         }
     }, 500);
-    
+
     // Also restore any additional user votes after a short delay
     // to ensure the UI is ready
     setTimeout(() => {
-         socket.emit('requestVotesByUsername', { userName: userName });
+        socket.emit('requestVotesByUsername', { userName: userName });
     }, 700);
   });
 
