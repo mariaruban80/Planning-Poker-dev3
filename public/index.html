@@ -2059,19 +2059,16 @@ window.showAddTicketModal = showAddTicketModal;
 
     // Custom modal functions
     function showInviteModalCustom() {
-      // First hide any existing modals from the original app
-      hideAllOriginalModals();
-          // Create a guest URL
-      const currentUrl = new URL(window.location.href);
-      const params = new URLSearchParams(currentUrl.search);
-      const roomId = params.get('roomId');
-      // Create clean guest URL (without host parameter)
-      const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
-      // Set the link value
-      //document.getElementById('inviteLinkCustom').value = window.location.href;
-      document.getElementById('inviteLinkCustom').value = guestUrl;
-      
-    // Show our custom modal
+  // First hide any existing modals from the original app
+  hideAllOriginalModals();
+  
+  // Get the guest URL using our helper function
+  const guestUrl = generateInviteLink();
+  
+  // Set the link value
+  document.getElementById('inviteLinkCustom').value = guestUrl;
+  
+  // Show our custom modal
   const modalElement = document.getElementById('inviteModalCustom');
   if (modalElement) {
     modalElement.style.display = 'flex';
@@ -2081,7 +2078,6 @@ window.showAddTicketModal = showAddTicketModal;
     alert(`Share this invite link: ${guestUrl}`);
   }
 }
-
     function hideInviteModalCustom() {
       document.getElementById('inviteModalCustom').style.display = 'none';
     }
@@ -2671,26 +2667,34 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
     
     <script>
   // Expose modal functions to window scope for main.js to use
-  window.showInviteModalCustom = function() {
-    // First hide any existing modals from the original app
-    if (typeof hideAllOriginalModals === 'function') {
-      hideAllOriginalModals();
-    }
-    
-    // Create a guest URL
-    const currentUrl = new URL(window.location.href);
-    const params = new URLSearchParams(currentUrl.search);
-    const roomId = params.get('roomId');
-    
-    // Create clean guest URL (without host parameter)
-    const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
-    
-    // Set the link value
-    document.getElementById('inviteLinkCustom').value = guestUrl;
-    
-    // Show our custom modal
-    document.getElementById('inviteModalCustom').style.display = 'flex';
-  };
+window.showInviteModalCustom = function() {
+  // First hide any existing modals from the original app
+  if (typeof hideAllOriginalModals === 'function') {
+    hideAllOriginalModals();
+  }
+  
+  // Create a guest URL using the generateInviteLink function
+  const guestUrl = generateInviteLink();
+  
+  // Set the link value
+  document.getElementById('inviteLinkCustom').value = guestUrl;
+  
+  // Show our custom modal
+  document.getElementById('inviteModalCustom').style.display = 'flex';
+};
+
+// New helper function to generate guest invite links
+function generateInviteLink() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomId = urlParams.get('roomId');
+  
+  // If we're the host, use the saved shareable ID without verification char
+  // or strip the verification character from the current roomId
+  const shareableRoomId = sessionStorage.getItem("shareableRoomId") || 
+                          (roomId && roomId.length > 6 ? roomId.slice(0, -1) : roomId);
+  
+  return `${window.location.origin}${window.location.pathname}?roomId=${shareableRoomId || roomId}`;
+}
   
   window.hideInviteModalCustom = function() {
     document.getElementById('inviteModalCustom').style.display = 'none';
