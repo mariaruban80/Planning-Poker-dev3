@@ -528,12 +528,12 @@ function isGuestUser() {
  * Determines if current user is the host
  */
 function isCurrentUserHost() {
-  // First check if sessionStorage says we're host (from createRoom)
+  // IMPORTANT: First check sessionStorage as this is set by createRoom
   if (sessionStorage.getItem('isHost') === 'true') {
     return true;
   }
   
-  // Otherwise check if the roomId has our verification signature
+  // Fallback verification through URL (this is our new checksum approach)
   const urlParams = new URLSearchParams(window.location.search);
   const roomId = urlParams.get('roomId');
   
@@ -548,11 +548,19 @@ function isCurrentUserHost() {
     }
     const expectedVerification = (checksum % 36).toString(36);
     
-    return verificationChar === expectedVerification;
+    // If verification passes, update sessionStorage to ensure consistency
+    if (verificationChar === expectedVerification) {
+      sessionStorage.setItem('isHost', 'true');
+      return true;
+    }
   }
   
+  // If we got here, user is definitely not a host
+  sessionStorage.setItem('isHost', 'false');
   return false;
 }
+
+
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
   if (!container) return;
