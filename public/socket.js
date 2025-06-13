@@ -41,7 +41,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   lastKnownRoomState = {
     votesPerStory: {},
     votesRevealed: {},
-    deletedStoryIds[];  
+    deletedStoryIds: [],  
     tickets: [],
     userVotes: {}      // Track user's own votes by storyId
   };
