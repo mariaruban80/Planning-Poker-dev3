@@ -596,23 +596,34 @@ function setupPlanningCards() {
  * Set up guest mode restrictions
  */
 function setupGuestModeRestrictions() {
-  if (isGuestUser()) {
-    // Hide sidebar control buttons
-    const revealVotesBtn = document.getElementById('revealVotesBtn');
-    const resetVotesBtn = document.getElementById('resetVotesBtn');
-    if (revealVotesBtn) revealVotesBtn.classList.add('hide-for-guests');
-    if (resetVotesBtn) resetVotesBtn.classList.add('hide-for-guests');
-    
-    // Hide upload ticket button
-    const fileInputContainer = document.getElementById('fileInputContainer');
-    if (fileInputContainer) fileInputContainer.classList.add('hide-for-guests');
-    
-    // Hide add ticket button
-    const addTicketBtn = document.getElementById('addTicketBtn');
-    if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
-    
-    console.log('Guest mode activated - voting controls restricted');
-  }
+  // First check if user is a host or guest
+  const isHost = isCurrentUserHost();
+  console.log("Setting up permissions. User is host:", isHost);
+  
+  // Show or hide host elements
+  const hostElements = [
+    document.getElementById('revealVotesBtn'),
+    document.getElementById('resetVotesBtn'),
+    document.getElementById('fileInputContainer'),
+    document.getElementById('addTicketBtn')
+  ];
+  
+  hostElements.forEach(el => {
+    if (el) {
+      if (isHost) {
+        // Host sees the controls
+        el.classList.remove('hide-for-guests');
+      } else {
+        // Guest has controls hidden
+        el.classList.add('hide-for-guests');
+      }
+    }
+  });
+  
+  // Also update story card interaction permissions
+  setupStoryCardInteractions();
+  
+  console.log(`${isHost ? 'Host' : 'Guest'} mode activated - controls ${isHost ? 'visible' : 'restricted'}`);
 }
 
 /**
@@ -916,6 +927,7 @@ socket.on('storySelected', ({ storyIndex, storyId }) => {
           refreshVoteDisplay();
         }
       }, 500);
+      setupGuestModeRestrictions(); 
     });
   }
   
