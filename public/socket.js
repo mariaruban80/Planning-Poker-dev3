@@ -577,8 +577,8 @@ socket.on('connect_error', (error) => {
     // Also restore any additional user votes after a short delay
     // to ensure the UI is ready
     setTimeout(() => {
-        // console.log('[SOCKET] Skipped local vote restoration to prevent duplication.');
-    }, 600);
+         socket.emit('requestVotesByUsername', { userName: userName });
+    }, 700);
   });
 
   // Try to load saved state from session storage
