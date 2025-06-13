@@ -343,11 +343,7 @@ if (existingVote !== vote) {
 }
       
       // Broadcast to all other clients
-      socket.broadcast.to(roomId).emit('voteUpdate', {
-        userId: socket.id,
-        vote,
-        storyId
-      });
+     socket.broadcast.to(roomId).emit('voteUpdate', { userName, vote, storyId });
       
       console.log(`[SERVER] Restored vote for ${userName} on story ${storyId}: ${vote}`);
     }
@@ -799,11 +795,7 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
         socket.emit('restoreUserVote', { storyId, vote });
         
         // Tell everyone else
-        socket.broadcast.to(roomId).emit('voteUpdate', {
-          userId: socket.id,
-          vote,
-          storyId
-        });
+      socket.broadcast.to(roomId).emit('voteUpdate', { userName, vote, storyId });
       }
       
       // Clean up any duplicate votes one more time
@@ -936,11 +928,7 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
         socket.emit('restoreUserVote', { storyId, vote });
         
         // IMPORTANT: Also broadcast to all other users
-        socket.broadcast.to(roomId).emit('voteUpdate', {
-          userId: socket.id,
-          vote,
-          storyId
-        });
+       socket.broadcast.to(roomId).emit('voteUpdate', { userName, vote, storyId });
       }
       
       // Clean up any duplicate votes one more time
@@ -1163,11 +1151,7 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
             socket.emit('restoreUserVote', { storyId, vote });
             
             // Broadcast to others
-            socket.broadcast.to(roomId).emit('voteUpdate', {
-              userId: socket.id,
-              vote,
-              storyId
-            });
+          socket.broadcast.to(roomId).emit('voteUpdate', { userName, vote, storyId });
             
             console.log(`[SERVER] Restored username-based vote for ${userName} on story ${storyId}: ${vote}`);
           }
@@ -1183,11 +1167,7 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
               socket.emit('restoreUserVote', { storyId, vote: userVotes[storyId] });
               
               // Also broadcast this vote to everyone else
-              socket.broadcast.to(roomId).emit('voteUpdate', {
-                userId: socket.id,
-                vote: userVotes[storyId],
-                storyId
-              });
+          socket.broadcast.to(roomId).emit('voteUpdate', { userName, vote, storyId });
             }
           }
         }
@@ -1302,7 +1282,8 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
               console.log(`[SERVER] Stored vote for username ${userNameToUse} on story ${storyId}: ${vote}`);
         }
         // Broadcast to all clients about the specific vote
-        io.to(roomId).emit('voteUpdate', { userId: targetUserId, vote, storyId });
+     //   io.to(roomId).emit('voteUpdate', { userId: targetUserId, vote, storyId });
+   io.to(roomId).emit('voteUpdate', { userName, vote, storyId });
 
              // Broadcast updated vote stats to ensure correct counting, but only if needed
         if (removedOldVotes || isNewVote ) {
