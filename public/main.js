@@ -528,9 +528,31 @@ function isGuestUser() {
  * Determines if current user is the host
  */
 function isCurrentUserHost() {
-  return sessionStorage.getItem('isHost') === 'true';
+  // First check if sessionStorage says we're host (from createRoom)
+  if (sessionStorage.getItem('isHost') === 'true') {
+    return true;
+  }
+  
+  // Otherwise check if the roomId has our verification signature
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomId = urlParams.get('roomId');
+  
+  if (roomId && roomId.length > 6) {
+    const baseRoomId = roomId.slice(0, -1);  // Remove last character
+    const verificationChar = roomId.slice(-1); // Get last character
+    
+    // Calculate expected checksum
+    let checksum = 0;
+    for (let i = 0; i < baseRoomId.length; i++) {
+      checksum += baseRoomId.charCodeAt(i);
+    }
+    const expectedVerification = (checksum % 36).toString(36);
+    
+    return verificationChar === expectedVerification;
+  }
+  
+  return false;
 }
-
 function setupPlanningCards() {
   const container = document.getElementById('planningCards');
   if (!container) return;
