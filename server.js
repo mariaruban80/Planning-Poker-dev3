@@ -532,7 +532,15 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   // Send voting system
   socket.emit('votingSystemUpdate', { votingSystem: roomVotingSystems[roomId] || 'fibonacci' });
   
-  // STEP 5: BROADCAST UPDATES TO ALL CLIENTS
+  
+  // Final deduplication and update broadcast after all joins and restores
+  const changed = cleanupRoomVotes(roomId);
+  if (removedOldVotes || changed) {
+    console.log(`[JOIN] Broadcasting cleaned votes after join for ${userName}`);
+    io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
+  }
+
+// STEP 5: BROADCAST UPDATES TO ALL CLIENTS
   // Broadcast updated user list
   io.to(roomId).emit('userList', rooms[roomId].users);
   
