@@ -1,6 +1,7 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
+let socket = null;
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, getUserVotes } from './socket.js'; 
 
@@ -285,7 +286,7 @@ let pendingStoryIndex = null;
 let csvData = [];
 let currentStoryIndex = 0;
 let userVotes = {};
-let socket = null;
+
 let csvDataLoaded = false;
 let votesPerStory = {};     // Track votes for each story { storyIndex: { userId: vote, ... }, ... }
 let votesRevealed = {};     // Track which stories have revealed votes { storyIndex: boolean }
