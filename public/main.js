@@ -163,22 +163,6 @@ function loadDeletedStoriesFromStorage(roomId) {
   }
 }
 
-/**
- * Safely merge a vote for a story by replacing older votes with the same value.
- * This avoids duplicate votes when a user refreshes and gets a new socket ID.
- */
-socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
-  const name = userName || userId;
-  mergeVote(storyId, name, vote);
-
-  const currentId = getCurrentStoryId();
-  if (storyId === currentId) {
-    updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
-  }
-
-  refreshVoteDisplay();
-});
-
 
 function clearAllVoteVisuals() {
   const badges = document.querySelectorAll('.vote-badge');
@@ -286,7 +270,7 @@ let pendingStoryIndex = null;
 let csvData = [];
 let currentStoryIndex = 0;
 let userVotes = {};
-
+let socket = null;
 let csvDataLoaded = false;
 let votesPerStory = {};     // Track votes for each story { storyIndex: { userId: vote, ... }, ... }
 let votesRevealed = {};     // Track which stories have revealed votes { storyIndex: boolean }
@@ -600,19 +584,23 @@ function initializeApp(roomId) {
 
   // Setup heartbeat mechanism to prevent timeouts
   setupHeartbeat();
+  /**
+ * Safely merge a vote for a story by replacing older votes with the same value.
+ * This avoids duplicate votes when a user refreshes and gets a new socket ID.
+ */
+socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
+  const name = userName || userId;
+  mergeVote(storyId, name, vote);
 
-  socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
-    const name = userName || userId;
-    mergeVote(storyId, name, vote);
+  const currentId = getCurrentStoryId();
+  if (storyId === currentId) {
+    updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
+  }
 
-    const currentId = getCurrentStoryId();
-    if (storyId === currentId) {
-      updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
-    }
+  refreshVoteDisplay();
+});
 
-    refreshVoteDisplay();
-  });
-  
+ 
   socket.on('storyVotes', ({ storyId, votes }) => {
     // Don't process votes for deleted stories
     if (deletedStoryIds.has(storyId)) {
