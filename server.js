@@ -469,6 +469,10 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   rooms[roomId].users.push({ id: socket.id, name: userName });
   socket.join(roomId);
 
+  
+  // FULL cleanup before restoring votes (login fix)
+  cleanupRoomVotes(roomId);  // Ensure we wipe any socket ID duplicates before restoring
+
   // STEP 3: RESTORE USER VOTES FROM USERNAME-BASED STORAGE
   // This approach centralizes vote handling in one place
   if (rooms[roomId].userNameVotes && rooms[roomId].userNameVotes[userName]) {
@@ -534,8 +538,15 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   
   
   // Final deduplication and update broadcast after all joins and restores
-  const changed = cleanupRoomVotes(roomId);
-  if (removedOldVotes || changed) {
+  
+  // Final deduplication and update broadcast after all joins and restores
+  const cleanedVotes = cleanupRoomVotes(roomId);
+  const cleanedAgain = cleanupRoomVotes(roomId); // Double pass ensures old socket votes are flushed
+  if (removedOldVotes || cleanedVotes || cleanedAgain) {
+    console.log(`[JOIN] Broadcasting cleaned votes after join for ${userName}`);
+    io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
+  }
+
     console.log(`[JOIN] Broadcasting cleaned votes after join for ${userName}`);
     io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
   }
