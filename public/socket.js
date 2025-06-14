@@ -41,7 +41,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   lastKnownRoomState = {
     votesPerStory: {},
     votesRevealed: {},
-    deletedStoryIds: [],  
+    deletedStoryIds: [], // Using an array instead of a Set
     tickets: [],
     userVotes: {}      // Track user's own votes by storyId
   };
@@ -307,7 +307,7 @@ socket.on('connect_error', (error) => {
       if (selectedCard && socket && socket.connected) {
         const storyId = selectedCard.id; 
         if (storyId && !lastKnownRoomState.deletedStoryIds.includes(storyId)) {
-          console.log(`[SOCKET] Requesting votes for selected story: ${storyId}`);
+          console.log(`[SOCKET] Requesting votes for newly selected story: ${storyId}`);
           socket.emit('requestStoryVotes', { storyId });
         }
       }
@@ -386,6 +386,7 @@ socket.on('connect_error', (error) => {
     try {
       const votesData = JSON.stringify(lastKnownRoomState.userVotes);
       sessionStorage.setItem(`votes_${roomIdentifier}`, votesData);
+      console.log(`[SOCKET] Saved restored vote to session storage: ${storyId} = ${vote}`);
     } catch (err) {
       console.warn('[SOCKET] Could not save restored vote to sessionStorage:', err);
     }
@@ -426,10 +427,11 @@ socket.on('connect_error', (error) => {
     if (!lastKnownRoomState.deletedStoryIds.includes(storyId)) {
       lastKnownRoomState.deletedStoryIds.push(storyId);
       
-      // Save to session storage
+      // Save deleted story IDs to session storage
       try {
         const deletedData = JSON.stringify(lastKnownRoomState.deletedStoryIds);
         sessionStorage.setItem(`deleted_${roomIdentifier}`, deletedData);
+        console.log(`[SOCKET] Saved deleted story to session storage: ${storyId}`);
       } catch (err) {
         console.warn('[SOCKET] Could not save deleted story to sessionStorage:', err);
       }
@@ -450,19 +452,18 @@ socket.on('connect_error', (error) => {
     // Clear from last known state - ensure initialization
     if (!lastKnownRoomState.votesPerStory) lastKnownRoomState.votesPerStory = {};
     if (!lastKnownRoomState.votesRevealed) lastKnownRoomState.votesRevealed = {};
-    if (!lastKnownRoomState.userVotes) lastKnownRoomState.userVotes = {};
     
     lastKnownRoomState.votesPerStory[storyId] = {};
     lastKnownRoomState.votesRevealed[storyId] = false;
     
-    // Also clear from user votes
-    if (lastKnownRoomState.userVotes[storyId]) {
+    // Also clear from user's personal votes
+    if (lastKnownRoomState.userVotes && lastKnownRoomState.userVotes[storyId]) {
       delete lastKnownRoomState.userVotes[storyId];
       
       // Update sessionStorage
       try {
         const votesData = JSON.stringify(lastKnownRoomState.userVotes);
-        sessionStorage.setItem(`votes_${roomId}`, votesData);
+        sessionStorage.setItem(`votes_${roomIdentifier}`, votesData);
       } catch (err) {
         console.warn('[SOCKET] Could not update session storage after vote reset:', err);
       }
@@ -510,16 +511,15 @@ socket.on('connect_error', (error) => {
   });
   
   // Enhanced state sync handling
-socket.on('resyncState', (state) => {
+  socket.on('resyncState', (state) => {
     console.log('[SOCKET] Received full state resync from server');
-
-        const userName = userNameValue //<<==
+    
     // Initialize the state objects if they don't exist
     if (!lastKnownRoomState.votesPerStory) lastKnownRoomState.votesPerStory = {};
     if (!lastKnownRoomState.votesRevealed) lastKnownRoomState.votesRevealed = {};
     if (!lastKnownRoomState.deletedStoryIds) lastKnownRoomState.deletedStoryIds = [];
     if (!lastKnownRoomState.userVotes) lastKnownRoomState.userVotes = {};
-
+    
     // Update deleted story IDs first (so we can filter correctly)
     if (Array.isArray(state.deletedStoryIds)) {
         state.deletedStoryIds.forEach(id => {
@@ -527,7 +527,7 @@ socket.on('resyncState', (state) => {
                 lastKnownRoomState.deletedStoryIds.push(id);
             }
         });
-
+        
         // Save to session storage for persistence
         try {
             const deletedData = JSON.stringify(lastKnownRoomState.deletedStoryIds);
@@ -536,34 +536,34 @@ socket.on('resyncState', (state) => {
             console.warn('[SOCKET] Could not save deleted story IDs to sessionStorage:', err);
         }
     }
-
+    
     // Filter out any deleted tickets
     const filteredTickets = (state.tickets || []).filter(
         ticket => !lastKnownRoomState.deletedStoryIds.includes(ticket.id)
     );
-
+    
     // Store selected index for later use after tickets are processed
     const selectedIndex = state.selectedIndex;
-
+    
     // Now store the filtered state
-    lastKnownRoomState = {
+    lastKnownRoomState = { 
         ...lastKnownRoomState,
         tickets: filteredTickets,
         votesPerStory: state.votesPerStory || {},
         votesRevealed: state.votesRevealed || {},
         selectedIndex: selectedIndex
     };
-
+    
     // Forward to message handler
-    handleMessage({
-        type: 'resyncState',
+    handleMessage({ 
+        type: 'resyncState', 
         tickets: filteredTickets,  // Use filtered tickets
         votesPerStory: state.votesPerStory || {},
         votesRevealed: state.votesRevealed || {},
         deletedStoryIds: lastKnownRoomState.deletedStoryIds, // Use our complete list
         selectedIndex: selectedIndex
     });
-
+    
     // Apply story selection after a delay to ensure DOM is ready
     setTimeout(() => {
         if (typeof selectedIndex === 'number') {
@@ -574,12 +574,12 @@ socket.on('resyncState', (state) => {
             });
         }
     }, 500);
-
+    
     // Also restore any additional user votes after a short delay
     // to ensure the UI is ready
     setTimeout(() => {
-        socket.emit('requestVotesByUsername', { userName: userName });
-    }, 700);
+        // console.log('[SOCKET] Skipped local vote restoration to prevent duplication.');
+    }, 600);
   });
 
   // Try to load saved state from session storage
@@ -922,7 +922,7 @@ export function requestAllTickets() {
   if (socket) {
     console.log('[SOCKET] Requesting all tickets');
     socket.emit('requestAllTickets');
-      }
+  }
 }
 
 /**
