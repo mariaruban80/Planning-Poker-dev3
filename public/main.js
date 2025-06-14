@@ -2722,38 +2722,41 @@ function createVoteCardSpace(user, isCurrentUser) {
   voteBadge.textContent = '';
   voteCard.appendChild(voteBadge);
 
-  if (isCurrentUser) {
-    voteCard.addEventListener('dragover', (e) => e.preventDefault());
-    voteCard.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const vote = e.dataTransfer.getData('text/plain');
-      const storyId = getCurrentStoryId();
-      
-      // Skip for deleted stories
-      if (storyId && deletedStoryIds.has(storyId)) {
-        console.log(`[VOTE] Cannot cast vote for deleted story: ${storyId}`);
-        return;
-      }
-      
-      if (socket && vote && storyId) {
-        socket.emit('castVote', { vote, targetUserId: user.id, storyId });
-        
-        // Update local state
-        if (!votesPerStory[storyId]) {
-          votesPerStory[storyId] = {};
-        }
-        
-        votesPerStory[storyId][user.id] = vote;
-        updateVoteVisuals(user.id, votesRevealed[storyId] ? vote : '👍', true);
-      }
+if (isCurrentUser) {
+  voteCard.addEventListener('dragover', (e) => e.preventDefault());
+
+  voteCard.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const vote = e.dataTransfer.getData('text/plain');
+    const storyId = getCurrentStoryId();
+    const userName = sessionStorage.getItem('userName');
+
+    if (!userName || !vote || !storyId) return;
+
+    if (deletedStoryIds.has(storyId)) {
+      console.log(`[VOTE] Cannot cast vote for deleted story: ${storyId}`);
+      return;
+    }
+
+    // ✅ Instant local update for fast feedback
+    mergeVote(storyId, userName, vote);
+    refreshVoteDisplay();
+
+    // ✅ Server sync using the correct user identity
+    socket.emit('restoreUserVoteByUsername', {
+      storyId,
+      vote,
+      userName
     });
-  } else {
-    voteCard.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      voteCard.classList.add('drop-not-allowed');
-      setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
-    });
-  }
+  });
+} else {
+  voteCard.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    voteCard.classList.add('drop-not-allowed');
+    setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
+  });
+}
+
 
   const storyId = getCurrentStoryId();
   
