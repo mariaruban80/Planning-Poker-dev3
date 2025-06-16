@@ -2960,14 +2960,6 @@ function generateAvatarUrl(name) {
 }
 
 /**
- * Setup invite button
- */
-
-;
-}
-
-
-/**
  * Handle socket messages with improved state persistence
  */
 function handleSocketMessage(message) {
