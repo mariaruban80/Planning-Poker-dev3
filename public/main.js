@@ -129,7 +129,7 @@ function setupHeartbeat() {
       // Try to reinitialize if disconnected unexpectedly
       if (!reconnectingInProgress) {
         console.log('[SOCKET] Attempting to reinitialize connection...');
-        const roomId = getRoomIdFromURL();
+        const roomId = sessionStorage.getItem('roomId');
         if (roomId) {
           socket = initializeWebSocket(roomId, userName, handleSocketMessage);
         }
@@ -296,19 +296,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if we're waiting for a username (joining via invite)
   if (window.userNameReady === false) {
     console.log('[APP] Waiting for username before initializing app');
-    return; // Exit early, we'll initialize after username is provided
+    return;
   }
-  
-  // Normal initialization for users who already have a name
-  let roomId = getRoomIdFromURL();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  let roomId = urlParams.get('roomId');
+  const isHost = urlParams.get('host') === 'true';
+
   if (!roomId) {
     roomId = 'room-' + Math.floor(Math.random() * 10000);
   }
-  appendRoomIdToURL(roomId);
-  
-  // Load deleted stories from sessionStorage first
+
+  // Store in sessionStorage so we can access later without relying on the URL
+  sessionStorage.setItem('roomId', roomId);
+  sessionStorage.setItem('isHost', isHost.toString());
+
+  // Clean the URL (hide query parameters from the address bar)
+  const cleanURL = window.location.origin + window.location.pathname;
+  window.history.replaceState({}, document.title, cleanURL);
+
+  // Load deleted stories and initialize
   loadDeletedStoriesFromStorage(roomId);
-  
   initializeApp(roomId);
 });
 
@@ -520,8 +528,9 @@ function createFixedVoteDisplay(votes) {
  * Determines if current user is a guest
  */
 function isGuestUser() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
+//  const urlParams = new URLSearchParams(window.location.search);
+//  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
+    return sessionStorage.getItem('isHost') !== 'true';
 }
 
 /**
@@ -587,7 +596,7 @@ function setupGuestModeRestrictions() {
 
 /**
  * Extract room ID from URL parameters
- */
+ 
 function getRoomIdFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   const roomId = urlParams.get('roomId');
@@ -598,7 +607,7 @@ function getRoomIdFromURL() {
     // If no roomId in URL, generate a new one (fallback behavior)
     return 'room-' + Math.floor(Math.random() * 10000);
   }
-}
+}*/
 
 /**
  * Append room ID to URL if not already present
@@ -1399,7 +1408,7 @@ function deleteStory(storyId) {
   deletedStoryIds.add(storyId);
   
   // Save to session storage
-  const roomId = getRoomIdFromURL();
+  const roomId = sessionStorage.getItem('roomId');
   saveDeletedStoriesToStorage(roomId);
   
   // Get story index before removal (for selection adjustment)
@@ -3139,7 +3148,7 @@ function handleSocketMessage(message) {
         });
         
         // Save to session storage
-        const roomId = getRoomIdFromURL();
+        const roomId = sessionStorage.getItem('roomId');
         saveDeletedStoriesToStorage(roomId);
       }
       
@@ -3279,7 +3288,7 @@ function handleSocketMessage(message) {
         deletedStoryIds.add(message.storyId);
         
         // Save to session storage
-        const roomId = getRoomIdFromURL();
+        const roomId = sessionStorage.getItem('roomId');
         saveDeletedStoriesToStorage(roomId);
         
         // Get the story element
