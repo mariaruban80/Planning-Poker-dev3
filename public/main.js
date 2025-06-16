@@ -531,10 +531,7 @@ function isGuestUser() {
   return sessionStorage.getItem('isHost') !== 'true';
 }
 
-/**
- * Extract room ID from URL parameters
- */
-}
+
 
 /**
  * Append room ID to URL if not already present
