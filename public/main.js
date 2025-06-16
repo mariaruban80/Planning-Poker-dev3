@@ -2966,25 +2966,7 @@ function generateAvatarUrl(name) {
  * Setup invite button
  */
 
-function setupInviteButton() {
-  const inviteButton = document.getElementById('inviteButton');
-  if (!inviteButton) return;
-
-  inviteButton.onclick = () => {
-    if (typeof window.showInviteModalCustom === 'function') {
-      window.showInviteModalCustom();
-    } else if (typeof showInviteModalCustom === 'function') {
-      showInviteModalCustom();
-    } else {
-      const roomId = sessionStorage.getItem('roomId');
-      if (!roomId || roomId === 'null') {
-        alert('Room ID is not available. Please refresh the page or try again.');
-        return;
-      }
-      const guestUrl = `${window.location.origin}${window.location.pathname}?roomId=${roomId}`;
-      alert(`Share this invite link: ${guestUrl}`);
-    }
-  };
+;
 }
 
 
@@ -3499,3 +3481,26 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
+
+
+function setupInviteButton() {
+  const inviteButton = document.getElementById('inviteButton');
+  if (!inviteButton) return;
+
+  inviteButton.onclick = () => {
+    if (typeof window.showInviteModalCustom === 'function') {
+      window.showInviteModalCustom();
+    } else if (typeof showInviteModalCustom === 'function') {
+      showInviteModalCustom();
+    } else {
+      const roomId = sessionStorage.getItem('roomId');
+      if (!roomId || roomId === 'null') {
+        alert('Room ID is not available. Please refresh the page or try again.');
+        return;
+      }
+      const guestUrl = `${window.location.origin}${window.location.pathname}?roomId=${roomId}`;
+      alert(`Share this invite link: ${guestUrl}`);
+    }
+  };
+}
