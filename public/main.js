@@ -3043,24 +3043,25 @@ function setupInviteButton() {
   if (!inviteButton) return;
 
   inviteButton.onclick = () => {
-    // Check if the custom function exists in window scope
     if (typeof window.showInviteModalCustom === 'function') {
       window.showInviteModalCustom();
     } else if (typeof showInviteModalCustom === 'function') {
       showInviteModalCustom();
     } else {
-      // Fallback if function isn't available
-      const currentUrl = new URL(window.location.href);
-      const params = new URLSearchParams(currentUrl.search);
-      const roomId = params.get('roomId') || getRoomIdFromURL();
-      
-      // Create guest URL (remove any host parameter)
-      const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
-      
+      const roomId = sessionStorage.getItem('roomId');
+
+      if (!roomId) {
+        alert('Room ID not available.');
+        return;
+      }
+
+      // Generate a guest link (no host=true in the URL)
+      const guestUrl = `${window.location.origin}${window.location.pathname}?roomId=${roomId}`;
       alert(`Share this invite link: ${guestUrl}`);
     }
   };
 }
+
 
 /**
  * Setup vote cards drag functionality
