@@ -1,29 +1,3 @@
-
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.userNameReady === false) {
-    console.log('[APP] Waiting for username before initializing app');
-    return;
-  }
-
-  const urlParams = new URLSearchParams(window.location.search);
-  let roomId = urlParams.get('roomId');
-  const isHost = urlParams.get('host') === 'true';
-
-  if (!roomId) {
-    roomId = 'room-' + Math.floor(Math.random() * 10000);
-  }
-
-  sessionStorage.setItem('roomId', roomId);
-  sessionStorage.setItem('isHost', isHost.toString());
-
-  const cleanURL = window.location.origin + window.location.pathname;
-  window.history.replaceState({}, document.title, cleanURL);
-
-  loadDeletedStoriesFromStorage(roomId);
-  initializeApp(roomId);
-});
-
-
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
@@ -155,7 +129,7 @@ function setupHeartbeat() {
       // Try to reinitialize if disconnected unexpectedly
       if (!reconnectingInProgress) {
         console.log('[SOCKET] Attempting to reinitialize connection...');
-        const roomId = sessionStorage.getItem('roomId');
+        const roomId = getRoomIdFromURL();
         if (roomId) {
           socket = initializeWebSocket(roomId, userName, handleSocketMessage);
         }
@@ -318,7 +292,25 @@ function saveDeletedStoriesToStorage(roomId) {
 }
 
 // Modify the existing DOMContentLoaded event handler to check if username is ready
-
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if we're waiting for a username (joining via invite)
+  if (window.userNameReady === false) {
+    console.log('[APP] Waiting for username before initializing app');
+    return; // Exit early, we'll initialize after username is provided
+  }
+  
+  // Normal initialization for users who already have a name
+  let roomId = getRoomIdFromURL();
+  if (!roomId) {
+    roomId = 'room-' + Math.floor(Math.random() * 10000);
+  }
+  appendRoomIdToURL(roomId);
+  
+  // Load deleted stories from sessionStorage first
+  loadDeletedStoriesFromStorage(roomId);
+  
+  initializeApp(roomId);
+});
 
 // Global state variables
 let pendingStoryIndex = null;
@@ -528,22 +520,18 @@ function createFixedVoteDisplay(votes) {
  * Determines if current user is a guest
  */
 function isGuestUser() {
-  return sessionStorage.getItem('isHost') !== 'true';
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
 }
-
-
 
 /**
- * Append room ID to URL if not already present
+ * Determines if current user is the host
  */
-function appendRoomIdToURL(roomId) {
-  // Only modify URL if roomId isn't already in the URL
-  if (!window.location.href.includes('roomId=')) {
-    const newUrl = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'roomId=' + roomId;
-    window.history.pushState({ path: newUrl }, '', newUrl);
-  }
+function isCurrentUserHost() {
+  return sessionStorage.getItem('isHost') === 'true';
 }
-  function setupPlanningCards() {
+
+function setupPlanningCards() {
   const container = document.getElementById('planningCards');
   if (!container) return;
 
@@ -570,8 +558,57 @@ function appendRoomIdToURL(roomId) {
     container.appendChild(card);
   });
 
-  // Re-enable drag/drop behavior
+  // ✅ Enable drag after cards are added
   setupVoteCardsDrag();
+}
+
+/**
+ * Set up guest mode restrictions
+ */
+function setupGuestModeRestrictions() {
+  if (isGuestUser()) {
+    // Hide sidebar control buttons
+    const revealVotesBtn = document.getElementById('revealVotesBtn');
+    const resetVotesBtn = document.getElementById('resetVotesBtn');
+    if (revealVotesBtn) revealVotesBtn.classList.add('hide-for-guests');
+    if (resetVotesBtn) resetVotesBtn.classList.add('hide-for-guests');
+    
+    // Hide upload ticket button
+    const fileInputContainer = document.getElementById('fileInputContainer');
+    if (fileInputContainer) fileInputContainer.classList.add('hide-for-guests');
+    
+    // Hide add ticket button
+    const addTicketBtn = document.getElementById('addTicketBtn');
+    if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
+    
+    console.log('Guest mode activated - voting controls restricted');
+  }
+}
+
+/**
+ * Extract room ID from URL parameters
+ */
+function getRoomIdFromURL() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomId = urlParams.get('roomId');
+  
+  if (roomId) {
+    return roomId;
+  } else {
+    // If no roomId in URL, generate a new one (fallback behavior)
+    return 'room-' + Math.floor(Math.random() * 10000);
+  }
+}
+
+/**
+ * Append room ID to URL if not already present
+ */
+function appendRoomIdToURL(roomId) {
+  // Only modify URL if roomId isn't already in the URL
+  if (!window.location.href.includes('roomId=')) {
+    const newUrl = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'roomId=' + roomId;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+  }
 }
 
 /**
@@ -1362,7 +1399,7 @@ function deleteStory(storyId) {
   deletedStoryIds.add(storyId);
   
   // Save to session storage
-  const roomId = sessionStorage.getItem('roomId');
+  const roomId = getRoomIdFromURL();
   saveDeletedStoriesToStorage(roomId);
   
   // Get story index before removal (for selection adjustment)
@@ -2895,8 +2932,6 @@ function setupStoryNavigation() {
     return allCards.filter(card => !deletedStoryIds.has(card.id));
   }
 
-
-
   function getSelectedCardIndex() {
     const cards = getOrderedCards();
     const selected = document.querySelector('.story-card.selected');
@@ -2992,6 +3027,71 @@ function generateAvatarUrl(name) {
 }
 
 /**
+ * Setup invite button
+ */
+function setupInviteButton() {
+  const inviteButton = document.getElementById('inviteButton');
+  if (!inviteButton) return;
+
+  inviteButton.onclick = () => {
+    // Check if the custom function exists in window scope
+    if (typeof window.showInviteModalCustom === 'function') {
+      window.showInviteModalCustom();
+    } else if (typeof showInviteModalCustom === 'function') {
+      showInviteModalCustom();
+    } else {
+      // Fallback if function isn't available
+      const currentUrl = new URL(window.location.href);
+      const params = new URLSearchParams(currentUrl.search);
+      const roomId = params.get('roomId') || getRoomIdFromURL();
+      
+      // Create guest URL (remove any host parameter)
+      const guestUrl = `${currentUrl.origin}${currentUrl.pathname}?roomId=${roomId}`;
+      
+      alert(`Share this invite link: ${guestUrl}`);
+    }
+  };
+}
+
+/**
+ * Setup vote cards drag functionality
+ */
+function setupVoteCardsDrag() {
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', card.textContent.trim());
+    });
+  });
+}
+
+function triggerGlobalEmojiBurst() {
+  const emojis = ['😀', '✨', '😆', '😝', '😄', '😍'];
+  const container = document.body;
+
+  for (let i = 0; i < 20; i++) {
+    const burst = document.createElement('div');
+    burst.className = 'global-emoji-burst';
+    burst.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+    // Random position on screen
+    burst.style.left = `${Math.random() * 100}vw`;
+    burst.style.top = `${Math.random() * 100}vh`;
+
+    container.appendChild(burst);
+
+    // Trigger animation
+    setTimeout(() => {
+      burst.classList.add('burst-go');
+    }, 10);
+
+    // Remove after animation
+    setTimeout(() => {
+      burst.remove();
+    }, 1200);
+  }
+}
+
+/**
  * Handle socket messages with improved state persistence
  */
 function handleSocketMessage(message) {
@@ -3039,7 +3139,7 @@ function handleSocketMessage(message) {
         });
         
         // Save to session storage
-        const roomId = sessionStorage.getItem('roomId');
+        const roomId = getRoomIdFromURL();
         saveDeletedStoriesToStorage(roomId);
       }
       
@@ -3179,7 +3279,7 @@ function handleSocketMessage(message) {
         deletedStoryIds.add(message.storyId);
         
         // Save to session storage
-        const roomId = sessionStorage.getItem('roomId');
+        const roomId = getRoomIdFromURL();
         saveDeletedStoriesToStorage(roomId);
         
         // Get the story element
@@ -3489,7 +3589,18 @@ function handleSocketMessage(message) {
 }
 
 // Initialize on page load
-
+document.addEventListener('DOMContentLoaded', () => {
+  let roomId = getRoomIdFromURL();
+  if (!roomId) {
+    roomId = 'room-' + Math.floor(Math.random() * 10000);
+  }
+  appendRoomIdToURL(roomId);
+  
+  // Load deleted stories from storage first
+  loadDeletedStoriesFromStorage(roomId);
+  
+  initializeApp(roomId);
+});
 
 // Apply CSS to hide elements until initialized
 const styleExtra = document.createElement('style');
@@ -3502,26 +3613,3 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
-
-
-
-function setupInviteButton() {
-  const inviteButton = document.getElementById('inviteButton');
-  if (!inviteButton) return;
-
-  inviteButton.onclick = () => {
-    if (typeof window.showInviteModalCustom === 'function') {
-      window.showInviteModalCustom();
-    } else if (typeof showInviteModalCustom === 'function') {
-      showInviteModalCustom();
-    } else {
-      const roomId = sessionStorage.getItem('roomId');
-      if (!roomId || roomId === 'null') {
-        alert('Room ID is not available. Please refresh the page or try again.');
-        return;
-      }
-      const guestUrl = `${window.location.origin}${window.location.pathname}?roomId=${roomId}`;
-      alert(`Share this invite link: ${guestUrl}`);
-    }
-  };
-}
