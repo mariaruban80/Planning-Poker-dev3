@@ -105,17 +105,17 @@ window.initializeSocketWithName = function(roomId, name) {
   addNewLayoutStyles();
   
   // Setup heartbeat to prevent idle timeouts
-  setupHeartbeat();
+//  setupHeartbeat();
 };
 
 /**
  * Set up heartbeat mechanism to prevent connection timeouts
- */
+ 
 function setupHeartbeat() {
   // Clear any existing heartbeat interval
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
-  }
+  }*/
   
   // Send heartbeat every 20 seconds to keep the connection alive
   heartbeatInterval = setInterval(() => {
@@ -630,7 +630,7 @@ function initializeApp(roomId) {
   }
 
   // Setup heartbeat mechanism to prevent timeouts
-  setupHeartbeat();
+//  setupHeartbeat();
 
   socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
     const name = userName || userId;
