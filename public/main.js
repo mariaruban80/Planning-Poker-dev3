@@ -115,7 +115,7 @@ function setupHeartbeat() {
   // Clear any existing heartbeat interval
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
-  }*/
+  }
   
   // Send heartbeat every 20 seconds to keep the connection alive
   heartbeatInterval = setInterval(() => {
@@ -141,7 +141,7 @@ function setupHeartbeat() {
   window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   });
-}
+}*/
 
 /**
  * Load deleted story IDs from sessionStorage
