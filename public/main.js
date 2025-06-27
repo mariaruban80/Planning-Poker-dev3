@@ -198,6 +198,7 @@ function clearAllVoteVisuals() {
 }
 function refreshVoteDisplay() {
   try {
+    // Clear all previous visual votes
     const badges = document.querySelectorAll('.vote-badge');
     badges.forEach(badge => {
       badge.textContent = '';
@@ -210,35 +211,30 @@ function refreshVoteDisplay() {
       space.classList.remove('has-vote');
     });
 
-    const activeUsers = new Map();
-    document.querySelectorAll('.avatar-container').forEach(container => {
-      const userId = container.getAttribute('data-user-id');
-      const userName = container.querySelector('.user-name')?.textContent;
-      if (userId && userName) {
-        activeUsers.set(userName, userId);
-      }
+    const avatars = document.querySelectorAll('.avatar-container');
+    avatars.forEach(container => {
+      container.classList.remove('has-voted');
+      const avatar = container.querySelector('.avatar-circle');
+      if (avatar) avatar.style.backgroundColor = '';
     });
 
-    const processedUsernames = new Set();
     const currentVotes = window.currentVotesPerStory || {};
     const storyId = window.currentStoryId;
-
     if (!storyId || !currentVotes[storyId]) return;
 
     const votes = currentVotes[storyId];
 
-    for (const [socketId, vote] of Object.entries(votes)) {
-      const userName = window.userMap?.[socketId] || socketId;
-      if (processedUsernames.has(userName)) continue;
-      processedUsernames.add(userName);
-
-      const resolvedSocketId = activeUsers.get(userName) || socketId;
-      updateVoteVisuals(resolvedSocketId, vote, true);
+    for (const [userId, vote] of Object.entries(votes)) {
+      const container = document.querySelector(`.avatar-container[data-user-id="${userId}"]`);
+      if (container) {
+        updateVoteVisuals(userId, vote, !votesRevealed[storyId]);
+      }
     }
   } catch (error) {
     console.error('[VOTE] Error in refreshVoteDisplay:', error);
   }
 }
+
 
 
 
@@ -2785,39 +2781,35 @@ function createVoteCardSpace(user, isCurrentUser) {
 /**
  * Update vote visuals for a user
  */
-function updateVoteVisuals(userId, vote, hasVoted = true) {
-  const storyId = window.currentStoryId;
-  if (!storyId || vote === undefined || vote === null) return;
+function updateVoteVisuals(userId, vote, showThumb = false) {
+  const container = document.querySelector(`.avatar-container[data-user-id="${userId}"]`);
+  if (!container) {
+    console.warn(`[VOTE] No avatar container found for userId ${userId}`);
+    return;
+  }
 
-  const isRevealed = window.revealedStories?.[storyId] || false;
-  const displayValue = isRevealed ? vote : '👍';
+  const badge = container.querySelector('.vote-badge');
+  const avatar = container.querySelector('.avatar-circle');
 
-  // Sidebar badge
-  const badge = document.querySelector(`.vote-badge[data-user-id="${userId}"]`);
   if (badge) {
-    badge.textContent = displayValue;
-    badge.setAttribute('title', vote.toString());
+    badge.textContent = '';
+    badge.removeAttribute('title');
+    badge.innerHTML = showThumb ? '👍' : vote;
+    badge.setAttribute('title', showThumb ? 'Voted' : `Voted: ${vote}`);
   }
 
-  // Card space
-  const cardSpace = document.querySelector(`.vote-card-space[data-user-id="${userId}"]`);
-  if (cardSpace) {
-    cardSpace.innerHTML = `<div class="vote-card">${displayValue}</div>`;
-    cardSpace.classList.add('has-vote');
+  if (container && avatar) {
+    container.classList.add('has-voted');
+    avatar.style.backgroundColor = '#c1e1c1';
   }
 
-  // Avatar vote (for overlay thumbs-up)
-  const avatar = document.querySelector(`.avatar-container[data-user-id="${userId}"]`);
-  if (avatar) {
-    let existing = avatar.querySelector('.vote-indicator');
-    if (!existing) {
-      existing = document.createElement('div');
-      existing.className = 'vote-indicator';
-      avatar.appendChild(existing);
-    }
-    existing.innerHTML = displayValue;
+  // If not showing actual vote yet, apply thumbs up
+  if (showThumb && badge) {
+    badge.style.fontSize = '20px';
+    badge.style.textAlign = 'center';
   }
 }
+
 
 
 
