@@ -2473,15 +2473,20 @@ function resetOrRestoreVotes(storyId) {
  * @param {Object} votes - Map of user IDs to vote values
  * @param {boolean} hideValues - Whether to hide actual vote values and show thumbs up
  */
+
 function applyVotesToUI(votes, hideValues) {
-  console.log('[DEBUG] applyVotesToUI called with:', 
-    { votes: JSON.stringify(votes), hideValues });
-  
-  Object.entries(votes).forEach(([userId, vote]) => {
-    console.log(`[DEBUG] Updating vote for ${userId}: ${hideValues ? '👍' : vote}`);
-    updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
-  });
-}
+  console.log('[DEBUG] applyVotesToUI called with:', 
+    { votes: JSON.stringify(votes), hideValues });
+
+  // ✅ Clear previous vote visuals
+  resetAllVoteVisuals();
+
+  Object.entries(votes).forEach(([userId, vote]) => {
+    if (vote !== undefined && vote !== null && vote !== '') {
+      updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
+    }
+  });
+
 
 /**
  * Reset all vote visuals
