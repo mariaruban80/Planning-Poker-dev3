@@ -198,7 +198,6 @@ function clearAllVoteVisuals() {
 }
 function refreshVoteDisplay() {
   try {
-    // Clear all vote visuals
     const badges = document.querySelectorAll('.vote-badge');
     badges.forEach(badge => {
       badge.textContent = '';
@@ -211,10 +210,6 @@ function refreshVoteDisplay() {
       space.classList.remove('has-vote');
     });
 
-    // Track processed usernames to avoid duplicates
-    const processedUsernames = new Set();
-
-    // Get all currently active users with their socket IDs
     const activeUsers = new Map();
     document.querySelectorAll('.avatar-container').forEach(container => {
       const userId = container.getAttribute('data-user-id');
@@ -224,32 +219,26 @@ function refreshVoteDisplay() {
       }
     });
 
-    const currentStoryId = window.currentStoryId;
-    const votes = window.currentVotesPerStory?.[currentStoryId] || {};
+    const processedUsernames = new Set();
+    const currentVotes = window.currentVotesPerStory || {};
+    const storyId = window.currentStoryId;
 
-    const userVotes = {};
+    if (!storyId || !currentVotes[storyId]) return;
+
+    const votes = currentVotes[storyId];
+
     for (const [socketId, vote] of Object.entries(votes)) {
-      const name = userMap?.[socketId] || socketId;
-      userVotes[name] = { socketId, vote };
+      const userName = window.userMap?.[socketId] || socketId;
+      if (processedUsernames.has(userName)) continue;
+      processedUsernames.add(userName);
+
+      const resolvedSocketId = activeUsers.get(userName) || socketId;
+      updateVoteVisuals(resolvedSocketId, vote, true);
     }
-
-    for (const [username, data] of Object.entries(userVotes)) {
-      const key = `${currentStoryId}_${username}`;
-      if (processedUsernames.has(key)) continue;
-
-      processedUsernames.add(key);
-
-      const activeSocketId = activeUsers.get(username);
-      const socketIdToUse = activeSocketId || data.socketId;
-
-      updateVoteVisuals(socketIdToUse, data.vote, true);
-    }
-
   } catch (error) {
     console.error('[VOTE] Error in refreshVoteDisplay:', error);
   }
 }
-
 
 
 
@@ -2796,98 +2785,39 @@ function createVoteCardSpace(user, isCurrentUser) {
 /**
  * Update vote visuals for a user
  */
-function updateVoteVisuals(userId, vote, hasVoted = false) {
-  console.log(`[DEBUG] updateVoteVisuals: userId=${userId}, vote=${vote}, hasVoted=${hasVoted}`);
-  
-  const storyId = getCurrentStoryId();
-  
-  // Skip for deleted stories or when no story is selected
-  if (!storyId || deletedStoryIds.has(storyId)) {
-    console.log('[VOTE] Not updating vote visuals for deleted story');
-    return;
+function updateVoteVisuals(userId, vote, hasVoted = true) {
+  const storyId = window.currentStoryId;
+  if (!storyId || vote === undefined || vote === null) return;
+
+  const isRevealed = window.revealedStories?.[storyId] || false;
+  const displayValue = isRevealed ? vote : '👍';
+
+  // Sidebar badge
+  const badge = document.querySelector(`.vote-badge[data-user-id="${userId}"]`);
+  if (badge) {
+    badge.textContent = displayValue;
+    badge.setAttribute('title', vote.toString());
   }
 
-  const isRevealed = votesRevealed[storyId] === true;
-  const displayVote = isRevealed ? vote : '👍';
-
-  console.log(`[DEBUG] Story ${storyId} revealed state:`, isRevealed);
-  console.log(`[DEBUG] Will display: ${displayVote}`);
-
-  // Multiple selector attempts for better reliability
-  // Try direct user ID first
-  let voteSpace = document.querySelector(`#vote-space-${userId}`);
-  let sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
-  let avatarContainer = document.querySelector(`#user-circle-${userId}`);
-  
-  // If not found by socket ID, try username lookup
-  if (!voteSpace || !sidebarBadge) {
-    const userName = window.userMap?.[userId] || userId;
-    
-    // Try to find elements by username-based attributes
-    const userElements = document.querySelectorAll(`.user-name`);
-    userElements.forEach(el => {
-      if (el.textContent === userName) {
-        // Found element with matching username
-        const container = el.closest('.avatar-container');
-        if (container) {
-          avatarContainer = container;
-          const userId = container.getAttribute('data-user-id');
-          if (userId) {
-            voteSpace = document.querySelector(`#vote-space-${userId}`);
-            sidebarBadge = document.querySelector(`#user-${userId} .vote-badge`);
-          }
-        }
-      }
-    });
+  // Card space
+  const cardSpace = document.querySelector(`.vote-card-space[data-user-id="${userId}"]`);
+  if (cardSpace) {
+    cardSpace.innerHTML = `<div class="vote-card">${displayValue}</div>`;
+    cardSpace.classList.add('has-vote');
   }
 
-  // Update sidebar badge if found
-  if (sidebarBadge) {
-    if (hasVoted) {
-      sidebarBadge.textContent = displayVote;
-      sidebarBadge.style.color = '#673ab7';
-      sidebarBadge.style.opacity = '1';
-    } else {
-      sidebarBadge.textContent = '';
+  // Avatar vote (for overlay thumbs-up)
+  const avatar = document.querySelector(`.avatar-container[data-user-id="${userId}"]`);
+  if (avatar) {
+    let existing = avatar.querySelector('.vote-indicator');
+    if (!existing) {
+      existing = document.createElement('div');
+      existing.className = 'vote-indicator';
+      avatar.appendChild(existing);
     }
-  } else {
-    console.log(`[DEBUG] Could not find sidebar badge for ${userId}`);
-  }
-
-  // Update vote card space if found
-  if (voteSpace) {
-    const voteBadge = voteSpace.querySelector('.vote-badge');
-    if (voteBadge) {
-      if (hasVoted) {
-        voteBadge.textContent = displayVote;
-        voteBadge.style.color = '#673ab7';
-        voteBadge.style.opacity = '1';
-      } else {
-        voteBadge.textContent = '';
-      }
-    }
-
-    if (hasVoted) {
-      voteSpace.classList.add('has-vote');
-    } else {
-      voteSpace.classList.remove('has-vote');
-    }
-  } else {
-    console.log(`[DEBUG] Could not find vote space for ${userId}`);
-  }
-
-  // Update avatar styling
-  if (hasVoted && avatarContainer) {
-    avatarContainer.classList.add('has-voted');
-    const avatar = avatarContainer.querySelector('.avatar-circle');
-    if (avatar) {
-      avatar.style.backgroundColor = '#c1e1c1'; // Light green
-    }
-  } else if (!avatarContainer) {
-    console.log(`[DEBUG] Could not find avatar container for ${userId}`);
+    existing.innerHTML = displayValue;
   }
 }
-
 
 
 
