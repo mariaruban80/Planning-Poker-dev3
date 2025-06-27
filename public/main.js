@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     roomId = 'room-' + Math.floor(Math.random() * 10000);
   }
   appendRoomIdToURL(roomId);
-  
+    window.history.replaceState({}, document.title, window.location.pathname);
   // Load deleted stories from sessionStorage first
   loadDeletedStoriesFromStorage(roomId);
   
