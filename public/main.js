@@ -213,7 +213,7 @@ function refreshVoteDisplay() {
 
     // Track processed usernames to avoid duplicates
     const processedUsernames = new Set();
-    
+
     // Get all currently active users with their socket IDs
     const activeUsers = new Map();
     document.querySelectorAll('.avatar-container').forEach(container => {
@@ -224,39 +224,32 @@ function refreshVoteDisplay() {
       }
     });
 
-    // Process votes for the current story
-    const currentVotes = window.currentVotesPerStory || {};
-    for (const [storyId, votes] of Object.entries(currentVotes)) {
-      // Map username → vote
-      const userVotes = {};
-      
-      // Group votes by username
-      for (const [socketId, vote] of Object.entries(votes)) {
-        const name = userMap?.[socketId] || socketId;
-        userVotes[name] = { socketId, vote };
-      }
-      
-      // Apply one vote per username, preferring active socket IDs
-      for (const [username, data] of Object.entries(userVotes)) {
-        // Skip if already processed this username for this story
-        if (processedUsernames.has(`${storyId}_${username}`)) {
-          continue;
-        }
-        
-        processedUsernames.add(`${storyId}_${username}`);
-        
-        // Get the active socket ID for this username if available
-        const activeSocketId = activeUsers.get(username);
-        const socketIdToUse = activeSocketId || data.socketId;
-        
-        // Update the visuals for this user
-        updateVoteVisuals(socketIdToUse, data.vote, true);
-      }
+    const currentStoryId = window.currentStoryId;
+    const votes = window.currentVotesPerStory?.[currentStoryId] || {};
+
+    const userVotes = {};
+    for (const [socketId, vote] of Object.entries(votes)) {
+      const name = userMap?.[socketId] || socketId;
+      userVotes[name] = { socketId, vote };
     }
+
+    for (const [username, data] of Object.entries(userVotes)) {
+      const key = `${currentStoryId}_${username}`;
+      if (processedUsernames.has(key)) continue;
+
+      processedUsernames.add(key);
+
+      const activeSocketId = activeUsers.get(username);
+      const socketIdToUse = activeSocketId || data.socketId;
+
+      updateVoteVisuals(socketIdToUse, data.vote, true);
+    }
+
   } catch (error) {
     console.error('[VOTE] Error in refreshVoteDisplay:', error);
   }
 }
+
 
 
 
@@ -2474,19 +2467,19 @@ function resetOrRestoreVotes(storyId) {
  * @param {boolean} hideValues - Whether to hide actual vote values and show thumbs up
  */
 
-function applyVotesToUI(votes, hideValues) {
-  console.log('[DEBUG] applyVotesToUI called with:', 
-    { votes: JSON.stringify(votes), hideValues });
+function applyVotesToUI(votes, showThumbsUp = false) {
+  const processedUsers = new Set();
+  for (const [userId, vote] of Object.entries(votes)) {
+    const name = userMap?.[userId] || userId;
 
-  // ✅ Clear previous vote visuals
-  resetAllVoteVisuals();
+    if (processedUsers.has(name)) continue; // ✅ prevent duplicates
 
-  Object.entries(votes).forEach(([userId, vote]) => {
-    if (vote !== undefined && vote !== null && vote !== '') {
-      updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
-    }
-  });
+    const displayValue = showThumbsUp ? '👍' : vote;
+    updateVoteVisuals(userId, displayValue, true);
+    processedUsers.add(name);
+  }
 }
+
 
 /**
  * Reset all vote visuals
