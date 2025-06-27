@@ -574,14 +574,20 @@ function setupGuestModeRestrictions() {
 function getRoomIdFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   const roomId = urlParams.get('roomId');
-  
-  if (roomId) {
-    return roomId;
+  const isHost = urlParams.get('host') === 'true';
+
+  // ✅ Store host status in sessionStorage
+  if (isHost) {
+    sessionStorage.setItem('isHost', 'true');
   } else {
-    // If no roomId in URL, generate a new one (fallback behavior)
-    return 'room-' + Math.floor(Math.random() * 10000);
+    sessionStorage.setItem('isHost', 'false');
   }
+
+  // Fallback: generate a room if not present
+  return roomId || 'room-' + Math.floor(Math.random() * 10000);
 }
+
+
 
 /**
  * Append room ID to URL if not already present
