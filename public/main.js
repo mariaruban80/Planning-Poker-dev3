@@ -2486,7 +2486,7 @@ function applyVotesToUI(votes, hideValues) {
       updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
     }
   });
-
+}
 
 /**
  * Reset all vote visuals
