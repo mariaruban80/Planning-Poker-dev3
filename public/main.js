@@ -808,7 +808,7 @@ console.log('[RESTORE] Skipped manual session restoration — server handles vot
 // Improve the storySelected event handler
 socket.on('storySelected', ({ storyIndex, storyId }) => {
   console.log('[SOCKET] storySelected received:', storyIndex, storyId);
-  
+  clearAllVoteVisuals();
   // If storyId is provided directly, use it
   if (storyId) {
     // Select the story
