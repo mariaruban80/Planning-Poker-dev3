@@ -276,13 +276,6 @@ function saveDeletedStoriesToStorage(roomId) {
 
 // Modify the existing DOMContentLoaded event handler to check if username is ready
 document.addEventListener('DOMContentLoaded', () => {
-  // Handle host status from hash FIRST
-  if (window.location.hash === '#host') {
-    sessionStorage.setItem('isHost', 'true');
-    // Clean the hash from URL
-    history.replaceState(null, null, window.location.pathname + window.location.search);
-  }
-  
   // Check if we're waiting for a username (joining via invite)
   if (window.userNameReady === false) {
     console.log('[APP] Waiting for username before initializing app');
@@ -295,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     roomId = 'room-' + Math.floor(Math.random() * 10000);
   }
   appendRoomIdToURL(roomId);
-  
+  //  window.history.replaceState({}, document.title, window.location.pathname);
   // Load deleted stories from sessionStorage first
   loadDeletedStoriesFromStorage(roomId);
   
@@ -555,17 +548,8 @@ function setupPlanningCards() {
 /**
  * Set up guest mode restrictions
  */
-/**
- * Set up guest mode restrictions
- */
 function setupGuestModeRestrictions() {
-  const isHost = isCurrentUserHost();
-  console.log('[DEBUG] setupGuestModeRestrictions - isHost:', isHost);
-  console.log('[DEBUG] sessionStorage.isHost:', sessionStorage.getItem('isHost'));
-  
-  if (!isHost) {
-    console.log('Guest mode activated - voting controls restricted');
-    
+  if (isGuestUser()) {
     // Hide sidebar control buttons
     const revealVotesBtn = document.getElementById('revealVotesBtn');
     const resetVotesBtn = document.getElementById('resetVotesBtn');
@@ -579,19 +563,8 @@ function setupGuestModeRestrictions() {
     // Hide add ticket button
     const addTicketBtn = document.getElementById('addTicketBtn');
     if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
-  } else {
-    console.log('Host mode activated - all controls visible');
     
-    // Make sure all host controls are visible
-    const revealVotesBtn = document.getElementById('revealVotesBtn');
-    const resetVotesBtn = document.getElementById('resetVotesBtn');
-    const fileInputContainer = document.getElementById('fileInputContainer');
-    const addTicketBtn = document.getElementById('addTicketBtn');
-    
-    if (revealVotesBtn) revealVotesBtn.classList.remove('hide-for-guests');
-    if (resetVotesBtn) resetVotesBtn.classList.remove('hide-for-guests');
-    if (fileInputContainer) fileInputContainer.classList.remove('hide-for-guests');
-    if (addTicketBtn) addTicketBtn.classList.remove('hide-for-guests');
+    console.log('Guest mode activated - voting controls restricted');
   }
 }
 
@@ -601,27 +574,15 @@ function setupGuestModeRestrictions() {
 function getRoomIdFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   const roomId = urlParams.get('roomId');
-  
-  // Check for host status from hash first, then URL parameter, then sessionStorage
-  let isHost = false;
-  
-  if (window.location.hash === '#host') {
-    isHost = true;
-    sessionStorage.setItem('isHost', 'true');
-    // Clean the hash from URL
-    history.replaceState(null, null, window.location.pathname + window.location.search);
-  } else if (urlParams.get('host') === 'true') {
-    isHost = true;
+  const isHost = urlParams.get('host') === 'true';
+
+  // ✅ Store host status in sessionStorage
+  if (isHost) {
     sessionStorage.setItem('isHost', 'true');
   } else {
-    // Check sessionStorage
-    const storedHostStatus = sessionStorage.getItem('isHost');
-    isHost = storedHostStatus === 'true';
+    sessionStorage.setItem('isHost', 'false');
   }
-  
-  // Store host status in sessionStorage
-  sessionStorage.setItem('isHost', isHost.toString());
-  
+
   // Fallback: generate a room if not present
   return roomId || 'room-' + Math.floor(Math.random() * 10000);
 }
@@ -2992,14 +2953,9 @@ function setupStoryNavigation() {
 /**
  * Set up story card interactions based on user role
  */
-/**
- * Set up story card interactions based on user role
- */
 function setupStoryCardInteractions() {
   // Check if user is a guest (joined via shared URL)
   const isGuest = isGuestUser();
-  
-  console.log('[DEBUG] setupStoryCardInteractions - isGuest:', isGuest);
   
   // Select all story cards
   const storyCards = document.querySelectorAll('.story-card');
@@ -3021,23 +2977,14 @@ function setupStoryCardInteractions() {
       }
     } else {
       // For hosts: maintain normal selection behavior
-      console.log('[DEBUG] Setting up host click handler for card:', card.id);
-      
-      // Remove disabled class if it exists
-      card.classList.remove('disabled-story');
-      
       // Remove existing handlers first to prevent duplicates
       const newCard = card.cloneNode(true);
       if (card.parentNode) {
         card.parentNode.replaceChild(newCard, card);
       
         // Add fresh click event listener
-        newCard.addEventListener('click', (e) => {
-          // Prevent event bubbling
-          e.stopPropagation();
-          
+        newCard.addEventListener('click', () => {
           const index = parseInt(newCard.dataset.index || 0);
-          console.log('[DEBUG] Host clicked story card, index:', index);
           selectStory(index);
         });
         
