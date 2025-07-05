@@ -549,24 +549,30 @@ function setupPlanningCards() {
  * Set up guest mode restrictions
  */
 function setupGuestModeRestrictions() {
-  if (isGuestUser()) {
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  console.log('[DEBUG] Host status:', isHost);
+
+  if (!isHost) {
     // Hide sidebar control buttons
     const revealVotesBtn = document.getElementById('revealVotesBtn');
     const resetVotesBtn = document.getElementById('resetVotesBtn');
     if (revealVotesBtn) revealVotesBtn.classList.add('hide-for-guests');
     if (resetVotesBtn) resetVotesBtn.classList.add('hide-for-guests');
-    
+
     // Hide upload ticket button
     const fileInputContainer = document.getElementById('fileInputContainer');
     if (fileInputContainer) fileInputContainer.classList.add('hide-for-guests');
-    
+
     // Hide add ticket button
     const addTicketBtn = document.getElementById('addTicketBtn');
     if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
-    
-    console.log('Guest mode activated - voting controls restricted');
+
+    console.log('Guest mode activated – voting controls restricted');
+  } else {
+    console.log('Host mode – all controls visible');
   }
 }
+
 
 /**
  * Extract room ID from URL parameters
