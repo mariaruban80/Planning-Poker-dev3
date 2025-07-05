@@ -824,7 +824,7 @@
       }, 1000);
     }
     
- function createRoom() {
+function createRoom() {
   const name = document.getElementById("createNameInput").value.trim();
   const sessionName = document.getElementById("sessionNameInput").value.trim();
   
@@ -837,11 +837,15 @@
   const allowMemberManage = document.getElementById("allowManage").checked;
   const roomId = Math.random().toString(36).substring(2, 10); 
   
+  // Store session data
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionName", sessionName);
   sessionStorage.setItem("votingSystem", selectedScale);
   sessionStorage.setItem("allowMemberManage", allowMemberManage);
   sessionStorage.setItem("isHost", "true");
+  sessionStorage.setItem("isCreator", "true"); // Additional flag
+  
+  console.log('[DEBUG] Room creator - setting isHost and isCreator to true');
   
   // Use hash instead of query parameter
   window.location.href = `/index.html?roomId=${roomId}#host`;
