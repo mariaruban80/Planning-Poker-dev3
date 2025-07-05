@@ -2992,9 +2992,14 @@ function setupStoryNavigation() {
 /**
  * Set up story card interactions based on user role
  */
+/**
+ * Set up story card interactions based on user role
+ */
 function setupStoryCardInteractions() {
   // Check if user is a guest (joined via shared URL)
   const isGuest = isGuestUser();
+  
+  console.log('[DEBUG] setupStoryCardInteractions - isGuest:', isGuest);
   
   // Select all story cards
   const storyCards = document.querySelectorAll('.story-card');
@@ -3016,14 +3021,23 @@ function setupStoryCardInteractions() {
       }
     } else {
       // For hosts: maintain normal selection behavior
+      console.log('[DEBUG] Setting up host click handler for card:', card.id);
+      
+      // Remove disabled class if it exists
+      card.classList.remove('disabled-story');
+      
       // Remove existing handlers first to prevent duplicates
       const newCard = card.cloneNode(true);
       if (card.parentNode) {
         card.parentNode.replaceChild(newCard, card);
       
         // Add fresh click event listener
-        newCard.addEventListener('click', () => {
+        newCard.addEventListener('click', (e) => {
+          // Prevent event bubbling
+          e.stopPropagation();
+          
           const index = parseInt(newCard.dataset.index || 0);
+          console.log('[DEBUG] Host clicked story card, index:', index);
           selectStory(index);
         });
         
