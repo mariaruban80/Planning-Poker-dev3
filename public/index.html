@@ -2501,6 +2501,20 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
   
   // Handle username synchronization and prompt for invited users
   document.addEventListener('DOMContentLoaded', function() {
+
+// Handle host status from hash
+  if (window.location.hash === '#host') {
+    sessionStorage.setItem('isHost', 'true');
+    // Clean URL for aesthetics
+    history.replaceState(null, null, window.location.pathname + window.location.search);
+  }
+  
+  // Determine guest status for invite links
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('roomId') && window.location.hash !== '#host' && !sessionStorage.getItem('isHost')) {
+    sessionStorage.setItem('isHost', 'false');
+  }
+      
     // STEP 1: Check for username from main.html (userName with capital N)
     const storedUserName = sessionStorage.getItem('userName');
     
