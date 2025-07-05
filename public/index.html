@@ -2005,15 +2005,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Expose function for main.js
 window.showAddTicketModal = showAddTicketModal;
-    function isGuestUser() {
-     // Check if URL contains 'roomId' parameter but not 'host=true'
-      const urlParams = new URLSearchParams(window.location.search);
-      
-      // Consider user a guest if:
-      // 1. There's no 'host' parameter, or
-      // 2. The 'host' parameter is anything other than 'true'
-      return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
-    }
+ function isGuestUser() {
+  // First check sessionStorage for explicit host status
+  const isHostFromStorage = sessionStorage.getItem('isHost');
+  if (isHostFromStorage !== null) {
+    return isHostFromStorage === 'false';
+  }
+  
+  // Fallback to URL parameter check
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
+}
 
     function setupGuestModeOnLoad() {
       if (isGuestUser()) {
@@ -2501,26 +2503,24 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
   
   // Handle username synchronization and prompt for invited users
   document.addEventListener('DOMContentLoaded', function() {
-
-// Handle host status from hash
-  if (window.location.hash === '#host') {
-    sessionStorage.setItem('isHost', 'true');
-    // Clean URL for aesthetics
-    history.replaceState(null, null, window.location.pathname + window.location.search);
-  }
-  
-  // Determine guest status for invite links
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has('roomId') && window.location.hash !== '#host' && !sessionStorage.getItem('isHost')) {
-    sessionStorage.setItem('isHost', 'false');
-  }
-      
+    // Handle host status from hash
+    if (window.location.hash === '#host') {
+      sessionStorage.setItem('isHost', 'true');
+      // Clean URL for aesthetics
+      history.replaceState(null, null, window.location.pathname + window.location.search);
+    }
+    
+    // Determine guest status for invite links
+    const urlParameters = new URLSearchParams(window.location.search); // Changed variable name
+    if (urlParameters.has('roomId') && window.location.hash !== '#host' && !sessionStorage.getItem('isHost')) {
+      sessionStorage.setItem('isHost', 'false');
+    }
+    
     // STEP 1: Check for username from main.html (userName with capital N)
     const storedUserName = sessionStorage.getItem('userName');
     
-    // STEP 2: Check if this is a new user joining via invite link
-    const urlParams = new URLSearchParams(window.location.search);
-    const isJoiningViaInvite = urlParams.has('roomId') && !storedUserName;
+    // STEP 2: Check if this is a new user joining via invite link  
+    const isJoiningViaInvite = urlParameters.has('roomId') && !storedUserName; // Use new variable name
     
     if (isJoiningViaInvite) {
       // This is someone joining via invite link who doesn't have a userName yet
