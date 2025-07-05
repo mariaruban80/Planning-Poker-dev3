@@ -2503,18 +2503,31 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
   
   // Handle username synchronization and prompt for invited users
   document.addEventListener('DOMContentLoaded', function() {
-    // Handle host status from hash
-    if (window.location.hash === '#host') {
-      sessionStorage.setItem('isHost', 'true');
-      // Clean URL for aesthetics
-      history.replaceState(null, null, window.location.pathname + window.location.search);
-    }
-    
-    // Determine guest status for invite links
-    const urlParameters = new URLSearchParams(window.location.search); // Changed variable name
-    if (urlParameters.has('roomId') && window.location.hash !== '#host' && !sessionStorage.getItem('isHost')) {
-      sessionStorage.setItem('isHost', 'false');
-    }
+  // Handle host status from hash - be more aggressive
+  if (window.location.hash === '#host') {
+    console.log('[DEBUG] Hash #host detected, setting isHost to true');
+    sessionStorage.setItem('isHost', 'true');
+    // Clean URL for aesthetics
+    history.replaceState(null, null, window.location.pathname + window.location.search);
+  }
+ // Check if this is a room creator from main.html
+  const isCreator = sessionStorage.getItem('isCreator');
+  if (isCreator === 'true') {
+    console.log('[DEBUG] Room creator detected, setting isHost to true');
+    sessionStorage.setItem('isHost', 'true');
+  }
+         // Determine guest status for invite links
+  const urlParameters = new URLSearchParams(window.location.search);
+  if (urlParameters.has('roomId') && 
+      window.location.hash !== '#host' && 
+      !sessionStorage.getItem('isHost') &&
+      isCreator !== 'true') {
+    console.log('[DEBUG] Setting guest mode for invite link user');
+    sessionStorage.setItem('isHost', 'false');
+  }
+  
+  // Debug current status
+  console.log('[DEBUG] Final isHost status:', sessionStorage.getItem('isHost'));
     
     // STEP 1: Check for username from main.html (userName with capital N)
     const storedUserName = sessionStorage.getItem('userName');
@@ -3231,7 +3244,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('loginModalCustom').style.display = 'none';
   });
 </script>
-
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Debug host status
+  setTimeout(() => {
+    console.log('=== HOST STATUS DEBUG ===');
+    console.log('URL hash:', window.location.hash);
+    console.log('URL search:', window.location.search);
+    console.log('isHost from sessionStorage:', sessionStorage.getItem('isHost'));
+    console.log('URL params has roomId:', new URLSearchParams(window.location.search).has('roomId'));
+    console.log('URL params has host:', new URLSearchParams(window.location.search).has('host'));
+    console.log('URL params host value:', new URLSearchParams(window.location.search).get('host'));
+    console.log('isGuestUser() returns:', isGuestUser());
+    console.log('isCurrentUserHost() returns:', typeof isCurrentUserHost === 'function' ? isCurrentUserHost() : 'function not found');
+    console.log('========================');
+  }, 1000);
+});
+</script>
   
      
 </body>
