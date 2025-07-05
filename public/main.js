@@ -582,9 +582,9 @@ function getRoomIdFromURL() {
   const roomId = urlParams.get('roomId');
 
   // Default to guest if not already set
-  if (!sessionStorage.getItem('isHost')) {
-    sessionStorage.setItem('isHost', 'false');
-  }
+ // if (!sessionStorage.getItem('isHost')) {
+   // sessionStorage.setItem('isHost', 'false');
+  //}
 
   return roomId || 'room-' + Math.floor(Math.random() * 10000);
 }
