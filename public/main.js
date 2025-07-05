@@ -574,25 +574,15 @@ function setupGuestModeRestrictions() {
 function getRoomIdFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   const roomId = urlParams.get('roomId');
-  const isHost = urlParams.get('host') === 'true';
 
-  // ✅ Store host status in sessionStorage
-  if (isHost) {
-    sessionStorage.setItem('isHost', 'true');
-  } else {
+  // Default to guest if not already set
+  if (!sessionStorage.getItem('isHost')) {
     sessionStorage.setItem('isHost', 'false');
   }
 
-    // ✅ Remove 'host' from the URL without reloading the page
-  if (urlParams.has('host')) {
-    urlParams.delete('host');
-    const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
-    window.history.replaceState({}, document.title, newUrl);
-  }
-
-  // Fallback: generate a room if not present
   return roomId || 'room-' + Math.floor(Math.random() * 10000);
 }
+
 
 
 
