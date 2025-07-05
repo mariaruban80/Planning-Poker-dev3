@@ -555,8 +555,17 @@ function setupPlanningCards() {
 /**
  * Set up guest mode restrictions
  */
+/**
+ * Set up guest mode restrictions
+ */
 function setupGuestModeRestrictions() {
-  if (isGuestUser()) {
+  const isHost = isCurrentUserHost();
+  console.log('[DEBUG] setupGuestModeRestrictions - isHost:', isHost);
+  console.log('[DEBUG] sessionStorage.isHost:', sessionStorage.getItem('isHost'));
+  
+  if (!isHost) {
+    console.log('Guest mode activated - voting controls restricted');
+    
     // Hide sidebar control buttons
     const revealVotesBtn = document.getElementById('revealVotesBtn');
     const resetVotesBtn = document.getElementById('resetVotesBtn');
@@ -570,8 +579,19 @@ function setupGuestModeRestrictions() {
     // Hide add ticket button
     const addTicketBtn = document.getElementById('addTicketBtn');
     if (addTicketBtn) addTicketBtn.classList.add('hide-for-guests');
+  } else {
+    console.log('Host mode activated - all controls visible');
     
-    console.log('Guest mode activated - voting controls restricted');
+    // Make sure all host controls are visible
+    const revealVotesBtn = document.getElementById('revealVotesBtn');
+    const resetVotesBtn = document.getElementById('resetVotesBtn');
+    const fileInputContainer = document.getElementById('fileInputContainer');
+    const addTicketBtn = document.getElementById('addTicketBtn');
+    
+    if (revealVotesBtn) revealVotesBtn.classList.remove('hide-for-guests');
+    if (resetVotesBtn) resetVotesBtn.classList.remove('hide-for-guests');
+    if (fileInputContainer) fileInputContainer.classList.remove('hide-for-guests');
+    if (addTicketBtn) addTicketBtn.classList.remove('hide-for-guests');
   }
 }
 
