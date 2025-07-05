@@ -276,6 +276,13 @@ function saveDeletedStoriesToStorage(roomId) {
 
 // Modify the existing DOMContentLoaded event handler to check if username is ready
 document.addEventListener('DOMContentLoaded', () => {
+  // Handle host status from hash FIRST
+  if (window.location.hash === '#host') {
+    sessionStorage.setItem('isHost', 'true');
+    // Clean the hash from URL
+    history.replaceState(null, null, window.location.pathname + window.location.search);
+  }
+  
   // Check if we're waiting for a username (joining via invite)
   if (window.userNameReady === false) {
     console.log('[APP] Waiting for username before initializing app');
@@ -288,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
     roomId = 'room-' + Math.floor(Math.random() * 10000);
   }
   appendRoomIdToURL(roomId);
-  //  window.history.replaceState({}, document.title, window.location.pathname);
+  
   // Load deleted stories from sessionStorage first
   loadDeletedStoriesFromStorage(roomId);
   
@@ -574,15 +581,27 @@ function setupGuestModeRestrictions() {
 function getRoomIdFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   const roomId = urlParams.get('roomId');
-  const isHost = urlParams.get('host') === 'true';
-
-  // ✅ Store host status in sessionStorage
-  if (isHost) {
+  
+  // Check for host status from hash first, then URL parameter, then sessionStorage
+  let isHost = false;
+  
+  if (window.location.hash === '#host') {
+    isHost = true;
+    sessionStorage.setItem('isHost', 'true');
+    // Clean the hash from URL
+    history.replaceState(null, null, window.location.pathname + window.location.search);
+  } else if (urlParams.get('host') === 'true') {
+    isHost = true;
     sessionStorage.setItem('isHost', 'true');
   } else {
-    sessionStorage.setItem('isHost', 'false');
+    // Check sessionStorage
+    const storedHostStatus = sessionStorage.getItem('isHost');
+    isHost = storedHostStatus === 'true';
   }
-
+  
+  // Store host status in sessionStorage
+  sessionStorage.setItem('isHost', isHost.toString());
+  
   // Fallback: generate a room if not present
   return roomId || 'room-' + Math.floor(Math.random() * 10000);
 }
