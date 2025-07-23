@@ -2450,50 +2450,95 @@ function displayCSVData(data) {
     });
   }
 }
-
 /**
  * Edit a story using the add ticket modal
  * @param {Object} ticketData - The ticket data to edit
  */
 function editStory(ticketData) {
   console.log('[EDIT] Editing story:', ticketData);
-  
+
   // Check if the add ticket modal functions exist
   if (typeof window.showAddTicketModal === 'function') {
+    // First, find the story card in the DOM
+    const storyCard = document.getElementById(ticketData.id);  // Find the card for the current list
+    let currentText = ticketData.text
+
+    if (storyCard) {
+          // Retrieve the story text from the DOM
+            const storyTitle = storyCard.querySelector('.story-title');
+
+            if(typeof(storyTitle) != undefined && storyTitle != null){		//Prevent crash in function
+             currentText    = storyTitle.textContent
+          }
+    }
+
     // Parse the ticket text to extract name and description
-    let ticketName = ticketData.text;
+    let ticketName = currentText ;
     let ticketDescription = '';
-    
+
     // Check if the text contains a ':' which indicates name: description format
-    if (ticketData.text.includes(': ')) {
-      const parts = ticketData.text.split(': ', 2);
+    if (currentText.includes(': ')) {
+      const parts = currentText.split(': ', 2);
       ticketName = parts[0];
       ticketDescription = parts[1];
     }
-    
+
     // Pre-fill the modal with existing data
     document.getElementById('ticketNameInput').value = ticketName;
     document.getElementById('ticketDescriptionInput').value = ticketDescription;
-    
-    // Show the modal
-    document.getElementById('addTicketModalCustom').style.display = 'flex';
-    
+
+
+    // Show the modal to all accounts
+    document.getElementById('addTicketModalCustom').style.display = 'flex'; //To All
+
     // Focus on the name input
     setTimeout(() => {
       document.getElementById('ticketNameInput').focus();
     }, 100);
-    
-    // Store the original ticket data for editing
+
+    // Store the original ticket data for editing for update process
     window.editingTicketData = ticketData;
-    
-    // Update the modal title and button text
+
+    // Update the modal title and button text for screen flag and update reasons
     const modalTitle = document.querySelector('#addTicketModalCustom h3');
     const confirmButton = document.getElementById('confirmAddTicket');
-    
+
     if (modalTitle) modalTitle.textContent = 'Edit Ticket';
     if (confirmButton) {
       confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
     }
+
+
+    if(typeof( confirmButton) != undefined && confirmButton != null){		//Confirm this code to execute
+
+         confirmButton.removeEventListener('click',window.ConfirmEdit);		 //for safty take the code out in and re put them in.
+         confirmButton.addEventListener('click',ConfirmEdit);
+
+    }	      //Valid edit button
+
+        /**
+
+         *This section to allow the code functions to the current scope and is for the edit feature
+
+         */
+        function ConfirmEdit(e){		 //this function can call and the name in this function only.
+
+               e.preventDefault();					  //Keep others away from this function
+               //Retrieve value of user edit and use it on the screen
+               const ticketName =  document.getElementById('ticketNameInput').value
+               const ticketDescription = document.getElementById('ticketDescriptionInput').value
+               //Assign current screen variables for use
+               const currentText = ticketName + " : " +ticketDescription 
+
+               //Code section
+               updateTicketInUI({ id: ticketData.id, text: currentText });
+
+               if (socket) {
+                    socket.emit('updateTicket', { id: ticketData.id, text: currentText });
+               } //Code section finished    
+
+        }	  //Function Local
+
   } else {
     console.error('[EDIT] Add ticket modal functions not available');
     // Fallback to prompt
@@ -2506,6 +2551,11 @@ function editStory(ticketData) {
     }
   }
 }
+
+
+
+
+
 
 
 /**
