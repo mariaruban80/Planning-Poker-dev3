@@ -3221,75 +3221,86 @@ function setupStoryCardInteractions() {
 
                                  if (!menuBtn.hasAttribute('data-listener-added')) {		//Safety check
 
-		                 console.log('Adding click handler to 3-dot menu (Host): ' + card.id);
-                                 menuBtn.setAttribute('data-listener-added', 'true');  //Mark it not a duplicate button
+		                                   console.log('Adding click handler to 3-dot menu (Host): ' + card.id);
+                                            menuBtn.setAttribute('data-listener-added', 'true');  //Mark it not a duplicate button
 
-                                    menuBtn.addEventListener('click', (e) => {			//This is the event for click
+                                            menuBtn.addEventListener('click', (e) => {			//This is the event for click code
 
-	                                   e.stopPropagation();
-                                      //Close any open story-menu just before
-                                        document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
-                                            if (dd !== dropdown) dd.classList.remove('show');
-                                                             });
+	                                               e.stopPropagation();
+                                                    //Close any open story-menu just before
+                                                    document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+                                                    if (dd !== dropdown) dd.classList.remove('show');
+                                                });
 
-                                         //Show the 3 dots with whatever properties are in place now after
-                                         dropdown.classList.toggle('show');
+                                                //Show the 3 dots with whatever properties are in place now after
+                                                dropdown.classList.toggle('show');
 
-                                    });
+                                        });		//end of menu.addeventlistener
 
-                                } //Valid if it is defined
-	                  }
+		                           } 	//end of check  menuBtn.hasAttribute('data-listener-added')
 
-	                if(editItem && menuBtn){  //Make sure if both are there, then we can perform functions
+	                  }   //end  if(menuBtn){
+
+	                if(editItem && menuBtn){  //Make sure if both are there, then we can perform functions,Edit item listener code
+
+                      if (!editItem.hasAttribute('data-listener-added')) {	//Safety check, prevent function dupiclates
+
+                      editItem.setAttribute('data-listener-added', 'true');	 //Mark that one button has been created
+
                        editItem.addEventListener('click', (e) => { //For safe code reasons we want this inside the
 
                                	   if(typeof(menuBtn) != undefined && menuBtn != null){
-					      e.stopPropagation();
+					                     e.stopPropagation();
                                          dropdown.classList.remove('show');		 //Hide the others out if dropdown
 
-                                          const storyId = card.id; 
+                                          const storyId = card.id;
                                           const text = card.querySelector('.story-title').textContent;	//Get story card
- 	                                 if (window.editStory && typeof window.editStory === 'function') {		//Force to the to do the edit and prevent null errors
-	                                      window.editStory({ id: storyId, text: text });					 //call the code. make sure it exists
-                                          e.preventDefault();					  //Keep others away from this.
+ 	                                     if (window.editStory && typeof window.editStory === 'function') {		//Force to the to do the edit and prevent null errors
+	                                             window.editStory({ id: storyId, text: text });					 //call the code. make sure it exists
+                                                 e.preventDefault();					  //Keep others away from this.
 
-					                   console.log( storyId +  " Click event to select id for edit");
-					                          }		 //This can only activate that this is done one time now and
+					                           console.log( "Edit " + storyId +  " Click event to select id for edit");
+					                   }		 //This can only activate that this is done one time now and
 
-					      	 }
-				     });
-                  }
+					      	 }		//Menu valid
+				             });   //Edit addEventListener
+                    }                      //Check editItem
+
+                  }	//  if(editItem && menuBtn){
+
+                     if(deleteItem  &&  menuBtn){    //The delete section of the code
+
+                           	   if (!deleteItem.hasAttribute('data-listener-added')) {	//Safety check, prevent function dupiclates
+
+                                   deleteItem.setAttribute('data-listener-added', 'true');	 //Mark that one button has been created
+
+                                        deleteItem.addEventListener('click', (e) => {      //Prevent running if it didn't get the first
+
+                                                 e.stopPropagation();
+                                                 dropdown.classList.remove('show');
+                                                 var cardDetails =  " The delete item clicked for = " + storyId + " Card ID= " +card.className
+                                                 console.log(cardDetails )	//for safe code reasons as well
+
+			                                     let finalId = card.id;   //prevent crashes
+
+	                                             deleteStory(finalId); //Remove the card from rendering by ID, to prevent a crash.
+                                       });  //deleteItem.addEventListener	 end
+
+                               }		 //end  if (!deleteItem.hasAttribute('data-listener-added'))
+
+                    }	  //Last section completed
+
+           } 		//Valid Action Continer
+
+      }	//Is user Host, code
+
+    }		//end Is Gust
+  })	//Card for each
+
+}		//end Function
 
 
-              if(deleteItem  &&  menuBtn){    //The delete section of the code
-
-                 deleteItem.addEventListener('click', (e) => {      //Prevent running if it didn't get the first
-
-                    e.stopPropagation();
-                    dropdown.classList.remove('show');
-                    var cardDetails =  " The delete item clicked for = " + storyId + " Card ID= " +card.className
-                    console.log(cardDetails )	//for safe code reasons as well
-
-			        let finalId = card.id;
-
-	            deleteStory(finalId); //Remove the card from rendering by ID, to prevent a crash.
-               });  //end code
-
-             }	  //Last section completed
-
-           }
-
-      }	//Is user Host
-    }		      //Valid Action Continer
-
-  })	          //Card for each
-
-}		           //end Function
-
-/**
- * For safety on touch Screens to allow the code to be applied.
- */
-function handleTouchStart(e) {
+/* function handleTouchStart(e) {
 	let className ='Touched =  ' +this.className  +  ' ID name ' +  this.id;
     this.classList.add('touched'); 	     	//Add flag
     const cardTouchTimer =  setTimeout(() => {
@@ -3300,7 +3311,7 @@ function handleTouchStart(e) {
         this.classList.remove('touched');
 	  }, 200); //After touch ends after 200
 	console.log("Touch feature Applied to -> " + className)
-}
+} */ 
 
 /**
  * Generate avatar URL
