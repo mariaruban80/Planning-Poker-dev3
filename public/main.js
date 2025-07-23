@@ -142,6 +142,44 @@ function setupHeartbeat() {
     clearInterval(heartbeatInterval);
   });
 }*/
+/**
+ * Handle updating a ticket from the modal
+ * @param {Object} ticketData - Updated ticket data {id, text, isEdit: true}
+ */
+window.updateTicketFromModal = function(ticketData) {
+  if (!ticketData || !ticketData.id || !ticketData.text) return;
+  
+  console.log('[UPDATE] Updating ticket from modal:', ticketData);
+  
+  // Update in UI
+  updateTicketInUI(ticketData);
+  
+  // Emit to server for synchronization
+  if (socket) {
+    socket.emit('updateTicket', ticketData);
+  }
+};
+
+/**
+ * Update ticket in the UI
+ * @param {Object} ticketData - Updated ticket data
+ */
+function updateTicketInUI(ticketData) {
+  const storyCard = document.getElementById(ticketData.id);
+  if (!storyCard) return;
+  
+  // Update the story title
+  const storyTitle = storyCard.querySelector('.story-title');
+  if (storyTitle) {
+    storyTitle.textContent = ticketData.text;
+  }
+  
+  console.log('[UI] Updated ticket in UI:', ticketData.id);
+}
+
+
+
+
 
 /**
  * Load deleted story IDs from sessionStorage
