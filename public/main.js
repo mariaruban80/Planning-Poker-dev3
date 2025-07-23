@@ -960,6 +960,15 @@ socket.on('storySelected', ({ storyIndex, storyId }) => {
   
   // Refresh votes periodically to ensure everyone sees the latest votes
   setInterval(refreshCurrentStoryVotes, 30000); // Check every 30 seconds
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.story-actions')) {
+    document.querySelectorAll('.story-menu-dropdown.show').forEach(dropdown => {
+      dropdown.classList.remove('show');
+    });
+  }
+});
+  
 }
 
 /**
@@ -2289,22 +2298,57 @@ function displayCSVData(data) {
       
       storyItem.appendChild(storyTitle);
       
-      // Add delete button for hosts only
+      // Add 3-dot menu for hosts only (UPDATED)
       if (isCurrentUserHost()) {
-        const deleteButton = document.createElement('div');
-        deleteButton.className = 'story-delete-btn';
-        deleteButton.innerHTML = '🗑'; // dustbin symbol
-        deleteButton.title = 'Delete story';
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'story-actions';
         
-        // Use the CORRECT story ID - this was wrong before!
-        deleteButton.onclick = function(e) {
-          e.stopPropagation(); // Prevent story selection
-          e.preventDefault();
-          console.log('[DELETE] Delete button clicked for manual story:', story.id);
+        const menuBtn = document.createElement('button');
+        menuBtn.className = 'story-menu-btn';
+        menuBtn.innerHTML = '⋮'; // 3 vertical dots
+        menuBtn.title = 'Story actions';
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'story-menu-dropdown';
+        
+        const editItem = document.createElement('div');
+        editItem.className = 'story-menu-item edit';
+        editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+        
+        const deleteItem = document.createElement('div');
+        deleteItem.className = 'story-menu-item delete';
+        deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        
+        dropdown.appendChild(editItem);
+        dropdown.appendChild(deleteItem);
+        
+        actionsContainer.appendChild(menuBtn);
+        actionsContainer.appendChild(dropdown);
+        storyItem.appendChild(actionsContainer);
+        
+        // Add event listeners
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          
+          // Close all other dropdowns first
+          document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+            if (dd !== dropdown) dd.classList.remove('show');
+          });
+          
+          dropdown.classList.toggle('show');
+        });
+        
+        editItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
+          editStory({ id: story.id, text: story.text });
+        });
+        
+        deleteItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
           deleteStory(story.id);
-        };
-        
-        storyItem.appendChild(deleteButton);
+        });
       }
       
       storyListContainer.appendChild(storyItem);
@@ -2341,23 +2385,57 @@ function displayCSVData(data) {
       
       storyItem.appendChild(storyTitle);
       
-      // Add delete button for hosts only
+      // Add 3-dot menu for hosts only (UPDATED)
       if (isCurrentUserHost()) {
-        console.log('[CSV] Adding delete button to CSV story:', csvStoryId);
-        const deleteButton = document.createElement('div'); // Changed to div
-        deleteButton.className = 'story-delete-btn';
-        deleteButton.innerHTML = '🗑'; // dustbin symbol
-        deleteButton.title = 'Delete CSV story';
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'story-actions';
         
-        // Add direct click handler that references the correct ID
-        deleteButton.onclick = function(e) {
-          e.stopPropagation(); // Prevent story selection
-          e.preventDefault();
-          console.log('[DELETE] Delete button clicked for CSV story:', csvStoryId);
+        const menuBtn = document.createElement('button');
+        menuBtn.className = 'story-menu-btn';
+        menuBtn.innerHTML = '⋮'; // 3 vertical dots
+        menuBtn.title = 'Story actions';
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'story-menu-dropdown';
+        
+        const editItem = document.createElement('div');
+        editItem.className = 'story-menu-item edit';
+        editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+        
+        const deleteItem = document.createElement('div');
+        deleteItem.className = 'story-menu-item delete';
+        deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        
+        dropdown.appendChild(editItem);
+        dropdown.appendChild(deleteItem);
+        
+        actionsContainer.appendChild(menuBtn);
+        actionsContainer.appendChild(dropdown);
+        storyItem.appendChild(actionsContainer);
+        
+        // Add event listeners
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          
+          // Close all other dropdowns first
+          document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+            if (dd !== dropdown) dd.classList.remove('show');
+          });
+          
+          dropdown.classList.toggle('show');
+        });
+        
+        editItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
+          editStory({ id: csvStoryId, text: row.join(' | ') });
+        });
+        
+        deleteItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
           deleteStory(csvStoryId);
-        };
-        
-        storyItem.appendChild(deleteButton);
+        });
       }
       
       storyListContainer.appendChild(storyItem);
@@ -2403,9 +2481,9 @@ function displayCSVData(data) {
       currentStoryIndex = 0;
     }
     
-    // Add cleanup and setup for delete buttons
-    cleanupDeleteButtonHandlers();
-    setupCSVDeleteButtons();
+    // Remove old delete button setup since we're using 3-dot menus now
+    // cleanupDeleteButtonHandlers();
+    // setupCSVDeleteButtons();
     
   } finally {
     normalizeStoryIndexes();
@@ -2414,6 +2492,9 @@ function displayCSVData(data) {
     processingCSVData = false;
   }
 }
+
+
+
 
 /**
  * Select a story by index
@@ -3310,7 +3391,13 @@ function handleSocketMessage(message) {
         }, 300);
       }
       break;
-
+  case 'updateTicket':
+    // Handle ticket update from another user
+    if (message.ticketData) {
+      console.log('[SOCKET] Ticket updated by another user:', message.ticketData);
+      updateTicketInUI(message.ticketData);
+    }
+      break;
     case 'restoreUserVote':
       if (message.storyId && message.vote) {
         // Skip for deleted stories
