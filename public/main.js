@@ -1904,51 +1904,6 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   
   normalizeStoryIndexes();
 }
-
-/**
- * Edit a story using the add ticket modal
- * @param {Object} ticketData - The ticket data to edit
- */
-function editStory(ticketData) {
-  console.log('[EDIT] Editing story:', ticketData);
-  
-  // Parse the ticket text to extract name and description
-  let ticketName = ticketData.text;
-  let ticketDescription = '';
-  
-  // Check if the text contains a ':' which indicates name: description format
-  if (ticketData.text.includes(': ')) {
-    const parts = ticketData.text.split(': ', 2);
-    ticketName = parts[0];
-    ticketDescription = parts[1];
-  }
-  
-  // Pre-fill the modal with existing data
-  document.getElementById('ticketNameInput').value = ticketName;
-  document.getElementById('ticketDescriptionInput').value = ticketDescription;
-  
-  // Show the modal
-  document.getElementById('addTicketModalCustom').style.display = 'flex';
-  
-  // Focus on the name input
-  setTimeout(() => {
-    document.getElementById('ticketNameInput').focus();
-  }, 100);
-  
-  // Store the original ticket data for editing
-  window.editingTicketData = ticketData;
-  
-  // Update the modal title and button text
-  const modalTitle = document.querySelector('#addTicketModalCustom h3');
-  const confirmButton = document.getElementById('confirmAddTicket');
-  
-  if (modalTitle) modalTitle.textContent = 'Edit Ticket';
-  if (confirmButton) {
-    confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
-  }
-}
-
-
 /**
  * Set up a mutation observer to catch any newly added story cards
  */
@@ -2225,7 +2180,7 @@ function displayCSVData(data) {
       return;
     }
 
-    console.log(`[CSV] Displaying ${data.length} rows of CSV data`);
+    console.log(`[CSV] Displaying ${data.length} rows of CSV data with 3-dot menus`);
 
     // First, identify and save all manually added stories
     const existingStories = [];
@@ -2255,7 +2210,7 @@ function displayCSVData(data) {
     // Re-add all stories to ensure they have proper indices
     storyListContainer.innerHTML = '';
     
-    // First add back manually added stories
+    // First add back manually added stories with 3-dot menu
     existingStories.forEach((story, index) => {
       // Skip if this story is in our deleted set
       if (deletedStoryIds.has(story.id)) {
@@ -2276,6 +2231,7 @@ function displayCSVData(data) {
       
       // Add 3-dot menu for hosts only (UPDATED)
       if (isCurrentUserHost()) {
+        console.log('[CSV] Adding 3-dot menu to manual story:', story.id);
         const actionsContainer = document.createElement('div');
         actionsContainer.className = 'story-actions';
         
@@ -2305,6 +2261,7 @@ function displayCSVData(data) {
         // Add event listeners
         menuBtn.addEventListener('click', (e) => {
           e.stopPropagation();
+          console.log('[CSV] 3-dot menu clicked for manual story:', story.id);
           
           // Close all other dropdowns first
           document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
@@ -2317,12 +2274,14 @@ function displayCSVData(data) {
         editItem.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.remove('show');
+          console.log('[CSV] Edit clicked for manual story:', story.id);
           editStory({ id: story.id, text: story.text });
         });
         
         deleteItem.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.remove('show');
+          console.log('[CSV] Delete clicked for manual story:', story.id);
           deleteStory(story.id);
         });
       }
@@ -2338,7 +2297,7 @@ function displayCSVData(data) {
       }
     });
     
-    // Then add CSV data
+    // Then add CSV data with 3-dot menu
     let startIndex = existingStories.length;
     data.forEach((row, index) => {
       const storyItem = document.createElement('div');
@@ -2361,8 +2320,9 @@ function displayCSVData(data) {
       
       storyItem.appendChild(storyTitle);
       
-      // Add 3-dot menu for hosts only (UPDATED)
+      // Add 3-dot menu for CSV hosts only (UPDATED)
       if (isCurrentUserHost()) {
+        console.log('[CSV] Adding 3-dot menu to CSV story:', csvStoryId);
         const actionsContainer = document.createElement('div');
         actionsContainer.className = 'story-actions';
         
@@ -2389,9 +2349,10 @@ function displayCSVData(data) {
         actionsContainer.appendChild(dropdown);
         storyItem.appendChild(actionsContainer);
         
-        // Add event listeners
+        // Add event listeners for CSV stories
         menuBtn.addEventListener('click', (e) => {
           e.stopPropagation();
+          console.log('[CSV] 3-dot menu clicked for CSV story:', csvStoryId);
           
           // Close all other dropdowns first
           document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
@@ -2404,12 +2365,14 @@ function displayCSVData(data) {
         editItem.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.remove('show');
+          console.log('[CSV] Edit clicked for CSV story:', csvStoryId);
           editStory({ id: csvStoryId, text: row.join(' | ') });
         });
         
         deleteItem.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.remove('show');
+          console.log('[CSV] Delete clicked for CSV story:', csvStoryId);
           deleteStory(csvStoryId);
         });
       }
@@ -2430,7 +2393,7 @@ function displayCSVData(data) {
     // Update preserved tickets list
     preservedManualTickets = existingStories;
     
-    console.log(`[CSV] Display complete: ${existingStories.length} manual + ${data.length} CSV = ${storyListContainer.children.length} total`);
+    console.log(`[CSV] Display complete with 3-dot menus: ${existingStories.length} manual + ${data.length} CSV = ${storyListContainer.children.length} total`);
     
     // Check if there are any stories and show/hide message accordingly
     const noStoriesMessage = document.getElementById('noStoriesMessage');
@@ -2457,19 +2420,78 @@ function displayCSVData(data) {
       currentStoryIndex = 0;
     }
     
-    // Remove old delete button setup since we're using 3-dot menus now
-    // cleanupDeleteButtonHandlers();
-    // setupCSVDeleteButtons();
-    
   } finally {
     normalizeStoryIndexes();
     setupStoryCardInteractions();
     // Always release the processing flag
     processingCSVData = false;
+    
+    // Add global click handler to close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.story-actions')) {
+        document.querySelectorAll('.story-menu-dropdown.show').forEach(dropdown => {
+          dropdown.classList.remove('show');
+        });
+      }
+    });
   }
 }
 
-
+/**
+ * Edit a story using the add ticket modal
+ * @param {Object} ticketData - The ticket data to edit
+ */
+function editStory(ticketData) {
+  console.log('[EDIT] Editing story:', ticketData);
+  
+  // Check if the add ticket modal functions exist
+  if (typeof window.showAddTicketModal === 'function') {
+    // Parse the ticket text to extract name and description
+    let ticketName = ticketData.text;
+    let ticketDescription = '';
+    
+    // Check if the text contains a ':' which indicates name: description format
+    if (ticketData.text.includes(': ')) {
+      const parts = ticketData.text.split(': ', 2);
+      ticketName = parts[0];
+      ticketDescription = parts[1];
+    }
+    
+    // Pre-fill the modal with existing data
+    document.getElementById('ticketNameInput').value = ticketName;
+    document.getElementById('ticketDescriptionInput').value = ticketDescription;
+    
+    // Show the modal
+    document.getElementById('addTicketModalCustom').style.display = 'flex';
+    
+    // Focus on the name input
+    setTimeout(() => {
+      document.getElementById('ticketNameInput').focus();
+    }, 100);
+    
+    // Store the original ticket data for editing
+    window.editingTicketData = ticketData;
+    
+    // Update the modal title and button text
+    const modalTitle = document.querySelector('#addTicketModalCustom h3');
+    const confirmButton = document.getElementById('confirmAddTicket');
+    
+    if (modalTitle) modalTitle.textContent = 'Edit Ticket';
+    if (confirmButton) {
+      confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
+    }
+  } else {
+    console.error('[EDIT] Add ticket modal functions not available');
+    // Fallback to prompt
+    const newText = prompt('Edit story text:', ticketData.text);
+    if (newText && newText !== ticketData.text) {
+      updateTicketInUI({ id: ticketData.id, text: newText });
+      if (socket) {
+        socket.emit('updateTicket', { id: ticketData.id, text: newText });
+      }
+    }
+  }
+}
 
 
 /**
