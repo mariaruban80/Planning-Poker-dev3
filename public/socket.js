@@ -232,6 +232,25 @@ socket.on('connect_error', (error) => {
       handleMessage({ type: 'reconnection_failed' });
     }
   });
+
+
+  socket.on('updateTicket', ({ ticketData }) => {
+  console.log('[SOCKET] Received ticket update from another user:', ticketData);
+  
+  // Check if this ticket is in our deleted stories list
+  if (lastKnownRoomState.deletedStoryIds.includes(ticketData.id)) {
+    console.log('[SOCKET] Ignoring update for deleted ticket:', ticketData.id);
+    return;
+  }
+  
+  // Update in local state
+  const ticketIndex = lastKnownRoomState.tickets.findIndex(t => t.id === ticketData.id);
+  if (ticketIndex !== -1) {
+    lastKnownRoomState.tickets[ticketIndex].text = ticketData.text;
+  }
+  
+  handleMessage({ type: 'updateTicket', ticketData });
+});
   
   socket.on('disconnect', (reason) => {
     console.log('[SOCKET] Disconnected from server. Reason:', reason);
