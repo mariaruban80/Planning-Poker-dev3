@@ -3171,22 +3171,13 @@ function setupStoryNavigation() {
     selectStory(parseInt(cards[prevIndex].dataset.index)); // emit to server
   });
 }
-/**
- * Set up story card interactions based on user role
- */
 function setupStoryCardInteractions() {
   // Select all story cards
   const storyCards = document.querySelectorAll('.story-card');
 
   storyCards.forEach(card => {
-    //Remove Touch start event
-
-	  if(typeof(card) != undefined && typeof(card.removeEventListener )  == typeof(Function) ){
-
-	       card.removeEventListener('touchstart',handleTouchStart )
-          card.addEventListener('touchstart',handleTouchStart);
-
-	  }
+    // 1. Setup touchstart event to highlight the .story-card
+    card.addEventListener('touchstart', handleTouchStart);
 
     // Check if user is a guest
     const isGuest = isGuestUser();
@@ -3195,114 +3186,130 @@ function setupStoryCardInteractions() {
       // For guests: disable click selection and add visual indicator
       card.classList.add('disabled-story');
 
-      // Remove all *direct* click events by cloning and replacing - but KEEP 3-dot menu
-      const actionsContainer = card.querySelector('.story-actions');
-      if (!actionsContainer) {
-        // If card does *not* have a menu, then replace card
-         const newCard = card.cloneNode(true);
-           if (card.parentNode) {
-                card.parentNode.replaceChild(newCard, card);
-            }
-       }
-    } else {
+      // Remove all *direct* click events, keep the 3-dot menu
+      if (!card.querySelector('.story-actions')) {
+        const newCard = card.cloneNode(true);
+        if (card.parentNode) {
+          card.parentNode.replaceChild(newCard, card);
+        }
+      }
+    } 
 
-      // Ensure each card has the proper 3-dot menu handler. Important on CSV load as this fixes issues
-       if (isCurrentUserHost()) {
-            //Only add the functions for this if its not a null action container
-          const actionsContainer = card.querySelector('.story-actions');
+    // Ensure each card has the proper 3-dot menu handler - for authorized person, we setup the handlers
+    if (isCurrentUserHost()) {
+	// Check if the required three dots elements do still exist
+	const actionsContainer = card.querySelector('.story-actions');
+	
+	if(actionsContainer != undefined && typeof (actionsContainer)!=undefined){
+	
+	const menuBtn = actionsContainer.querySelector('.story-menu-btn');
+	const dropdown = actionsContainer.querySelector('.story-menu-dropdown'); 		      
+	const editItem = dropdown.querySelector('.story-menu-item.edit');
+	const deleteItem = dropdown.querySelector('.story-menu-item.delete');
+	
+	//Validate elements and only trigger actions when the menu has loaded
+	if(typeof(menuBtn) != undefined  && menuBtn != undefined ){
+	
+	//menu clickEvent
+	if (!menuBtn.hasAttribute('data-menubtn-added')) {		//Add flag to ensure added one time
+	console.log('Applying click handler to 3-dot menu button(Host): ' + card.id);
+	
+	menuBtn.addEventListener('click', makeSubMenuActions(card),false);  
+	menuBtn.setAttribute('data-menubtn-added', 'true');    //to keep it from building too often
+	}
+	if(editItem !=undefined && menuBtn !=undefined){  //check if both
+	
+	//Add event if all are loaded here now
+	editItem.addEventListener('click', (e) =>  {		      //Only load function based on current event
+	
+	e.stopPropagation();
+	const menuContainer =   (e.target.parentElement.className == 'story-menu-dropdown show')?   e.target : null
+	console.log("Edit menu select event test +:  " + (menuContainer!= null) )		//Check menu exits
+	dropdown.classList.remove('show');						             //After, hide other menu functions
+	
+	const storyId = card.id;  	         //Pass selected to avoid errors
+	const text = card.querySelector('.story-title').textContent;		 //get the text
+	
+	//call function since, it must do it to push call and prevent errors.
+	
+	if (cardIdTextCheck(card, editItem)) {  		    //Validate click
+	
+	if (window.editStory && typeof window.editStory === 'function' && typeof text != typeof (null) ) {   //Extra check for safty 1 only
+	
+	window.editStory({ id: storyId, text: text });   //call
+	e.preventDefault();  	  //Make sure to stop!
+	
+	}
+	} //Final Checks End here
+	//Code	
+	}   //end EDIT item Event
+	
+	//Prevent null loads
+	if(deleteItem != null &&  typeof_menuBtn !=undefined){  //Check if the delte Item event can load
+	
+	deleteItem.addEventListener('click',removeSelectedCard(card))	  //Trigger load from here once the values become available.
+	}  //end for Delete
+	//add the check
+	
+	} //Is action Conatiner a valid Load
+	
+	} //if current host
 
-	           if (actionsContainer && typeof( actionsContainer) != undefined) {
-	              const menuBtn = actionsContainer.querySelector('.story-menu-btn');
-	              const dropdown = actionsContainer.querySelector('.story-menu-dropdown');
-                const editItem = dropdown.querySelector('.story-menu-item.edit');
-		        const deleteItem = dropdown.querySelector('.story-menu-item.delete');
+  })
 
-             		if(menuBtn){		 //Valid button
+}   //end here the load
 
-                                 if (!menuBtn.hasAttribute('data-listener-added')) {		//Safety check
+/*
+* Description: Runs a safety  function call
+	  Also, uses functions for added safety
+*/
+   //A function that does safety checks and uses functions
+function cardIdTextCheck (thiscard, thisCheckBtn){		//If parameters are loaded, trigger the action for onclick function load
 
-		                 console.log('Adding click handler to 3-dot menu (Host): ' + card.id);
-                                 menuBtn.setAttribute('data-listener-added', 'true');  //Mark it not a duplicate button
+//if not undefined to create the variables,
+if (thiscard && typeof (thiscard)!= undefined &&  thisCheckBtn &&  typeof (thisCheckBtn) != undefined ){
 
-                                    menuBtn.addEventListener('click', (e) => {			//This is the event for click
-
-	                                   e.stopPropagation();
-                                      //Close any open story-menu just before
-                                        document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
-                                            if (dd !== dropdown) dd.classList.remove('show');
-                                                             });
-
-                                         //Show the 3 dots with whatever properties are in place now after
-                                         dropdown.classList.toggle('show');
-
-                                    });
-
-                                } //Valid if it is defined
-	                  }
-
-	                if(editItem && menuBtn){  //Make sure if both are there, then we can perform functions
-                       editItem.addEventListener('click', (e) => { //For safe code reasons we want this inside the
-
-                               	   if(typeof(menuBtn) != undefined && menuBtn != null){
-					      e.stopPropagation();
-                                         dropdown.classList.remove('show');		 //Hide the others out if dropdown
-
-                                          const storyId = card.id; 
-                                          const text = card.querySelector('.story-title').textContent;	//Get story card
- 	                                 if (window.editStory && typeof window.editStory === 'function') {		//Force to the to do the edit and prevent null errors
-	                                      window.editStory({ id: storyId, text: text });					 //call the code. make sure it exists
-                                          e.preventDefault();					  //Keep others away from this.
-
-					                   console.log( storyId +  " Click event to select id for edit");
-					                          }		 //This can only activate that this is done one time now and
-
-					      	 }
-				     });
-                  }
-
-
-              if(deleteItem  &&  menuBtn){    //The delete section of the code
-
-                 deleteItem.addEventListener('click', (e) => {      //Prevent running if it didn't get the first
-
-                    e.stopPropagation();
-                    dropdown.classList.remove('show');
-                    var cardDetails =  " The delete item clicked for = " + storyId + " Card ID= " +card.className
-                    console.log(cardDetails )	//for safe code reasons as well
-
-			        let finalId = card.id;
-
-	            deleteStory(finalId); //Remove the card from rendering by ID, to prevent a crash.
-               });  //end code
-
-             }	  //Last section completed
-
-           }
-
-      }	//Is user Host
-    }		      //Valid Action Continer
-
-  })	          //Card for each
-
-}		           //end Function
-
-/**
- * For safety on touch Screens to allow the code to be applied.
- */
-function handleTouchStart(e) {
-	let className ='Touched =  ' +this.className  +  ' ID name ' +  this.id;
-    this.classList.add('touched'); 	     	//Add flag
-    const cardTouchTimer =  setTimeout(() => {
-    	if (this.className == "Touched") {
-    		className += "Touch Error check values"		    	
-    	}
-
-        this.classList.remove('touched');
-	  }, 200); //After touch ends after 200
-	console.log("Touch feature Applied to -> " + className)
+if(thiscard.className.includes ("story-card") ==true )		   //If the param includes the class code
+return	true
 }
+return false	   	                      //Not valid info
+}
+/**
+* @param card , card events.
+*/
+function removeSelectedCard(card){
+//if it loads with the right data perform action
+return function(e) {
+e.stopPropagation();
+//Stop function bubbling
+const dropdown = card.querySelector('.story-menu-dropdown');
+//if dropdown exists
+if(dropdown !=undefined ){
 
+dropdown.classList.remove('show');		              //Hide the other function on load
+console.log("The removed has the correct value")
 
+//check also that the Id also has the correct load
+let finalId="";
+//Valid the properties so  the page load doesn't crash
+if( card && typeof card!=undefined && card.id != undefined )  	   //Check the load order for valid names to function only, 
+finalId = card.id
+console.log('The selected card to be deleted is ' +finalId )
+
+//Call if its an authorized deletion
+deleteStory(finalId);    //Remove by ID function to test that its all there,
+}
+} //end the call
+}
+   //Small hack to apply Touchstart to touch features
+ function handleTouchStart (e) {
+    this.classList.add('touched'); //Add the touched class
+    const cardTouchTimer =  setTimeout(() => {
+        this.classList.remove('touched');	  //After touch ends it clears the name
+       }, 200); 						                  //200 milliseconds
+ }		                                                 		    
+
+/**/
 
 /**
  * Generate avatar URL
