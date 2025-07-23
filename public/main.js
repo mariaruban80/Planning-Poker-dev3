@@ -1934,7 +1934,6 @@ function setupStoryCardObserver() {
     subtree: true 
   });
 }
-
 /**
  * Apply guest restrictions to all story cards
  * This ensures manually added cards are also properly restricted
@@ -1949,13 +1948,28 @@ function applyGuestRestrictions() {
     // Make sure the card has the disabled class
     card.classList.add('disabled-story');
     
-    // Remove all click events by cloning and replacing
-    const newCard = card.cloneNode(true);
-    if (card.parentNode) {
-      card.parentNode.replaceChild(newCard, card);
-    }
+    // Remove all click events by cloning and replacing - except for the 3-dot menu
+    const actionsContainer = card.querySelector('.story-actions');
+    if (actionsContainer) {
+          
+      const menuBtn = actionsContainer.querySelector('.story-menu-btn');
+      const dropdown = actionsContainer.querySelector('.story-menu-dropdown');
+      
+       if (menuBtn && dropdown) {
+
+              // Do not add remove event listener
+        }
+      } else {
+             const newCard = card.cloneNode(true);
+             if (card.parentNode) {
+               card.parentNode.replaceChild(newCard, card);
+             }
+      }
+    
   });
 }
+
+
 
 /**
  * Process multiple tickets at once (used when receiving all tickets from server)
@@ -3161,89 +3175,117 @@ function setupStoryNavigation() {
 /**
  * Set up story card interactions based on user role
  */
-
-/**
- * Set up story card interactions based on user role
- */
 function setupStoryCardInteractions() {
-  // Check if user is a guest (joined via shared URL)
-  const isGuest = isGuestUser();
-  
   // Select all story cards
   const storyCards = document.querySelectorAll('.story-card');
-  
+
   storyCards.forEach(card => {
-    // Skip deleted stories
-    if (deletedStoryIds.has(card.id)) {
-      return;
-    }
-    
+    // 1. Setup touchstart event to highlight the .story-card
+    card.addEventListener('touchstart', function(e) {
+      this.classList.add('touched'); // Add the 'touched' class
+
+      // Remove the class after a delay (e.g. 100ms)
+      setTimeout(() => {
+        this.classList.remove('touched');
+      }, 200);
+    });
+
+    // Check if user is a guest
+    const isGuest = isGuestUser();
+
     if (isGuest) {
-      // For guests: disable clicking and add visual indicator
+      // For guests: disable click selection and add visual indicator
       card.classList.add('disabled-story');
-      
-      // Remove any existing click events by cloning and replacing
-      const newCard = card.cloneNode(true);
-      if (card.parentNode) {
-        card.parentNode.replaceChild(newCard, card);
-      }
-    } else {
-      // Remove existing handlers first to prevent duplicates
-      const newCard = card.cloneNode(true);
-      if (card.parentNode) {
-        card.parentNode.replaceChild(newCard, card);
-      
-        // Add fresh click event listener - Only hosts can select stories
-        newCard.addEventListener('click', (e) => {
-          const index = parseInt(newCard.dataset.index || 0);
-          selectStory(index);
-        });
-      }
-    }
-    
-     // For hosts: Ensure the 3-dot menu works, regardless of CSV or manually added ticket
-    if (isCurrentUserHost()) {
+
+      // Remove all click events by cloning and replacing AND preserve 3-dot menu
       const actionsContainer = card.querySelector('.story-actions');
       if (actionsContainer) {
-        const menuBtn = actionsContainer.querySelector('.story-menu-btn');
-        const dropdown = actionsContainer.querySelector('.story-menu-dropdown');
+          //  If the story card has a 3-dot menu, keep the 3-dot menu
+            const newCard = card.cloneNode(true);
+            card.parentNode.replaceChild(newCard, card)
 
-        if (menuBtn && dropdown) {
-          // Attach the same click handler to menu button again just to ensure
-          menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
-              if (dd !== dropdown) dd.classList.remove('show');
-            });
-            dropdown.classList.toggle('show');
-          });
-
-          // Use existing edit and delete listeners for 3-dot menu
-          const editItem = dropdown.querySelector('.story-menu-item.edit');
-          const deleteItem = dropdown.querySelector('.story-menu-item.delete');
-
-          if (editItem) {
-            editItem.addEventListener('click', (e) => {
-              e.stopPropagation();
-              dropdown.classList.remove('show');
-              const storyId = card.id;
-              const text = card.querySelector('.story-title').textContent;
-              editStory({ id: storyId, text: text });
-            });
-          }
-
-          if (deleteItem) {
-            deleteItem.addEventListener('click', (e) => {
-              e.stopPropagation();
-              dropdown.classList.remove('show');
-              deleteStory(card.id);
-            });
-          }
+        }  else { // remove story click events if no 3-dot menu
+             const newCard = card.cloneNode(true);
+             if (card.parentNode) {
+               card.parentNode.replaceChild(newCard, card);
+             }
+            
         }
-      }
+    } else {
+      // For hosts: maintain normal selection behavior + 3-dot menu action
+
+           // Remove ALL click events by cloning and replacing  - ADD THE SELECT STORY FUNC
+            const newCard = card.cloneNode(true);
+            card.parentNode.replaceChild(newCard, card)
+         
+         
+            newCard.addEventListener('click', () => {
+               const index = parseInt(newCard.dataset.index || 0);
+               selectStory(index);
+            console.log("Added click select on host. I am here now !");
+              });
+
+       //Remove other event Listeners    
+        // Remove edit button (not used with 3-dot menus)
+
     }
-  });
+
+     // Ensure each card has the proper 3-dot menu handler. Important on CSV load as this fixes issues
+     if (isCurrentUserHost()) {
+         const actionsContainer = card.querySelector('.story-actions');
+         if (actionsContainer) {
+              // Only proceed if there is already a 3 dot menu to avoid adding it again
+
+              //Now we setup the handlers on this button
+              const menuBtn = actionsContainer.querySelector('.story-menu-btn');
+              const dropdown = actionsContainer.querySelector('.story-menu-dropdown');
+              const editItem = dropdown.querySelector('.story-menu-item.edit');
+              const deleteItem = dropdown.querySelector('.story-menu-item.delete');
+
+
+                            // Re-attach these event listeners directly to elements that exist
+                            if (menuBtn) {                         
+                                  menuBtn.addEventListener('click', (e) => {
+                                          e.stopPropagation();
+                                           e.preventDefault()
+                                  document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+                                  if (dd !== dropdown) dd.classList.remove('show');
+                                       });
+                                        dropdown.classList.toggle('show');
+                                      });
+
+                                     editItem.addEventListener('click', (e) => {
+                                         e.stopPropagation();
+                                          e.preventDefault()
+                                         dropdown.classList.remove('show');
+                                                    const storyId = card.id;
+                                                     const text = card.querySelector('.story-title').textContent;
+                                      console.log('${storyId}:' +  card.querySelector('.story-title').textContent )
+			    //call function since not seeing functions
+                                  if (window.editStory && typeof window.editStory === 'function') {
+                                      	window.editStory({ id: storyId, text: text });
+					console.log(card +  + " The edit item clicked" )
+                                       }
+                             
+	                           });
+
+                                       deleteItem.addEventListener('click', (e) => {
+                                       e.stopPropagation();
+                                       e.preventDefault()
+                                       dropdown.classList.remove('show');                           
+					//remove the console check
+                                      deleteStory(card.id);
+
+                                   });
+
+                            }
+         }
+      }
+
+  })
 }
+
+
 
 
 /**
