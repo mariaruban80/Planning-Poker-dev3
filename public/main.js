@@ -3171,6 +3171,7 @@ function setupStoryNavigation() {
     selectStory(parseInt(cards[prevIndex].dataset.index)); // emit to server
   });
 }
+
 /**
  * Set up story card interactions based on user role
  */
@@ -3179,7 +3180,7 @@ function setupStoryCardInteractions() {
   const storyCards = document.querySelectorAll('.story-card');
 
   storyCards.forEach(card => {
-     //Remove Touch start event
+    //Remove Touch start event
        card.removeEventListener('touchstart',handleTouchStart )
 
        card.addEventListener('touchstart',handleTouchStart );
@@ -3264,7 +3265,9 @@ function setupStoryCardInteractions() {
            }
 
          }
+
       }
+    }
   })
 
 }
@@ -3275,6 +3278,8 @@ function handleTouchStart (e) {
         this.classList.remove('touched');
        }, 200); //After touch ends removes it
 }
+
+
 
 /**
  * Generate avatar URL
