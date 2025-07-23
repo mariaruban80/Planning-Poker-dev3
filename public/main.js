@@ -2450,6 +2450,7 @@ function displayCSVData(data) {
     });
   }
 }
+
 /**
  * Edit a story using the add ticket modal
  * @param {Object} ticketData - The ticket data to edit
@@ -2460,20 +2461,20 @@ function editStory(ticketData) {
   // Check if the add ticket modal functions exist
   if (typeof window.showAddTicketModal === 'function') {
     // First, find the story card in the DOM
-    const storyCard = document.getElementById(ticketData.id);  // Find the card for the current list
-    let currentText = ticketData.text
+    const storyCard = document.getElementById(ticketData.id);
+    let currentText = ticketData.text;
 
     if (storyCard) {
-          // Retrieve the story text from the DOM
-            const storyTitle = storyCard.querySelector('.story-title');
+      // Retrieve the story text from the DOM if the cards id in the current card
+        const storyTitle = storyCard.querySelector('.story-title');   //Will not be created if can't read title
 
-            if(typeof(storyTitle) != undefined && storyTitle != null){		//Prevent crash in function
-             currentText    = storyTitle.textContent
-          }
-    }
+	          if(typeof(storyTitle) !=null &&  typeof(storyTitle) != undefined ){
+                 currentText = storyTitle.textContent;	      //The current txt value is passed here
+	          }else  console.error('No valid data to use ')       //Safety catch will print if crash.
+    }			    //If Valid
 
     // Parse the ticket text to extract name and description
-    let ticketName = currentText ;
+    let ticketName = currentText;
     let ticketDescription = '';
 
     // Check if the text contains a ':' which indicates name: description format
@@ -2487,16 +2488,18 @@ function editStory(ticketData) {
     document.getElementById('ticketNameInput').value = ticketName;
     document.getElementById('ticketDescriptionInput').value = ticketDescription;
 
-
     // Show the modal to all accounts
-    document.getElementById('addTicketModalCustom').style.display = 'flex'; //To All
+    document.getElementById('addTicketModalCustom').style.display = 'flex';
 
-    // Focus on the name input
-    setTimeout(() => {
-      document.getElementById('ticketNameInput').focus();
-    }, 100);
+    	// Focus on the name input (Make the function and prevent type of errors)
+         if (typeof  document.getElementById('ticketNameInput').focus === 'function') {
 
-    // Store the original ticket data for editing for update process
+            setTimeout(() => {		  //Function saftey to work
+                 document.getElementById('ticketNameInput').focus()  //Get the type from a string
+             }, 100);           //For all code functions to take effect
+
+           }		  //End Saftey
+    // Store the original ticket data for editing
     window.editingTicketData = ticketData;
 
     // Update the modal title and button text for screen flag and update reasons
@@ -2508,51 +2511,85 @@ function editStory(ticketData) {
       confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
     }
 
+       if(typeof(confirmButton) != undefined&& confirmButton != null){		//For safty reasons to be sure code happens
 
-    if(typeof( confirmButton) != undefined && confirmButton != null){		//Confirm this code to execute
+		  confirmButton.removeEventListener('click',ConfirmEdit) //Take the event out
 
-         confirmButton.removeEventListener('click',window.ConfirmEdit);		 //for safty take the code out in and re put them in.
-         confirmButton.addEventListener('click',ConfirmEdit);
-
-    }	      //Valid edit button
+		  confirmButton.addEventListener('click',ConfirmEdit)					   //Function call
+       }		//END FUNCTION FOR  confirmButton
+              ///For this code to take the change
 
         /**
-
-         *This section to allow the code functions to the current scope and is for the edit feature
-
+         *This code is scoped and function call works
          */
-        function ConfirmEdit(e){		 //this function can call and the name in this function only.
+      function ConfirmEdit(e){ //this function with scope can call  the name in this function only.
 
-               e.preventDefault();					  //Keep others away from this function
-               //Retrieve value of user edit and use it on the screen
-               const ticketName =  document.getElementById('ticketNameInput').value
-               const ticketDescription = document.getElementById('ticketDescriptionInput').value
-               //Assign current screen variables for use
-               const currentText = ticketName + " : " +ticketDescription 
+	        e.preventDefault();													    //Keeps everything local to this function
 
-               //Code section
-               updateTicketInUI({ id: ticketData.id, text: currentText });
+               const ticketName = document.getElementById('ticketNameInput').value //Code in here to get functions and prevent display errors
 
-               if (socket) {
-                    socket.emit('updateTicket', { id: ticketData.id, text: currentText });
-               } //Code section finished    
+               const ticketDescription = document.getElementById('ticketDescriptionInput').value;	//Get the name from the flag text
+	        const currentText  = ticketName + " : " +ticketDescription								//Add all together with :
 
-        }	  //Function Local
+               //code to perform and display actions,  Make call and execute to make sure the proccess is used
+	        if(  typeof( ticketData.id) != 'undefined'    ){ //Type test	 //
+
+                     const storyCard = document.getElementById(ticketData.id);
+
+                     if(storyCard != 'undefined'){	  //if not a valid card don't crash
+
+                         const storyTitle  = storyCard.querySelector('.story-title');  //Get id from all cards loaded
+
+                        if( storyTitle  != 'undefined'){
+	                          storyTitle.textContent  = currentText;  //Set string in card.
+
+                             updateTicketInUI({ id: ticketData.id, text: currentText });	//Run event for the update flag
+
+     	                       if (socket) {		 //Run function, call event, check and done, is a type test
+                                        socket.emit('updateTicket', storyObject);  //Type test
+                                        console.log("Code Passed Socket Process running Now")	 //All is well report it.
+
+                               }        //End code and action
+                        } else   	 console.warn("Pointer crash prevented"); //The display can't be displayed,
+
+                                                }  else  console.warn("Code Can't function to it");	//
+            }			//EndCode If is a Type
+
+
+
+
+    }	  //END Function Local
 
   } else {
+
+	  //
     console.error('[EDIT] Add ticket modal functions not available');
+
     // Fallback to prompt
     const newText = prompt('Edit story text:', ticketData.text);
-    if (newText && newText !== ticketData.text) {
-      updateTicketInUI({ id: ticketData.id, text: newText });
-      if (socket) {
-        socket.emit('updateTicket', { id: ticketData.id, text: newText });
-      }
-    }
+
+ 	 if (newText && newText !== ticketData.text) {	 //If valid process
+
+	      if(  typeof( ticketData.id) != 'undefined'    ){   //Get flag first.Type  test in here we can make something happen and display
+	          const storyCard = document.getElementById(ticketData.id);
+
+                  if(  storyCard != undefined ){
+                         const storyTitle = storyCard.querySelector('.story-title');   //Can not find the card
+			              if( typeof(storyTitle)  != undefined){
+                                 storyTitle.textContent = newText	 //Run and now display
+
+                                 //Update the UI
+                                 updateTicketInUI({ id: ticketData.id, text: newText });
+
+                                               socket.emit('updateTicket', { id: ticketData.id, text: newText });
+
+			               }
+	           }				  	 //Valid data sent can proccesss data display display
+	     }  else       console.warn("Code Not Found")      //Code can't display
+	 }  //Check String to fix	 //If code won't run at all report here
+
   }
-}
-
-
+}   //END all function
 
 
 
@@ -3350,7 +3387,7 @@ function setupStoryCardInteractions() {
 }		//end Function
 
 
-/* function handleTouchStart(e) {
+ function handleTouchStart(e) {
 	let className ='Touched =  ' +this.className  +  ' ID name ' +  this.id;
     this.classList.add('touched'); 	     	//Add flag
     const cardTouchTimer =  setTimeout(() => {
@@ -3361,7 +3398,7 @@ function setupStoryCardInteractions() {
         this.classList.remove('touched');
 	  }, 200); //After touch ends after 200
 	console.log("Touch feature Applied to -> " + className)
-} */ 
+}  
 
 /**
  * Generate avatar URL
