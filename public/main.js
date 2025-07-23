@@ -3171,7 +3171,6 @@ function setupStoryNavigation() {
     selectStory(parseInt(cards[prevIndex].dataset.index)); // emit to server
   });
 }
-
 /**
  * Set up story card interactions based on user role
  */
@@ -3302,8 +3301,6 @@ function handleTouchStart(e) {
 	  }, 200); //After touch ends after 200
 	console.log("Touch feature Applied to -> " + className)
 }
-
-
 
 /**
  * Generate avatar URL
