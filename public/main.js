@@ -1759,9 +1759,8 @@ function getVoteEmoji(vote) {
   };
   return map[vote] || '🎉';
 }
-
 /**
- * Add a ticket to the UI
+ * Add a ticket to the UI with 3-dot menu
  * @param {Object} ticketData - Ticket data { id, text }
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
@@ -1798,20 +1797,57 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   // Add to DOM
   storyCard.appendChild(storyTitle);
   
-  // Add delete button for hosts only
+  // Add 3-dot menu for hosts only
   if (isCurrentUserHost()) {
-    const deleteButton = document.createElement('div');
-    deleteButton.className = 'story-delete-btn';
-    deleteButton.innerHTML = '🗑'; // dustbin symbol
-    deleteButton.title = 'Delete story';
+    const actionsContainer = document.createElement('div');
+    actionsContainer.className = 'story-actions';
     
-    // Add click handler for delete button
-    deleteButton.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent story selection when clicking delete
-      deleteStory(ticketData.id);
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'story-menu-btn';
+    menuBtn.innerHTML = '⋮'; // 3 vertical dots
+    menuBtn.title = 'Story actions';
+    
+    const dropdown = document.createElement('div');
+    dropdown.className = 'story-menu-dropdown';
+    
+    const editItem = document.createElement('div');
+    editItem.className = 'story-menu-item edit';
+    editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+    
+    const deleteItem = document.createElement('div');
+    deleteItem.className = 'story-menu-item delete';
+    deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+    
+    dropdown.appendChild(editItem);
+    dropdown.appendChild(deleteItem);
+    
+    actionsContainer.appendChild(menuBtn);
+    actionsContainer.appendChild(dropdown);
+    storyCard.appendChild(actionsContainer);
+    
+    // Add event listeners
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      
+      // Close all other dropdowns first
+      document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+        if (dd !== dropdown) dd.classList.remove('show');
+      });
+      
+      dropdown.classList.toggle('show');
     });
     
-    storyCard.appendChild(deleteButton);
+    editItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('show');
+      editStory(ticketData);
+    });
+    
+    deleteItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('show');
+      deleteStory(ticketData.id);
+    });
   }
   
   storyList.appendChild(storyCard);
@@ -1825,7 +1861,8 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
       selectStory(newIndex);
     });
   }
-    // Select the new story if requested (only for hosts)
+  
+  // Select the new story if requested (only for hosts)
   if (selectAfterAdd && !isGuestUser()) {
     selectStory(newIndex);
   }
@@ -1841,8 +1878,53 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     card.classList.remove('disabled');
     card.setAttribute('draggable', 'true');
   });
+  
   normalizeStoryIndexes();
-} 
+}
+
+/**
+ * Edit a story using the add ticket modal
+ * @param {Object} ticketData - The ticket data to edit
+ */
+function editStory(ticketData) {
+  console.log('[EDIT] Editing story:', ticketData);
+  
+  // Parse the ticket text to extract name and description
+  let ticketName = ticketData.text;
+  let ticketDescription = '';
+  
+  // Check if the text contains a ':' which indicates name: description format
+  if (ticketData.text.includes(': ')) {
+    const parts = ticketData.text.split(': ', 2);
+    ticketName = parts[0];
+    ticketDescription = parts[1];
+  }
+  
+  // Pre-fill the modal with existing data
+  document.getElementById('ticketNameInput').value = ticketName;
+  document.getElementById('ticketDescriptionInput').value = ticketDescription;
+  
+  // Show the modal
+  document.getElementById('addTicketModalCustom').style.display = 'flex';
+  
+  // Focus on the name input
+  setTimeout(() => {
+    document.getElementById('ticketNameInput').focus();
+  }, 100);
+  
+  // Store the original ticket data for editing
+  window.editingTicketData = ticketData;
+  
+  // Update the modal title and button text
+  const modalTitle = document.querySelector('#addTicketModalCustom h3');
+  const confirmButton = document.getElementById('confirmAddTicket');
+  
+  if (modalTitle) modalTitle.textContent = 'Edit Ticket';
+  if (confirmButton) {
+    confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
+  }
+}
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
