@@ -503,15 +503,33 @@ function createFixedVoteDisplay(votes) {
  * Determines if current user is a guest
  */
 function isGuestUser() {
+  // Check sessionStorage first (most reliable)
+  const isHostFromStorage = sessionStorage.getItem('isHost');
+  if (isHostFromStorage !== null) {
+    return isHostFromStorage === 'false';
+  }
+  
+  // Fallback: If joining via shared URL without being marked as host
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
+  const hasRoomId = urlParams.has('roomId');
+  const isRoomCreator = sessionStorage.getItem('isRoomCreator') === 'true';
+  
+  // If there's a roomId but user didn't create the room, they're a guest
+  return hasRoomId && !isRoomCreator;
 }
 
 /**
  * Determines if current user is the host
  */
 function isCurrentUserHost() {
-  return sessionStorage.getItem('isHost') === 'true';
+  // Check sessionStorage first (most reliable)
+  const isHostFromStorage = sessionStorage.getItem('isHost');
+  if (isHostFromStorage !== null) {
+    return isHostFromStorage === 'true';
+  }
+  
+  // Fallback: Check if user created the room
+  return sessionStorage.getItem('isRoomCreator') === 'true';
 }
 
 function setupPlanningCards() {
@@ -573,16 +591,7 @@ function setupGuestModeRestrictions() {
  */
 function getRoomIdFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
-  const roomId = urlParams.get('roomId');
-  const isHost = urlParams.get('host') === 'true';
-
-  // ✅ Store host status in sessionStorage
-  if (isHost) {
-    sessionStorage.setItem('isHost', 'true');
-  } else {
-    sessionStorage.setItem('isHost', 'false');
-  }
-
+  const roomId = urlParams.get('roomId');  
   // Fallback: generate a room if not present
   return roomId || 'room-' + Math.floor(Math.random() * 10000);
 }
