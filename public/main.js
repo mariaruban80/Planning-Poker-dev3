@@ -3268,12 +3268,12 @@ function setupStoryCardInteractions() {
   storyCards.forEach(card => {
     //Remove Touch start event
 
-	/*  if(typeof(card) != undefined && typeof(card.removeEventListener )  == typeof(Function) ){
+	 if(typeof(card) != undefined && typeof(card.removeEventListener )  == typeof(Function) ){
 
 	       card.removeEventListener('touchstart',handleTouchStart )
           card.addEventListener('touchstart',handleTouchStart);
 
-	  }*/
+	  }
 
     // Check if user is a guest
     const isGuest = isGuestUser();
