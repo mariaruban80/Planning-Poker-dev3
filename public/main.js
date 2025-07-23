@@ -1373,35 +1373,11 @@ function cleanupDeleteButtonHandlers() {
 
 /**
  * Setup delegation-based event handling for CSV story delete buttons
+ * NOTE: This is now disabled since we use 3-dot menus
  */
 function setupCSVDeleteButtons() {
-  // Define the handler function if it doesn't exist yet
-  if (!window.csvDeleteButtonHandler) {
-    window.csvDeleteButtonHandler = function(event) {
-      // Only handle clicks on delete buttons inside CSV stories
-      const deleteBtn = event.target.closest('.story-delete-btn');
-      const storyCard = event.target.closest('.story-card[id^="story_csv_"]');
-      
-      if (deleteBtn && storyCard && storyCard.id) {
-        event.stopPropagation();
-        event.preventDefault();
-        
-        console.log('[DELETE] Delegated handler for CSV story:', storyCard.id);
-        deleteStory(storyCard.id);
-      }
-    };
-  }
-  
-  // Remove any existing delegated click handler first (safely)
-  try {
-    document.removeEventListener('click', window.csvDeleteButtonHandler);
-  } catch (e) {
-    console.log('[SETUP] No existing handler to remove');
-  }
-  
-  // Add the new event listener
-  document.addEventListener('click', window.csvDeleteButtonHandler);
-  console.log('[SETUP] CSV delete button handler installed');
+  // Disabled - we now use 3-dot menus instead
+  console.log('[SETUP] CSV delete button handler disabled - using 3-dot menus instead');
 }
 
 /**
