@@ -2090,9 +2090,7 @@ function showAddTicketModal() {
   }, 100);
 }
 
-function hideAddTicketModal() {
-  document.getElementById('addTicketModalCustom').style.display = 'none';
-}
+
 
 function handleAddTicketSubmit() {
   const ticketName = document.getElementById('ticketNameInput').value.trim();
@@ -2117,41 +2115,96 @@ function handleAddTicketSubmit() {
     ticketText = ticketName + ': ' + ticketDescription;
   }
   
-  // Create ticket data
-  const ticketData = {
-    id: `story_${Date.now()}`,
-    text: ticketText
-  };
+  // Check if we're editing or adding
+  const isEditing = window.editingTicketData;
   
-  // Hide the modal
-  hideAddTicketModal();
-  
-  // If we have access to main.js functions
-  if (window.addTicketFromModal) {
-    window.addTicketFromModal(ticketData);
-  } else {
-    // Fallback implementation
-    const storyList = document.getElementById('storyList');
+  if (isEditing) {
+    // Update existing ticket
+    const ticketData = {
+      id: window.editingTicketData.id,
+      text: ticketText,
+      isEdit: true
+    };
     
-    if (storyList) {
-      const storyCard = document.createElement('div');
-      storyCard.className = 'story-card';
-      storyCard.id = ticketData.id;
+    console.log('[EDIT] Updating ticket:', ticketData);
+    
+    // Hide the modal and reset state
+    hideAddTicketModal();
+    resetAddTicketModal();
+    
+    // Update the ticket
+    if (window.updateTicketFromModal) {
+      window.updateTicketFromModal(ticketData);
+    } else {
+      // Fallback: Update locally and emit to server
+      updateTicketInUI(ticketData);
       
-      const storyTitle = document.createElement('div');
-      storyTitle.className = 'story-title';
-      storyTitle.textContent = ticketData.text;
-      
-      storyCard.appendChild(storyTitle);
-      storyList.appendChild(storyCard);
-      
-      // Try to emit to socket if available
+      // Emit to server
       if (window.socket) {
-        window.socket.emit('addTicket', ticketData);
+        window.socket.emit('updateTicket', ticketData);
+      }
+    }
+  } else {
+    // Create new ticket
+    const ticketData = {
+      id: `story_${Date.now()}`,
+      text: ticketText
+    };
+    
+    // Hide the modal
+    hideAddTicketModal();
+    
+    // If we have access to main.js functions
+    if (window.addTicketFromModal) {
+      window.addTicketFromModal(ticketData);
+    } else {
+      // Fallback implementation
+      const storyList = document.getElementById('storyList');
+      
+      if (storyList) {
+        const storyCard = document.createElement('div');
+        storyCard.className = 'story-card';
+        storyCard.id = ticketData.id;
+        
+        const storyTitle = document.createElement('div');
+        storyTitle.className = 'story-title';
+        storyTitle.textContent = ticketData.text;
+        
+        storyCard.appendChild(storyTitle);
+        storyList.appendChild(storyCard);
+        
+        // Try to emit to socket if available
+        if (window.socket) {
+          window.socket.emit('addTicket', ticketData);
+        }
       }
     }
   }
 }
+
+function hideAddTicketModal() {
+  document.getElementById('addTicketModalCustom').style.display = 'none';
+}
+
+function resetAddTicketModal() {
+  // Clear form inputs
+  document.getElementById('ticketNameInput').value = '';
+  document.getElementById('ticketDescriptionInput').value = '';
+  
+  // Reset modal title and button text
+  const modalTitle = document.querySelector('#addTicketModalCustom h3');
+  const confirmButton = document.getElementById('confirmAddTicket');
+  
+  if (modalTitle) modalTitle.textContent = 'Add New Ticket';
+  if (confirmButton) {
+    confirmButton.innerHTML = '<span class="plus-icon">+</span> ADD';
+  }
+  
+  // Clear editing state
+  window.editingTicketData = null;
+}
+
+     
 
 // Set up event listeners for the add ticket modal
 document.addEventListener('DOMContentLoaded', function() {
