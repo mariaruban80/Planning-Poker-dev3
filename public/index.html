@@ -1712,6 +1712,7 @@ function updateHeaderStyle() {
       }
     }
 // Initialize the user display in header - improved version
+
 function initUserHeaderDisplay() {
   // Get username from session storage - prioritize the one set through login modal
   const username = sessionStorage.getItem('userName') || 'Guest';
@@ -1721,25 +1722,38 @@ function initUserHeaderDisplay() {
   if (usernameEl) usernameEl.textContent = username;
   
   if (avatarEl) {
-    // Generate initials for the avatar
-    const initials = username.split(' ')
-      .map(part => part.charAt(0))
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-      
-    avatarEl.textContent = initials;
+    // Use the same avatar generation as the main app (generateAvatarUrl function already exists in main.js)
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random&rounded=true`;
     
-    // Generate a consistent color based on username
-    const hue = Math.abs(username.split('').reduce((a, b) => {
-      return a + b.charCodeAt(0);
-    }, 0) % 360);
+    avatarEl.innerHTML = `<img src="${avatarUrl}" alt="${username}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
     
-    avatarEl.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
+    // Fallback if image fails
+    const imgElement = avatarEl.querySelector('img');
+    if (imgElement) {
+      imgElement.onerror = function() {
+        const initials = username.split(' ')
+          .map(part => part.charAt(0))
+          .join('')
+          .toUpperCase()
+          .substring(0, 2);
+          
+        avatarEl.innerHTML = initials;
+        
+        const hue = Math.abs(username.split('').reduce((a, b) => {
+          return a + b.charCodeAt(0);
+        }, 0) % 360);
+        
+        avatarEl.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
+        avatarEl.style.color = 'white';
+        avatarEl.style.display = 'flex';
+        avatarEl.style.alignItems = 'center';
+        avatarEl.style.justifyContent = 'center';
+        avatarEl.style.fontWeight = 'bold';
+      };
+    }
   }
 }
 
-// Call this function when the DOM is loaded AND after login
 // Handle username synchronization and prompt for invited users
 document.addEventListener('DOMContentLoaded', function() {
   // STEP 1: Check for username from main.html (userName with capital N)
@@ -1771,7 +1785,62 @@ document.addEventListener('DOMContentLoaded', function() {
       const isCreator = sessionStorage.getItem('isRoomCreator') === 'true';
       sessionStorage.setItem('isHost', isCreator ? 'true' : 'false');
     }
+    
+    // ✅ Update header if we have username - NEW ADDITION
+    if (storedUserName) {
+      setTimeout(initUserHeaderDisplay, 100);
+    }
   }
+  
+  // ✅ NEW ADDITIONS FOR HEADER FUNCTIONALITY
+  // Add periodic check to ensure header stays updated
+  setInterval(function() {
+    const usernameEl = document.getElementById('headerUsername');
+    const currentStoredUserName = sessionStorage.getItem('userName');
+    
+    // If header shows "User" but we have a real username, update it
+    if (usernameEl && currentStoredUserName && (usernameEl.textContent === 'User' || usernameEl.textContent === 'Guest')) {
+      console.log('[HEADER] Header showing default text, updating with stored username:', currentStoredUserName);
+      initUserHeaderDisplay();
+    }
+  }, 2000);
+  
+  // Add a callback to the join session button to update header after login
+  const joinButton = document.getElementById('joinSessionWithName');
+  if (joinButton) {
+    joinButton.addEventListener('click', function() {
+      setTimeout(() => {
+        console.log('[LOGIN] Join button clicked, updating header display');
+        initUserHeaderDisplay();
+      }, 100);
+    });
+  }
+  
+  // Also listen for Enter key in username input
+  const userNameInput = document.getElementById('userNameInput');
+  if (userNameInput) {
+    userNameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        setTimeout(() => {
+          console.log('[LOGIN] Enter key pressed, updating header display');
+          initUserHeaderDisplay();
+        }, 100);
+      }
+    });
+  }
+  
+  // Check when page becomes visible (in case user switched tabs)
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      setTimeout(function() {
+        const usernameEl = document.getElementById('headerUsername');
+        const currentStoredUserName = sessionStorage.getItem('userName');
+        if (usernameEl && currentStoredUserName && usernameEl.textContent === 'User') {
+          initUserHeaderDisplay();
+        }
+      }, 500);
+    }
+  });
   
   // Debugging info
   console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
@@ -1871,7 +1940,6 @@ window.addEventListener('orientationchange', function() {
 });
 
 // Update existing handleLoginSubmit function to call our header update
-// This modifies the existing function from your ENHANCED SCRIPT FOR USERNAME HANDLING
 const originalHandleLoginSubmit = window.handleLoginSubmit || function() {};
 window.handleLoginSubmit = function() {
   const username = document.getElementById('userNameInput').value.trim();
@@ -1894,7 +1962,7 @@ window.handleLoginSubmit = function() {
     if (window.initializeAppWithName) window.initializeAppWithName(username);
     
     // Update header display with the new username
-    initUserHeaderDisplay();
+    setTimeout(initUserHeaderDisplay, 50);
   } else {
     // Show validation error - shake the input
     const input = document.getElementById('userNameInput');
@@ -1906,6 +1974,12 @@ window.handleLoginSubmit = function() {
     }, 500);
   }
 };
+
+// Also make sure to update the display whenever username changes
+window.updateUserDisplay = function() {
+  initUserHeaderDisplay();
+};
+
 
 // Also make sure to update the display whenever username changes
 window.updateUserDisplay = function() {
@@ -2514,33 +2588,52 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
 <script>
   // Global flag to track if username is ready
   window.userNameReady = false;
-  
   // Handle username synchronization and prompt for invited users
-  document.addEventListener('DOMContentLoaded', function() {
-    // STEP 1: Check for username from main.html (userName with capital N)
-    const storedUserName = sessionStorage.getItem('userName');
+document.addEventListener('DOMContentLoaded', function() {
+  // STEP 1: Check for username from main.html (userName with capital N)
+  const storedUserName = sessionStorage.getItem('userName');
+  
+  // STEP 2: Check if this is a new user joining via invite link
+  const urlParams = new URLSearchParams(window.location.search);
+  const isJoiningViaInvite = urlParams.has('roomId') && !storedUserName;
+  
+  if (isJoiningViaInvite) {
+    // This is someone joining via invite link who doesn't have a userName yet
+    // ✅ Mark them as guest since they're joining via invite
+    sessionStorage.setItem('isHost', 'false');
+    sessionStorage.setItem('isRoomCreator', 'false');
     
-    // STEP 2: Check if this is a new user joining via invite link
-    const urlParams = new URLSearchParams(window.location.search);
-    const isJoiningViaInvite = urlParams.has('roomId') && !storedUserName;
+    showLoginModal();
     
-    if (isJoiningViaInvite) {
-      // This is someone joining via invite link who doesn't have a userName yet
-      showLoginModal();
-      
-      // Important: Mark username as not ready to prevent socket connection
-      window.userNameReady = false;
-      
-      // Hide main content until user provides name
-      hideMainContent();
-    } else {
-      // User already has a name, mark as ready
-      window.userNameReady = true;
+    // Important: Mark username as not ready to prevent socket connection
+    window.userNameReady = false;
+    
+    // Hide main content until user provides name
+    hideMainContent();
+  } else {
+    // User already has a name, mark as ready
+    window.userNameReady = true;
+    
+    // ✅ If no host status is set, check if they have room creator status
+    if (!sessionStorage.getItem('isHost')) {
+      const isCreator = sessionStorage.getItem('isRoomCreator') === 'true';
+      sessionStorage.setItem('isHost', isCreator ? 'true' : 'false');
     }
     
-    // Debugging info
-    console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
-  });
+    // ✅ Update header if we have username
+    if (storedUserName) {
+      setTimeout(initUserHeaderDisplay, 100);
+    }
+  }
+  
+  // Debugging info
+  console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
+  console.log('Host status:', sessionStorage.getItem('isHost'));
+  console.log('Room creator:', sessionStorage.getItem('isRoomCreator'));
+});
+
+
+     
   
   // Function to hide main content until user provides name
   function hideMainContent() {
@@ -2730,21 +2823,23 @@ function handleLoginSubmit() {
   };
   
   // Initialize on page load
-
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if the button exists before trying to use it
     const logOffBtn = document.getElementById('logOffBtn');
     
     if (logOffBtn) {
         logOffBtn.addEventListener('click', function() {
-            // ✅ Clear ALL session storage to reset host/guest status
+            // Clear session storage
             sessionStorage.clear();
+            
+            // Reset header to default
+            const usernameEl = document.getElementById('headerUsername');
+            const avatarEl = document.getElementById('headerUserAvatar');
+            if (usernameEl) usernameEl.textContent = 'User';
+            if (avatarEl) avatarEl.innerHTML = '';
             
             // Redirect to main.html
             window.location.href = 'About.html';
         });
-    } else {
-        console.error('Log Off button not found - make sure the button exists in HTML');
     }
 });
 
