@@ -1740,32 +1740,43 @@ function initUserHeaderDisplay() {
 }
 
 // Call this function when the DOM is loaded AND after login
+// Handle username synchronization and prompt for invited users
 document.addEventListener('DOMContentLoaded', function() {
-  // Initial setup of header
-  initUserHeaderDisplay();
+  // STEP 1: Check for username from main.html (userName with capital N)
+  const storedUserName = sessionStorage.getItem('userName');
   
-  // Add a callback to the join session button to update header after login
-  const joinButton = document.getElementById('joinSessionWithName');
-  if (joinButton) {
-    joinButton.addEventListener('click', function() {
-      // Set a small delay to ensure sessionStorage is updated first
-      setTimeout(initUserHeaderDisplay, 100);
-    });
+  // STEP 2: Check if this is a new user joining via invite link
+  const urlParams = new URLSearchParams(window.location.search);
+  const isJoiningViaInvite = urlParams.has('roomId') && !storedUserName;
+  
+  if (isJoiningViaInvite) {
+    // This is someone joining via invite link who doesn't have a userName yet
+    // ✅ Mark them as guest since they're joining via invite
+    sessionStorage.setItem('isHost', 'false');
+    sessionStorage.setItem('isRoomCreator', 'false');
+    
+    showLoginModal();
+    
+    // Important: Mark username as not ready to prevent socket connection
+    window.userNameReady = false;
+    
+    // Hide main content until user provides name
+    hideMainContent();
+  } else {
+    // User already has a name, mark as ready
+    window.userNameReady = true;
+    
+    // ✅ If no host status is set, check if they have room creator status
+    if (!sessionStorage.getItem('isHost')) {
+      const isCreator = sessionStorage.getItem('isRoomCreator') === 'true';
+      sessionStorage.setItem('isHost', isCreator ? 'true' : 'false');
+    }
   }
   
-  // Also listen for Enter key in username input
-  const userNameInput = document.getElementById('userNameInput');
-  if (userNameInput) {
-    userNameInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        // Set a small delay to ensure sessionStorage is updated first
-        setTimeout(initUserHeaderDisplay, 100);
-      }
-    });
-  }
-  
-  // Setup mobile layout features
-  setupMobileLayout();
+  // Debugging info
+  console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
+  console.log('Host status:', sessionStorage.getItem('isHost'));
+  console.log('Room creator:', sessionStorage.getItem('isRoomCreator'));
 });
 
 // Setup mobile-specific features
@@ -2578,37 +2589,46 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
   }
   
   // Function to handle login form submission
-  function handleLoginSubmit() {
-    const username = document.getElementById('userNameInput').value.trim();
-    
-    if (username) {
-      // Store with both key formats for compatibility
-      sessionStorage.setItem('userName', username);
-      console.log(`User joined as: ${username}`);
-      
-      // Hide the modal
-      document.getElementById('loginModalCustom').style.display = 'none';
-      
-      // Mark username as ready
-      window.userNameReady = true;
-      
-      // Show main content
-      showMainContent();
-      
-      // Initialize the app now that we have a username
-      initializeAppWithName(username);
-    } else {
-      // Show validation error - shake the input
-      const input = document.getElementById('userNameInput');
-      input.style.borderColor = '#ff4d4f';
-      input.classList.add('shake');
-      
-      setTimeout(() => {
-        input.classList.remove('shake');
-      }, 500);
-    }
-  }
+// Function to handle login form submission
+function handleLoginSubmit() {
+  const username = document.getElementById('userNameInput').value.trim();
   
+  if (username) {
+    // Store with both key formats for compatibility
+    sessionStorage.setItem('userName', username);
+    
+    // ✅ Ensure guest status is maintained for invited users
+    if (!sessionStorage.getItem('isHost')) {
+      sessionStorage.setItem('isHost', 'false');
+      sessionStorage.setItem('isRoomCreator', 'false');
+    }
+    
+    console.log(`User joined as: ${username}`);
+    
+    // Hide the modal
+    document.getElementById('loginModalCustom').style.display = 'none';
+    
+    // Mark username as ready
+    window.userNameReady = true;
+    
+    // Show main content
+    showMainContent();
+    
+    // Initialize the app now that we have a username
+    initializeAppWithName(username);
+  } else {
+    // Show validation error - shake the input
+    const input = document.getElementById('userNameInput');
+    input.style.borderColor = '#ff4d4f';
+    input.classList.add('shake');
+    
+    setTimeout(() => {
+      input.classList.remove('shake');
+    }, 500);
+  }
+}
+
+     
   // Initialize the app with the provided username
   function initializeAppWithName(username) {
     // Initialize socket connection with the username
@@ -2710,13 +2730,25 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
   };
   
   // Initialize on page load
-  document.addEventListener('DOMContentLoaded', function() {
-    // Ensure the invite button uses our custom modal function
-    const inviteBtn = document.getElementById('inviteButton');
-    if (inviteBtn) {
-      inviteBtn.onclick = window.showInviteModalCustom;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if the button exists before trying to use it
+    const logOffBtn = document.getElementById('logOffBtn');
+    
+    if (logOffBtn) {
+        logOffBtn.addEventListener('click', function() {
+            // ✅ Clear ALL session storage to reset host/guest status
+            sessionStorage.clear();
+            
+            // Redirect to main.html
+            window.location.href = 'About.html';
+        });
+    } else {
+        console.error('Log Off button not found - make sure the button exists in HTML');
     }
-  });
+});
+
+         
 </script>
  <!-- Add this before the closing </body> tag 
 <script src="userlist-fix.js"></script> -->
