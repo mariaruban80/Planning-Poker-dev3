@@ -3161,6 +3161,10 @@ function setupStoryNavigation() {
 /**
  * Set up story card interactions based on user role
  */
+
+/**
+ * Set up story card interactions based on user role
+ */
 function setupStoryCardInteractions() {
   // Check if user is a guest (joined via shared URL)
   const isGuest = isGuestUser();
@@ -3178,43 +3182,69 @@ function setupStoryCardInteractions() {
       // For guests: disable clicking and add visual indicator
       card.classList.add('disabled-story');
       
-      // Remove any existing click handlers by cloning and replacing
+      // Remove any existing click events by cloning and replacing
       const newCard = card.cloneNode(true);
       if (card.parentNode) {
         card.parentNode.replaceChild(newCard, card);
       }
     } else {
-      // For hosts: maintain normal selection behavior
       // Remove existing handlers first to prevent duplicates
       const newCard = card.cloneNode(true);
       if (card.parentNode) {
         card.parentNode.replaceChild(newCard, card);
       
-        // Add fresh click event listener
-        newCard.addEventListener('click', () => {
+        // Add fresh click event listener - Only hosts can select stories
+        newCard.addEventListener('click', (e) => {
           const index = parseInt(newCard.dataset.index || 0);
           selectStory(index);
         });
-        
-        // Re-add delete button if needed
-        if (isCurrentUserHost() && !newCard.querySelector('.story-delete-btn')) {
-          const deleteButton = document.createElement('div');
-          deleteButton.className = 'story-delete-btn';
-          deleteButton.innerHTML = '🗑';
-          deleteButton.title = 'Delete story';
-          
-          deleteButton.onclick = function(e) {
+      }
+    }
+    
+     // For hosts: Ensure the 3-dot menu works, regardless of CSV or manually added ticket
+    if (isCurrentUserHost()) {
+      const actionsContainer = card.querySelector('.story-actions');
+      if (actionsContainer) {
+        const menuBtn = actionsContainer.querySelector('.story-menu-btn');
+        const dropdown = actionsContainer.querySelector('.story-menu-dropdown');
+
+        if (menuBtn && dropdown) {
+          // Attach the same click handler to menu button again just to ensure
+          menuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            e.preventDefault();
-            deleteStory(newCard.id);
-          };
-          
-          newCard.appendChild(deleteButton);
+            document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+              if (dd !== dropdown) dd.classList.remove('show');
+            });
+            dropdown.classList.toggle('show');
+          });
+
+          // Use existing edit and delete listeners for 3-dot menu
+          const editItem = dropdown.querySelector('.story-menu-item.edit');
+          const deleteItem = dropdown.querySelector('.story-menu-item.delete');
+
+          if (editItem) {
+            editItem.addEventListener('click', (e) => {
+              e.stopPropagation();
+              dropdown.classList.remove('show');
+              const storyId = card.id;
+              const text = card.querySelector('.story-title').textContent;
+              editStory({ id: storyId, text: text });
+            });
+          }
+
+          if (deleteItem) {
+            deleteItem.addEventListener('click', (e) => {
+              e.stopPropagation();
+              dropdown.classList.remove('show');
+              deleteStory(card.id);
+            });
+          }
         }
       }
     }
   });
 }
+
 
 /**
  * Generate avatar URL
