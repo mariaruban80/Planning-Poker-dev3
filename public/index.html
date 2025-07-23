@@ -2005,15 +2005,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Expose function for main.js
 window.showAddTicketModal = showAddTicketModal;
-    function isGuestUser() {
-     // Check if URL contains 'roomId' parameter but not 'host=true'
-      const urlParams = new URLSearchParams(window.location.search);
-      
-      // Consider user a guest if:
-      // 1. There's no 'host' parameter, or
-      // 2. The 'host' parameter is anything other than 'true'
-      return urlParams.has('roomId') && (!urlParams.has('host') || urlParams.get('host') !== 'true');
-    }
+function isGuestUser() {
+  // Primary check: sessionStorage
+  const isHostFromStorage = sessionStorage.getItem('isHost');
+  if (isHostFromStorage !== null) {
+    return isHostFromStorage === 'false';
+  }
+  
+  // Secondary check: URL has roomId but user didn't create room
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasRoomId = urlParams.has('roomId');
+  const isRoomCreator = sessionStorage.getItem('isRoomCreator') === 'true';
+  
+  return hasRoomId && !isRoomCreator;
+}
 
     function setupGuestModeOnLoad() {
       if (isGuestUser()) {
