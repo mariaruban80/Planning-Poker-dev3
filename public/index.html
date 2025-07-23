@@ -2497,7 +2497,7 @@ function isGuestUser() {
         alert('Error exporting votes: ' + (error.message || 'Unknown error'));
       }
     }
-// Monitor for CSV file uploads - CORRECTED VERSION
+// Monitor for CSV file uploads - FIXED VERSION
 document.getElementById('csvInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -2512,7 +2512,6 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
     if (storyList) {
       const manualStories = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
       manualStories.forEach(card => {
-        // Only save non-CSV stories (using ID pattern)
         if (card.id && !card.id.includes('story_csv_')) {
           const titleEl = card.querySelector('.story-title');
           if (titleEl) {
@@ -2525,71 +2524,10 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
       });
       
       console.log(`Saved ${existingStories.length} existing stories before CSV processing`);
-      
-      // Now clear the list for new content
       storyList.innerHTML = '';
     }
     
-    // Function to create 3-dot menu
-    function create3DotMenu(storyData) {
-      const actionsContainer = document.createElement('div');
-      actionsContainer.className = 'story-actions';
-      
-      const menuBtn = document.createElement('button');
-      menuBtn.className = 'story-menu-btn';
-      menuBtn.innerHTML = '⋮';
-      menuBtn.title = 'Story actions';
-      
-      const dropdown = document.createElement('div');
-      dropdown.className = 'story-menu-dropdown';
-      
-      const editItem = document.createElement('div');
-      editItem.className = 'story-menu-item edit';
-      editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
-      
-      const deleteItem = document.createElement('div');
-      deleteItem.className = 'story-menu-item delete';
-      deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
-      
-      dropdown.appendChild(editItem);
-      dropdown.appendChild(deleteItem);
-      
-      actionsContainer.appendChild(menuBtn);
-      actionsContainer.appendChild(dropdown);
-      
-      // Add event listeners
-      menuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        console.log('[CSV] 3-dot menu clicked for:', storyData.id);
-        
-        document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
-          if (dd !== dropdown) dd.classList.remove('show');
-        });
-        dropdown.classList.toggle('show');
-      });
-      
-      editItem.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.remove('show');
-        console.log('[CSV] Edit clicked for:', storyData.id);
-        if (window.editStory && typeof window.editStory === 'function') {
-          window.editStory(storyData);
-        }
-      });
-      
-      deleteItem.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.remove('show');
-        console.log('[CSV] Delete clicked for:', storyData.id);
-        if (window.deleteStory && typeof window.deleteStory === 'function') {
-          window.deleteStory(storyData.id);
-        }
-      });
-      
-      return actionsContainer;
-    }
-    
-    // First, restore the manually added stories with 3-dot menu ONLY
+    // Re-add manually added stories using the same structure as addTicketToUI
     existingStories.forEach((story, index) => {
       const storyCard = document.createElement('div');
       storyCard.className = 'story-card';
@@ -2599,19 +2537,61 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
       const storyTitle = document.createElement('div');
       storyTitle.className = 'story-title';
       storyTitle.textContent = story.text;
-      
       storyCard.appendChild(storyTitle);
       
-      // Add 3-dot menu for hosts only - NO DELETE BUTTONS
+      // Use the EXACT same 3-dot menu code as addTicketToUI
       if (!isGuestUser()) {
-        const menu = create3DotMenu({ id: story.id, text: story.text });
-        storyCard.appendChild(menu);
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'story-actions';
+        
+        const menuBtn = document.createElement('button');
+        menuBtn.className = 'story-menu-btn';
+        menuBtn.innerHTML = '⋮';
+        menuBtn.title = 'Story actions';
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'story-menu-dropdown';
+        
+        const editItem = document.createElement('div');
+        editItem.className = 'story-menu-item edit';
+        editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+        
+        const deleteItem = document.createElement('div');
+        deleteItem.className = 'story-menu-item delete';
+        deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        
+        dropdown.appendChild(editItem);
+        dropdown.appendChild(deleteItem);
+        actionsContainer.appendChild(menuBtn);
+        actionsContainer.appendChild(dropdown);
+        storyCard.appendChild(actionsContainer);
+        
+        // Use the EXACT same event listeners as addTicketToUI
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+            if (dd !== dropdown) dd.classList.remove('show');
+          });
+          dropdown.classList.toggle('show');
+        });
+        
+        editItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
+          if (window.editStory) window.editStory({id: story.id, text: story.text});
+        });
+        
+        deleteItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
+          if (window.deleteStory) window.deleteStory(story.id);
+        });
       }
       
       storyList.appendChild(storyCard);
     });
     
-    // Then add the CSV stories with 3-dot menu ONLY
+    // Add CSV stories using the EXACT same structure as addTicketToUI
     const stories = csvData.split('\n');
     let startIndex = existingStories.length;
     
@@ -2625,38 +2605,75 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
         const storyTitle = document.createElement('div');
         storyTitle.className = 'story-title';
         storyTitle.textContent = story.trim();
-        
         storyCard.appendChild(storyTitle);
         
-        // Add 3-dot menu for CSV stories for hosts only - NO DELETE BUTTONS
+        // Use the EXACT same 3-dot menu code as addTicketToUI
         if (!isGuestUser()) {
-          const menu = create3DotMenu({ id: `story_csv_${index}`, text: story.trim() });
-          storyCard.appendChild(menu);
+          const actionsContainer = document.createElement('div');
+          actionsContainer.className = 'story-actions';
+          
+          const menuBtn = document.createElement('button');
+          menuBtn.className = 'story-menu-btn';
+          menuBtn.innerHTML = '⋮';
+          menuBtn.title = 'Story actions';
+          
+          const dropdown = document.createElement('div');
+          dropdown.className = 'story-menu-dropdown';
+          
+          const editItem = document.createElement('div');
+          editItem.className = 'story-menu-item edit';
+          editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+          
+          const deleteItem = document.createElement('div');
+          deleteItem.className = 'story-menu-item delete';
+          deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+          
+          dropdown.appendChild(editItem);
+          dropdown.appendChild(deleteItem);
+          actionsContainer.appendChild(menuBtn);
+          actionsContainer.appendChild(dropdown);
+          storyCard.appendChild(actionsContainer);
+          
+          // Use the EXACT same event listeners as addTicketToUI
+          menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+              if (dd !== dropdown) dd.classList.remove('show');
+            });
+            dropdown.classList.toggle('show');
+          });
+          
+          editItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.remove('show');
+            if (window.editStory) window.editStory({id: `story_csv_${index}`, text: story.trim()});
+          });
+          
+          deleteItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.remove('show');
+            if (window.deleteStory) window.deleteStory(`story_csv_${index}`);
+          });
         }
         
         storyList.appendChild(storyCard);
       }
     });
     
-    // Check for stories again after CSV upload
+    // Check for stories and select first one
     checkForStories();
-    
-    // Select the first story if there are any
     const firstStory = storyList.querySelector('.story-card');
     if (firstStory) {
       firstStory.classList.add('selected');
     }
     
-    // Notify main.js about the combined stories if possible
-    if (window.notifyStoriesUpdated && typeof window.notifyStoriesUpdated === 'function') {
+    if (window.notifyStoriesUpdated) {
       window.notifyStoriesUpdated();
     }
   };
   
   reader.readAsText(file);
 });
-
-     
     
     // Story selection functionality
     document.addEventListener('click', function(e) {
