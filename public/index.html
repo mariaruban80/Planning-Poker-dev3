@@ -59,7 +59,97 @@
       border-left-color: white;
       box-shadow: none;
     }
-    
+
+     /* 3-dot menu styles */
+.story-actions {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 10;
+}
+
+.story-menu-btn {
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 16px;
+  transition: all 0.2s;
+  opacity: 0.7;
+}
+
+.story-menu-btn:hover {
+  background-color: #f5f5f5;
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.story-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+  display: none;
+  z-index: 1000;
+}
+
+.story-menu-dropdown.show {
+  display: block;
+}
+
+.story-menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.story-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.story-menu-item:first-child {
+  border-radius: 6px 6px 0 0;
+}
+
+.story-menu-item:last-child {
+  border-radius: 0 0 6px 6px;
+}
+
+.story-menu-item.delete {
+  color: #e53e3e;
+}
+
+.story-menu-item.delete:hover {
+  background-color: #fed7d7;
+}
+
+/* Ensure story cards have relative positioning for absolute menu positioning */
+.story-card {
+  position: relative;
+  padding-right: 40px; /* Make room for the menu */
+}
+
+/* Hide old delete button */
+.story-delete-btn {
+  display: none;
+}
+
+     
     
     /* Updated story card styling to match reference screenshot */
     .story-card { 
