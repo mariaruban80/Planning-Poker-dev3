@@ -3268,12 +3268,12 @@ function setupStoryCardInteractions() {
   storyCards.forEach(card => {
     //Remove Touch start event
 
-	  if(typeof(card) != undefined && typeof(card.removeEventListener )  == typeof(Function) ){
+	/*  if(typeof(card) != undefined && typeof(card.removeEventListener )  == typeof(Function) ){
 
 	       card.removeEventListener('touchstart',handleTouchStart )
           card.addEventListener('touchstart',handleTouchStart);
 
-	  }
+	  }*/
 
     // Check if user is a guest
     const isGuest = isGuestUser();
@@ -3387,7 +3387,7 @@ function setupStoryCardInteractions() {
 }		//end Function
 
 
- function handleTouchStart(e) {
+/* function handleTouchStart(e) {
 	let className ='Touched =  ' +this.className  +  ' ID name ' +  this.id;
     this.classList.add('touched'); 	     	//Add flag
     const cardTouchTimer =  setTimeout(() => {
@@ -3398,7 +3398,7 @@ function setupStoryCardInteractions() {
         this.classList.remove('touched');
 	  }, 200); //After touch ends after 200
 	console.log("Touch feature Applied to -> " + className)
-}  
+}  */
 
 /**
  * Generate avatar URL
