@@ -2495,8 +2495,8 @@ function isGuestUser() {
         alert('Error exporting votes: ' + (error.message || 'Unknown error'));
       }
     }
-// Monitor for CSV file uploads
 
+// Monitor for CSV file uploads - UPDATED VERSION WITH 3-DOT MENU
 document.getElementById('csvInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -2509,14 +2509,17 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
     // Save existing manually added stories before processing CSV
     const existingStories = [];
     if (storyList) {
-      const manualStories = storyList.querySelectorAll('.story-card[id^="story_"]');
+      const manualStories = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
       manualStories.forEach(card => {
         // Only save non-CSV stories (using ID pattern)
         if (card.id && !card.id.includes('story_csv_')) {
-          existingStories.push({
-            id: card.id,
-            text: card.querySelector('.story-title').textContent
-          });
+          const titleEl = card.querySelector('.story-title');
+          if (titleEl) {
+            existingStories.push({
+              id: card.id,
+              text: titleEl.textContent
+            });
+          }
         }
       });
       
@@ -2579,16 +2582,16 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
         editItem.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.remove('show');
-          if (typeof editStory === 'function') {
-            editStory({ id: story.id, text: story.text });
+          if (window.editStory && typeof window.editStory === 'function') {
+            window.editStory({ id: story.id, text: story.text });
           }
         });
         
         deleteItem.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.remove('show');
-          if (typeof deleteStory === 'function') {
-            deleteStory(story.id);
+          if (window.deleteStory && typeof window.deleteStory === 'function') {
+            window.deleteStory(story.id);
           }
         });
       }
@@ -2613,7 +2616,7 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
         
         storyCard.appendChild(storyTitle);
         
-        // Add 3-dot menu for hosts only
+        // Add 3-dot menu for CSV stories for hosts only - THIS IS THE KEY PART
         if (!isGuestUser()) {
           const actionsContainer = document.createElement('div');
           actionsContainer.className = 'story-actions';
@@ -2641,7 +2644,7 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
           actionsContainer.appendChild(dropdown);
           storyCard.appendChild(actionsContainer);
           
-          // Add event listeners
+          // Add event listeners for CSV stories
           menuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
@@ -2653,21 +2656,20 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
           editItem.addEventListener('click', (e) => {
             e.stopPropagation();
             dropdown.classList.remove('show');
-            if (typeof editStory === 'function') {
-              editStory({ id: `story_csv_${index}`, text: story.trim() });
+            if (window.editStory && typeof window.editStory === 'function') {
+              window.editStory({ id: `story_csv_${index}`, text: story.trim() });
             }
           });
           
           deleteItem.addEventListener('click', (e) => {
             e.stopPropagation();
             dropdown.classList.remove('show');
-            if (typeof deleteStory === 'function') {
-              deleteStory(`story_csv_${index}`);
+            if (window.deleteStory && typeof window.deleteStory === 'function') {
+              window.deleteStory(`story_csv_${index}`);
             }
           });
         }
         
-        storyCard.appendChild(storyTitle);
         storyList.appendChild(storyCard);
       }
     });
@@ -2689,7 +2691,6 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
   
   reader.readAsText(file);
 });
-
      
     
     // Story selection functionality
