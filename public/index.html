@@ -2496,6 +2496,7 @@ function isGuestUser() {
       }
     }
 // Monitor for CSV file uploads
+
 document.getElementById('csvInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -2525,7 +2526,7 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
       storyList.innerHTML = '';
     }
     
-    // First, restore the manually added stories
+    // First, restore the manually added stories with 3-dot menu
     existingStories.forEach((story, index) => {
       const storyCard = document.createElement('div');
       storyCard.className = 'story-card';
@@ -2537,10 +2538,65 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
       storyTitle.textContent = story.text;
       
       storyCard.appendChild(storyTitle);
+      
+      // Add 3-dot menu for hosts only
+      if (!isGuestUser()) {
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'story-actions';
+        
+        const menuBtn = document.createElement('button');
+        menuBtn.className = 'story-menu-btn';
+        menuBtn.innerHTML = '⋮';
+        menuBtn.title = 'Story actions';
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'story-menu-dropdown';
+        
+        const editItem = document.createElement('div');
+        editItem.className = 'story-menu-item edit';
+        editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+        
+        const deleteItem = document.createElement('div');
+        deleteItem.className = 'story-menu-item delete';
+        deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        
+        dropdown.appendChild(editItem);
+        dropdown.appendChild(deleteItem);
+        
+        actionsContainer.appendChild(menuBtn);
+        actionsContainer.appendChild(dropdown);
+        storyCard.appendChild(actionsContainer);
+        
+        // Add event listeners
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+            if (dd !== dropdown) dd.classList.remove('show');
+          });
+          dropdown.classList.toggle('show');
+        });
+        
+        editItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
+          if (typeof editStory === 'function') {
+            editStory({ id: story.id, text: story.text });
+          }
+        });
+        
+        deleteItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
+          if (typeof deleteStory === 'function') {
+            deleteStory(story.id);
+          }
+        });
+      }
+      
       storyList.appendChild(storyCard);
     });
     
-    // Then add the CSV stories
+    // Then add the CSV stories with 3-dot menu
     const stories = csvData.split('\n');
     let startIndex = existingStories.length;
     
@@ -2554,6 +2610,62 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
         const storyTitle = document.createElement('div');
         storyTitle.className = 'story-title';
         storyTitle.textContent = story.trim();
+        
+        storyCard.appendChild(storyTitle);
+        
+        // Add 3-dot menu for hosts only
+        if (!isGuestUser()) {
+          const actionsContainer = document.createElement('div');
+          actionsContainer.className = 'story-actions';
+          
+          const menuBtn = document.createElement('button');
+          menuBtn.className = 'story-menu-btn';
+          menuBtn.innerHTML = '⋮';
+          menuBtn.title = 'Story actions';
+          
+          const dropdown = document.createElement('div');
+          dropdown.className = 'story-menu-dropdown';
+          
+          const editItem = document.createElement('div');
+          editItem.className = 'story-menu-item edit';
+          editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+          
+          const deleteItem = document.createElement('div');
+          deleteItem.className = 'story-menu-item delete';
+          deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+          
+          dropdown.appendChild(editItem);
+          dropdown.appendChild(deleteItem);
+          
+          actionsContainer.appendChild(menuBtn);
+          actionsContainer.appendChild(dropdown);
+          storyCard.appendChild(actionsContainer);
+          
+          // Add event listeners
+          menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+              if (dd !== dropdown) dd.classList.remove('show');
+            });
+            dropdown.classList.toggle('show');
+          });
+          
+          editItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.remove('show');
+            if (typeof editStory === 'function') {
+              editStory({ id: `story_csv_${index}`, text: story.trim() });
+            }
+          });
+          
+          deleteItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.remove('show');
+            if (typeof deleteStory === 'function') {
+              deleteStory(`story_csv_${index}`);
+            }
+          });
+        }
         
         storyCard.appendChild(storyTitle);
         storyList.appendChild(storyCard);
@@ -2577,6 +2689,8 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
   
   reader.readAsText(file);
 });
+
+     
     
     // Story selection functionality
     document.addEventListener('click', function(e) {
@@ -2707,6 +2821,51 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
         return false;
       };
     }
+// Make editStory function available globally for CSV stories
+window.editStory = function(ticketData) {
+  console.log('[EDIT] Editing story:', ticketData);
+  
+  // Parse the ticket text to extract name and description
+  let ticketName = ticketData.text;
+  let ticketDescription = '';
+  
+  // Check if the text contains a ':' or '|' which indicates structured format
+  if (ticketData.text.includes(': ')) {
+    const parts = ticketData.text.split(': ', 2);
+    ticketName = parts[0];
+    ticketDescription = parts[1];
+  } else if (ticketData.text.includes(' | ')) {
+    // For CSV data that uses ' | ' separator
+    const parts = ticketData.text.split(' | ');
+    ticketName = parts[0];
+    ticketDescription = parts.slice(1).join(' | ') || '';
+  }
+  
+  // Pre-fill the modal with existing data
+  document.getElementById('ticketNameInput').value = ticketName;
+  document.getElementById('ticketDescriptionInput').value = ticketDescription;
+  
+  // Show the modal
+  document.getElementById('addTicketModalCustom').style.display = 'flex';
+  
+  // Focus on the name input
+  setTimeout(() => {
+    document.getElementById('ticketNameInput').focus();
+  }, 100);
+  
+  // Store the original ticket data for editing
+  window.editingTicketData = ticketData;
+  
+  // Update the modal title and button text
+  const modalTitle = document.querySelector('#addTicketModalCustom h3');
+  const confirmButton = document.getElementById('confirmAddTicket');
+  
+  if (modalTitle) modalTitle.textContent = 'Edit Ticket';
+  if (confirmButton) {
+    confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
+  }
+};
+     
   </script>
 
    <script>
