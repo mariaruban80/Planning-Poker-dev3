@@ -2514,112 +2514,68 @@ function displayCSVData(data) {
  * Edit a story using the add ticket modal
  * @param {Object} ticketData - The ticket data to edit
  */
-function editStory(ticketData) {
-  console.log('[EDIT] Editing story:', ticketData);
 
-  // Check if the modal show function exists
-  if (typeof window.showAddTicketModal === 'function') {
-    // Find corresponding story card
-    const storyCard = document.getElementById(ticketData.id);
+function ConfirmEdit(e) {
+  e.preventDefault();
 
-    // Prefer structured fields over text splitting!
-    let ticketName =
-      ticketData.idDisplay !== undefined
-        ? ticketData.idDisplay
-        : (storyCard && storyCard.dataset.id) || '';
-    let ticketDescription =
-      ticketData.descriptionDisplay !== undefined
-        ? ticketData.descriptionDisplay
-        : (storyCard && storyCard.dataset.description) || '';
+  const newName = document.getElementById('ticketNameInput').value.trim();
+  const newDesc = document.getElementById('ticketDescriptionInput').value.trim();
+  // If both exist, format as "ID: Description", else show whichever exists
+  const newDisplay = (newName && newDesc) ? `${newName}: ${newDesc}` : (newName || newDesc);
 
-    // Fallback for legacy cards if both fields missing
-    if ((!ticketName || !ticketDescription) && storyCard) {
-      const storyTitle = storyCard.querySelector('.story-title');
-      if (storyTitle) {
-        const txt = storyTitle.textContent || '';
-        if (txt.includes(': ')) {
-          const parts = txt.split(': ', 2);
-          if (!ticketName) ticketName = parts[0];
-          if (!ticketDescription) ticketDescription = parts[1];
-        } else if (!ticketName) {
-          ticketName = txt;
-          ticketDescription = '';
-        }
-      }
-    }
+  const ticketId = window.currentEditingTicketId;
+  if (!ticketId) {
+    console.warn("No ticket ID available for editing.");
+    return;
+  }
 
-    // Pre-fill the modal with the current values
-    document.getElementById('ticketNameInput').value = ticketName || '';
-    document.getElementById('ticketDescriptionInput').value = ticketDescription || '';
+  const storyCard = document.getElementById(ticketId);
+  if (!storyCard) {
+    console.warn("No story card found for ID:", ticketId);
+    return;
+  }
 
-    // Show the modal
-    document.getElementById('addTicketModalCustom').style.display = 'flex';
-    setTimeout(() => {
-      const nameInput = document.getElementById('ticketNameInput');
-      if (nameInput && typeof nameInput.focus === 'function') nameInput.focus();
-    }, 100);
+  // Update visible title
+  const storyTitle = storyCard.querySelector('.story-title');
+  if (storyTitle) {
+    storyTitle.textContent = newDisplay;
+  }
+  // Update dataset attributes so future edit is pre-filled properly
+  storyCard.dataset.id = newName;
+  storyCard.dataset.description = newDesc;
 
-    // Save the ticket id for confirming the edit later
-    window.currentEditingTicketId = ticketData.id;
-    window.editingTicketData = ticketData;
+  // Prepare the updated ticket object
+  const storyObject = {
+    id: ticketId,
+    idDisplay: newName,
+    descriptionDisplay: newDesc,
+    text: newDisplay
+  };
 
-    // Update modal header/button
-    const modalTitle = document.querySelector('#addTicketModalCustom h3');
-    if (modalTitle) modalTitle.textContent = 'Edit Ticket';
-    const confirmButton = document.getElementById('confirmAddTicket');
-    if (confirmButton) {
-      confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
-      confirmButton.onclick = ConfirmEdit; // Set click handler (no double-bind issues)
-    }
+  updateTicketInUI(storyObject);
 
-    // Confirm edit handler — updates data and notifies server
-    function ConfirmEdit(e) {
-      e.preventDefault();
+  // Notify server (and others) of UI update
+  if (typeof socket !== 'undefined' && socket) {
+    socket.emit('updateTicket', storyObject);
+  }
 
-      const newName = document.getElementById('ticketNameInput').value.trim();
-      const newDesc = document.getElementById('ticketDescriptionInput').value.trim();
-      const newDisplay = newName && newDesc ? `${newName}: ${newDesc}` : (newName || newDesc);
+  // Optionally close/hide the modal after confirming edit
+  const modal = document.getElementById('addTicketModalCustom');
+  if (modal) {
+    modal.style.display = 'none';
+  }
 
-      const ticketId = window.currentEditingTicketId;
-      if (!ticketId) {
-        console.warn("No ticket ID available for editing.");
-        return;
-      }
+  // Reset edit context if desired
+  window.currentEditingTicketId = null;
+  window.editingTicketData = null;
 
-      const storyCard = document.getElementById(ticketId);
-      if (!storyCard) {
-        console.warn("No story card found for ID:", ticketId);
-        return;
-      }
+  // Optionally reselect the story (or you could keep it on the same one)
+  setTimeout(() => {
+    selectStory(0, false);
+  }, 200);
+}
 
-      // Update the DOM: visual text AND data attrs for re-editing
-      const storyTitle = storyCard.querySelector('.story-title');
-      if (storyTitle) {
-        storyTitle.textContent = newDisplay;
-      }
-      storyCard.dataset.id = newName;
-      storyCard.dataset.description = newDesc;
 
-      // Prepare the updated ticket object
-      const storyObject = {
-        id: ticketId,
-        idDisplay: newName,
-        descriptionDisplay: newDesc,
-        text: newDisplay
-      };
-
-      updateTicketInUI(storyObject);
-
-      // Notify server (and others) of UI update
-      if (typeof socket !== 'undefined' && socket) {
-        socket.emit('updateTicket', storyObject);
-      }
-
-      // Optionally close or reset modal, then reselect card if needed
-      setTimeout(() => {
-        selectStory(0, false);
-      }, 500);
-    }
   } else {
     // Fallback: prompt-based editing
     console.error('[EDIT] Add ticket modal functions not available');
