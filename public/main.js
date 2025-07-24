@@ -2164,11 +2164,11 @@ function setupCSVUploader() {
  */
 function parseCSV(data) {
   const rows = data.trim().split('\n');
-  const headers = rows[0].split(',').map(h => h.trim());
+  const headers = rows[0].split('\t').map(h => h.trim());
   const parsedRows = [];
 
   for (let i = 1; i < rows.length; i++) {
-    const values = rows[i].split(',').map(v => v.trim());
+    const values = rows[i].split('\t').map(v => v.trim());
     const rowObject = {};
 
     headers.forEach((header, index) => {
@@ -2304,87 +2304,88 @@ function displayCSVData(data) {
     });
 
     // Add CSV stories
-    let startIndex = existingStories.length;
+// Then add CSV data with 3-dot menu
+let startIndex = existingStories.length;
+data.forEach((row, index) => {
+  const rawId = (row['Id'] || `csv_${index}`).trim();
+  const safeId = rawId.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+  const storyText = (row['Description'] || 'Untitled').trim();
+  const csvStoryId = `story_csv_${safeId}`;
 
-    data.forEach((row, index) => {
-      const rawId = (row['Id'] || `csv_${index}`).trim();
-      const safeId = rawId.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-      const storyText = (row['Description'] || 'Untitled').trim();
-      const csvStoryId = `story_csv_${safeId}`;
+  if (deletedStoryIds.has(csvStoryId)) {
+    console.log('[CSV] Not adding deleted CSV story:', csvStoryId);
+    return;
+  }
 
-      if (deletedStoryIds.has(csvStoryId)) {
-        console.log('[CSV] Not adding deleted CSV story:', csvStoryId);
-        return;
-      }
+  const storyItem = document.createElement('div');
+  storyItem.classList.add('story-card');
+  storyItem.id = csvStoryId;
+  storyItem.dataset.index = startIndex + index;
 
-      const storyItem = document.createElement('div');
-      storyItem.classList.add('story-card');
-      storyItem.id = csvStoryId;
-      storyItem.dataset.index = startIndex + index;
+  const storyTitle = document.createElement('div');
+  storyTitle.classList.add('story-title');
+  storyTitle.textContent = storyText;
+  storyItem.appendChild(storyTitle);
 
-      const storyTitle = document.createElement('div');
-      storyTitle.classList.add('story-title');
-      storyTitle.textContent = storyText;
-      storyItem.appendChild(storyTitle);
+  // Add 3-dot menu for hosts
+  if (isCurrentUserHost()) {
+    const actionsContainer = document.createElement('div');
+    actionsContainer.className = 'story-actions';
 
-      if (isCurrentUserHost()) {
-        const actionsContainer = document.createElement('div');
-        actionsContainer.className = 'story-actions';
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'story-menu-btn';
+    menuBtn.innerHTML = '⋮';
+    menuBtn.title = 'Story actions';
 
-        const menuBtn = document.createElement('button');
-        menuBtn.className = 'story-menu-btn';
-        menuBtn.innerHTML = '⋮';
-        menuBtn.title = 'Story actions';
+    const dropdown = document.createElement('div');
+    dropdown.className = 'story-menu-dropdown';
 
-        const dropdown = document.createElement('div');
-        dropdown.className = 'story-menu-dropdown';
+    const editItem = document.createElement('div');
+    editItem.className = 'story-menu-item edit';
+    editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
 
-        const editItem = document.createElement('div');
-        editItem.className = 'story-menu-item edit';
-        editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+    const deleteItem = document.createElement('div');
+    deleteItem.className = 'story-menu-item delete';
+    deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
 
-        const deleteItem = document.createElement('div');
-        deleteItem.className = 'story-menu-item delete';
-        deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+    dropdown.appendChild(editItem);
+    dropdown.appendChild(deleteItem);
+    actionsContainer.appendChild(menuBtn);
+    actionsContainer.appendChild(dropdown);
+    storyItem.appendChild(actionsContainer);
 
-        dropdown.appendChild(editItem);
-        dropdown.appendChild(deleteItem);
-        actionsContainer.appendChild(menuBtn);
-        actionsContainer.appendChild(dropdown);
-        storyItem.appendChild(actionsContainer);
-
-        menuBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
-            if (dd !== dropdown) dd.classList.remove('show');
-          });
-          dropdown.classList.toggle('show');
-        });
-
-        editItem.addEventListener('click', (e) => {
-          e.stopPropagation();
-          dropdown.classList.remove('show');
-          editStory({ id: csvStoryId, text: storyText });
-        });
-
-        deleteItem.addEventListener('click', (e) => {
-          e.stopPropagation();
-          dropdown.classList.remove('show');
-          deleteStory(csvStoryId);
-        });
-      }
-
-      storyListContainer.appendChild(storyItem);
-
-      if (isGuestUser()) {
-        storyItem.classList.add('disabled-story');
-      } else {
-        storyItem.addEventListener('click', () => {
-          selectStory(startIndex + index);
-        });
-      }
+    // Menu logic
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+        if (dd !== dropdown) dd.classList.remove('show');
+      });
+      dropdown.classList.toggle('show');
     });
 
+    editItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('show');
+      editStory({ id: csvStoryId, text: storyText });
+    });
+
+    deleteItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('show');
+      deleteStory(csvStoryId);
+    });
+  }
+
+  storyListContainer.appendChild(storyItem);
+
+  if (!isGuestUser()) {
+    storyItem.addEventListener('click', () => {
+      selectStory(startIndex + index);
+    });
+  } else {
+    storyItem.classList.add('disabled-story');
+  }
+});
     preservedManualTickets = existingStories;
 
     console.log(`[CSV] Display complete: ${existingStories.length} manual + ${data.length} CSV = ${storyListContainer.children.length} total`);
