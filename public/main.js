@@ -2489,6 +2489,7 @@ storyItem.dataset.csvDescription = storyText
  * Edit a story using the add ticket modal
  * @param {Object} ticketData - The ticket data to edit
  */
+
 function editStory(ticketData) {
   console.log('[EDIT] Editing story:', ticketData);
 
@@ -2497,25 +2498,32 @@ function editStory(ticketData) {
   let ticketDescription = '';
 
   if (storyCard) {
-    const storyTitle = storyCard.querySelector('.story-title');
-    const currentText = storyTitle?.textContent?.trim() || ticketData.text || '';
+    // Prefer dataset if available
+    ticketName = storyCard.dataset.csvId || '';
+    ticketDescription = storyCard.dataset.csvDescription || '';
 
-    if (currentText.includes(':')) {
-      const [idPart, ...descParts] = currentText.split(':');
-      ticketName = idPart.trim();
-      ticketDescription = descParts.join(':').trim();
-    } else {
-      ticketName = currentText;
+    // Fallback if dataset is not set
+    if (!ticketName || !ticketDescription) {
+      const currentText = storyCard.querySelector('.story-title')?.textContent || '';
+      if (currentText.includes(': ')) {
+        const parts = currentText.split(': ');
+        ticketName = parts[0];
+        ticketDescription = parts[1];
+      } else {
+        ticketDescription = currentText;
+      }
     }
   }
 
-  // Show modal and populate inputs
+  // Pre-fill modal
   document.getElementById('ticketNameInput').value = ticketName;
   document.getElementById('ticketDescriptionInput').value = ticketDescription;
   document.getElementById('addTicketModalCustom').style.display = 'flex';
-  setTimeout(() => document.getElementById('ticketNameInput').focus(), 100);
 
-  // Prepare modal state
+  setTimeout(() => {
+    document.getElementById('ticketNameInput').focus();
+  }, 100);
+
   window.editingTicketData = ticketData;
   const modalTitle = document.querySelector('#addTicketModalCustom h3');
   const confirmButton = document.getElementById('confirmAddTicket');
@@ -2528,31 +2536,40 @@ function editStory(ticketData) {
 
   function ConfirmEdit(e) {
     e.preventDefault();
+
     const ticketName = document.getElementById('ticketNameInput').value.trim();
     const ticketDescription = document.getElementById('ticketDescriptionInput').value.trim();
+    const currentText = `${ticketName}: ${ticketDescription}`;
 
-    if (!window.editingTicketData?.id) {
-      console.warn("No ticket ID available for editing.");
-      return;
-    }
+    const cardId = ticketData.id;
+    const storyCard = document.getElementById(cardId);
+    const storyTitle = storyCard?.querySelector('.story-title');
+    if (!storyTitle) return;
 
-    const newText = `${ticketName}: ${ticketDescription}`;
-    const updatedTicket = {
-      id: window.editingTicketData.id,
-      text: newText
+    // Update DOM
+    storyTitle.textContent = currentText;
+    storyCard.dataset.csvId = ticketName;
+    storyCard.dataset.csvDescription = ticketDescription;
+
+    const updatedStory = {
+      id: cardId,
+      text: currentText,
+      csvId: ticketName,
+      csvDescription: ticketDescription
     };
 
-    const storyCard = document.getElementById(updatedTicket.id);
-    if (storyCard) {
-      const storyTitle = storyCard.querySelector('.story-title');
-      if (storyTitle) storyTitle.textContent = newText;
+    updateTicketInUI(updatedStory);
+
+    if (socket) {
+      socket.emit('updateTicket', updatedStory);
+      console.log("[EDIT] Ticket updated via socket:", updatedStory);
     }
 
-    updateTicketInUI(updatedTicket);
-    if (typeof socket !== 'undefined') socket.emit('updateTicket', updatedTicket);
-    setTimeout(() => selectStory(0, false), 500);
+    setTimeout(() => selectStory(0, false), 300);
   }
 }
+
+
 
 /**
  * Select a story by index
