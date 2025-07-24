@@ -179,8 +179,9 @@ window.updateTicketFromModal = function(ticketData) {
   if (!ticketData || !ticketData.id) return;
 
   const trimmedText = (ticketData.text || '').trim();
+
   if (!trimmedText) {
-    alert('Story text cannot be empty.');
+    console.warn('[UPDATE] Ignoring update due to empty or missing text:', ticketData);
     return;
   }
 
@@ -191,14 +192,13 @@ window.updateTicketFromModal = function(ticketData) {
 
   console.log('[UPDATE] Updating ticket from modal:', safeTicket);
 
-  // Update in UI
   updateTicketInUI(safeTicket);
 
-  // Emit to server for synchronization
   if (socket) {
     socket.emit('updateTicket', safeTicket);
   }
 };
+
 /**
  * Update ticket in the UI
  * @param {Object} ticketData - Updated ticket data
