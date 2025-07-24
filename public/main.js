@@ -159,28 +159,21 @@ window.updateTicketFromModal = function(ticketData) {
     socket.emit('updateTicket', ticketData);
   }
 };
-
 /**
  * Update ticket in the UI
  * @param {Object} ticketData - Updated ticket data
  */
 function updateTicketInUI(ticketData) {
-  const storyCard = document.getElementById(ticketData.id);
-  if (!storyCard) return;
-  
-  // Update the story title
-  const storyTitle = storyCard.querySelector('.story-title');
-  if (storyTitle) {
-    storyTitle.textContent = ticketData.text;
-  }
-  
-  console.log('[UI] Updated ticket in UI:', ticketData.id);
+    const storyCard = document.getElementById(ticketData.id);
+    if (!storyCard) return;
+    // Update the story title
+    const storyTitle = storyCard.querySelector('.story-title');
+    if (storyTitle) {
+        storyTitle.textContent = ticketData.text;
+        console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text: ', ticketData.text); //CHECK VALUES
+    }
+    console.log('[UI] Updated ticket in UI:', ticketData.id);
 }
-
-
-
-
-
 /**
  * Load deleted story IDs from sessionStorage
  */
