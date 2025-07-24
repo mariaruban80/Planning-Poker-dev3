@@ -2519,46 +2519,33 @@ function editStory(ticketData) {
        }		//END FUNCTION FOR  confirmButton
               ///For this code to take the change
 
-        /**
-         *This code is scoped and function call works
-         */
-      function ConfirmEdit(e){ //this function with scope can call  the name in this function only.
+function ConfirmEdit(e)
+{
+	e.preventDefault();	
+	const ticketName = document.getElementById('ticketNameInput').value	
+	const ticketDescription = document.getElementById('ticketDescriptionInput').value;	
+	const currentText = ticketName + " : " +ticketDescription	
+	if( typeof( ticketData.id) != 'undefined' )
+		{
+		const storyCard = document.getElementById(ticketData.id);
+		if(storyCard != 'undefined')
+			{ 
+			const storyTitle = storyCard.querySelector('.story-title'); 
+			if( storyTitle != 'undefined')
+				{
+				storyTitle.textContent = currentText; 
+				updateTicketInUI({ id: ticketData.id, text: currentText }); //Run event for the update flag
+					if (socket) 
+					{	 
+						const storyObject = { id: ticketData.id, text: currentText }; // define here in scope
+						socket.emit('updateTicket', storyObject); //Type test
+						console.log("Code Passed Socket Process running Now") //All is well report it.
+					} //End code and action
+				} else console.warn("Pointer crash prevented"); //The display can't be displayed,
+			} else console.warn("Code Can't function to it"); //
 
-	        e.preventDefault();													    //Keeps everything local to this function
-
-               const ticketName = document.getElementById('ticketNameInput').value //Code in here to get functions and prevent display errors
-
-               const ticketDescription = document.getElementById('ticketDescriptionInput').value;	//Get the name from the flag text
-	        const currentText  = ticketName + " : " +ticketDescription								//Add all together with :
-
-               //code to perform and display actions,  Make call and execute to make sure the proccess is used
-	        if(  typeof( ticketData.id) != 'undefined'    ){ //Type test	 //
-
-                     const storyCard = document.getElementById(ticketData.id);
-
-                     if(storyCard != 'undefined'){	  //if not a valid card don't crash
-
-                         const storyTitle  = storyCard.querySelector('.story-title');  //Get id from all cards loaded
-
-                        if( storyTitle  != 'undefined'){
-	                          storyTitle.textContent  = currentText;  //Set string in card.
-
-                             updateTicketInUI({ id: ticketData.id, text: currentText });	//Run event for the update flag
-
-     	                       if (socket) {		 //Run function, call event, check and done, is a type test
-                                        socket.emit('updateTicket', storyObject);  //Type test
-                                        console.log("Code Passed Socket Process running Now")	 //All is well report it.
-
-                               }        //End code and action
-                        } else   	 console.warn("Pointer crash prevented"); //The display can't be displayed,
-
-                                                }  else  console.warn("Code Can't function to it");	//
-            }			//EndCode If is a Type
-
-
-
-
-    }	  //END Function Local
+		}
+}	  
 
   } else {
 
