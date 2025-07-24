@@ -2162,57 +2162,48 @@ function setupCSVUploader() {
 /**
  * Parse CSV text into array structure
  */
-function parseCSV(data) {
-  const lines = data.trim().split(/\r?\n/);
-
-  // Detect delimiter: tab if tabs are more common than commas
-  const delimiter = lines[0].includes('\t') ? '\t' : ',';
+function parseCSV(text) {
+  const delimiter = text.includes('\t') ? '\t' : ',';
   console.log(`[CSV] Detected delimiter: ${delimiter === '\t' ? 'tab' : 'comma'}`);
 
-  const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim()));
-  const headers = rows[0];
+  const rows = text.trim().split('\n').map(row => row.split(delimiter));
 
-  const hasHeaders = headers[0]?.toLowerCase() === 'id' && headers[1]?.toLowerCase() === 'description';
+  const hasHeaders = rows.length > 0 && ['id', 'description'].every(h => rows[0].map(hdr => hdr.toLowerCase()).includes(h));
   console.log(`[CSV] Headers detected: ${hasHeaders}`);
 
   let parsed = [];
 
   if (hasHeaders) {
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      const entry = {
-        Id: row[0] || '',
-        Description: row[1] || ''
-      };
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    const idIdx = headers.findIndex(h => h === 'id');
+    const descIdx = headers.findIndex(h => h === 'description');
 
-      if (!entry.Id || !entry.Description) {
-        console.warn(`[CSV] Skipping row ${i + 1} — Missing Id or Description`);
-        continue;
-      }
-
-      parsed.push(entry);
+    if (idIdx === -1 || descIdx === -1) {
+      alert('CSV is missing required headers: Id and Description');
+      return [];
     }
+
+    parsed = rows.slice(1).map((row, i) => {
+      return {
+        Id: row[idIdx]?.trim() || `csv_${i}`,
+        Description: row[descIdx]?.trim() || 'Untitled'
+      };
+    });
   } else {
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const entry = {
-        Id: row[0] || '',
-        Description: row[1] || ''
+    parsed = rows.map((row, i) => {
+      const id = row[0]?.trim();
+      const desc = row[1]?.trim();
+      if (!id && !desc) return null;
+      return {
+        Id: id || `csv_${i}`,
+        Description: desc || 'Untitled'
       };
-
-      if (!entry.Id || !entry.Description) {
-        console.warn(`[CSV] Skipping row ${i + 1} — Missing Id or Description`);
-        continue;
-      }
-
-      parsed.push(entry);
-    }
+    }).filter(Boolean);
   }
 
   console.log(`[CSV] Parsed ${parsed.length} valid entries`);
   return parsed;
 }
-
 
 
 
