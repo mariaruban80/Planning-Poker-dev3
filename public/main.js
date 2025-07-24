@@ -2574,9 +2574,7 @@ function ConfirmEdit(e) {
     selectStory(0, false);
   }, 200);
 }
-
-
-  else {
+/** else {
     // Fallback: prompt-based editing
     console.error('[EDIT] Add ticket modal functions not available');
     const newText = prompt('Edit story text:', ticketData.text);
@@ -2598,8 +2596,8 @@ function ConfirmEdit(e) {
         console.warn("No valid ticket ID to update via prompt fallback");
       }
     }
-  }
-}
+  }*/
+//}
 
 
 
