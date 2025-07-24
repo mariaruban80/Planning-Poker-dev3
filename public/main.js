@@ -142,77 +142,30 @@ function setupHeartbeat() {
     clearInterval(heartbeatInterval);
   });
 }*/
-// Add this early in main.js
-
-function showBannerError(message) {
-  let banner = document.getElementById('csvErrorBanner');
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'csvErrorBanner';
-    banner.style.cssText = `
-      background: #f44336;
-      color: white;
-      padding: 10px;
-      text-align: center;
-      font-weight: bold;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-    `;
-    document.body.prepend(banner);
-  }
-  banner.textContent = message;
-  setTimeout(() => banner.remove(), 5000);
-}
-
-
-
-
-
 /**
  * Handle updating a ticket from the modal
  * @param {Object} ticketData - Updated ticket data {id, text, isEdit: true}
  */
 window.updateTicketFromModal = function(ticketData) {
-  if (!ticketData || !ticketData.id) return;
-
-  const trimmedText = (ticketData.text || '').trim();
-
-  if (!trimmedText) {
-    console.warn('[UPDATE] Ignoring update due to empty or missing text:', ticketData);
-    return;
-  }
-
-  const safeTicket = {
-    id: ticketData.id,
-    text: trimmedText
-  };
-
-  console.log('[UPDATE] Updating ticket from modal:', safeTicket);
-
-  updateTicketInUI(safeTicket);
-
+  if (!ticketData || !ticketData.id || !ticketData.text) return;
+  
+  console.log('[UPDATE] Updating ticket from modal:', ticketData);
+  
+  // Update in UI
+  updateTicketInUI(ticketData);
+  
+  // Emit to server for synchronization
   if (socket) {
-    socket.emit('updateTicket', safeTicket);
+    socket.emit('updateTicket', ticketData);
   }
 };
-
 /**
  * Update ticket in the UI
  * @param {Object} ticketData - Updated ticket data
  */
-
 function updateTicketInUI(ticketData) {
-  if (!ticketData || !ticketData.id) {
-    console.warn('[UI] Invalid ticketData:', ticketData);
-    return;
-  }
-
-  const trimmedText = (ticketData.text || '').trim();
-  if (!trimmedText) {
-    console.warn('[UI] Skipping updateTicketInUI due to empty text:', ticketData);
+  if (!ticketData || !ticketData.id || !ticketData.text) {
+    console.warn('[UI] Invalid or empty ticketData passed to updateTicketInUI:', ticketData);
     return;
   }
 
@@ -221,11 +174,10 @@ function updateTicketInUI(ticketData) {
 
   const storyTitle = storyCard.querySelector('.story-title');
   if (storyTitle) {
-    storyTitle.textContent = trimmedText;
-    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', trimmedText);
+    storyTitle.textContent = ticketData.text;
+    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', ticketData.text);
   }
 }
-
 
 
 
@@ -2214,37 +2166,40 @@ function parseCSV(text) {
   const delimiter = text.includes('\t') ? '\t' : ',';
   console.log(`[CSV] Detected delimiter: ${delimiter === '\t' ? 'tab' : 'comma'}`);
 
-  const rows = text.trim().split('\n').map(row => row.split(delimiter).map(cell => cell.trim()));
-  if (rows.length === 0 || rows[0].length < 2) {
-    showBannerError('CSV must contain at least two columns: Id and Description.');
-    return [];
+  const rows = text.trim().split('\n').map(row => row.split(delimiter));
+
+  const hasHeaders = rows.length > 0 && ['id', 'description'].every(h => rows[0].map(hdr => hdr.toLowerCase()).includes(h));
+  console.log(`[CSV] Headers detected: ${hasHeaders}`);
+
+  let parsed = [];
+
+  if (hasHeaders) {
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    const idIdx = headers.findIndex(h => h === 'id');
+    const descIdx = headers.findIndex(h => h === 'description');
+
+    if (idIdx === -1 || descIdx === -1) {
+      alert('CSV is missing required headers: Id and Description');
+      return [];
+    }
+
+    parsed = rows.slice(1).map((row, i) => {
+      return {
+        Id: row[idIdx]?.trim() || `csv_${i}`,
+        Description: row[descIdx]?.trim() || 'Untitled'
+      };
+    });
+  } else {
+    parsed = rows.map((row, i) => {
+      const id = row[0]?.trim();
+      const desc = row[1]?.trim();
+      if (!id && !desc) return null;
+      return {
+        Id: id || `csv_${i}`,
+        Description: desc || 'Untitled'
+      };
+    }).filter(Boolean);
   }
-
-  const headers = rows[0].map(h => h.toLowerCase());
-  const isHeaderRow = headers.includes('id') && headers.includes('description');
-  console.log(`[CSV] Headers detected: ${isHeaderRow}`);
-
-  let idIdx = 0;
-  let descIdx = 1;
-  let dataRows = rows;
-
-  if (isHeaderRow) {
-    idIdx = headers.indexOf('id');
-    descIdx = headers.indexOf('description');
-    dataRows = rows.slice(1); // skip header
-  }
-
-  const parsed = dataRows.map((row, i) => {
-    const id = row[idIdx]?.trim();
-    const desc = row[descIdx]?.trim();
-
-    if (!id && !desc) return null; // skip empty rows
-
-    return {
-      Id: id || `csv_${i}`,
-      Description: desc || 'Untitled'
-    };
-  }).filter(Boolean);
 
   console.log(`[CSV] Parsed ${parsed.length} valid entries`);
   return parsed;
@@ -2391,8 +2346,7 @@ function displayCSVData(data) {
       storyItem.classList.add('story-card');
       storyItem.id = csvStoryId;
       storyItem.dataset.index = startIndex + index;
-storyItem.dataset.csvId = rawId;
-storyItem.dataset.csvDescription = storyText
+
       const storyTitle = document.createElement('div');
       storyTitle.classList.add('story-title');
       storyTitle.textContent = storyText;
@@ -2507,85 +2461,144 @@ storyItem.dataset.csvDescription = storyText
  * Edit a story using the add ticket modal
  * @param {Object} ticketData - The ticket data to edit
  */
-
 function editStory(ticketData) {
   console.log('[EDIT] Editing story:', ticketData);
 
-  const storyCard = document.getElementById(ticketData.id);
-  let ticketName = '';
-  let ticketDescription = '';
+  // Check if the add ticket modal functions exist
+  if (typeof window.showAddTicketModal === 'function') {
+    // First, find the story card in the DOM
+    const storyCard = document.getElementById(ticketData.id);
+    let currentText = ticketData.text;
 
-  if (storyCard) {
-    // Prefer dataset if available
-    ticketName = storyCard.dataset.csvId || '';
-    ticketDescription = storyCard.dataset.csvDescription || '';
+    if (storyCard) {
+      // Retrieve the story text from the DOM if the cards id in the current card
+        const storyTitle = storyCard.querySelector('.story-title');   //Will not be created if can't read title
 
-    // Fallback if dataset is not set
-    if (!ticketName || !ticketDescription) {
-      const currentText = storyCard.querySelector('.story-title')?.textContent || '';
-      if (currentText.includes(': ')) {
-        const parts = currentText.split(': ');
-        ticketName = parts[0];
-        ticketDescription = parts[1];
-      } else {
-        ticketDescription = currentText;
-      }
+	          if(typeof(storyTitle) !=null &&  typeof(storyTitle) != undefined ){
+                 currentText = storyTitle.textContent;	      //The current txt value is passed here
+	          }else  console.error('No valid data to use ')       //Safety catch will print if crash.
+    }			    //If Valid
+
+    // Parse the ticket text to extract name and description
+    let ticketName = currentText;
+    let ticketDescription = '';
+
+    // Check if the text contains a ':' which indicates name: description format
+    if (currentText.includes(': ')) {
+      const parts = currentText.split(': ', 2);
+      ticketName = parts[0];
+      ticketDescription = parts[1];
     }
+
+    // Pre-fill the modal with existing data
+    document.getElementById('ticketNameInput').value = ticketName;
+    document.getElementById('ticketDescriptionInput').value = ticketDescription;
+
+    // Show the modal to all accounts
+    document.getElementById('addTicketModalCustom').style.display = 'flex';
+
+    	// Focus on the name input (Make the function and prevent type of errors)
+         if (typeof  document.getElementById('ticketNameInput').focus === 'function') {
+
+            setTimeout(() => {		  //Function saftey to work
+                 document.getElementById('ticketNameInput').focus()  //Get the type from a string
+             }, 100);           //For all code functions to take effect
+
+           }		  //End Saftey
+    // Store the original ticket data for editing
+    window.editingTicketData = ticketData;
+
+    // Update the modal title and button text for screen flag and update reasons
+    const modalTitle = document.querySelector('#addTicketModalCustom h3');
+    const confirmButton = document.getElementById('confirmAddTicket');
+
+    if (modalTitle) modalTitle.textContent = 'Edit Ticket';
+    if (confirmButton) {
+      confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
+    }
+
+       if(typeof(confirmButton) != undefined&& confirmButton != null){		//For safty reasons to be sure code happens
+
+		  confirmButton.removeEventListener('click',ConfirmEdit) //Take the event out
+
+		  confirmButton.addEventListener('click',ConfirmEdit)					  
+       }	
+function ConfirmEdit(e) {
+  e.preventDefault();
+
+  const ticketName = document.getElementById('ticketNameInput').value;
+  const ticketDescription = document.getElementById('ticketDescriptionInput').value;
+  const currentText = ticketName + " : " + ticketDescription;
+
+  if (!currentEditingTicketId) {
+    console.warn("No ticket ID available for editing.");
+    return;
   }
 
-  // Pre-fill modal
-  document.getElementById('ticketNameInput').value = ticketName;
-  document.getElementById('ticketDescriptionInput').value = ticketDescription;
-  document.getElementById('addTicketModalCustom').style.display = 'flex';
+  const storyCard = document.getElementById(currentEditingTicketId);
+  if (!storyCard) {
+    console.warn("No story card found for ID:", currentEditingTicketId);
+    return;
+  }
+
+  const storyTitle = storyCard.querySelector('.story-title');
+  if (!storyTitle) {
+    console.warn("No .story-title element found in story card");
+    return;
+  }
+
+  const storyObject = {
+    id: currentEditingTicketId,
+    text: currentText
+  };
+
+  storyTitle.textContent = currentText;
+  updateTicketInUI(storyObject);
+
+  if (socket) {
+    socket.emit('updateTicket', storyObject);
+    console.log("Code Passed Socket Process running Now");
+  }
 
   setTimeout(() => {
-    document.getElementById('ticketNameInput').focus();
-  }, 100);
-
-  window.editingTicketData = ticketData;
-  const modalTitle = document.querySelector('#addTicketModalCustom h3');
-  const confirmButton = document.getElementById('confirmAddTicket');
-  if (modalTitle) modalTitle.textContent = 'Edit Ticket';
-  if (confirmButton) {
-    confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
-    confirmButton.removeEventListener('click', ConfirmEdit);
-    confirmButton.addEventListener('click', ConfirmEdit);
-  }
-
-  function ConfirmEdit(e) {
-    e.preventDefault();
-
-    const ticketName = document.getElementById('ticketNameInput').value.trim();
-    const ticketDescription = document.getElementById('ticketDescriptionInput').value.trim();
-    const currentText = `${ticketName}: ${ticketDescription}`;
-
-    const cardId = ticketData.id;
-    const storyCard = document.getElementById(cardId);
-    const storyTitle = storyCard?.querySelector('.story-title');
-    if (!storyTitle) return;
-
-    // Update DOM
-    storyTitle.textContent = currentText;
-    storyCard.dataset.csvId = ticketName;
-    storyCard.dataset.csvDescription = ticketDescription;
-
-    const updatedStory = {
-      id: cardId,
-      text: currentText,
-      csvId: ticketName,
-      csvDescription: ticketDescription
-    };
-
-    updateTicketInUI(updatedStory);
-
-    if (socket) {
-      socket.emit('updateTicket', updatedStory);
-      console.log("[EDIT] Ticket updated via socket:", updatedStory);
-    }
-
-    setTimeout(() => selectStory(0, false), 300);
-  }
+    selectStory(0, false);
+  }, 500);
 }
+
+ 
+	  
+
+  } else {
+
+	  //
+    console.error('[EDIT] Add ticket modal functions not available');
+
+    // Fallback to prompt
+    const newText = prompt('Edit story text:', ticketData.text);
+
+ 	 if (newText && newText !== ticketData.text) {	 //If valid process
+
+	      if(  typeof( ticketData.id) != 'undefined'    ){   //Get flag first.Type  test in here we can make something happen and display
+	          const storyCard = document.getElementById(ticketData.id);
+
+                  if(  storyCard != undefined ){
+                         const storyTitle = storyCard.querySelector('.story-title');   //Can not find the card
+			              if( typeof(storyTitle)  != undefined){
+                                 storyTitle.textContent = newText	 //Run and now display
+
+                                 //Update the UI
+                                 updateTicketInUI({ id: ticketData.id, text: newText });
+
+                                               socket.emit('updateTicket', { id: ticketData.id, text: newText });
+
+			               }
+	           }				  	 //Valid data sent can proccesss data display display
+	     }  else       console.warn("Code Not Found")      //Code can't display
+	 }  //Check String to fix	 //If code won't run at all report here
+
+  }
+}   //END all function
+
 
 
 
