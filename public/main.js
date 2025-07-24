@@ -2508,39 +2508,41 @@ function editStory(ticketData) {
 
 		  confirmButton.removeEventListener('click',ConfirmEdit) //Take the event out
 
-		  confirmButton.addEventListener('click',ConfirmEdit)					   //Function call
-       }		//END FUNCTION FOR  confirmButton
-              ///For this code to take the change
+		  confirmButton.addEventListener('click',ConfirmEdit)					  
+       }	
 
-  /**
-   *This code is scoped and function call works
-   */
-  function ConfirmEdit(e) { //this function with scope can call  the name in this function only.
-      e.preventDefault();
-      const ticketName = document.getElementById('ticketNameInput').value
-      const ticketDescription = document.getElementById('ticketDescriptionInput').value;
-      const currentText = ticketName + " : " + ticketDescription
-      //code to perform and display actions,  Make call and execute to make sure the proccess is used
-      if (typeof(ticketData.id) != 'undefined') { //Type test	 //
-          const storyCard = document.getElementById(ticketData.id);
-          if (storyCard != 'undefined') { //if not a valid card don't crash
-              const storyTitle = storyCard.querySelector('.story-title'); //Get id from all cards loaded
-              if (storyTitle != 'undefined') {
-                  const storyObject = {
-                      id: ticketData.id,
-                      text: currentText
-                  }; // define here in scope
-                  storyTitle.textContent = currentText; //Set string in card.
-                  updateTicketInUI(storyObject); //Run event for the update flag
-                  if (socket) { //Run function, call event, check and done, is a type test
-                      socket.emit('updateTicket', storyObject); //Type test
-                      console.log("Code Passed Socket Process running Now") //All is well report it.
-                  } //End code and action
-              } else console.warn("Pointer crash prevented"); //The display can't be displayed,
-          } else console.warn("Code Can't function to it"); //
-      } //EndCode If is a Type
-  } //END Function Local
+        function ConfirmEdit(e) { //this function with scope can call  the name in this function only.
+            e.preventDefault();
+            const ticketName = document.getElementById('ticketNameInput').value
+            const ticketDescription = document.getElementById('ticketDescriptionInput').value;
+            const currentText = ticketName + " : " + ticketDescription
+            //code to perform and display actions,  Make call and execute to make sure the proccess is used
+            if (typeof(ticketData.id) != 'undefined') { //Type test	 //
+                const storyCard = document.getElementById(ticketData.id);
+                if (storyCard != 'undefined') { //if not a valid card don't crash
+                    const storyTitle = storyCard.querySelector('.story-title'); //Get id from all cards loaded
+                    if (storyTitle != 'undefined') {
+                        const storyObject = {
+                            id: ticketData.id,
+                            text: currentText
+                        }; // define here in scope
+                        storyTitle.textContent = currentText; //Set string in card.
+                        //Ensure update before emitting
+                        updateTicketInUI(storyObject); //Run event for the update flag
+                        if (socket) { //Run function, call event, check and done, is a type test
+                            //Socket event before setting text may have been causing conflicts
+                            socket.emit('updateTicket', storyObject); //Type test
+                            console.log("Code Passed Socket Process running Now") //All is well report it.
+                        } //End code and action
+                        setTimeout(function() { //May help other guests
+                            selectStory(0, false);
+                        }, 500); //Wait 500 ms
+                    } else console.warn("Pointer crash prevented"); //The display can't be displayed,
+                } else console.warn("Code Can't function to it"); //
+            } //EndCode If is a Type
+        } //END Function Local
 
+	  
 	  
 
   } else {
