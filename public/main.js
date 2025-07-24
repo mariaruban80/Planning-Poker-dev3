@@ -142,6 +142,35 @@ function setupHeartbeat() {
     clearInterval(heartbeatInterval);
   });
 }*/
+// Add this early in main.js
+
+function showBannerError(message) {
+  let banner = document.getElementById('csvErrorBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'csvErrorBanner';
+    banner.style.cssText = `
+      background: #f44336;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    `;
+    document.body.prepend(banner);
+  }
+  banner.textContent = message;
+  setTimeout(() => banner.remove(), 5000);
+}
+
+
+
+
+
 /**
  * Handle updating a ticket from the modal
  * @param {Object} ticketData - Updated ticket data {id, text, isEdit: true}
@@ -163,6 +192,7 @@ window.updateTicketFromModal = function(ticketData) {
  * Update ticket in the UI
  * @param {Object} ticketData - Updated ticket data
  */
+
 function updateTicketInUI(ticketData) {
   if (!ticketData || !ticketData.id || !ticketData.text) {
     console.warn('[UI] Invalid or empty ticketData passed to updateTicketInUI:', ticketData);
@@ -173,10 +203,16 @@ function updateTicketInUI(ticketData) {
   if (!storyCard) return;
 
   const storyTitle = storyCard.querySelector('.story-title');
-  if (storyTitle) {
-    storyTitle.textContent = ticketData.text;
-    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', ticketData.text);
-  }
+  if (!storyTitle) return;
+
+  const [idPart, ...descParts] = ticketData.text.split(':');
+  const id = idPart?.trim() || '';
+  const desc = descParts.join(':').trim() || '';
+
+  const combinedText = id && desc ? `${id}: ${desc}` : id || desc || 'Untitled';
+  storyTitle.textContent = combinedText;
+
+  console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', combinedText);
 }
 
 
@@ -2166,40 +2202,37 @@ function parseCSV(text) {
   const delimiter = text.includes('\t') ? '\t' : ',';
   console.log(`[CSV] Detected delimiter: ${delimiter === '\t' ? 'tab' : 'comma'}`);
 
-  const rows = text.trim().split('\n').map(row => row.split(delimiter));
-
-  const hasHeaders = rows.length > 0 && ['id', 'description'].every(h => rows[0].map(hdr => hdr.toLowerCase()).includes(h));
-  console.log(`[CSV] Headers detected: ${hasHeaders}`);
-
-  let parsed = [];
-
-  if (hasHeaders) {
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const idIdx = headers.findIndex(h => h === 'id');
-    const descIdx = headers.findIndex(h => h === 'description');
-
-    if (idIdx === -1 || descIdx === -1) {
-      alert('CSV is missing required headers: Id and Description');
-      return [];
-    }
-
-    parsed = rows.slice(1).map((row, i) => {
-      return {
-        Id: row[idIdx]?.trim() || `csv_${i}`,
-        Description: row[descIdx]?.trim() || 'Untitled'
-      };
-    });
-  } else {
-    parsed = rows.map((row, i) => {
-      const id = row[0]?.trim();
-      const desc = row[1]?.trim();
-      if (!id && !desc) return null;
-      return {
-        Id: id || `csv_${i}`,
-        Description: desc || 'Untitled'
-      };
-    }).filter(Boolean);
+  const rows = text.trim().split('\n').map(row => row.split(delimiter).map(cell => cell.trim()));
+  if (rows.length === 0 || rows[0].length < 2) {
+    showBannerError('CSV must contain at least two columns: Id and Description.');
+    return [];
   }
+
+  const headers = rows[0].map(h => h.toLowerCase());
+  const isHeaderRow = headers.includes('id') && headers.includes('description');
+  console.log(`[CSV] Headers detected: ${isHeaderRow}`);
+
+  let idIdx = 0;
+  let descIdx = 1;
+  let dataRows = rows;
+
+  if (isHeaderRow) {
+    idIdx = headers.indexOf('id');
+    descIdx = headers.indexOf('description');
+    dataRows = rows.slice(1); // skip header
+  }
+
+  const parsed = dataRows.map((row, i) => {
+    const id = row[idIdx]?.trim();
+    const desc = row[descIdx]?.trim();
+
+    if (!id && !desc) return null; // skip empty rows
+
+    return {
+      Id: id || `csv_${i}`,
+      Description: desc || 'Untitled'
+    };
+  }).filter(Boolean);
 
   console.log(`[CSV] Parsed ${parsed.length} valid entries`);
   return parsed;
