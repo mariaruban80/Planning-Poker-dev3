@@ -2510,9 +2510,10 @@ function editStory(ticketData) {
 
     function ConfirmEdit(e) {
       e.preventDefault();
-      const ticketName = document.getElementById('ticketNameInput').value;
-      const ticketDescription = document.getElementById('ticketDescriptionInput').value;
-      const currentText = ticketName + " : " + ticketDescription;
+      const ticketName = document.getElementById('ticketNameInput').value.trim();
+      const ticketDescription = document.getElementById('ticketDescriptionInput').value.trim();
+
+      const currentText = ticketName && ticketDescription ? `${ticketName} : ${ticketDescription}` : ticketName || ticketDescription;
 
       if (!ticketData.id) {
         console.warn("No ticket ID available for editing.");
