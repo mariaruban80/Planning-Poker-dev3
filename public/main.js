@@ -205,13 +205,14 @@ window.updateTicketFromModal = function(ticketData) {
  */
 
 function updateTicketInUI(ticketData) {
-  if (
-    !ticketData ||
-    !ticketData.id ||
-    typeof ticketData.text !== 'string' ||
-    ticketData.text.trim() === ''
-  ) {
-    console.warn('[UI] Invalid or empty ticketData passed to updateTicketInUI:', ticketData);
+  if (!ticketData || !ticketData.id) {
+    console.warn('[UI] Invalid ticketData:', ticketData);
+    return;
+  }
+
+  const trimmedText = (ticketData.text || '').trim();
+  if (!trimmedText) {
+    console.warn('[UI] Skipping updateTicketInUI due to empty text:', ticketData);
     return;
   }
 
@@ -220,10 +221,11 @@ function updateTicketInUI(ticketData) {
 
   const storyTitle = storyCard.querySelector('.story-title');
   if (storyTitle) {
-    storyTitle.textContent = ticketData.text.trim();
-    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', ticketData.text.trim());
+    storyTitle.textContent = trimmedText;
+    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', trimmedText);
   }
 }
+
 
 
 
