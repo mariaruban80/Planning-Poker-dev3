@@ -242,7 +242,11 @@ socket.on('connect_error', (error) => {
     console.log('[SOCKET] Ignoring update for deleted ticket:', ticketData.id);
     return;
   }
-  
+   const trimmedText = (ticketData.text || '').trim();
+  if (!trimmedText) {
+    console.warn('[SOCKET] Ignoring updateTicket with blank text:', ticketData);
+    return;
+  }
   // Update in local state
   const ticketIndex = lastKnownRoomState.tickets.findIndex(t => t.id === ticketData.id);
   if (ticketIndex !== -1) {
