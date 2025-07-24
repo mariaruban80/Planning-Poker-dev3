@@ -1789,123 +1789,147 @@ function getVoteEmoji(vote) {
  * @param {Object} ticketData - Ticket data { id, text }
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
+
 function addTicketToUI(ticketData, selectAfterAdd = false) {
   if (!ticketData || !ticketData.id || !ticketData.text) return;
-  
+
   // Check if this ticket is in our deleted set
   if (deletedStoryIds.has(ticketData.id)) {
     console.log('[ADD] Not adding deleted ticket to UI:', ticketData.id);
     return;
   }
-  
+
   const storyList = document.getElementById('storyList');
   if (!storyList) return;
-  
+
   // Check if this ticket already exists (to avoid duplicates)
   const existingTicket = document.getElementById(ticketData.id);
   if (existingTicket) return;
-  
+
   // Create new story card
   const storyCard = document.createElement('div');
   storyCard.className = 'story-card';
   storyCard.id = ticketData.id;
-  
+
   // Set data index attribute (for selection)
   const newIndex = storyList.children.length;
   storyCard.dataset.index = newIndex;
-  
+
+  // Detect fields for proper display and attribute storage
+  // Accept ticketData.idDisplay and .descriptionDisplay as explicit overrides from CSV import
+  const idForDisplay = ticketData.idDisplay !== undefined ? ticketData.idDisplay : (
+    ticketData.id.startsWith('story_csv_') && ticketData.id.replace(/^story_csv_/, '') !== '' ? ticketData.id.replace(/^story_csv_/, '') : ticketData.id
+  );
+  const descriptionForDisplay = ticketData.descriptionDisplay !== undefined ? ticketData.descriptionDisplay : ticketData.text;
+
+  // Store these as data attributes for editStory to use
+  storyCard.dataset.id = idForDisplay;
+  storyCard.dataset.description = descriptionForDisplay;
+
   // Create the story title element
   const storyTitle = document.createElement('div');
   storyTitle.className = 'story-title';
-  storyTitle.textContent = ticketData.text;
-  
+  // Display as "ID: Description" if both exist and ID is non-empty
+  if (idForDisplay && descriptionForDisplay) {
+    storyTitle.textContent = `${idForDisplay}: ${descriptionForDisplay}`;
+  } else {
+    storyTitle.textContent = descriptionForDisplay;
+  }
+
   // Add to DOM
   storyCard.appendChild(storyTitle);
-  
+
   // Add 3-dot menu for hosts only
   if (isCurrentUserHost()) {
     const actionsContainer = document.createElement('div');
     actionsContainer.className = 'story-actions';
-    
+
     const menuBtn = document.createElement('button');
     menuBtn.className = 'story-menu-btn';
     menuBtn.innerHTML = '⋮'; // 3 vertical dots
     menuBtn.title = 'Story actions';
-    
+
     const dropdown = document.createElement('div');
     dropdown.className = 'story-menu-dropdown';
-    
+
     const editItem = document.createElement('div');
     editItem.className = 'story-menu-item edit';
     editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
-    
+
     const deleteItem = document.createElement('div');
     deleteItem.className = 'story-menu-item delete';
     deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
-    
+
     dropdown.appendChild(editItem);
     dropdown.appendChild(deleteItem);
-    
+
     actionsContainer.appendChild(menuBtn);
     actionsContainer.appendChild(dropdown);
     storyCard.appendChild(actionsContainer);
-    
+
     // Add event listeners
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      
+
       // Close all other dropdowns first
       document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
         if (dd !== dropdown) dd.classList.remove('show');
       });
-      
+
       dropdown.classList.toggle('show');
     });
-    
+
     editItem.addEventListener('click', (e) => {
       e.stopPropagation();
       dropdown.classList.remove('show');
-      editStory(ticketData);
+      // Pass both data fields for editStory (for popup prefill)
+      editStory({
+        id: ticketData.id,
+        idDisplay: storyCard.dataset.id,
+        descriptionDisplay: storyCard.dataset.description,
+        text: storyTitle.textContent
+      });
     });
-    
+
     deleteItem.addEventListener('click', (e) => {
       e.stopPropagation();
       dropdown.classList.remove('show');
       deleteStory(ticketData.id);
     });
   }
-  
+
   storyList.appendChild(storyCard);
-  
+
   // Check if user is guest and handle accordingly
   if (isGuestUser()) {
     storyCard.classList.add('disabled-story');
   } else {
-    // Add click event listener only for hosts
+    // Add click event listener
     storyCard.addEventListener('click', () => {
       selectStory(newIndex);
     });
   }
-  
+
   // Select the new story if requested (only for hosts)
   if (selectAfterAdd && !isGuestUser()) {
     selectStory(newIndex);
   }
-  
+
   // Check for stories message
   const noStoriesMessage = document.getElementById('noStoriesMessage');
   if (noStoriesMessage) {
     noStoriesMessage.style.display = 'none';
   }
-  
+
   // Enable planning cards if they were disabled
   document.querySelectorAll('#planningCards .card').forEach(card => {
     card.classList.remove('disabled');
     card.setAttribute('draggable', 'true');
   });
-  
+
   normalizeStoryIndexes();
 }
+
 /**
  * Set up a mutation observer to catch any newly added story cards
  */
@@ -2162,41 +2186,50 @@ function setupCSVUploader() {
 /**
  * Parse CSV text into array structure
  */
+
 function parseCSV(text) {
   const delimiter = text.includes('\t') ? '\t' : ',';
   console.log(`[CSV] Detected delimiter: ${delimiter === '\t' ? 'tab' : 'comma'}`);
 
-  const rows = text.trim().split('\n').map(row => row.split(delimiter));
+  // Normalize lines and split on delimiter
+  const rows = text
+    .trim()
+    .split('\n')
+    .filter(row => row.trim().length > 0)
+    .map(row => row.split(delimiter).map(cell => cell.trim()));
 
-  const hasHeaders = rows.length > 0 && ['id', 'description'].every(h => rows[0].map(hdr => hdr.toLowerCase()).includes(h));
+  if (rows.length === 0) {
+    console.log("[CSV] No rows to parse");
+    return [];
+  }
+
+  // Identify if headers exist (case-insensitive, whitespace-tolerant)
+  const headersNormalized = rows[0].map(h => h.replace(/\s/g, '').toLowerCase());
+  const idIdx = headersNormalized.indexOf('id');
+  const descIdx = headersNormalized.indexOf('description');
+  const hasHeaders = idIdx !== -1 && descIdx !== -1;
   console.log(`[CSV] Headers detected: ${hasHeaders}`);
 
   let parsed = [];
 
   if (hasHeaders) {
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const idIdx = headers.findIndex(h => h === 'id');
-    const descIdx = headers.findIndex(h => h === 'description');
-
-    if (idIdx === -1 || descIdx === -1) {
-      alert('CSV is missing required headers: Id and Description');
-      return [];
-    }
-
-    parsed = rows.slice(1).map((row, i) => {
-      return {
-        Id: row[idIdx]?.trim() || `csv_${i}`,
-        Description: row[descIdx]?.trim() || 'Untitled'
-      };
-    });
+    // Skip the header row
+    parsed = rows.slice(1).map((row, i) => ({
+      Id: row[idIdx] || `csv_${i}`,
+      Description: row[descIdx] || 'Untitled',
+    })).filter(entry =>
+      (entry.Id && entry.Id.toLowerCase() !== "id") ||
+      (entry.Description && entry.Description.toLowerCase() !== "description")
+    );
   } else {
     parsed = rows.map((row, i) => {
-      const id = row[0]?.trim();
-      const desc = row[1]?.trim();
+      const id = row[0] || `csv_${i}`;
+      const desc = row[1] || 'Untitled';
+      // Don't add empty rows
       if (!id && !desc) return null;
       return {
-        Id: id || `csv_${i}`,
-        Description: desc || 'Untitled'
+        Id: id,
+        Description: desc,
       };
     }).filter(Boolean);
   }
@@ -2246,20 +2279,25 @@ function displayCSVData(data) {
 
       const title = card.querySelector('.story-title');
       if (title) {
-        existingStories.push({ id: card.id, text: title.textContent });
+        // Try to grab any previously set data attributes for id/description
+        existingStories.push({
+          id: card.id,
+          idDisplay: card.dataset.id || '',
+          descriptionDisplay: card.dataset.description || '',
+          text: title.textContent
+        });
       }
     });
 
     console.log(`[CSV] Saved ${existingStories.length} existing manual stories`);
 
     // Remove only CSV stories
-    const csvStories = storyListContainer.querySelectorAll('.story-card[id^="story_csv_"]');
-    csvStories.forEach(card => card.remove());
+    storyListContainer.querySelectorAll('.story-card[id^="story_csv_"]').forEach(card => card.remove());
 
     // Clear and rebuild all stories
     storyListContainer.innerHTML = '';
 
-    // Re-add manual stories
+    // Re-add manual stories in the new format
     existingStories.forEach((story, index) => {
       if (deletedStoryIds.has(story.id)) return;
 
@@ -2267,10 +2305,17 @@ function displayCSVData(data) {
       storyItem.classList.add('story-card');
       storyItem.id = story.id;
       storyItem.dataset.index = index;
+      storyItem.dataset.id = story.idDisplay || '';
+      storyItem.dataset.description = story.descriptionDisplay || '';
 
       const storyTitle = document.createElement('div');
       storyTitle.classList.add('story-title');
-      storyTitle.textContent = story.text;
+      // Display as "ID: Description" if both exist
+      if (story.idDisplay && story.descriptionDisplay) {
+        storyTitle.textContent = `${story.idDisplay}: ${story.descriptionDisplay}`;
+      } else {
+        storyTitle.textContent = story.text;
+      }
       storyItem.appendChild(storyTitle);
 
       if (isCurrentUserHost()) {
@@ -2310,7 +2355,13 @@ function displayCSVData(data) {
         editItem.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.remove('show');
-          editStory({ id: story.id, text: story.text });
+          // Pass both ID and description, fallback to splitting the text if needed
+          editStory({
+            id: story.id,
+            idDisplay: storyItem.dataset.id,
+            descriptionDisplay: storyItem.dataset.description,
+            text: storyTitle.textContent
+          });
         });
 
         deleteItem.addEventListener('click', (e) => {
@@ -2329,7 +2380,7 @@ function displayCSVData(data) {
       }
     });
 
-    // ✅ Add CSV stories with proper Id/Description
+    // Add CSV stories (properly formatted)
     let startIndex = existingStories.length;
     data.forEach((row, index) => {
       const rawId = (row['Id'] || `csv_${index}`).trim();
@@ -2346,10 +2397,12 @@ function displayCSVData(data) {
       storyItem.classList.add('story-card');
       storyItem.id = csvStoryId;
       storyItem.dataset.index = startIndex + index;
+      storyItem.dataset.id = rawId;
+      storyItem.dataset.description = storyText;
 
       const storyTitle = document.createElement('div');
       storyTitle.classList.add('story-title');
-      storyTitle.textContent = storyText;
+      storyTitle.textContent = `${rawId}: ${storyText}`;   // << display "ID: Description"
       storyItem.appendChild(storyTitle);
 
       if (isCurrentUserHost()) {
@@ -2389,7 +2442,13 @@ function displayCSVData(data) {
         editItem.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.classList.remove('show');
-          editStory({ id: csvStoryId, text: storyText });
+          // Pass ID and Description for editing
+          editStory({
+            id: csvStoryId,
+            idDisplay: storyItem.dataset.id,
+            descriptionDisplay: storyItem.dataset.description,
+            text: storyTitle.textContent
+          });
         });
 
         deleteItem.addEventListener('click', (e) => {
@@ -2451,12 +2510,6 @@ function displayCSVData(data) {
   }
 }
 
-
-
-
-
-
-
 /**
  * Edit a story using the add ticket modal
  * @param {Object} ticketData - The ticket data to edit
@@ -2464,140 +2517,134 @@ function displayCSVData(data) {
 function editStory(ticketData) {
   console.log('[EDIT] Editing story:', ticketData);
 
-  // Check if the add ticket modal functions exist
+  // Check if the modal show function exists
   if (typeof window.showAddTicketModal === 'function') {
-    // First, find the story card in the DOM
+    // Find corresponding story card
     const storyCard = document.getElementById(ticketData.id);
-    let currentText = ticketData.text;
 
-    if (storyCard) {
-      // Retrieve the story text from the DOM if the cards id in the current card
-        const storyTitle = storyCard.querySelector('.story-title');   //Will not be created if can't read title
+    // Prefer structured fields over text splitting!
+    let ticketName =
+      ticketData.idDisplay !== undefined
+        ? ticketData.idDisplay
+        : (storyCard && storyCard.dataset.id) || '';
+    let ticketDescription =
+      ticketData.descriptionDisplay !== undefined
+        ? ticketData.descriptionDisplay
+        : (storyCard && storyCard.dataset.description) || '';
 
-	          if(typeof(storyTitle) !=null &&  typeof(storyTitle) != undefined ){
-                 currentText = storyTitle.textContent;	      //The current txt value is passed here
-	          }else  console.error('No valid data to use ')       //Safety catch will print if crash.
-    }			    //If Valid
-
-    // Parse the ticket text to extract name and description
-    let ticketName = currentText;
-    let ticketDescription = '';
-
-    // Check if the text contains a ':' which indicates name: description format
-    if (currentText.includes(': ')) {
-      const parts = currentText.split(': ', 2);
-      ticketName = parts[0];
-      ticketDescription = parts[1];
+    // Fallback for legacy cards if both fields missing
+    if ((!ticketName || !ticketDescription) && storyCard) {
+      const storyTitle = storyCard.querySelector('.story-title');
+      if (storyTitle) {
+        const txt = storyTitle.textContent || '';
+        if (txt.includes(': ')) {
+          const parts = txt.split(': ', 2);
+          if (!ticketName) ticketName = parts[0];
+          if (!ticketDescription) ticketDescription = parts[1];
+        } else if (!ticketName) {
+          ticketName = txt;
+          ticketDescription = '';
+        }
+      }
     }
 
-    // Pre-fill the modal with existing data
-    document.getElementById('ticketNameInput').value = ticketName;
-    document.getElementById('ticketDescriptionInput').value = ticketDescription;
+    // Pre-fill the modal with the current values
+    document.getElementById('ticketNameInput').value = ticketName || '';
+    document.getElementById('ticketDescriptionInput').value = ticketDescription || '';
 
-    // Show the modal to all accounts
+    // Show the modal
     document.getElementById('addTicketModalCustom').style.display = 'flex';
+    setTimeout(() => {
+      const nameInput = document.getElementById('ticketNameInput');
+      if (nameInput && typeof nameInput.focus === 'function') nameInput.focus();
+    }, 100);
 
-    	// Focus on the name input (Make the function and prevent type of errors)
-         if (typeof  document.getElementById('ticketNameInput').focus === 'function') {
-
-            setTimeout(() => {		  //Function saftey to work
-                 document.getElementById('ticketNameInput').focus()  //Get the type from a string
-             }, 100);           //For all code functions to take effect
-
-           }		  //End Saftey
-    // Store the original ticket data for editing
+    // Save the ticket id for confirming the edit later
+    window.currentEditingTicketId = ticketData.id;
     window.editingTicketData = ticketData;
 
-    // Update the modal title and button text for screen flag and update reasons
+    // Update modal header/button
     const modalTitle = document.querySelector('#addTicketModalCustom h3');
-    const confirmButton = document.getElementById('confirmAddTicket');
-
     if (modalTitle) modalTitle.textContent = 'Edit Ticket';
+    const confirmButton = document.getElementById('confirmAddTicket');
     if (confirmButton) {
       confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
+      confirmButton.onclick = ConfirmEdit; // Set click handler (no double-bind issues)
     }
 
-       if(typeof(confirmButton) != undefined&& confirmButton != null){		//For safty reasons to be sure code happens
+    // Confirm edit handler — updates data and notifies server
+    function ConfirmEdit(e) {
+      e.preventDefault();
 
-		  confirmButton.removeEventListener('click',ConfirmEdit) //Take the event out
+      const newName = document.getElementById('ticketNameInput').value.trim();
+      const newDesc = document.getElementById('ticketDescriptionInput').value.trim();
+      const newDisplay = newName && newDesc ? `${newName}: ${newDesc}` : (newName || newDesc);
 
-		  confirmButton.addEventListener('click',ConfirmEdit)					  
-       }	
-function ConfirmEdit(e) {
-  e.preventDefault();
+      const ticketId = window.currentEditingTicketId;
+      if (!ticketId) {
+        console.warn("No ticket ID available for editing.");
+        return;
+      }
 
-  const ticketName = document.getElementById('ticketNameInput').value;
-  const ticketDescription = document.getElementById('ticketDescriptionInput').value;
-  const currentText = ticketName + " : " + ticketDescription;
+      const storyCard = document.getElementById(ticketId);
+      if (!storyCard) {
+        console.warn("No story card found for ID:", ticketId);
+        return;
+      }
 
-  if (!currentEditingTicketId) {
-    console.warn("No ticket ID available for editing.");
-    return;
-  }
+      // Update the DOM: visual text AND data attrs for re-editing
+      const storyTitle = storyCard.querySelector('.story-title');
+      if (storyTitle) {
+        storyTitle.textContent = newDisplay;
+      }
+      storyCard.dataset.id = newName;
+      storyCard.dataset.description = newDesc;
 
-  const storyCard = document.getElementById(currentEditingTicketId);
-  if (!storyCard) {
-    console.warn("No story card found for ID:", currentEditingTicketId);
-    return;
-  }
+      // Prepare the updated ticket object
+      const storyObject = {
+        id: ticketId,
+        idDisplay: newName,
+        descriptionDisplay: newDesc,
+        text: newDisplay
+      };
 
-  const storyTitle = storyCard.querySelector('.story-title');
-  if (!storyTitle) {
-    console.warn("No .story-title element found in story card");
-    return;
-  }
+      updateTicketInUI(storyObject);
 
-  const storyObject = {
-    id: currentEditingTicketId,
-    text: currentText
-  };
+      // Notify server (and others) of UI update
+      if (typeof socket !== 'undefined' && socket) {
+        socket.emit('updateTicket', storyObject);
+      }
 
-  storyTitle.textContent = currentText;
-  updateTicketInUI(storyObject);
-
-  if (socket) {
-    socket.emit('updateTicket', storyObject);
-    console.log("Code Passed Socket Process running Now");
-  }
-
-  setTimeout(() => {
-    selectStory(0, false);
-  }, 500);
-}
-
- 
-	  
-
+      // Optionally close or reset modal, then reselect card if needed
+      setTimeout(() => {
+        selectStory(0, false);
+      }, 500);
+    }
   } else {
-
-	  //
+    // Fallback: prompt-based editing
     console.error('[EDIT] Add ticket modal functions not available');
-
-    // Fallback to prompt
     const newText = prompt('Edit story text:', ticketData.text);
 
- 	 if (newText && newText !== ticketData.text) {	 //If valid process
-
-	      if(  typeof( ticketData.id) != 'undefined'    ){   //Get flag first.Type  test in here we can make something happen and display
-	          const storyCard = document.getElementById(ticketData.id);
-
-                  if(  storyCard != undefined ){
-                         const storyTitle = storyCard.querySelector('.story-title');   //Can not find the card
-			              if( typeof(storyTitle)  != undefined){
-                                 storyTitle.textContent = newText	 //Run and now display
-
-                                 //Update the UI
-                                 updateTicketInUI({ id: ticketData.id, text: newText });
-
-                                               socket.emit('updateTicket', { id: ticketData.id, text: newText });
-
-			               }
-	           }				  	 //Valid data sent can proccesss data display display
-	     }  else       console.warn("Code Not Found")      //Code can't display
-	 }  //Check String to fix	 //If code won't run at all report here
-
+    if (newText && newText !== ticketData.text) {
+      if (typeof ticketData.id !== 'undefined') {
+        const storyCard = document.getElementById(ticketData.id);
+        if (storyCard) {
+          const storyTitle = storyCard.querySelector('.story-title');
+          if (storyTitle) {
+            storyTitle.textContent = newText;
+            updateTicketInUI({ id: ticketData.id, text: newText });
+            if (typeof socket !== 'undefined' && socket) {
+              socket.emit('updateTicket', { id: ticketData.id, text: newText });
+            }
+          }
+        }
+      } else {
+        console.warn("No valid ticket ID to update via prompt fallback");
+      }
+    }
   }
-}   //END all function
+}
+
 
 
 
