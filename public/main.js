@@ -176,16 +176,27 @@ function showBannerError(message) {
  * @param {Object} ticketData - Updated ticket data {id, text, isEdit: true}
  */
 window.updateTicketFromModal = function(ticketData) {
-  if (!ticketData || !ticketData.id || !ticketData.text) return;
-  
-  console.log('[UPDATE] Updating ticket from modal:', ticketData);
-  
+  if (!ticketData || !ticketData.id) return;
+
+  const trimmedText = (ticketData.text || '').trim();
+  if (!trimmedText) {
+    alert('Story text cannot be empty.');
+    return;
+  }
+
+  const safeTicket = {
+    id: ticketData.id,
+    text: trimmedText
+  };
+
+  console.log('[UPDATE] Updating ticket from modal:', safeTicket);
+
   // Update in UI
-  updateTicketInUI(ticketData);
-  
+  updateTicketInUI(safeTicket);
+
   // Emit to server for synchronization
   if (socket) {
-    socket.emit('updateTicket', ticketData);
+    socket.emit('updateTicket', safeTicket);
   }
 };
 /**
@@ -194,7 +205,12 @@ window.updateTicketFromModal = function(ticketData) {
  */
 
 function updateTicketInUI(ticketData) {
-  if (!ticketData || !ticketData.id || !ticketData.text) {
+  if (
+    !ticketData ||
+    !ticketData.id ||
+    typeof ticketData.text !== 'string' ||
+    ticketData.text.trim() === ''
+  ) {
     console.warn('[UI] Invalid or empty ticketData passed to updateTicketInUI:', ticketData);
     return;
   }
@@ -204,8 +220,8 @@ function updateTicketInUI(ticketData) {
 
   const storyTitle = storyCard.querySelector('.story-title');
   if (storyTitle) {
-    storyTitle.textContent = ticketData.text;
-    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', ticketData.text);
+    storyTitle.textContent = ticketData.text.trim();
+    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', ticketData.text.trim());
   }
 }
 
