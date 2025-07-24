@@ -164,16 +164,24 @@ window.updateTicketFromModal = function(ticketData) {
  * @param {Object} ticketData - Updated ticket data
  */
 function updateTicketInUI(ticketData) {
-    const storyCard = document.getElementById(ticketData.id);
-    if (!storyCard) return;
-    // Update the story title
-    const storyTitle = storyCard.querySelector('.story-title');
-    if (storyTitle) {
-        storyTitle.textContent = ticketData.text;
-        console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text: ', ticketData.text); //CHECK VALUES
-    }
-    console.log('[UI] Updated ticket in UI:', ticketData.id);
+  if (!ticketData || !ticketData.id || !ticketData.text) {
+    console.warn('[UI] Invalid or empty ticketData passed to updateTicketInUI:', ticketData);
+    return;
+  }
+
+  const storyCard = document.getElementById(ticketData.id);
+  if (!storyCard) return;
+
+  const storyTitle = storyCard.querySelector('.story-title');
+  if (storyTitle) {
+    storyTitle.textContent = ticketData.text;
+    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', ticketData.text);
+  }
 }
+
+
+
+
 /**
  * Load deleted story IDs from sessionStorage
  */
@@ -338,6 +346,7 @@ let votesRevealed = {};     // Track which stories have revealed votes { storyIn
 let manuallyAddedTickets = []; // Track tickets added manually
 let hasRequestedTickets = false; // Flag to track if we've already requested tickets
 let reconnectingInProgress = false; // Flag for reconnection logic
+let currentEditingTicketId = null;
 
 // Adding this function to main.js to be called whenever votes are revealed
 function fixRevealedVoteFontSizes() {
@@ -2510,39 +2519,49 @@ function editStory(ticketData) {
 
 		  confirmButton.addEventListener('click',ConfirmEdit)					  
        }	
+function ConfirmEdit(e) {
+  e.preventDefault();
 
-        function ConfirmEdit(e) { //this function with scope can call  the name in this function only.
-            e.preventDefault();
-            const ticketName = document.getElementById('ticketNameInput').value
-            const ticketDescription = document.getElementById('ticketDescriptionInput').value;
-            const currentText = ticketName + " : " + ticketDescription
-            //code to perform and display actions,  Make call and execute to make sure the proccess is used
-            if (typeof(ticketData.id) != 'undefined') { //Type test	 //
-                const storyCard = document.getElementById(ticketData.id);
-                if (storyCard != 'undefined') { //if not a valid card don't crash
-                    const storyTitle = storyCard.querySelector('.story-title'); //Get id from all cards loaded
-                    if (storyTitle != 'undefined') {
-                        const storyObject = {
-                            id: ticketData.id,
-                            text: currentText
-                        }; // define here in scope
-                        storyTitle.textContent = currentText; //Set string in card.
-                        //Ensure update before emitting
-                        updateTicketInUI(storyObject); //Run event for the update flag
-                        if (socket) { //Run function, call event, check and done, is a type test
-                            //Socket event before setting text may have been causing conflicts
-                            socket.emit('updateTicket', storyObject); //Type test
-                            console.log("Code Passed Socket Process running Now") //All is well report it.
-                        } //End code and action
-                        setTimeout(function() { //May help other guests
-                            selectStory(0, false);
-                        }, 500); //Wait 500 ms
-                    } else console.warn("Pointer crash prevented"); //The display can't be displayed,
-                } else console.warn("Code Can't function to it"); //
-            } //EndCode If is a Type
-        } //END Function Local
+  const ticketName = document.getElementById('ticketNameInput').value;
+  const ticketDescription = document.getElementById('ticketDescriptionInput').value;
+  const currentText = ticketName + " : " + ticketDescription;
 
-	  
+  if (!currentEditingTicketId) {
+    console.warn("No ticket ID available for editing.");
+    return;
+  }
+
+  const storyCard = document.getElementById(currentEditingTicketId);
+  if (!storyCard) {
+    console.warn("No story card found for ID:", currentEditingTicketId);
+    return;
+  }
+
+  const storyTitle = storyCard.querySelector('.story-title');
+  if (!storyTitle) {
+    console.warn("No .story-title element found in story card");
+    return;
+  }
+
+  const storyObject = {
+    id: currentEditingTicketId,
+    text: currentText
+  };
+
+  storyTitle.textContent = currentText;
+  updateTicketInUI(storyObject);
+
+  if (socket) {
+    socket.emit('updateTicket', storyObject);
+    console.log("Code Passed Socket Process running Now");
+  }
+
+  setTimeout(() => {
+    selectStory(0, false);
+  }, 500);
+}
+
+ 
 	  
 
   } else {
