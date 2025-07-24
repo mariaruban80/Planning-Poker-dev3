@@ -2163,23 +2163,59 @@ function setupCSVUploader() {
  * Parse CSV text into array structure
  */
 function parseCSV(data) {
-  const rows = data.trim().split('\n');
-  const headers = rows[0].split('\t').map(h => h.trim());  // use tab instead of comma
-  const parsedRows = [];
+  const lines = data.trim().split(/\r?\n/);
 
-  for (let i = 1; i < rows.length; i++) {
-    const values = rows[i].split('\t').map(v => v.trim());
-    const rowObject = {};
+  // Detect delimiter: tab if tabs are more common than commas
+  const delimiter = lines[0].includes('\t') ? '\t' : ',';
+  console.log(`[CSV] Detected delimiter: ${delimiter === '\t' ? 'tab' : 'comma'}`);
 
-    headers.forEach((header, index) => {
-      rowObject[header] = values[index] || '';
-    });
+  const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim()));
+  const headers = rows[0];
 
-    parsedRows.push(rowObject);
+  const hasHeaders = headers[0]?.toLowerCase() === 'id' && headers[1]?.toLowerCase() === 'description';
+  console.log(`[CSV] Headers detected: ${hasHeaders}`);
+
+  let parsed = [];
+
+  if (hasHeaders) {
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const entry = {
+        Id: row[0] || '',
+        Description: row[1] || ''
+      };
+
+      if (!entry.Id || !entry.Description) {
+        console.warn(`[CSV] Skipping row ${i + 1} — Missing Id or Description`);
+        continue;
+      }
+
+      parsed.push(entry);
+    }
+  } else {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const entry = {
+        Id: row[0] || '',
+        Description: row[1] || ''
+      };
+
+      if (!entry.Id || !entry.Description) {
+        console.warn(`[CSV] Skipping row ${i + 1} — Missing Id or Description`);
+        continue;
+      }
+
+      parsed.push(entry);
+    }
   }
 
-  return parsedRows;
+  console.log(`[CSV] Parsed ${parsed.length} valid entries`);
+  return parsed;
 }
+
+
+
+
 
 
 function normalizeStoryIndexes() {
