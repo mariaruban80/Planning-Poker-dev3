@@ -273,26 +273,30 @@ io.on('connection', (socket) => {
 
 // Handle ticket updates
 socket.on('updateTicket', (ticketData) => {
-  const roomId = socket.data.roomId;
-  if (roomId && rooms[roomId] && ticketData.id) {
-    console.log(`[SERVER] Updating ticket in room ${roomId}:`, ticketData.id);
-    
-    // Update room activity timestamp
-    rooms[roomId].lastActivity = Date.now();
-    
-    // Find and update the ticket in the server state
-    if (rooms[roomId].tickets) {
-      const ticketIndex = rooms[roomId].tickets.findIndex(ticket => ticket.id === ticketData.id);
-      if (ticketIndex !== -1) {
-        rooms[roomId].tickets[ticketIndex].text = ticketData.text;
-        console.log(`[SERVER] Ticket updated in server state`);
-      }
-    }
-    
-    // Broadcast the update to all other clients in the room
-    socket.broadcast.to(roomId).emit('updateTicket', { ticketData });
+  const roomId = socketToRoom[socket.id];
+  if (!roomId || !rooms[roomId] || !ticketData || !ticketData.id) return;
+
+  const ticketIndex = rooms[roomId].tickets.findIndex(ticket => ticket.id === ticketData.id);
+  if (ticketIndex === -1) return;
+
+  // ✅ Prevent blank updates
+  const trimmedText = (ticketData.text || '').trim();
+  if (!trimmedText) {
+    console.warn(`[SERVER] Rejected empty ticket update from ${socket.id}:`, ticketData);
+    return;
   }
+
+  // ✅ Only update the text, preserve the rest
+  Object.assign(rooms[roomId].tickets[ticketIndex], {
+    text: trimmedText
+  });
+
+  // ✅ Emit updated ticket to all clients in the room
+  io.in(roomId).emit('updateTicket', {
+    ticketData: rooms[roomId].tickets[ticketIndex]
+  });
 });
+
 
   
   // Handler for requesting votes by username
