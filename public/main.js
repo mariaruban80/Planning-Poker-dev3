@@ -2576,7 +2576,7 @@ function ConfirmEdit(e) {
 }
 
 
-  } else {
+  else {
     // Fallback: prompt-based editing
     console.error('[EDIT] Add ticket modal functions not available');
     const newText = prompt('Edit story text:', ticketData.text);
