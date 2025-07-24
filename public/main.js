@@ -44,31 +44,53 @@ window.notifyStoriesUpdated = function() {
 
 /**
  * Handle adding a ticket from the modal
- * @param {Object} ticketData - Ticket data {id, text}
+ * @param {Object} ticketData - Ticket data {id, text} - [Will now properly set name/description]
  */
 window.addTicketFromModal = function(ticketData) {
-  if (!ticketData || !ticketData.id || !ticketData.text) return;
-  
-  // Don't add if this story is in our deleted set
+  if (!ticketData || !ticketData.id ) return; // text not required as will build
+
+  // Get Name and Description from input fields
+  const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
+  const ticketDescription = document.getElementById('ticketDescriptionInput').value?.trim() || '';
+
+  const displayText = ticketName && ticketDescription ? `${ticketName} : ${ticketDescription}` : (ticketName || ticketDescription)
+
+    //Make sure deleted card can't pass, we can not do anything here.
   if (deletedStoryIds.has(ticketData.id)) {
     console.log('[MODAL] Cannot add previously deleted ticket:', ticketData.id);
     return;
   }
   
   console.log('[MODAL] Adding ticket from modal:', ticketData);
-  
-  // Emit to server for synchronization
-  if (typeof emitAddTicket === 'function') {
-    emitAddTicket(ticketData);
-  } else if (socket) {
-    socket.emit('addTicket', ticketData);
+
+  // Update ticketdata with name and values
+    let validData =  false
+    if (ticketName != null && ticketDescription != null){
+
+      //Create JSON to store the data
+          ticketData.text = displayText			 //String
+          ticketData.idDisplay = ticketName	 //Store name
+      	  ticketData.descriptionDisplay = ticketDescription 	 //Description
+          validData = true
+      } 
+
+  //This flag may not be usefull in the current iteration of code.
+  // Emit to server for synchronization, pass ticketData.text not the other values
+       if ( (typeof emitAddTicket === 'function')&& validData  )  {  //Prevent code failing
+                emitAddTicket(ticketData);
+         }  else if (socket && validData ) {       //Old code fix
+
+                 socket.emit('addTicket', ticketData)       //Make sure this gets past if all of previous ones are not correct
+         }
+
+
+  //Add ticket data after it passes.
+  if(validData){
+        addTicketToUI(ticketData, true);		          //Store ticket data locally.
   }
-  
-  // Add ticket locally
-  addTicketToUI(ticketData, true);
-  
-  // Store in manually added tickets
+  //For now it doesn't need to do anything anyway.
   manuallyAddedTickets.push(ticketData);
+  return;
 };
 
 /**
