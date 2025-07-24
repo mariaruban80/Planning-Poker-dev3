@@ -2346,7 +2346,8 @@ function displayCSVData(data) {
       storyItem.classList.add('story-card');
       storyItem.id = csvStoryId;
       storyItem.dataset.index = startIndex + index;
-
+storyItem.dataset.csvId = rawId;
+storyItem.dataset.csvDescription = storyText
       const storyTitle = document.createElement('div');
       storyTitle.classList.add('story-title');
       storyTitle.textContent = storyText;
@@ -2464,140 +2465,98 @@ function displayCSVData(data) {
 function editStory(ticketData) {
   console.log('[EDIT] Editing story:', ticketData);
 
-  // Check if the add ticket modal functions exist
   if (typeof window.showAddTicketModal === 'function') {
-    // First, find the story card in the DOM
     const storyCard = document.getElementById(ticketData.id);
-    let currentText = ticketData.text;
-
-    if (storyCard) {
-      // Retrieve the story text from the DOM if the cards id in the current card
-        const storyTitle = storyCard.querySelector('.story-title');   //Will not be created if can't read title
-
-	          if(typeof(storyTitle) !=null &&  typeof(storyTitle) != undefined ){
-                 currentText = storyTitle.textContent;	      //The current txt value is passed here
-	          }else  console.error('No valid data to use ')       //Safety catch will print if crash.
-    }			    //If Valid
-
-    // Parse the ticket text to extract name and description
-    let ticketName = currentText;
+    let ticketName = '';
     let ticketDescription = '';
 
-    // Check if the text contains a ':' which indicates name: description format
-    if (currentText.includes(': ')) {
-      const parts = currentText.split(': ', 2);
-      ticketName = parts[0];
-      ticketDescription = parts[1];
+    if (storyCard) {
+      const isCSVStory = storyCard.id.startsWith('story_csv_');
+      if (isCSVStory && storyCard.dataset.csvId && storyCard.dataset.csvDescription) {
+        ticketName = storyCard.dataset.csvId;
+        ticketDescription = storyCard.dataset.csvDescription;
+      } else {
+        const storyTitle = storyCard.querySelector('.story-title');
+        if (storyTitle) {
+          const currentText = storyTitle.textContent;
+          if (currentText.includes(': ')) {
+            const parts = currentText.split(': ', 2);
+            ticketName = parts[0];
+            ticketDescription = parts[1];
+          } else {
+            ticketName = currentText;
+            ticketDescription = '';
+          }
+        }
+      }
     }
 
-    // Pre-fill the modal with existing data
     document.getElementById('ticketNameInput').value = ticketName;
     document.getElementById('ticketDescriptionInput').value = ticketDescription;
 
-    // Show the modal to all accounts
     document.getElementById('addTicketModalCustom').style.display = 'flex';
+    setTimeout(() => document.getElementById('ticketNameInput').focus(), 100);
 
-    	// Focus on the name input (Make the function and prevent type of errors)
-         if (typeof  document.getElementById('ticketNameInput').focus === 'function') {
-
-            setTimeout(() => {		  //Function saftey to work
-                 document.getElementById('ticketNameInput').focus()  //Get the type from a string
-             }, 100);           //For all code functions to take effect
-
-           }		  //End Saftey
-    // Store the original ticket data for editing
     window.editingTicketData = ticketData;
 
-    // Update the modal title and button text for screen flag and update reasons
     const modalTitle = document.querySelector('#addTicketModalCustom h3');
     const confirmButton = document.getElementById('confirmAddTicket');
-
     if (modalTitle) modalTitle.textContent = 'Edit Ticket';
     if (confirmButton) {
       confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
+      confirmButton.removeEventListener('click', ConfirmEdit);
+      confirmButton.addEventListener('click', ConfirmEdit);
     }
 
-       if(typeof(confirmButton) != undefined&& confirmButton != null){		//For safty reasons to be sure code happens
+    function ConfirmEdit(e) {
+      e.preventDefault();
+      const ticketName = document.getElementById('ticketNameInput').value;
+      const ticketDescription = document.getElementById('ticketDescriptionInput').value;
+      const currentText = ticketName + " : " + ticketDescription;
 
-		  confirmButton.removeEventListener('click',ConfirmEdit) //Take the event out
+      if (!ticketData.id) {
+        console.warn("No ticket ID available for editing.");
+        return;
+      }
 
-		  confirmButton.addEventListener('click',ConfirmEdit)					  
-       }	
-function ConfirmEdit(e) {
-  e.preventDefault();
+      const storyCard = document.getElementById(ticketData.id);
+      if (!storyCard) {
+        console.warn("No story card found for ID:", ticketData.id);
+        return;
+      }
 
-  const ticketName = document.getElementById('ticketNameInput').value;
-  const ticketDescription = document.getElementById('ticketDescriptionInput').value;
-  const currentText = ticketName + " : " + ticketDescription;
+      const storyTitle = storyCard.querySelector('.story-title');
+      if (!storyTitle) {
+        console.warn("No .story-title element found in story card");
+        return;
+      }
 
-  if (!currentEditingTicketId) {
-    console.warn("No ticket ID available for editing.");
-    return;
+      const storyObject = {
+        id: ticketData.id,
+        text: currentText
+      };
+
+      storyTitle.textContent = currentText;
+      updateTicketInUI(storyObject);
+      if (socket) socket.emit('updateTicket', storyObject);
+
+      setTimeout(() => selectStory(0, false), 500);
+    }
+  } else {
+    console.error('[EDIT] Add ticket modal functions not available');
+    const newText = prompt('Edit story text:', ticketData.text);
+    if (newText && newText !== ticketData.text && ticketData.id) {
+      const storyCard = document.getElementById(ticketData.id);
+      const storyTitle = storyCard?.querySelector('.story-title');
+      if (storyTitle) {
+        storyTitle.textContent = newText;
+        updateTicketInUI({ id: ticketData.id, text: newText });
+        socket.emit('updateTicket', { id: ticketData.id, text: newText });
+      }
+    }
   }
-
-  const storyCard = document.getElementById(currentEditingTicketId);
-  if (!storyCard) {
-    console.warn("No story card found for ID:", currentEditingTicketId);
-    return;
-  }
-
-  const storyTitle = storyCard.querySelector('.story-title');
-  if (!storyTitle) {
-    console.warn("No .story-title element found in story card");
-    return;
-  }
-
-  const storyObject = {
-    id: currentEditingTicketId,
-    text: currentText
-  };
-
-  storyTitle.textContent = currentText;
-  updateTicketInUI(storyObject);
-
-  if (socket) {
-    socket.emit('updateTicket', storyObject);
-    console.log("Code Passed Socket Process running Now");
-  }
-
-  setTimeout(() => {
-    selectStory(0, false);
-  }, 500);
 }
 
- 
-	  
-
-  } else {
-
-	  //
-    console.error('[EDIT] Add ticket modal functions not available');
-
-    // Fallback to prompt
-    const newText = prompt('Edit story text:', ticketData.text);
-
- 	 if (newText && newText !== ticketData.text) {	 //If valid process
-
-	      if(  typeof( ticketData.id) != 'undefined'    ){   //Get flag first.Type  test in here we can make something happen and display
-	          const storyCard = document.getElementById(ticketData.id);
-
-                  if(  storyCard != undefined ){
-                         const storyTitle = storyCard.querySelector('.story-title');   //Can not find the card
-			              if( typeof(storyTitle)  != undefined){
-                                 storyTitle.textContent = newText	 //Run and now display
-
-                                 //Update the UI
-                                 updateTicketInUI({ id: ticketData.id, text: newText });
-
-                                               socket.emit('updateTicket', { id: ticketData.id, text: newText });
-
-			               }
-	           }				  	 //Valid data sent can proccesss data display display
-	     }  else       console.warn("Code Not Found")      //Code can't display
-	 }  //Check String to fix	 //If code won't run at all report here
-
-  }
-}   //END all function
 
 
 
