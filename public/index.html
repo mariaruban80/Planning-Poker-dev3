@@ -1563,6 +1563,24 @@ white-space: nowrap;
   -webkit-overflow-scrolling: touch;
 }
 
+.input-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.input-group textarea:focus {
+  outline: none;
+  border-color: #673ab7;
+  box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
+}
+
 /* Add padding to main container to prevent content from being hidden behind fixed panel */
 .container {
   padding-bottom: 120px !important;
@@ -1626,10 +1644,10 @@ white-space: nowrap;
       <input id="ticketNameInput" type="text" placeholder="Enter ticket ID">
     </div>
     
-    <div class="input-group">
-      <label for="ticketDescriptionInput">Description</label>
-      <input id="ticketDescriptionInput" type="textarea" placeholder="Enter ticket description">
-    </div>
+<div class="input-group">
+  <label for="ticketDescriptionInput">Comment</label>
+  <textarea id="ticketDescriptionInput" placeholder="Enter ticket comment" rows="4"></textarea>
+</div>
     
     <div class="button-group">
       <button id="cancelAddTicket" class="cancel-button">CANCEL</button>
