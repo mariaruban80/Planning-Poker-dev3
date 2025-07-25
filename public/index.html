@@ -1663,8 +1663,7 @@ white-space: nowrap;
     </div>
     
 <div class="input-group">
-  <label for="ticketDescriptionInput">Comment</label>
- // <textarea id="ticketDescriptionInput" placeholder="Enter ticket comment" rows="4"></textarea>   
+  <label for="ticketDescriptionInput">Comment</label> 
 <div id="ticketDescriptionEditor" style="height:130px;"></div>
 </div>
     
@@ -1739,7 +1738,7 @@ white-space: nowrap;
 <!-- Scripts -->
 <script src="main.js" type="module"></script>
 <script>
-
+let quill = null; // global variable
 function updateHeaderStyle() {
   const style = document.createElement('style');
   style.textContent = `
@@ -1789,6 +1788,13 @@ function updateHeaderStyle() {
       font-size: 14px;
       font-weight: 500;
     }
+    #addTicketModalCustom .ql-toolbar.ql-snow {
+  border-radius: 6px 6px 0 0;
+}
+#addTicketModalCustom .ql-container.ql-snow {
+  border-radius: 0 0 6px 6px;
+  min-height: 90px;
+}
     
     /* Don't modify these elements */
     #headerUsername,
@@ -2117,15 +2123,13 @@ window.updateUserDisplay = function() {
 window.updateUserDisplay = function() {
   initUserHeaderDisplay();
 };
-let quill = null; // global variable
+
 
 function showAddTicketModal() {
-  // Clear previous input values
   document.getElementById('ticketNameInput').value = '';
-  
-  // Initialize Quill if not already done
+  // Initialize Quill only once
   if (!quill) {
-    quill = new Quill('#ticketDescriptionInput', {
+    quill = new Quill('#ticketDescriptionEditor', {
       theme: 'snow',
       placeholder: 'Enter ticket comment...',
       modules: {
@@ -2144,19 +2148,15 @@ function showAddTicketModal() {
 
   // Show the modal
   document.getElementById('addTicketModalCustom').style.display = 'flex';
-
-  // Focus on the name input
   setTimeout(() => {
     document.getElementById('ticketNameInput').focus();
   }, 100);
 }
 
 
-
 function handleAddTicketSubmit() {
   const ticketName = document.getElementById('ticketNameInput').value.trim();
-//  const ticketDescription = document.getElementById('ticketDescriptionInput').value.trim();
-    const ticketDescription = quillEditor.root.innerHTML;
+    const ticketDescription = quill.root.innerHTML;
   // Validate input
   if (!ticketName) {
     const nameInput = document.getElementById('ticketNameInput');
