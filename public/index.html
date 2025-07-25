@@ -2227,8 +2227,8 @@ function showAddTicketModal() {
 
 function handleAddTicketSubmit() {
   const ticketName = document.getElementById('ticketNameInput').value.trim();
-  const ticketDescription = document.getElementById('ticketDescriptionInput').value.trim();
-  
+  const ticketDescription = document.getElementById('ticketDescriptionInput').innerText.trim();
+
   // Validate input
   if (!ticketName) {
     const nameInput = document.getElementById('ticketNameInput');
