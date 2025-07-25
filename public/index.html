@@ -58,6 +58,10 @@ document.addEventListener('DOMContentLoaded', function () {
       border-right: white;
       border-left-color: white;
     }
+  #ticketDescriptionEditor {
+    min-height: 150px;
+  }
+
     
     .rightbar {
       border-right: none;
@@ -1540,6 +1544,9 @@ white-space: nowrap;
   display: none;
   align-items: center;
   justify-content: center;
+}
+  .ql-container {
+  min-height: 150px !important;
 }
 #addTicketModalCustom .modal-content.add-ticket-modal {
   background: #fff;
@@ -3752,7 +3759,16 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('loginModalCustom').style.display = 'none';
   });
 </script>
-
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const container = document.getElementById('ticketDescriptionEditor');
+  if (container && !window.quill) {
+    window.quill = new Quill(container, {
+      theme: 'snow'
+    });
+  }
+});
+</script>
   
      
 </body>
