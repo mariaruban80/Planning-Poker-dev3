@@ -48,10 +48,10 @@ window.notifyStoriesUpdated = function() {
  */
 window.addTicketFromModal = function(ticketData) {
   if (!ticketData || !ticketData.id ) return; // text not required as will build
-
-  // Get Name and Description from input fields
-  const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
-  const ticketDescription = document.getElementById('ticketDescriptionInput').value?.trim() || '';
+const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
+// Get Quill editor content for description:
+const ticketDescription = window.quill ? window.quill.root.innerText.trim() : '';
+  
 
   const displayText = ticketName && ticketDescription ? `${ticketName} : ${ticketDescription}` : (ticketName || ticketDescription)
 
