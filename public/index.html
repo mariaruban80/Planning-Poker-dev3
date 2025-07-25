@@ -75,7 +75,37 @@
   z-index: 10;
   display: flex !important;
 }
+/* Make Quill fill width and be visually pleasing */
+#ticketDescriptionEditor {
+  min-height: 120px;
+  width: 100% !important;
+  margin-top: 6px;
+  margin-bottom: 0;
+  border-radius: 6px;
+}
+     /* Remove weird border between toolbar and editor */
+#addTicketModalCustom .ql-toolbar.ql-snow {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+#addTicketModalCustom .ql-container.ql-snow {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  min-height: 100px;
+}
 
+/* If you want even more space for the editor: */
+#addTicketModalCustom #ticketDescriptionEditor .ql-editor {
+  min-height: 100px;
+  font-size: 15px; /* slightly larger font in editor */
+}
+     #addTicketModalCustom .ql-toolbar.ql-snow,
+#addTicketModalCustom .ql-container.ql-snow {
+  width: 100%;
+  min-width: 0;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
 .story-menu-btn {
   width: 24px;
   height: 24px;
@@ -1038,15 +1068,12 @@
   z-index: 10000;
 }
 
+/* Make the Add Ticket modal larger and cleaner */
 .add-ticket-modal {
-  background-color: white;
-  border-radius: 12px;
-  padding: 25px 30px; /* Increased padding */
-  max-width: 550px; /* Increased from 450px */
-  width: 95%; /* Increased from 90% */
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  border: 2px solid #673ab7;
-  min-height: 400px; /* Added minimum height */
+  max-width: 600px; /* previously 450/550px, now wider */
+  min-width: 380px;
+  width: 95%;
+  padding: 35px 40px; /* more breathing space */
 }
 #addTicketModalCustom {
   position: fixed;
@@ -1072,7 +1099,13 @@
 }
 
 .input-group {
-  margin-bottom: 16px;
+  margin-bottom: 24px; /* more space below each group */
+}
+/* Space between comment label and editor */
+.input-group label[for="ticketDescriptionInput"], 
+.input-group label[for="ticketDescriptionEditor"] {
+  margin-bottom: 8px;
+  display: block;
 }
 
 .input-group label {
