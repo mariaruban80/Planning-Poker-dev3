@@ -1534,34 +1534,48 @@ white-space: nowrap;
   }
 
   
-/* Refined Add Ticket Modal Layout */
+/* Completely refined modal for better centering and Quill alignment */
+#addTicketModalCustom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
 #addTicketModalCustom .modal-content.add-ticket-modal {
-  background-color: white;
-  border-radius: 16px;
-  padding: 40px 30px;
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  width: 100%;
   max-width: 600px;
-  width: 90%;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  border: 1px solid #ddd;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-#addTicketModalCustom .modal-content.add-ticket-modal h3 {
+#addTicketModalCustom h3 {
+  margin: 0;
   text-align: center;
-  margin-bottom: 0;
+  color: #673ab7;
   font-size: 20px;
 }
 
-#addTicketModalCustom .input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+#addTicketModalCustom .input-group label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  display: block;
 }
 
 #addTicketModalCustom .input-group input {
-  padding: 10px;
+  padding: 10px 14px;
   font-size: 15px;
   border-radius: 6px;
   border: 1px solid #ccc;
@@ -1575,28 +1589,49 @@ white-space: nowrap;
 
 #addTicketModalCustom .ql-container.ql-snow {
   border: 1px solid #ccc;
-  border-top: none;
   border-radius: 0 0 6px 6px;
-  min-height: 140px;
+  min-height: 150px;
 }
 
 #addTicketModalCustom .ql-editor {
-  font-size: 15px;
   padding: 12px;
+  font-size: 15px;
 }
 
 #addTicketModalCustom .button-group {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 #addTicketModalCustom .cancel-button,
 #addTicketModalCustom .confirm-button {
   flex: 1;
+  padding: 12px 20px;
   font-size: 14px;
-  padding: 10px 20px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+#addTicketModalCustom .cancel-button {
+  background: #eee;
+  color: #333;
+}
+
+#addTicketModalCustom .cancel-button:hover {
+  background: #ddd;
+}
+
+#addTicketModalCustom .confirm-button {
+  background: #673ab7;
+  color: white;
+}
+
+#addTicketModalCustom .confirm-button:hover {
+  background: #5c33a4;
 }
 
 </style>
