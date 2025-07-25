@@ -83,29 +83,7 @@
   margin-bottom: 0;
   border-radius: 6px;
 }
-     /* Remove weird border between toolbar and editor */
-#addTicketModalCustom .ql-toolbar.ql-snow {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-#addTicketModalCustom .ql-container.ql-snow {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  min-height: 100px;
-}
 
-/* If you want even more space for the editor: */
-#addTicketModalCustom #ticketDescriptionEditor .ql-editor {
-  min-height: 100px;
-  font-size: 15px; /* slightly larger font in editor */
-}
-     #addTicketModalCustom .ql-toolbar.ql-snow,
-#addTicketModalCustom .ql-container.ql-snow {
-  width: 100%;
-  min-width: 0;
-  border-radius: 6px;
-  box-sizing: border-box;
-}
 .story-menu-btn {
   width: 24px;
   height: 24px;
@@ -1581,12 +1559,11 @@ white-space: nowrap;
   }
 
   </style>
-     <style>
-/* Modal should be wide enough */
+<style>
 .add-ticket-modal {
   max-width: 600px;
   padding: 35px 40px;
-  border-radius: 16px; /* more rounded for luxury */
+  border-radius: 16px;
 }
 
 .input-group {
@@ -1594,7 +1571,6 @@ white-space: nowrap;
   margin-bottom: 22px;
 }
 
-/* Quill toolbar and editor perfectly flush with input width */
 #addTicketModalCustom .ql-toolbar.ql-snow,
 #addTicketModalCustom .ql-container.ql-snow {
   width: 100%;
@@ -1602,63 +1578,27 @@ white-space: nowrap;
   box-sizing: border-box;
 }
 
-/* Give toolbar only top border radius */
 #addTicketModalCustom .ql-toolbar.ql-snow {
   border-radius: 6px 6px 0 0;
+  border: 1px solid #d0d0d0;
   border-bottom: none;
-  box-sizing: border-box;
   background: #fff;
 }
 
-/* Give editor only bottom border radius */
 #addTicketModalCustom .ql-container.ql-snow {
   border-radius: 0 0 6px 6px;
+  border: 1px solid #d0d0d0;
   border-top: none;
-  min-height: 90px;
-  box-sizing: border-box;
+  min-height: 100px;
 }
 
-/* Ensure only 1px border between toolbar/editor, and no border mismatch */
-#addTicketModalCustom .ql-toolbar.ql-snow,
-#addTicketModalCustom .ql-container.ql-snow {
-  border-width: 1px;
-  border-style: solid;
-  border-color: #d0d0d0;
-}
-
-#addTicketModalCustom .ql-toolbar.ql-snow {
-  border-bottom-width: 0;
-}
-
-#addTicketModalCustom .ql-container.ql-snow {
-  border-top-width: 0;
-}
-
-/* Good spacing below label */
-.input-group label {
-  margin-bottom: 8px;
-  display: block;
-  color: #673ab7;
-  font-weight: 600;
-}
-
-/* Input, toolbar, and editor all match border/details */
-#addTicketModalCustom input[type="text"],
-#addTicketModalCustom .ql-toolbar.ql-snow,
-#addTicketModalCustom .ql-container.ql-snow {
-  border-width: 1px !important;
-  border-color: #d0d0d0 !important;
-  box-sizing: border-box;
-}
-
-/* Editor padding for good feel */
 #addTicketModalCustom .ql-editor {
-  min-height: 90px;
+  min-height: 100px;
   font-size: 15px;
-  padding: 10px 14px;
+  padding: 12px 14px;
 }
-          
-          </style>
+</style>
+
      
      <style>
 
