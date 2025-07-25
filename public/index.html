@@ -1738,8 +1738,9 @@ white-space: nowrap;
       <input id="ticketNameInput" type="text" placeholder="Enter ticket ID">
     </div>
     <div class="input-group">
-      <label for="ticketDescriptionEditor">Comment</label>
-      <div id="ticketDescriptionEditor"></div>
+      <label for="ticketDescriptionInput">Comment</label>
+      <!-- Either a plain input or the Quill container, but must have *this* ID: -->
+      <div id="ticketDescriptionInput"></div>
     </div>
     <div class="button-group">
       <button id="cancelAddTicket" class="cancel-button">CANCEL</button>
@@ -1748,7 +1749,7 @@ white-space: nowrap;
       </button>
     </div>
   </div>
-</div>    
+</div>   
 <!-- Updated Upload Section - moved to right side as per screenshot -->
 <div class="upload-section">
 <div class="upload-right">
