@@ -1534,48 +1534,72 @@ white-space: nowrap;
   }
 
   
-/* FIX: Clean alignment for Add Ticket Modal and Quill editor */
+/* Refined Add Ticket Modal Layout */
 #addTicketModalCustom .modal-content.add-ticket-modal {
-  padding: 30px 40px;
-  max-width: 540px;
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 12px;
+  background-color: white;
+  border-radius: 16px;
+  padding: 40px 30px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#addTicketModalCustom .modal-content.add-ticket-modal h3 {
+  text-align: center;
+  margin-bottom: 0;
+  font-size: 20px;
 }
 
 #addTicketModalCustom .input-group {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-#addTicketModalCustom .input-group label {
-  display: block;
-  font-weight: 600;
-  color: #673ab7;
-  margin-bottom: 8px;
-  font-size: 14px;
+#addTicketModalCustom .input-group input {
+  padding: 10px;
+  font-size: 15px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
 
 #addTicketModalCustom .ql-toolbar.ql-snow {
-  border-radius: 8px 8px 0 0;
+  border-radius: 6px 6px 0 0;
   border: 1px solid #ccc;
   border-bottom: none;
-  padding: 8px;
-  background-color: #f9f9f9;
 }
 
 #addTicketModalCustom .ql-container.ql-snow {
-  border-radius: 0 0 8px 8px;
   border: 1px solid #ccc;
   border-top: none;
-  min-height: 150px;
+  border-radius: 0 0 6px 6px;
+  min-height: 140px;
 }
 
 #addTicketModalCustom .ql-editor {
+  font-size: 15px;
   padding: 12px;
-  font-size: 14px;
 }
-</style>
 
+#addTicketModalCustom .button-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+#addTicketModalCustom .cancel-button,
+#addTicketModalCustom .confirm-button {
+  flex: 1;
+  font-size: 14px;
+  padding: 10px 20px;
+}
+
+</style>
 <style>
 .add-ticket-modal {
   max-width: 600px;
@@ -1622,49 +1646,7 @@ white-space: nowrap;
   padding: 12px 14px;
   min-height: 100px;
 }
-
-/* FIX: Clean alignment for Add Ticket Modal and Quill editor */
-#addTicketModalCustom .modal-content.add-ticket-modal {
-  padding: 30px 40px;
-  max-width: 540px;
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 12px;
-}
-
-#addTicketModalCustom .input-group {
-  margin-bottom: 20px;
-}
-
-#addTicketModalCustom .input-group label {
-  display: block;
-  font-weight: 600;
-  color: #673ab7;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-#addTicketModalCustom .ql-toolbar.ql-snow {
-  border-radius: 8px 8px 0 0;
-  border: 1px solid #ccc;
-  border-bottom: none;
-  padding: 8px;
-  background-color: #f9f9f9;
-}
-
-#addTicketModalCustom .ql-container.ql-snow {
-  border-radius: 0 0 8px 8px;
-  border: 1px solid #ccc;
-  border-top: none;
-  min-height: 150px;
-}
-
-#addTicketModalCustom .ql-editor {
-  padding: 12px;
-  font-size: 14px;
-}
 </style>
-
 
 
 
@@ -1714,49 +1696,7 @@ white-space: nowrap;
   position: relative;
   z-index: 1001;
 }
-     
-/* FIX: Clean alignment for Add Ticket Modal and Quill editor */
-#addTicketModalCustom .modal-content.add-ticket-modal {
-  padding: 30px 40px;
-  max-width: 540px;
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 12px;
-}
-
-#addTicketModalCustom .input-group {
-  margin-bottom: 20px;
-}
-
-#addTicketModalCustom .input-group label {
-  display: block;
-  font-weight: 600;
-  color: #673ab7;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-#addTicketModalCustom .ql-toolbar.ql-snow {
-  border-radius: 8px 8px 0 0;
-  border: 1px solid #ccc;
-  border-bottom: none;
-  padding: 8px;
-  background-color: #f9f9f9;
-}
-
-#addTicketModalCustom .ql-container.ql-snow {
-  border-radius: 0 0 8px 8px;
-  border: 1px solid #ccc;
-  border-top: none;
-  min-height: 150px;
-}
-
-#addTicketModalCustom .ql-editor {
-  padding: 12px;
-  font-size: 14px;
-}
-</style>
-
+     </style>
 
 </head>
 <body>
