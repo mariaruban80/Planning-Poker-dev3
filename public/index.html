@@ -2192,15 +2192,25 @@ window.updateUserDisplay = function() {
   initUserHeaderDisplay();
 };
 // Add Ticket Modal Functions
+     let quillAddTicket = null;
 function showAddTicketModal() {
   // Clear previous input values
   document.getElementById('ticketNameInput').value = '';
-  document.getElementById('ticketDescriptionInput').value = '';
-  
+
   // Show the modal
   document.getElementById('addTicketModalCustom').style.display = 'flex';
-  
-  // Focus on the name input
+
+  // Initialize Quill (after modal is visible & container exists)
+  // If already created in a previous session, destroy it and recreate
+  let commentDiv = document.getElementById('ticketDescriptionInput');
+  commentDiv.innerHTML = ''; // clear, in case Quill instance was there
+
+  quillAddTicket = new Quill('#ticketDescriptionInput', {
+    theme: 'snow',
+    placeholder: 'Enter comment'
+  });
+
+  // Optionally focus on the name input after a small pause
   setTimeout(() => {
     document.getElementById('ticketNameInput').focus();
   }, 100);
