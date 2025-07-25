@@ -2348,11 +2348,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('confirmAddTicket').addEventListener('click', handleAddTicketSubmit);
   
   // Set up enter key in description field
-  document.getElementById('ticketDescriptionInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      handleAddTicketSubmit();
-    }
-  });
+  
 });
 
 // Expose function for main.js
