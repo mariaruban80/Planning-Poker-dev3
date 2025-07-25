@@ -1738,9 +1738,8 @@ white-space: nowrap;
       <input id="ticketNameInput" type="text" placeholder="Enter ticket ID">
     </div>
     <div class="input-group">
-      <label for="ticketDescriptionInput">Comment</label>
-      <!-- Either a plain input or the Quill container, but must have *this* ID: -->
-      <div id="ticketDescriptionInput"></div>
+      <label for="ticketDescriptionEditor">Comment</label>
+      <div id="ticketDescriptionEditor"></div>
     </div>
     <div class="button-group">
       <button id="cancelAddTicket" class="cancel-button">CANCEL</button>
@@ -1749,7 +1748,7 @@ white-space: nowrap;
       </button>
     </div>
   </div>
-</div>   
+</div>    
 <!-- Updated Upload Section - moved to right side as per screenshot -->
 <div class="upload-section">
 <div class="upload-right">
@@ -2192,25 +2191,15 @@ window.updateUserDisplay = function() {
   initUserHeaderDisplay();
 };
 // Add Ticket Modal Functions
-     let quillAddTicket = null;
 function showAddTicketModal() {
   // Clear previous input values
   document.getElementById('ticketNameInput').value = '';
-
+  document.getElementById('ticketDescriptionInput').value = '';
+  
   // Show the modal
   document.getElementById('addTicketModalCustom').style.display = 'flex';
-
-  // Initialize Quill (after modal is visible & container exists)
-  // If already created in a previous session, destroy it and recreate
-  let commentDiv = document.getElementById('ticketDescriptionInput');
-  commentDiv.innerHTML = ''; // clear, in case Quill instance was there
-
-  quillAddTicket = new Quill('#ticketDescriptionInput', {
-    theme: 'snow',
-    placeholder: 'Enter comment'
-  });
-
-  // Optionally focus on the name input after a small pause
+  
+  // Focus on the name input
   setTimeout(() => {
     document.getElementById('ticketNameInput').focus();
   }, 100);
