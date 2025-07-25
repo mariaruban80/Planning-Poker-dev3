@@ -1037,13 +1037,27 @@
 .add-ticket-modal {
   background-color: white;
   border-radius: 12px;
-  padding: 20px 25px;
-  max-width: 450px;
-  width: 90%;
+  padding: 25px 30px; /* Increased padding */
+  max-width: 550px; /* Increased from 450px */
+  width: 95%; /* Increased from 90% */
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   border: 2px solid #673ab7;
+  min-height: 400px; /* Added minimum height */
 }
-
+#addTicketModalCustom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px; /* Add padding for mobile */
+  box-sizing: border-box;
+}
 .add-ticket-modal h3 {
   color: #673ab7;
   margin-top: 0;
@@ -2825,50 +2839,48 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
         return false;
       };
     }
-// Make editStory function available globally for CSV stories
+// Make editStory function available globally
 window.editStory = function(ticketData) {
   console.log('[EDIT] Editing story:', ticketData);
-  
-  // Parse the ticket text to extract name and description
-  let ticketName = ticketData.text;
+
+  // Split ticket text into name and description based on ":"
+  let ticketName = '';
   let ticketDescription = '';
-  
-  // Check if the text contains a ':' or '|' which indicates structured format
-  if (ticketData.text.includes(': ')) {
-    const parts = ticketData.text.split(': ', 2);
-    ticketName = parts[0];
-    ticketDescription = parts[1];
-  } else if (ticketData.text.includes(' | ')) {
-    // For CSV data that uses ' | ' separator
-    const parts = ticketData.text.split(' | ');
-    ticketName = parts[0];
-    ticketDescription = parts.slice(1).join(' | ') || '';
+
+  if (ticketData.text.includes(':')) {
+    const parts = ticketData.text.split(':');
+    ticketName = parts[0].trim();
+    ticketDescription = parts.slice(1).join(':').trim(); // Rejoin in case description has ":"
+  } else {
+    ticketName = ticketData.text.trim(); // If no ":", the whole thing is the name
   }
-  
-  // Pre-fill the modal with existing data
+
+  // Fill the modal form - make sure it's the TEXTAREA that gets the description
   document.getElementById('ticketNameInput').value = ticketName;
   document.getElementById('ticketDescriptionInput').value = ticketDescription;
-  
-  // Show the modal
+
+  // Show the dialog
   document.getElementById('addTicketModalCustom').style.display = 'flex';
-  
-  // Focus on the name input
+
+  // Focus the ticket name
   setTimeout(() => {
     document.getElementById('ticketNameInput').focus();
   }, 100);
-  
-  // Store the original ticket data for editing
+
+  // Store the original settings
   window.editingTicketData = ticketData;
-  
-  // Update the modal title and button text
+
+  // Setting Title and Button text
   const modalTitle = document.querySelector('#addTicketModalCustom h3');
   const confirmButton = document.getElementById('confirmAddTicket');
-  
+
   if (modalTitle) modalTitle.textContent = 'Edit Ticket';
   if (confirmButton) {
     confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
   }
 };
+
+     
      
   </script>
 
