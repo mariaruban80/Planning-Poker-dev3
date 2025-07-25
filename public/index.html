@@ -1571,10 +1571,13 @@ white-space: nowrap;
   margin-bottom: 22px;
 }
 
-#addTicketModalCustom .ql-toolbar.ql-snow,
-#addTicketModalCustom .ql-container.ql-snow {
+#addTicketModalCustom #ticketDescriptionEditor {
   width: 100%;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+  padding: 0;
+  border-radius: 6px;
   box-sizing: border-box;
 }
 
@@ -1583,6 +1586,9 @@ white-space: nowrap;
   border: 1px solid #d0d0d0;
   border-bottom: none;
   background: #fff;
+  padding: 8px;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 #addTicketModalCustom .ql-container.ql-snow {
@@ -1590,6 +1596,9 @@ white-space: nowrap;
   border: 1px solid #d0d0d0;
   border-top: none;
   min-height: 100px;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 #addTicketModalCustom .ql-editor {
