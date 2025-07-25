@@ -2222,12 +2222,10 @@ function showAddTicketModal() {
     document.getElementById('ticketNameInput').focus();
   }, 100);
 }
-
-
-
 function handleAddTicketSubmit() {
   const ticketName = document.getElementById('ticketNameInput').value.trim();
-  const ticketDescription = document.getElementById('ticketDescriptionInput').innerText.trim();
+  const ticketDescription = window.quill ? window.quill.root.innerText.trim() : '';
+  // For formatted comment use .innerHTML.trim()
 
   // Validate input
   if (!ticketName) {
@@ -2314,6 +2312,8 @@ function handleAddTicketSubmit() {
     }
   }
 }
+
+
 
 function hideAddTicketModal() {
   document.getElementById('addTicketModalCustom').style.display = 'none';
@@ -2953,7 +2953,8 @@ window.editStory = function(ticketData) {
   
   // Pre-fill the modal with existing data
   document.getElementById('ticketNameInput').value = ticketName;
-  document.getElementById('ticketDescriptionInput').value = ticketDescription;
+
+  window.quill.root.innerHTML = ticketDescription;
   
   // Show the modal
   document.getElementById('addTicketModalCustom').style.display = 'flex';
