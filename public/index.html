@@ -1599,6 +1599,9 @@ white-space: nowrap;
   border-radius: 0 0 6px 6px;
   min-height: 120px;
 }
+  #ticketDescriptionEditor {
+  min-height: 150px;
+}
 #addTicketModalCustom .ql-editor {
   font-size: 15px;
   min-height: 85px;
@@ -3752,7 +3755,16 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('loginModalCustom').style.display = 'none';
   });
 </script>
-
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const container = document.getElementById('ticketDescriptionEditor');
+  if (container && !window.quill) {
+    window.quill = new Quill(container, {
+      theme: 'snow'
+    });
+  }
+});
+</script>
   
      
 </body>
