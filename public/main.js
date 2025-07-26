@@ -169,13 +169,24 @@ function setupHeartbeat() {
  * @param {Object} ticketData - Updated ticket data {id, text, isEdit: true}
  */
 window.updateTicketFromModal = function(ticketData) {
-  if (!ticketData || !ticketData.id || !ticketData.text) return;
-  
+  if (!ticketData || !ticketData.id) return;
+
+  const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
+  const ticketDescription = window.quill ? window.quill.root.innerText.trim() : '';
+
+  const displayText = ticketName && ticketDescription
+    ? `${ticketName} : ${ticketDescription}`
+    : (ticketName || ticketDescription);
+
+  ticketData.text = displayText;
+  ticketData.idDisplay = ticketName;
+  ticketData.descriptionDisplay = ticketDescription;
+
   console.log('[UPDATE] Updating ticket from modal:', ticketData);
-  
+
   // Update in UI
   updateTicketInUI(ticketData);
-  
+
   // Emit to server for synchronization
   if (socket) {
     socket.emit('updateTicket', ticketData);
