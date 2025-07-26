@@ -277,19 +277,21 @@ socket.on('updateTicket', (ticketData) => {
   if (roomId && rooms[roomId] && ticketData.id) {
     console.log(`[SERVER] Updating ticket in room ${roomId}:`, ticketData.id);
     
-    // Update room activity timestamp
     rooms[roomId].lastActivity = Date.now();
     
-    // Find and update the ticket in the server state
     if (rooms[roomId].tickets) {
       const ticketIndex = rooms[roomId].tickets.findIndex(ticket => ticket.id === ticketData.id);
       if (ticketIndex !== -1) {
-        rooms[roomId].tickets[ticketIndex].text = ticketData.text;
+        rooms[roomId].tickets[ticketIndex] = {
+          ...rooms[roomId].tickets[ticketIndex],
+          text: ticketData.text,
+          idDisplay: ticketData.idDisplay,
+          descriptionDisplay: ticketData.descriptionDisplay
+        };
         console.log(`[SERVER] Ticket updated in server state`);
       }
     }
-    
-    // Broadcast the update to all other clients in the room
+
     socket.broadcast.to(roomId).emit('updateTicket', { ticketData });
   }
 });
