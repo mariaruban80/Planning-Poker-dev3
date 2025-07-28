@@ -1863,12 +1863,17 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   // Create the story title element
   const storyTitle = document.createElement('div');
   storyTitle.className = 'story-title';
-  // Display as "ID: Description" if both exist and ID is non-empty
-  if (idForDisplay && descriptionForDisplay) {
-    storyTitle.textContent = `${idForDisplay}: ${descriptionForDisplay}`;
-  } else {
-    storyTitle.textContent = descriptionForDisplay;
-  }
+  let previewText = '';
+  if (descriptionForDisplay) {
+	  const tmpDiv = document.createElement('div');
+	  tmpDiv.innerHTML = descriptionForDisplay;
+	  previewText = tmpDiv.innerText || tmpDiv.textContent || '';
+	}
+ if (idForDisplay && previewText) {
+	  storyTitle.textContent = `${idForDisplay}: ${previewText}`;
+	} else {
+	  storyTitle.textContent = previewText;
+	}
 
   // Add to DOM
   storyCard.appendChild(storyTitle);
@@ -2436,7 +2441,10 @@ function displayCSVData(data) {
 
       const storyTitle = document.createElement('div');
       storyTitle.classList.add('story-title');
-      storyTitle.textContent = `${rawId}: ${storyText}`;   // << display "ID: Description"
+      const tmpDiv = document.createElement('div');
+      tmpDiv.innerHTML = storyText || '';
+      const previewText = tmpDiv.innerText || tmpDiv.textContent || '';
+      storyTitle.textContent = `${rawId}: ${previewText}`;	      
       storyItem.appendChild(storyTitle);
 
       if (isCurrentUserHost()) {
