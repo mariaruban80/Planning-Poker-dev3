@@ -2225,8 +2225,8 @@ function showAddTicketModal() {
   }, 100);
 }
 function handleAddTicketSubmit() {
-  const ticketName = document.getElementById('ticketNameInput').value.trim();
-  const ticketDescription = window.quill ? window.quill.root.innerText.trim() : '';
+  const ticketName = document.getElementById('ticketNameInput').value.trim(); 
+  const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
   // For formatted comment use .innerHTML.trim()
 
   // Validate input
@@ -2949,8 +2949,8 @@ window.editStory = function(ticketData) {
     }
   }
 
-  document.getElementById('ticketNameInput').value = ticketName;
-  window.quill.root.innerHTML = ticketDescription;
+  document.getElementById('ticketNameInput').value = ticketName;  
+  window.quill.root.innerHTML = ticketData.descriptionDisplay || '';
 
   document.getElementById('addTicketModalCustom').style.display = 'flex';
   setTimeout(() => {
