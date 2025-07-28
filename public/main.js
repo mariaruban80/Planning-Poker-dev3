@@ -50,8 +50,8 @@ window.addTicketFromModal = function(ticketData) {
   if (!ticketData || !ticketData.id ) return; // text not required as will build
 const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
 // Get Quill editor content for description:
-const ticketDescription = window.quill ? window.quill.root.innerText.trim() : '';
 
+const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
 
   const displayText = ticketName && ticketDescription ? `${ticketName} : ${ticketDescription}` : (ticketName || ticketDescription)
 
@@ -172,7 +172,7 @@ window.updateTicketFromModal = function(ticketData) {
   if (!ticketData || !ticketData.id) return;
 
   const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
-  const ticketDescription = window.quill ? window.quill.root.innerText.trim() : '';
+const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
 
 
   const displayText = ticketName && ticketDescription
