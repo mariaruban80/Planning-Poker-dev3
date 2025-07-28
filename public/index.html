@@ -2935,50 +2935,37 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
     }
 // Make editStory function available globally for CSV stories
 window.editStory = function(ticketData) {
-  console.log('[EDIT] Editing story:', ticketData);
-  
-  // Parse the ticket text to extract name and description
-  let ticketName = ticketData.text;
-  let ticketDescription = '';
-  
-  // Check if the text contains a ':' or '|' which indicates structured format
-  if (ticketData.text.includes(': ')) {
-    const parts = ticketData.text.split(': ', 2);
-    ticketName = parts[0];
-    ticketDescription = parts[1];
-  } else if (ticketData.text.includes(' | ')) {
-    // For CSV data that uses ' | ' separator
-    const parts = ticketData.text.split(' | ');
-    ticketName = parts[0];
-    ticketDescription = parts.slice(1).join(' | ') || '';
-  }
-  
-  // Pre-fill the modal with existing data
-  document.getElementById('ticketNameInput').value = ticketName;
+  let ticketName = ticketData.idDisplay !== undefined ? ticketData.idDisplay : '';
+  let ticketDescription = ticketData.descriptionDisplay !== undefined ? ticketData.descriptionDisplay : '';
 
+  // Fallback for legacy tickets
+  if (!ticketName && ticketData.text) {
+    if (ticketData.text.includes(': ')) {
+      const parts = ticketData.text.split(': ', 2);
+      ticketName = parts[0];
+      ticketDescription = parts[1];
+    } else {
+      ticketName = ticketData.text;
+    }
+  }
+
+  document.getElementById('ticketNameInput').value = ticketName;
   window.quill.root.innerHTML = ticketDescription;
-  
-  // Show the modal
+
   document.getElementById('addTicketModalCustom').style.display = 'flex';
-  
-  // Focus on the name input
   setTimeout(() => {
     document.getElementById('ticketNameInput').focus();
   }, 100);
-  
-  // Store the original ticket data for editing
+
   window.editingTicketData = ticketData;
-  
-  // Update the modal title and button text
   const modalTitle = document.querySelector('#addTicketModalCustom h3');
   const confirmButton = document.getElementById('confirmAddTicket');
-  
+
   if (modalTitle) modalTitle.textContent = 'Edit Ticket';
-  if (confirmButton) {
-    confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
-  }
+  if (confirmButton) confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
 };
-     
+
+  
   </script>
 
    <script>
