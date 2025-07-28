@@ -207,10 +207,25 @@ function updateTicketInUI(ticketData) {
   if (!storyCard) return;
 
   const storyTitle = storyCard.querySelector('.story-title');
-  if (storyTitle) {
-    storyTitle.textContent = ticketData.text;
-    console.log('[UI] Updated ticket in UI:', ticketData.id, ' with text:', ticketData.text);
+if (storyTitle) {
+  // Pull the Quill HTML (may be in .descriptionDisplay or .text)
+  let descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
+  const idForDisplay = ticketData.idDisplay || '';
+
+  // Convert HTML to plain text for display
+  const tmpDiv = document.createElement('div');
+  tmpDiv.innerHTML = descriptionHTML;
+  const previewText = tmpDiv.innerText || tmpDiv.textContent || '';
+
+  if (idForDisplay && previewText) {
+    storyTitle.textContent = `${idForDisplay}: ${previewText}`;
+  } else if (idForDisplay) {
+    storyTitle.textContent = idForDisplay;
+  } else {
+    storyTitle.textContent = previewText;
   }
+  console.log('[UI] Updated ticket in UI:', ticketData.id, ' with display:', storyTitle.textContent);
+}
 }
 
 
