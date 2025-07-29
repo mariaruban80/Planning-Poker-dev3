@@ -198,26 +198,39 @@ const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : ''
  * @param {Object} ticketData - Updated ticket data
  */
 function updateTicketInUI(ticketData) {
-  if (!ticketData || !ticketData.id) return;
+  if (!ticketData || !ticketData.id) {
+    console.warn('[UI] Invalid or empty ticketData passed to updateTicketInUI:', ticketData);
+    return;
+  }
 
   const storyCard = document.getElementById(ticketData.id);
   if (!storyCard) return;
 
   const storyTitle = storyCard.querySelector('.story-title');
   if (storyTitle) {
-    // Use data from the inputs
     let descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
-    const idForDisplay = ticketData.idDisplay || '';
+    let idForDisplay = ticketData.idDisplay || '';
 
-    // Strip HTML and whitespace
+    // Convert HTML to plain text for display
     const tmpDiv = document.createElement('div');
     tmpDiv.innerHTML = descriptionHTML;
     let previewText = (tmpDiv.innerText || tmpDiv.textContent || '').trim();
 
-    // If Quill returns only an empty block, treat as empty
-    if (!previewText || /^(\s*|\u200B)$/.test(previewText)) previewText = '';
+    // Treat empty/blank or Quill's empty HTML as empty string
+    if (
+      !previewText ||
+      previewText === '' ||
+      descriptionHTML === '' ||
+      descriptionHTML === '<p><br></p>' ||
+      descriptionHTML.trim() === ''
+    ) {
+      previewText = '';
+    }
 
-    // Always prevent blank display
+    // Debugging
+    console.log('[UI] idForDisplay:', `"${idForDisplay}"`, 'previewText:', `"${previewText}"`);
+
+    // Only show fallback if both are really empty
     let display;
     if (idForDisplay && previewText) {
       display = `${idForDisplay}: ${previewText}`;
@@ -229,10 +242,10 @@ function updateTicketInUI(ticketData) {
       display = '[No ticket info]';
     }
     storyTitle.textContent = display;
+    storyCard.dataset.id = idForDisplay;
+    storyCard.dataset.description = descriptionHTML;
   }
 }
-
-
 
 
 /**
