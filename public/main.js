@@ -198,34 +198,38 @@ const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : ''
  * @param {Object} ticketData - Updated ticket data
  */
 function updateTicketInUI(ticketData) {
-  if (!ticketData || !ticketData.id || !ticketData.text) {
-    console.warn('[UI] Invalid or empty ticketData passed to updateTicketInUI:', ticketData);
-    return;
-  }
+  if (!ticketData || !ticketData.id) return;
 
   const storyCard = document.getElementById(ticketData.id);
   if (!storyCard) return;
 
   const storyTitle = storyCard.querySelector('.story-title');
-if (storyTitle) {
-  // Pull the Quill HTML (may be in .descriptionDisplay or .text)
-  let descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
-  const idForDisplay = ticketData.idDisplay || '';
+  if (storyTitle) {
+    // Use data from the inputs
+    let descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
+    const idForDisplay = ticketData.idDisplay || '';
 
-  // Convert HTML to plain text for display
-  const tmpDiv = document.createElement('div');
-  tmpDiv.innerHTML = descriptionHTML;
-  const previewText = tmpDiv.innerText || tmpDiv.textContent || '';
+    // Strip HTML and whitespace
+    const tmpDiv = document.createElement('div');
+    tmpDiv.innerHTML = descriptionHTML;
+    let previewText = (tmpDiv.innerText || tmpDiv.textContent || '').trim();
 
-  if (idForDisplay && previewText) {
-    storyTitle.textContent = `${idForDisplay}: ${previewText}`;
-  } else if (idForDisplay) {
-    storyTitle.textContent = idForDisplay;
-  } else {
-    storyTitle.textContent = previewText;
+    // If Quill returns only an empty block, treat as empty
+    if (!previewText || /^(\s*|\u200B)$/.test(previewText)) previewText = '';
+
+    // Always prevent blank display
+    let display;
+    if (idForDisplay && previewText) {
+      display = `${idForDisplay}: ${previewText}`;
+    } else if (idForDisplay) {
+      display = idForDisplay;
+    } else if (previewText) {
+      display = previewText;
+    } else {
+      display = '[No ticket info]';
+    }
+    storyTitle.textContent = display;
   }
-  console.log('[UI] Updated ticket in UI:', ticketData.id, ' with display:', storyTitle.textContent);
-}
 }
 
 
