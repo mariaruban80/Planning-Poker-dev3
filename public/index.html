@@ -1536,6 +1536,54 @@ white-space: nowrap;
   }
 
   </style>
+
+ /* Add styles for the drop down menu */   
+  <style>
+.profile-menu {
+  display: none;
+  position: absolute;
+  top: 65px; /* adjust if your header height is different */
+  right: 24px;
+  width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(103,58,183,0.17);
+  z-index: 99999;
+  font-family: inherit;
+  padding-bottom: 10px;
+}
+.profile-menu.show { display: block; }
+
+.profile-menu-header {
+  display: flex;
+  align-items: center;
+  padding: 20px 20px 12px 20px;
+}
+.profile-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin-right: 14px;
+}
+.profile-menu-name { font-weight: bold; font-size: 18px; }
+.profile-menu-divider { border-bottom: 1px solid #eee; margin:8px 0; }
+.profile-menu-item {
+  display: block;
+  width: 100%;
+  padding: 13px 24px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 16px;
+  cursor: pointer;
+  color: #333;
+  transition: background 0.14s;
+}
+.profile-menu-item:hover { background: #f3e8ff; }
+.profile-menu-item.logout { color: #c32d2d; font-weight: bold; }
+
+    
+    </style>
 <style>
      #addTicketModalCustom {
   position: fixed;
@@ -1718,14 +1766,27 @@ font-size: 15px;
   </div>
   <div class="nav-links">    
     <!-- New user display element -->
-    <div class="current-user-display">
-      <div class="user-avatar" id="headerUserAvatar"></div>
-      <span id="headerUsername">User</span>
-    </div>
-    <button id="logOffBtn" class="btn btn-danger join-session">🏃LOG OFF</button>   
-    <div class="connection-status" id="connectionStatus" title="Connected"></div>   
-    
+  <div class="current-user-display" id="profileMenuTrigger" style="cursor:pointer;position:relative;">
+    <div class="user-avatar" id="headerUserAvatar"></div>
+    <span id="headerUsername">User</span>
+    <span style="margin-left:2px;font-size:18px;">&#9881;</span>
   </div>
+   </div>
+      <!-- Profile Dropdown Menu -->
+<div id="profileMenu" class="profile-menu">
+  <div class="profile-menu-header">
+    <img id="profileMenuAvatar" class="profile-avatar" src="" alt="avatar">
+    <div>
+      <div class="profile-menu-name" id="profileMenuName">User</div>
+      <div class="profile-menu-email" id="profileMenuEmail" style="font-size:12px;color:#555;"></div>
+    </div>
+  </div>
+  <div class="profile-menu-divider"></div>
+  <button class="profile-menu-item" id="changeLanguageBtn">🌐 Change language</button>
+  <button class="profile-menu-item" id="uploadTicketMenuBtn">📁 Upload Ticket</button>
+  <div class="profile-menu-divider"></div>
+  <button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
+</div>
 </header>
 <!-- Create a completely new custom invite modal that doesn't use the same ID or classes as the original -->
 <div id="inviteModalCustom">
