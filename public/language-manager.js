@@ -125,58 +125,82 @@ class LanguageManager {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
+getTranslatableElements() {
+  const elements = [];
+  const selectors = [
+    'h1, h2, h3, h4, h5, h6',
+    'button:not(.close-button):not(.language-apply-btn):not(.language-cancel-btn)',
+    'label',
+    '.button',
+    '.nav-links a',
+    '.sidebar h3',
+    '.rightbar h3',
+    '.planning-cards-section h3',
+    '.section-heading',
+    '.user-name',
+    '.no-stories-message',
+    'input[placeholder]',
+    'textarea[placeholder]' // <-- added for future-proofing
+  ];
 
-  getTranslatableElements() {
-    const elements = [];
-    const selectors = [
-      'h1, h2, h3, h4, h5, h6',
-      'button:not(.close-button):not(.language-apply-btn):not(.language-cancel-btn)',
-      'label',
-      '.button',
-      '.nav-links a',
-      '.sidebar h3',
-      '.rightbar h3',
-      '.planning-cards-section h3',
-      '.section-heading',
-      '.user-name',
-      '.no-stories-message',
-      'input[placeholder]'
-    ];
-
-    selectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(el => {
-        if (this.shouldTranslateElement(el)) {
-          elements.push({
-            element: el,
-            type: 'text',
-            original: el.textContent.trim()
-          });
-        }
-      });
-    });
-
-    document.querySelectorAll('.story-title').forEach(el => {
-      if (el.textContent.trim()) {
+  selectors.forEach(selector => {
+    document.querySelectorAll(selector).forEach(el => {
+      if (this.shouldTranslateElement(el)) {
         elements.push({
           element: el,
-          type: 'story',
+          type: 'text',
           original: el.textContent.trim()
         });
       }
     });
+  });
 
-    document.querySelectorAll('input[placeholder]').forEach(el => {
-      if (el.placeholder.trim()) {
-        elements.push({
-          element: el,
-          type: 'placeholder',
-          original: el.placeholder.trim()
-        });
-      }
+  // Translate story titles
+  document.querySelectorAll('.story-title').forEach(el => {
+    if (el.textContent.trim()) {
+      elements.push({
+        element: el,
+        type: 'story',
+        original: el.textContent.trim()
+      });
+    }
+  });
+
+  // Translate placeholders from inputs
+  document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+    if (el.placeholder.trim()) {
+      elements.push({
+        element: el,
+        type: 'placeholder',
+        original: el.placeholder.trim()
+      });
+    }
+  });
+
+  // ✅ NEW: Handle ticket modal fields by ID (exact target)
+  const ticketId = document.getElementById('ticketNameInput');
+  const ticketDesc = document.getElementById('ticketDescriptionEditor');
+
+  if (ticketId && ticketId.placeholder.trim()) {
+    elements.push({
+      element: ticketId,
+      type: 'placeholder',
+      original: ticketId.placeholder.trim()
     });
-
-    return elements;
   }
+
+  if (ticketDesc && ticketDesc.placeholder && ticketDesc.placeholder.trim()) {
+    elements.push({
+      element: ticketDesc,
+      type: 'placeholder',
+      original: ticketDesc.placeholder.trim()
+    });
+  }
+
+  return elements;
+}
+
+
 
   shouldTranslateElement(element) {
     const text = element.textContent.trim();
