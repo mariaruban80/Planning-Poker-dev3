@@ -153,6 +153,14 @@ document.addEventListener('DOMContentLoaded', function() {
      console.log('changeLanguageBtn element does not exist in HTML');       //Show safety reason and errors
   }
 
+const quillContainer = document.getElementById('ticketDescriptionEditor');
+  if (quillContainer) {
+    window.quill = new Quill('#ticketDescriptionEditor', {
+      theme: 'snow'
+    });
+  }
+	
+
 
 }); //End document add Event listener
 
