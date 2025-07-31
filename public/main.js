@@ -141,19 +141,18 @@ document.addEventListener('DOMContentLoaded', function() {
 	});			
  }			
 
-
-const changeLanguageBtn = document.getElementById('changeLanguageBtn');		
-if(typeof(changeLanguageBtn) != undefined &&  changeLanguageBtn != null){	
-changeLanguageBtn.addEventListener('click', function() {		 
-window.showLanguageModal();	 
-
-});		
-}		
+   const changeLanguageBtn = document.getElementById('changeLanguageBtn');
+         if(typeof(changeLanguageBtn) != undefined &&  changeLanguageBtn != null)
+                    changeLanguageBtn.addEventListener('click', function() { 
+                    window.showLanguageModal(); 
+                   });             
+        }     
 
   else
   {
-          console.log('changeLanguageBtn element does not exist in HTML');		//Show safety reason and errors
+     console.log('changeLanguageBtn element does not exist in HTML');       //Show safety reason and errors
   }
+
 
 }); //End document add Event listener
 
