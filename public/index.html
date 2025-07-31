@@ -2344,7 +2344,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Set up modal buttons
-  document.getElementById('cancelAddTicket').addEventListener('click', hideAddTicketModal);
+  document.getElementById('cancelAddTicket').addEventListener('click', function() {
+  hideAddTicketModal();
+  resetAddTicketModal();
+});
   document.getElementById('confirmAddTicket').addEventListener('click', handleAddTicketSubmit);
   
   // Set up enter key in description field
