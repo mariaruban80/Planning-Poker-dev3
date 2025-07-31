@@ -27,9 +27,7 @@ class LanguageManager {
     this.cache = new Map();
     this.translating = false;
   }
-
-  // Show language selection modal
-  showLanguageModal() {
+ showLanguageModal() {
     const modal = document.getElementById('languageModalCustom');
     const grid = document.getElementById('languageGrid');
     
@@ -47,7 +45,7 @@ class LanguageManager {
       }
       
       option.innerHTML = `
-        <span class="language-flag">${lang.flag}</span>
+        <span class="language-flag">${lang.flag}</span>		//Here
         <div class="language-info">
           <div class="language-name">${lang.name}</div>
           <div class="language-code">${lang.code}</div>
@@ -62,6 +60,7 @@ class LanguageManager {
     
     modal.style.display = 'flex';
   }
+
 
   // Select a language
   selectLanguage(langCode, element) {
