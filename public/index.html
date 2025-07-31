@@ -1568,19 +1568,31 @@ white-space: nowrap;
 .profile-menu-name { font-weight: bold; font-size: 18px; }
 .profile-menu-divider { border-bottom: 1px solid #eee; margin:8px 0; }
 .profile-menu-item {
-  display: block;
+ display: block;
   width: 100%;
-  padding: 13px 24px;
+  padding: 12px 20px;
   background: none;
   border: none;
   text-align: left;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #673ab7;
+  font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   cursor: pointer;
-  color: #333;
-  transition: background 0.14s;
+  transition: background 0.2s ease;
 }
-.profile-menu-item:hover { background: #f3e8ff; }
-.profile-menu-item.logout { color: #c32d2d; font-weight: bold; }
+.profile-menu-item:hover {  
+  background: #f0e6ff;
+  color: #501ca3;
+}
+.profile-menu-item.logout { 
+  color: #e53935;
+  font-weight: 700;
+}
+  .profile-menu-item.logout:hover {
+  background-color: #fee;
+  color: #c62828;
+}
 
     
     </style>
