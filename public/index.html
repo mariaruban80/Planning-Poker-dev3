@@ -2224,97 +2224,78 @@ function showAddTicketModal() {
     document.getElementById('ticketNameInput').focus();
   }, 100);
 }
+
 function handleAddTicketSubmit() {
-  const ticketName = document.getElementById('ticketNameInput').value.trim(); 
+  const ticketName = document.getElementById('ticketNameInput').value.trim();
   const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
-  // For formatted comment use .innerHTML.trim()
 
   // Validate input
   if (!ticketName) {
     const nameInput = document.getElementById('ticketNameInput');
     nameInput.classList.add('shake');
     nameInput.style.borderColor = '#ff4d4f';
-    
     setTimeout(() => {
       nameInput.classList.remove('shake');
     }, 500);
-    
     return;
   }
-  
+
   // Prepare ticket text (combine name and description if provided)
   let ticketText = ticketName;
   if (ticketDescription) {
     ticketText = ticketName + ': ' + ticketDescription;
   }
-  
+
   // Check if we're editing or adding
-  const isEditing = window.editingTicketData;
-  
+  const isEditing = !!window.editingTicketData;
+
   if (isEditing) {
-    // Update existing ticket
-    const ticketData = {
-      id: window.editingTicketData.id,
-      text: ticketText,
-      isEdit: true
-    };
-    
-    console.log('[EDIT] Updating ticket:', ticketData);
-    
-    // Hide the modal and reset state
-    hideAddTicketModal();
-    resetAddTicketModal();
-    if (isEditing) {
+    // Clean: Build update object ONCE, use all fields!
     const ticketData = {
       id: window.editingTicketData.id,
       text: ticketText,
       isEdit: true,
-      idDisplay: ticketName, // add this line
-      descriptionDisplay: ticketDescription // and this
-  };
-    // Update the ticket
+      idDisplay: ticketName,
+      descriptionDisplay: ticketDescription
+    };
+    console.log('[EDIT] Updating ticket:', ticketData);
+
     if (window.updateTicketFromModal) {
       window.updateTicketFromModal(ticketData);
-    } 
     } else {
       // Fallback: Update locally and emit to server
       updateTicketInUI(ticketData);
-      
-      // Emit to server
       if (window.socket) {
         window.socket.emit('updateTicket', ticketData);
       }
     }
+    // Reset state and close modal
+    hideAddTicketModal();
+    resetAddTicketModal();
+    window.editingTicketData = null;
   } else {
-    // Create new ticket
+    // New ticket
     const ticketData = {
       id: `story_${Date.now()}`,
-      text: ticketText
+      text: ticketText,
+      idDisplay: ticketName,
+      descriptionDisplay: ticketDescription
     };
-    
-    // Hide the modal
     hideAddTicketModal();
-    
-    // If we have access to main.js functions
     if (window.addTicketFromModal) {
       window.addTicketFromModal(ticketData);
     } else {
-      // Fallback implementation
+      // Fallback
       const storyList = document.getElementById('storyList');
-      
       if (storyList) {
         const storyCard = document.createElement('div');
         storyCard.className = 'story-card';
         storyCard.id = ticketData.id;
-        
         const storyTitle = document.createElement('div');
         storyTitle.className = 'story-title';
         storyTitle.textContent = ticketData.text;
-        
         storyCard.appendChild(storyTitle);
         storyList.appendChild(storyCard);
-        
-        // Try to emit to socket if available
         if (window.socket) {
           window.socket.emit('addTicket', ticketData);
         }
@@ -2322,7 +2303,7 @@ function handleAddTicketSubmit() {
     }
   }
 }
-
+  
 
 
 function hideAddTicketModal() {
