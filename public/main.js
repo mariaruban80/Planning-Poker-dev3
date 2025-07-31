@@ -1929,7 +1929,6 @@ function getVoteEmoji(vote) {
  * @param {Object} ticketData - Ticket data { id, text }
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
-
 function addTicketToUI(ticketData, selectAfterAdd = false) {
   if (!ticketData || !ticketData.id || !ticketData.text) return;
 
@@ -2073,7 +2072,19 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   });
 
   normalizeStoryIndexes();
+
+   // NEW: Trigger translation if needed
+    if (window.languageManager && window.languageManager.currentLanguage !== 'en') {
+        console.log("added and wants to translate element")    
+      
+         window.languageManager.translateInterface();													
+
+    }
 }
+
+
+
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
