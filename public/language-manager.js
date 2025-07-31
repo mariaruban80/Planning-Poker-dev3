@@ -1,7 +1,12 @@
 // Language Manager - Dynamic Translation System
 class LanguageManager {
   constructor() {
-    this.currentLanguage = localStorage.getItem('selectedLanguage') || 'en';
+    if (!sessionStorage.getItem('languageForced')) {
+  localStorage.setItem('selectedLanguage', 'en');
+  sessionStorage.setItem('languageForced', 'true');
+}
+
+this.currentLanguage = 'en';
     this.supportedLanguages = [
       { code: 'en', name: 'English', flagCode: 'us' },
       { code: 'es', name: 'Español', flagCode: 'es' },
