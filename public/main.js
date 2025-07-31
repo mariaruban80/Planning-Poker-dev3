@@ -142,11 +142,11 @@ document.addEventListener('DOMContentLoaded', function() {
  }			
 
    const changeLanguageBtn = document.getElementById('changeLanguageBtn');
-         if(typeof(changeLanguageBtn) != undefined &&  changeLanguageBtn != null)
+         if(typeof(changeLanguageBtn) != undefined &&  changeLanguageBtn != null){
                     changeLanguageBtn.addEventListener('click', function() { 
                     window.showLanguageModal(); 
                    });             
-        }     
+	 }
 
   else
   {
