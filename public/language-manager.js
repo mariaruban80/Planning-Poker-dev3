@@ -185,9 +185,9 @@ class LanguageManager {
     document.querySelectorAll('.story-title').forEach(el => {
       if (el.textContent.trim()) {
         elements.push({
-          element: el,
-          type: 'story',
-          original: el.textContent.trim()
+            element: el,
+            type: 'story',
+            original: el.textContent.trim()
         });
       }
     });
