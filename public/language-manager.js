@@ -45,7 +45,7 @@ class LanguageManager {
       }
       
       option.innerHTML = `
-        <span class="language-flag">${lang.flag}</span>		//Here
+        <span class="language-flag">${lang.flag}</span>	
         <div class="language-info">
           <div class="language-name">${lang.name}</div>
           <div class="language-code">${lang.code}</div>
