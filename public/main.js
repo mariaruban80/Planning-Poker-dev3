@@ -42,6 +42,41 @@ window.notifyStoriesUpdated = function() {
   console.log(`Preserved ${preservedManualTickets.length} manual tickets`);
 };
 
+
+/**
+ * Translates incoming tickets to the current guest user's language
+ */
+async function translateTicketsIfNeeded(tickets) {
+  const isGuest = isGuestUser();
+  const languageManager = window.languageManager;
+  const currentLang = languageManager?.currentLanguage || 'en';
+
+  if (!isGuest || currentLang === 'en') return;
+
+  console.log(`[TRANSLATION] Guest detected. Translating ${tickets.length} ticket(s) to ${currentLang}`);
+
+  for (const ticket of tickets) {
+    if (ticket.text) {
+      try {
+        const translated = await languageManager.translateText(ticket.text, currentLang);
+        if (translated && translated !== ticket.text) {
+          ticket.text = translated;
+
+          // Optional: store for reference
+          ticket.originalText = ticket.text;
+          ticket.translatedText = translated;
+        }
+      } catch (err) {
+        console.warn('[TRANSLATION] Failed to translate ticket:', ticket.text, err);
+      }
+    }
+  }
+}
+
+
+
+
+
 /**
  * Handle adding a ticket from the modal
  * @param {Object} ticketData - Ticket data {id, text} - [Will now properly set name/description]
@@ -3664,7 +3699,7 @@ function triggerGlobalEmojiBurst() {
 /**
  * Handle socket messages with improved state persistence
  */
-function handleSocketMessage(message) {
+async function handleSocketMessage(message)  {
   const eventType = message.type;
   
   // console.log(`[SOCKET] Received ${eventType}:`, message);
@@ -3717,7 +3752,7 @@ function handleSocketMessage(message) {
       const filteredTickets = (message.tickets || []).filter(ticket => 
         !deletedStoryIds.has(ticket.id)
       );
-      
+        await translateTicketsIfNeeded(filteredTickets);
       processAllTickets(filteredTickets);
       
       // Update vote state
