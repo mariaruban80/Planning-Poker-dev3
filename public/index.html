@@ -1536,7 +1536,40 @@ white-space: nowrap;
   }
 
   </style>
+<style>
+  .language-dropdown {
+  position: absolute;
+  top: 110px;
+  right: 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  z-index: 99999;
+  padding: 8px 0;
+  width: 200px;
+}
 
+.language-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #333;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.language-dropdown button:hover {
+  background-color: #f0e6ff;
+}
+
+  </style>
 
   <style>
 .profile-menu {
@@ -1799,6 +1832,14 @@ font-size: 15px;
   <div class="profile-menu-divider"></div>
   <button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
 </div>
+<!-- Language Selection Menu (initially hidden) -->
+<div id="languageDropdown" class="language-dropdown" style="display: none;">
+  <button data-lang="en"><img src="https://flagcdn.com/w40/gb.png" width="20"> English</button>
+  <button data-lang="fr"><img src="https://flagcdn.com/w40/fr.png" width="20"> Français</button>
+  <button data-lang="de"><img src="https://flagcdn.com/w40/de.png" width="20"> Deutsch</button>
+  <button data-lang="es"><img src="https://flagcdn.com/w40/es.png" width="20"> Español</button>
+</div>
+
 </header>
 <!-- Create a completely new custom invite modal that doesn't use the same ID or classes as the original -->
 <div id="inviteModalCustom">
