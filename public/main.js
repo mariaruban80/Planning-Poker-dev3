@@ -1924,6 +1924,7 @@ function getVoteEmoji(vote) {
   };
   return map[vote] || '🎉';
 }
+
 /**
  * Add a ticket to the UI with 3-dot menu
  * @param {Object} ticketData - Ticket data { id, text }
@@ -2073,16 +2074,37 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 
   normalizeStoryIndexes();
 
-   // NEW: Trigger translation if needed
-    if (window.languageManager && window.languageManager.currentLanguage !== 'en') {
-        console.log("added and wants to translate element")    
-      
-         window.languageManager.translateInterface();													
+  // NEW: Trigger translation if needed
+  if (window.languageManager && window.languageManager.currentLanguage !== 'en') {
+    console.log("Attempting to translate the new storyTitle");
 
+    // Check if getTranslatableElements function is available
+    if (typeof window.languageManager.getTranslatableElements === 'function') {
+      // Check for translateTexts function
+      if(typeof window.languageManager.translateTexts  === 'function')
+      {   
+         if (typeof window.languageManager.applyTranslation === 'function')   //Added to check for null errors
+         {
+            // Create a batch of translations,
+             window.languageManager.translateTexts( [ storyTitle.textContent]).then((tranlatedText) =>{
+
+                 window.languageManager.applyTranslation({element :storyTitle,  type: 'text'}, tranlatedText[0]);
+
+             }) 
+          }
+          else  //If the check fails, send a message to the error.
+               console.log("- window.languageManager.applyTranslation() function declaration not  found ");
+
+
+     }else{
+        console.log("- window.languageManager.translateTexts() function declaration not found please double check the names");
+
+     }
+    } else {
+      console.log("- main.js -> the window.languageManager.getTranslatableElements statement not found please check. ");       
     }
+  }
 }
-
-
 
 
 
