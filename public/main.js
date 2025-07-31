@@ -96,103 +96,45 @@ const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : ''
 /**
 Script for drop down menu 
 */
-document.addEventListener('DOMContentLoaded', function () {
-  // Profile menu toggle
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle menu when avatar/name is clicked
   const trigger = document.getElementById('profileMenuTrigger');
   const menu = document.getElementById('profileMenu');
 
-  trigger.addEventListener('click', function (e) {
+  trigger.addEventListener('click', function(e) {
     e.stopPropagation();
     menu.classList.toggle('show');
+    // Set avatar, name and email (if you track it), fallbacks:
     document.getElementById('profileMenuAvatar').src = document.querySelector('#headerUserAvatar img')?.src || '';
     document.getElementById('profileMenuName').textContent = sessionStorage.getItem('userName') || "User";
     document.getElementById('profileMenuEmail').textContent = sessionStorage.getItem('userEmail') || "";
   });
 
-  document.addEventListener('click', function (e) {
+  // Hide menu if clicking outside
+  document.addEventListener('click', function(e) {
     if (!menu.contains(e.target) && !trigger.contains(e.target)) {
       menu.classList.remove('show');
     }
   });
 
-  // Upload ticket
-  document.getElementById('uploadTicketMenuBtn').addEventListener('click', function (e) {
+  // Upload Ticket triggers the file input
+  document.getElementById('uploadTicketMenuBtn').addEventListener('click', function(e) {
     e.preventDefault();
     document.getElementById('csvInput').click();
     menu.classList.remove('show');
   });
 
-  // Logout
-  document.getElementById('logoutMenuBtn').addEventListener('click', function () {
+  // Logout via menu
+  document.getElementById('logoutMenuBtn').addEventListener('click', function() {
     sessionStorage.clear();
     window.location.href = 'About.html';
   });
 
-  // Toggle language dropdown
-  document.getElementById('changeLanguageBtn').addEventListener('click', function () {
-    const langMenu = document.getElementById('languageDropdown');
-    langMenu.style.display = langMenu.style.display === 'block' ? 'none' : 'block';
+  // You can add language picker logic here:
+  document.getElementById('changeLanguageBtn').addEventListener('click', function() {
+    alert('Change language coming soon!');
   });
-
-  // Handle language selection
-  document.querySelectorAll('#languageDropdown button').forEach(btn => {
-    btn.addEventListener('click', function () {
-      const selectedLang = this.dataset.lang;
-      sessionStorage.setItem('language', selectedLang);
-      applyLanguage(selectedLang);
-      document.getElementById('languageDropdown').style.display = 'none';
-    });
-  });
-
-  // Auto-apply language on load
-  const storedLang = sessionStorage.getItem('language');
-  if (storedLang) applyLanguage(storedLang);
 });
-
-// Translation dictionary
-const translations = {
-  en: {
-    invite: 'Invite Others',
-    nextStory: 'Next Story',
-    prevStory: 'Previous Story',
-    planningCards: 'Planning Cards',
-    noStories: 'No stories available. Please upload or add stories to start voting.'
-  },
-  fr: {
-    invite: 'Inviter d’autres',
-    nextStory: 'Histoire Suivante',
-    prevStory: 'Histoire Précédente',
-    planningCards: 'Cartes de Planification',
-    noStories: 'Aucune histoire disponible. Veuillez en ajouter ou en téléverser.'
-  },
-  de: {
-    invite: 'Andere einladen',
-    nextStory: 'Nächste Geschichte',
-    prevStory: 'Vorherige Geschichte',
-    planningCards: 'Planungskarten',
-    noStories: 'Keine Stories vorhanden. Bitte laden Sie Stories hoch oder fügen Sie welche hinzu.'
-  },
-  es: {
-    invite: 'Invitar a otros',
-    nextStory: 'Siguiente Historia',
-    prevStory: 'Historia Anterior',
-    planningCards: 'Cartas de Planificación',
-    noStories: 'No hay historias disponibles. Sube o añade algunas para comenzar a votar.'
-  }
-};
-
-function applyLanguage(lang) {
-  const t = translations[lang];
-  if (!t) return;
-
-  document.getElementById('inviteButton')?.textContent = t.invite;
-  document.getElementById('nextStory')?.textContent = t.nextStory;
-  document.getElementById('prevStory')?.textContent = t.prevStory;
-  document.querySelector('h3.planning-cards-title')?.textContent = t.planningCards;
-  const noStoriesEl = document.getElementById('noStoriesMessage');
-  if (noStoriesEl) noStoriesEl.textContent = t.noStories;
-}
-
 
 /**
  * Initialize socket with a specific name (used when joining via invite)
