@@ -118,23 +118,47 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Upload Ticket triggers the file input
-  document.getElementById('uploadTicketMenuBtn').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('csvInput').click();
-    menu.classList.remove('show');
-  });
+  const uploadTicketBtn = document.getElementById('uploadTicketMenuBtn');		
 
-  // Logout via menu
-  document.getElementById('logoutMenuBtn').addEventListener('click', function() {
-    sessionStorage.clear();
-    window.location.href = 'About.html';
-  });
+ if(typeof(uploadTicketBtn) != undefined &&  uploadTicketBtn != null)
+ {	
 
-  // You can add language picker logic here:
-  document.getElementById('changeLanguageBtn').addEventListener('click', function() {
-    alert('Change language coming soon!');
-  });
-});
+	uploadTicketBtn.addEventListener('click', function(e) {
+	e.preventDefault();
+	 document.getElementById('csvInput').click();
+	menu.classList.remove('show');
+	              });		
+	    }	
+
+
+  const logoutMenuBtn =  document.getElementById('logoutMenuBtn');
+ if(typeof(logoutMenuBtn) != undefined &&  logoutMenuBtn != null)
+ {		
+
+	logoutMenuBtn.addEventListener('click', function() {
+	sessionStorage.clear();
+	window.location.href = 'About.html';
+	});			
+ }			
+
+
+const changeLanguageBtn = document.getElementById('changeLanguageBtn');		
+if(typeof(changeLanguageBtn) != undefined &&  changeLanguageBtn != null){	
+changeLanguageBtn.addEventListener('click', function() {		 
+window.showLanguageModal();	 
+
+});		
+}		
+
+  else
+  {
+          console.log('changeLanguageBtn element does not exist in HTML');		//Show safety reason and errors
+  }
+
+}); //End document add Event listener
+
+
+
 
 /**
  * Initialize socket with a specific name (used when joining via invite)
