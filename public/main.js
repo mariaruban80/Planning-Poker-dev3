@@ -94,6 +94,49 @@ const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : ''
 };
 
 /**
+Script for drop down menu 
+*/
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle menu when avatar/name is clicked
+  const trigger = document.getElementById('profileMenuTrigger');
+  const menu = document.getElementById('profileMenu');
+
+  trigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    menu.classList.toggle('show');
+    // Set avatar, name and email (if you track it), fallbacks:
+    document.getElementById('profileMenuAvatar').src = document.querySelector('#headerUserAvatar img')?.src || '';
+    document.getElementById('profileMenuName').textContent = sessionStorage.getItem('userName') || "User";
+    document.getElementById('profileMenuEmail').textContent = sessionStorage.getItem('userEmail') || "";
+  });
+
+  // Hide menu if clicking outside
+  document.addEventListener('click', function(e) {
+    if (!menu.contains(e.target) && !trigger.contains(e.target)) {
+      menu.classList.remove('show');
+    }
+  });
+
+  // Upload Ticket triggers the file input
+  document.getElementById('uploadTicketMenuBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.getElementById('csvInput').click();
+    menu.classList.remove('show');
+  });
+
+  // Logout via menu
+  document.getElementById('logoutMenuBtn').addEventListener('click', function() {
+    sessionStorage.clear();
+    window.location.href = 'About.html';
+  });
+
+  // You can add language picker logic here:
+  document.getElementById('changeLanguageBtn').addEventListener('click', function() {
+    alert('Change language coming soon!');
+  });
+});
+
+/**
  * Initialize socket with a specific name (used when joining via invite)
  * @param {string} roomId - Room ID to join 
  * @param {string} name - Username to use
