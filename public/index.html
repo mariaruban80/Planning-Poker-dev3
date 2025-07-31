@@ -2264,10 +2264,18 @@ function handleAddTicketSubmit() {
     // Hide the modal and reset state
     hideAddTicketModal();
     resetAddTicketModal();
-    
+    if (isEditing) {
+    const ticketData = {
+      id: window.editingTicketData.id,
+      text: ticketText,
+      isEdit: true,
+      idDisplay: ticketName, // add this line
+      descriptionDisplay: ticketDescription // and this
+  };
     // Update the ticket
     if (window.updateTicketFromModal) {
       window.updateTicketFromModal(ticketData);
+    } 
     } else {
       // Fallback: Update locally and emit to server
       updateTicketInUI(ticketData);
