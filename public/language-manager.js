@@ -202,14 +202,22 @@ class LanguageManager {
     /** --- #2: Translate all tickets/stories if not English --- */
     async translateAllStories() {
         if (this.currentLanguage === 'en') return;
-        // storyTitle class is used for story cards
-        document.querySelectorAll('.story-title').forEach(storyEl => {
-            const text = storyEl.textContent.trim();
-            this.translateText(text, this.currentLanguage).then(translated => {
-                if (translated && translated !== text)
-                    storyEl.textContent = translated;
-            });
-        });
+	 document.querySelectorAll('.story-card').forEach(storyCard => {
+	  const titleEl = storyCard.querySelector('.story-title');
+	  const original = storyCard.dataset.original || titleEl?.textContent || '';
+	  const originalLang = storyCard.dataset.originallang || 'en';
+	
+	  if (this.currentLanguage !== originalLang) {
+	    this.translateText(original, this.currentLanguage).then(translated => {
+	      if (translated && translated !== original) {
+	        titleEl.textContent = translated;
+	      }
+	    }).catch(err => {
+	      console.warn('Failed to translate story card:', err);
+	    });
+	  }
+	});
+
     }
 
     /** --- #4: Translate sidebar headings like "Current Members" ONLY (not names) --- */
