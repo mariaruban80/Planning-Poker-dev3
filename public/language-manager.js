@@ -285,18 +285,57 @@ getTranslatableElements() {
     return translations;
   }
 
-  async translateText(text, targetLang) {
-    try {
-      const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`);
-      const data = await response.json();
-      if (data.responseStatus === 200) {
-        return data.responseData.translatedText;
-      }
-    } catch (error) {
-      console.error('Translation API error:', error);
+const translationCache = {};
+
+async function translateText(text, targetLang) {
+  const cacheKey = `${text}::${targetLang}`;
+  if (translationCache[cacheKey]) return translationCache[cacheKey];
+
+  // Primary: LibreTranslate
+  try {
+    const response = await fetch('https://libretranslate.com/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        q: text,
+        source: 'en',
+        target: targetLang,
+        format: 'text'
+      })
+    });
+
+    const data = await response.json();
+
+    if (data?.translatedText) {
+      translationCache[cacheKey] = data.translatedText;
+      return data.translatedText;
+    } else {
+      console.warn('[TRANSLATION] LibreTranslate returned unexpected format:', data);
     }
-    return text;
+  } catch (libreError) {
+    console.warn('[TRANSLATION] LibreTranslate failed, falling back to MyMemory:', libreError);
   }
+
+  // Fallback: MyMemory
+  try {
+    const fallbackURL = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`;
+    const fallbackResponse = await fetch(fallbackURL);
+    const fallbackData = await fallbackResponse.json();
+
+    if (fallbackData?.responseData?.translatedText) {
+      translationCache[cacheKey] = fallbackData.responseData.translatedText;
+      return fallbackData.responseData.translatedText;
+    } else {
+      console.warn('[TRANSLATION] MyMemory returned unexpected format:', fallbackData);
+    }
+  } catch (fallbackError) {
+    console.error('[TRANSLATION] MyMemory fallback also failed:', fallbackError);
+  }
+
+  // Final fallback: original text
+  return text;
+}
+
 
   showTranslationSuccess() {
     const message = document.createElement('div');
