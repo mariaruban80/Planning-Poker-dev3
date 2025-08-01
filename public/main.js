@@ -176,17 +176,18 @@ document.addEventListener('DOMContentLoaded', function() {
 	});			
  }			
 
-   const changeLanguageBtn = document.getElementById('changeLanguageBtn');
-         
-		 if (changeLanguageBtn) {
-                    changeLanguageBtn.addEventListener('click', function() { 
-                    window.showLanguageModal(); 
-                   });             
-	 }
+ const changeLanguageBtn = document.getElementById('changeLanguageBtn');
 
-  else
-  {
-     console.log('changeLanguageBtn element does not exist in HTML');       //Show safety reason and errors
+  if (changeLanguageBtn) {
+    changeLanguageBtn.addEventListener('click', function () {
+      if (typeof window.showLanguageModal === 'function') {
+        window.showLanguageModal();
+      } else {
+        console.error('❌ showLanguageModal is not defined');
+      }
+    });
+  } else {
+    console.log('❌ changeLanguageBtn element does not exist in HTML');
   }
 
 const quillContainer = document.getElementById('ticketDescriptionEditor');
