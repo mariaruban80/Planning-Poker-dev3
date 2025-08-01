@@ -1,4 +1,5 @@
 // Language Manager - Dynamic Translation System
+const translationCache = {};
 class LanguageManager {
   constructor() {
     if (!sessionStorage.getItem('languageForced')) {
@@ -285,7 +286,7 @@ getTranslatableElements() {
     return translations;
   }
 
-const translationCache = {};
+
 
 async function translateText(text, targetLang) {
   const cacheKey = `${text}::${targetLang}`;
