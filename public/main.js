@@ -317,43 +317,60 @@ function updateTicketInUI(ticketData) {
   if (!storyCard) return;
 
   const storyTitle = storyCard.querySelector('.story-title');
-  if (storyTitle) {
-    let descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
-    let idForDisplay = ticketData.idDisplay || '';
+  if (!storyTitle) return;
 
-    // Convert HTML to plain text for display
-    const tmpDiv = document.createElement('div');
-    tmpDiv.innerHTML = descriptionHTML;
-    let previewText = (tmpDiv.innerText || tmpDiv.textContent || '').trim();
+  const userLang = localStorage.getItem('selectedLanguage') || 'en';
 
-    // Treat empty/blank or Quill's empty HTML as empty string
-    if (
-      !previewText ||
-      previewText === '' ||
-      descriptionHTML === '' ||
-      descriptionHTML === '<p><br></p>' ||
-      descriptionHTML.trim() === ''
-    ) {
-      previewText = '';
-    }
+  // Get raw description HTML or fallback text
+  let descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
+  let idForDisplay = ticketData.idDisplay || '';
 
-    // Debugging
-    console.log('[UI] idForDisplay:', `"${idForDisplay}"`, 'previewText:', `"${previewText}"`);
+  // Convert HTML to plain text for display preview
+  const tmpDiv = document.createElement('div');
+  tmpDiv.innerHTML = descriptionHTML;
+  let previewText = (tmpDiv.innerText || tmpDiv.textContent || '').trim();
 
-    // Only show fallback if both are really empty
-    let display;
-    if (idForDisplay && previewText) {
-      display = `${idForDisplay}: ${previewText}`;
-    } else if (idForDisplay) {
-      display = idForDisplay;
-    } else if (previewText) {
-      display = previewText;
-    } else {
-      display = '[No ticket info]';
-    }
+  // Handle empty/blank/Quill empty HTML case
+  if (
+    !previewText ||
+    previewText === '' ||
+    descriptionHTML === '' ||
+    descriptionHTML === '<p><br></p>' ||
+    descriptionHTML.trim() === ''
+  ) {
+    previewText = '';
+  }
+
+  // Compose display text fallback (before translation)
+  let display;
+  if (idForDisplay && previewText) {
+    display = `${idForDisplay}: ${previewText}`;
+  } else if (idForDisplay) {
+    display = idForDisplay;
+  } else if (previewText) {
+    display = previewText;
+  } else {
+    display = '[No ticket info]';
+  }
+
+  // If language is English, just update immediately
+  if (userLang === 'en') {
     storyTitle.textContent = display;
     storyCard.dataset.id = idForDisplay;
     storyCard.dataset.description = descriptionHTML;
+  } else {
+    // Translate the display text (title + description preview)
+    languageManager.translateText(display, userLang).then(translated => {
+      storyTitle.textContent = translated;
+      storyCard.dataset.id = idForDisplay;
+      storyCard.dataset.description = descriptionHTML;
+    }).catch(err => {
+      console.error('[Translation] Failed to translate ticket display:', err);
+      // fallback to original display text on error
+      storyTitle.textContent = display;
+      storyCard.dataset.id = idForDisplay;
+      storyCard.dataset.description = descriptionHTML;
+    });
   }
 }
 
