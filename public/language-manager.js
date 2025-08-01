@@ -1,13 +1,22 @@
-// Language Manager - Dynamic Translation System
+// Language Manager - Dynamic Translation System (Enhanced)
+
+/** --- ENGLISH DEFAULT ON EACH LOAD (RECOMMENDATION #1) --- */
+(function forceEnglishOnLoad(){
+  // Always force english as the selected language by default on load
+  localStorage.setItem('selectedLanguage', 'en');
+})();
+
 const translationCache = {};
 
 class LanguageManager {
   constructor() {
+    // Always start with ENGLISH on load
+    this.currentLanguage = 'en';
+    this.selectedLanguage = 'en';
+    localStorage.setItem('selectedLanguage', 'en');
     this.translationCache = {};
     this.cache = new Map();
     this.translating = false;
-    this.currentLanguage = localStorage.getItem('selectedLanguage') || 'en';
-    this.selectedLanguage = this.currentLanguage;
 
     this.supportedLanguages = [
       { code: 'en', name: 'English', flagCode: 'us' },
@@ -78,6 +87,33 @@ class LanguageManager {
     this.selectedLanguage = langCode;
   }
 
+  /** --- RECOMMENDATION #3: Overlay spinner for translation --- */
+  showTranslationOverlay() {
+    let overlay = document.getElementById('translationOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'translationOverlay';
+      overlay.style.cssText = 'display:flex;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10001;background:rgba(0,0,0,0.45);color:white;font-size:1.8em;align-items:center;justify-content:center;flex-direction:column;';
+      overlay.innerHTML = `<div class="loading-spinner" style="margin-bottom:18px;border:5px solid #eee;border-top:5px solid #753acb;width:32px;height:32px;border-radius:50%;animation:spin 1s linear infinite;"></div>
+      Translating, please wait...`;
+      document.body.appendChild(overlay);
+
+      // add keyframes if not present
+      if (!document.getElementById('translationOverlaySpinnerKeyframes')) {
+        const style = document.createElement('style');
+        style.id = 'translationOverlaySpinnerKeyframes';
+        style.textContent = `@keyframes spin { 0% { transform: rotate(0deg);} 100%{transform:rotate(360deg);} }`;
+        document.head.appendChild(style);
+      }
+    }
+    overlay.style.display = 'flex';
+  }
+
+  hideTranslationOverlay() {
+    const overlay = document.getElementById('translationOverlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
   async applyLanguageChanges() {
     if (this.selectedLanguage === this.currentLanguage) {
       this.hideLanguageModal();
@@ -85,17 +121,24 @@ class LanguageManager {
     }
 
     this.translating = true;
-    const applyBtn = document.getElementById('applyLanguageBtn');
-    const originalText = applyBtn.textContent;
 
-    applyBtn.innerHTML = '<span class="loading-spinner"></span>Translating...';
-    applyBtn.disabled = true;
+    // Show overlay spinner (recommendation #3)
+    this.showTranslationOverlay();
+
+    const applyBtn = document.getElementById('applyLanguageBtn');
+    const originalText = applyBtn ? applyBtn.textContent : '';
+
+    if (applyBtn) {
+      applyBtn.innerHTML = '<span class="loading-spinner"></span>Translating...';
+      applyBtn.disabled = true;
+    }
 
     try {
       this.currentLanguage = this.selectedLanguage;
       localStorage.setItem('selectedLanguage', this.currentLanguage);
 
       await this.translateInterface();
+
       this.hideLanguageModal();
       this.showTranslationSuccess();
     } catch (e) {
@@ -103,8 +146,11 @@ class LanguageManager {
       alert('Translation failed. Try again.');
     } finally {
       this.translating = false;
-      applyBtn.textContent = originalText;
-      applyBtn.disabled = false;
+      if (applyBtn) {
+        applyBtn.textContent = originalText;
+        applyBtn.disabled = false;
+      }
+      this.hideTranslationOverlay();
     }
   }
 
@@ -121,14 +167,49 @@ class LanguageManager {
       await this.translateBatch(batch);
       await new Promise(r => setTimeout(r, 100));
     }
+
+    // --- #2: ALSO translate all currently visible story titles (cards) ---
+    // (In case tickets were rendered after initial scan)
+    this.translateAllStories();
+
+    // --- #4: Sidebar labels ("Current Members") ---
+    this.translateSidebarLabels();
+  }
+
+  /** --- #2: Translate all tickets/stories if not English --- */
+  async translateAllStories() {
+    if (this.currentLanguage === 'en') return;
+    // storyTitle class is used for story cards
+    document.querySelectorAll('.story-title').forEach(storyEl => {
+      const text = storyEl.textContent.trim();
+      this.translateText(text, this.currentLanguage).then(translated => {
+        if (translated && translated !== text)
+          storyEl.textContent = translated;
+      });
+    });
+  }
+
+  /** --- #4: Translate sidebar headings like "Current Members" ONLY (not names) --- */
+  async translateSidebarLabels() {
+    // Translate left-panel headings
+    document.querySelectorAll('.sidebar h3, .section-heading').forEach(el => {
+      const txt = el.textContent.trim();
+      this.translateText(txt, this.currentLanguage).then(translated => {
+        if (translated && translated !== txt)
+          el.textContent = translated;
+      });
+    });
   }
 
   getTranslatableElements() {
     const targets = [];
 
+    // Selectors for all standard UI elements—not usernames
     const selectors = [
-      'h1,h2,h3,h4,h5,h6', 'label', 'button', '.button', '.story-title',
-      '.nav-links a', '.section-heading', '.user-name',
+      'h1,h2,h3,h4,h5,h6', 'label',
+      'button', '.button',
+      '.story-title',
+      '.nav-links a', '.section-heading',
       'input[placeholder]', 'textarea[placeholder]'
     ];
 
@@ -144,6 +225,7 @@ class LanguageManager {
       });
     });
 
+    // If you want to translate "Current Members" label in sidebar (not user names), it's picked up by '.sidebar h3'.
     return targets;
   }
 
@@ -244,10 +326,15 @@ class LanguageManager {
     setTimeout(() => msg.remove(), 3000);
   }
 
+  /** --- Initialization: Always start in English, translate after user changes language --- */
   initialize() {
-    if (this.currentLanguage !== 'en') {
-      setTimeout(() => this.translateInterface(), 500);
+    // Patch #1: ALWAYS ENGLISH base state; if user has selected something else in this session, let them change.
+    if (localStorage.getItem('selectedLanguage') !== 'en') {
+      this.selectedLanguage = localStorage.getItem('selectedLanguage') || 'en';
+      this.currentLanguage = 'en';
+      localStorage.setItem('selectedLanguage', 'en');
     }
+    // After user selects a new language, everything is managed via applyLanguageChanges()
   }
 }
 
@@ -264,3 +351,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+/** --- #2: EXPORT an API for new stories to be translated as soon as they're added/edited --- */
+/**
+ * Call this function after adding or editing story cards,
+ * so they are auto-translated for non-English users.
+ */
+window.languageManagerTranslateStoryElement = function(storyEl) {
+  if (!storyEl || !window.languageManager) return;
+  const curLang = window.languageManager.currentLanguage;
+  if (curLang === 'en') return;
+  const txt = storyEl.textContent.trim();
+  window.languageManager.translateText(txt, curLang).then(translated => {
+    if (translated !== txt) storyEl.textContent = translated;
+  });
+};
