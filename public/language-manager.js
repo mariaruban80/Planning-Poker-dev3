@@ -69,27 +69,24 @@ class LanguageManager {
 	 *  e.g. { element: document.querySelector('.story-title), type: 'text' }
 	 * @param {string} translatedText - The text to apply to the element.
 	 */
-  applyTranslation( target, translatedText ) {									 //Now only to be passsed for element name
-
-
-	if ((typeof( target )   != undefined &&  target != null) ) {		 //check the null
-
-      if(!target  || !target.element == undefined)			//Error trap this and show log error for users
-      {
-              console.warn('[TRANSLATION] : Element did not  load properly so skip the code. It does not meet the requirements to run and function');
-              return;                                                                   //Skip if it does not pass basic function
+applyTranslation(target, translatedText) {
+  try {
+    if (typeof target !== 'undefined' && target != null) {
+      if (!target.element) {
+        console.warn('[TRANSLATION] Element did not load properly, skipping...');
+        return;
       }
-
 
       if (target.type === 'placeholder') {
         target.element.placeholder = translatedText;
       } else {
         target.element.textContent = translatedText;
       }
-    } catch (e) {
-      console.warn('[TRANSLATION] Error applying translation:', e.message);
     }
+  } catch (e) {
+    console.warn('[TRANSLATION] Error applying translation:', e.message);
   }
+}
 
     hideLanguageModal() {
         const modal = document.getElementById('languageModalCustom');
