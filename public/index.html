@@ -4016,7 +4016,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('loginModalCustom').style.display = 'none';
   });
 </script>
-
+<!-- Translation Loading Overlay (for language-manager.js) -->
+<div id="translationOverlay" style="display:none; position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10001; background:rgba(0,0,0,0.45); color: white; font-size: 2em; align-items:center;justify-content:center; flex-direction:column;">
+  <div class="loading-spinner" style="margin-bottom:16px;"></div>
+  Translating, please wait...
+</div>
   
      
 </body>
