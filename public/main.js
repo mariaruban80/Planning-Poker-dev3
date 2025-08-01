@@ -82,51 +82,51 @@ async function translateTicketsIfNeeded(tickets) {
  * @param {Object} ticketData - Ticket data {id, text} - [Will now properly set name/description]
  */
 window.addTicketFromModal = function(ticketData) {
-  if (!ticketData || !ticketData.id ) return; // text not required as will build
-const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
-// Get Quill editor content for description:
+  if (!ticketData || !ticketData.id) return;
 
-const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
+  const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
+  const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
 
-  const displayText = ticketName && ticketDescription ? `${ticketName} : ${ticketDescription}` : (ticketName || ticketDescription)
+  const displayText = ticketName && ticketDescription
+    ? `${ticketName} : ${ticketDescription}`
+    : (ticketName || ticketDescription);
 
-    //Make sure deleted card can't pass, we can not do anything here.
   if (deletedStoryIds.has(ticketData.id)) {
     console.log('[MODAL] Cannot add previously deleted ticket:', ticketData.id);
     return;
   }
-  
+
   console.log('[MODAL] Adding ticket from modal:', ticketData);
 
-  // Update ticketdata with name and values
-    let validData =  false
-    if (ticketName != null && ticketDescription != null){
+  let validData = false;
+  if (ticketName != null && ticketDescription != null) {
+    const hostLang = localStorage.getItem('selectedLanguage') || 'en';
 
-      //Create JSON to store the data
-          ticketData.text = displayText			 //String
-          ticketData.idDisplay = ticketName	 //Store name
-      	  ticketData.descriptionDisplay = ticketDescription 	 //Description
-          validData = true
-      } 
+    ticketData.text = displayText;
+    ticketData.idDisplay = ticketName;
+    ticketData.descriptionDisplay = ticketDescription;
+    ticketData.originalText = displayText;        // 🔥 new
+    ticketData.originalLang = hostLang;           // 🔥 new
 
-  //This flag may not be usefull in the current iteration of code.
-  // Emit to server for synchronization, pass ticketData.text not the other values
-       if ( (typeof emitAddTicket === 'function')&& validData  )  {  //Prevent code failing
-                emitAddTicket(ticketData);
-         }  else if (socket && validData ) {       //Old code fix
-
-                 socket.emit('addTicket', ticketData)       //Make sure this gets past if all of previous ones are not correct
-         }
-
-
-  //Add ticket data after it passes.
-  if(validData){
-        addTicketToUI(ticketData, true);		          //Store ticket data locally.
+    validData = true;
   }
-  //For now it doesn't need to do anything anyway.
+
+  if ((typeof emitAddTicket === 'function') && validData) {
+    emitAddTicket(ticketData);
+  } else if (socket && validData) {
+    socket.emit('addTicket', ticketData);
+  }
+
+  if (validData) {
+    addTicketToUI(ticketData, true);
+  }
+
   manuallyAddedTickets.push(ticketData);
   return;
 };
+
+
+
 
 /**
 Script for drop down menu 
@@ -282,27 +282,33 @@ window.updateTicketFromModal = function(ticketData) {
   if (!ticketData || !ticketData.id) return;
 
   const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
-const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
-
+  const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
 
   const displayText = ticketName && ticketDescription
     ? `${ticketName} : ${ticketDescription}`
     : (ticketName || ticketDescription);
 
+  const hostLang = localStorage.getItem('selectedLanguage') || 'en';
+
   ticketData.text = displayText;
   ticketData.idDisplay = ticketName;
   ticketData.descriptionDisplay = ticketDescription;
+  ticketData.originalText = displayText;     // 🔥 new
+  ticketData.originalLang = hostLang;        // 🔥 new
 
   console.log('[UPDATE] Updating ticket from modal:', ticketData);
 
-  // Update in UI
   updateTicketInUI(ticketData);
 
-  // Emit to server for synchronization
   if (socket) {
     socket.emit('updateTicket', ticketData);
   }
 };
+
+
+
+
+
 /**
  * Update ticket in the UI
  * @param {Object} ticketData - Updated ticket data
@@ -320,20 +326,19 @@ function updateTicketInUI(ticketData) {
   if (!storyTitle) return;
 
   const userLang = localStorage.getItem('selectedLanguage') || 'en';
+  const originalLang = ticketData.originalLang || 'en';
+  const originalText = ticketData.originalText || ticketData.text || '[No ticket info]';
 
-  // Get raw description HTML or fallback text
-  let descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
-  let idForDisplay = ticketData.idDisplay || '';
+  const descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
+  const idForDisplay = ticketData.idDisplay || '';
 
-  // Convert HTML to plain text for display preview
+  // Extract plain text from description HTML
   const tmpDiv = document.createElement('div');
   tmpDiv.innerHTML = descriptionHTML;
   let previewText = (tmpDiv.innerText || tmpDiv.textContent || '').trim();
 
-  // Handle empty/blank/Quill empty HTML case
   if (
     !previewText ||
-    previewText === '' ||
     descriptionHTML === '' ||
     descriptionHTML === '<p><br></p>' ||
     descriptionHTML.trim() === ''
@@ -341,38 +346,39 @@ function updateTicketInUI(ticketData) {
     previewText = '';
   }
 
-  // Compose display text fallback (before translation)
-  let display;
+  // Fallback display string
+  let fallbackDisplay;
   if (idForDisplay && previewText) {
-    display = `${idForDisplay}: ${previewText}`;
+    fallbackDisplay = `${idForDisplay}: ${previewText}`;
   } else if (idForDisplay) {
-    display = idForDisplay;
+    fallbackDisplay = idForDisplay;
   } else if (previewText) {
-    display = previewText;
+    fallbackDisplay = previewText;
   } else {
-    display = '[No ticket info]';
+    fallbackDisplay = '[No ticket info]';
   }
 
-  // If language is English, just update immediately
-  if (userLang === 'en') {
-    storyTitle.textContent = display;
-    storyCard.dataset.id = idForDisplay;
-    storyCard.dataset.description = descriptionHTML;
+  // Store metadata on the card
+  storyCard.dataset.id = idForDisplay;
+  storyCard.dataset.description = descriptionHTML;
+  storyCard.dataset.original = originalText;
+  storyCard.dataset.originallang = originalLang;
+
+  // Show untranslated for same-language users
+  if (userLang === originalLang) {
+    storyTitle.textContent = originalText;
   } else {
-    // Translate the display text (title + description preview)
-    languageManager.translateText(display, userLang).then(translated => {
+    languageManager.translateText(originalText, userLang).then(translated => {
       storyTitle.textContent = translated;
-      storyCard.dataset.id = idForDisplay;
-      storyCard.dataset.description = descriptionHTML;
     }).catch(err => {
-      console.error('[Translation] Failed to translate ticket display:', err);
-      // fallback to original display text on error
-      storyTitle.textContent = display;
-      storyCard.dataset.id = idForDisplay;
-      storyCard.dataset.description = descriptionHTML;
+      console.error('[Translation] Fallback to original:', err);
+      storyTitle.textContent = originalText;
     });
   }
 }
+
+
+
 
 
 /**
@@ -2242,8 +2248,15 @@ function processAllTickets(tickets) {
     manualCards.forEach(card => card.remove());
   }
 
+  const userLang = localStorage.getItem('selectedLanguage') || 'en';
+
   filtered.forEach(ticket => {
     if (ticket?.id && ticket?.text) {
+
+      // ✅ Add these two lines
+      ticket.originalText = ticket.text;
+      ticket.originalLang = userLang;
+
       addTicketToUI(ticket, false);
     }
   });
@@ -2254,7 +2267,6 @@ function processAllTickets(tickets) {
       selectStory(0, false);
     } else {
       console.log('[INIT] Skipping auto-select, currentStoryIndex already set:', currentStoryIndex);
-      // 🛠️ Add this line to re-highlight the story in UI
       selectStory(currentStoryIndex, false);
     }
   }
@@ -2263,6 +2275,9 @@ function processAllTickets(tickets) {
     applyGuestRestrictions();
   }
 }
+
+
+
 
 // Get storyId from selected card
 function getCurrentStoryId() {
