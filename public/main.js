@@ -177,7 +177,8 @@ document.addEventListener('DOMContentLoaded', function() {
  }			
 
    const changeLanguageBtn = document.getElementById('changeLanguageBtn');
-         if(typeof(changeLanguageBtn) != undefined &&  changeLanguageBtn != null){
+         
+		 if (changeLanguageBtn) {
                     changeLanguageBtn.addEventListener('click', function() { 
                     window.showLanguageModal(); 
                    });             
