@@ -33,7 +33,7 @@ class LanguageManager {
             { code: 'da', name: 'Dansk', flagCode: 'dk', flag: '🇩🇰' },
             { code: 'no', name: 'Norsk', flagCode: 'no', flag: '🇳🇴' },
             { code: 'fi', name: 'Suomi', flagCode: 'fi', flag: '🇫🇮' },
-            { code: 'pl', name: Polski', flagCode: 'pl', flag: '🇵🇱' },
+            { code: 'pl', name: 'Polski', flagCode: 'pl', flag: '🇵🇱' },
             { code: 'tr', name: 'Türkçe', flagCode: 'tr', flag: '🇹🇷' },
             { code: 'th', name: 'ไทย', flagCode: 'th', flag: '🇹🇭' }
         ];
