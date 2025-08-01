@@ -53,16 +53,12 @@ function showPremiumUpgradePopup() {
   }
 }
 
-function closePremiumModal() {
+window.closePremiumModal = function () {
   const modal = document.getElementById('premiumModal');
   if (modal) {
     modal.style.display = 'none';
   }
-}
-
-
-
-
+};
 
 /**
  * Translates incoming tickets to the current guest user's language
