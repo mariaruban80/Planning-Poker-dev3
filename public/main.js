@@ -1,6 +1,8 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
+const isPremiumUser = false;
+
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, getUserVotes } from './socket.js'; 
 
@@ -41,6 +43,25 @@ window.notifyStoriesUpdated = function() {
   
   console.log(`Preserved ${preservedManualTickets.length} manual tickets`);
 };
+
+/** function to diable the change language */
+
+function showPremiumUpgradePopup() {
+  const modal = document.getElementById('premiumModal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closePremiumModal() {
+  const modal = document.getElementById('premiumModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+
+
 
 
 /**
@@ -176,7 +197,9 @@ document.addEventListener('DOMContentLoaded', function() {
 	});			
  }			
 
- const changeLanguageBtn = document.getElementById('changeLanguageBtn');
+/** working code commented for later release
+
+const changeLanguageBtn = document.getElementById('changeLanguageBtn');
 
   if (changeLanguageBtn) {
     changeLanguageBtn.addEventListener('click', function () {
@@ -188,8 +211,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   } else {
     console.log('❌ changeLanguageBtn element does not exist in HTML');
-  }
+  } */
 
+const changeLanguageBtn = document.getElementById('changeLanguageBtn');
+
+if (changeLanguageBtn) {
+  changeLanguageBtn.addEventListener('click', function () {
+    const isGuest = isGuestUser(); // assumes you have this function
+    if (isGuest || !isPremiumUser) {
+      showPremiumUpgradePopup(); // already discussed
+    } else {
+      window.showLanguageModal();
+    }
+  });
+}
+
+
+	
 const quillContainer = document.getElementById('ticketDescriptionEditor');
   if (quillContainer) {
     window.quill = new Quill('#ticketDescriptionEditor', {
@@ -2202,36 +2240,50 @@ function setupStoryCardObserver() {
  * Apply guest restrictions to all story cards
  * This ensures manually added cards are also properly restricted
  */
+
 function applyGuestRestrictions() {
   if (!isGuestUser()) return; // Only apply to guests
-  
-  // Select all story cards
+
+  // ⛔ Disable all story cards (readonly view)
   const storyCards = document.querySelectorAll('.story-card');
-  
   storyCards.forEach(card => {
-    // Make sure the card has the disabled class
     card.classList.add('disabled-story');
-    
-    // Remove all click events by cloning and replacing - except for the 3-dot menu
+
+    // Preserve 3-dot menu, disable other interactions
     const actionsContainer = card.querySelector('.story-actions');
     if (actionsContainer) {
-          
       const menuBtn = actionsContainer.querySelector('.story-menu-btn');
       const dropdown = actionsContainer.querySelector('.story-menu-dropdown');
-      
-       if (menuBtn && dropdown) {
 
-              // Do not add remove event listener
-        }
-      } else {
-             const newCard = card.cloneNode(true);
-             if (card.parentNode) {
-               card.parentNode.replaceChild(newCard, card);
-             }
+      if (menuBtn && dropdown) {
+        // Leave menu enabled
       }
-    
+    } else {
+      // Replace the card to remove old event listeners
+      const newCard = card.cloneNode(true);
+      if (card.parentNode) {
+        card.parentNode.replaceChild(newCard, card);
+      }
+    }
   });
+
+  // ⛔ Disable Upload CSV Button for guests
+  const uploadBtn = document.getElementById('uploadCSVBtn');
+  if (uploadBtn) {
+    uploadBtn.disabled = true;
+    uploadBtn.classList.add('disabled');
+    uploadBtn.title = 'Guests cannot upload CSVs';
+  }
+
+  // 🔒 Optionally disable Add Ticket button too (if exists)
+  const addTicketBtn = document.getElementById('addTicketBtn');
+  if (addTicketBtn) {
+    addTicketBtn.disabled = true;
+    addTicketBtn.classList.add('disabled');
+    addTicketBtn.title = 'Guests cannot add new tickets';
+  }
 }
+
 
 
 
