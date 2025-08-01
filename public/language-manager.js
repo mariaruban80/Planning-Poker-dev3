@@ -1,13 +1,15 @@
 // Language Manager - Dynamic Translation System
 const translationCache = {};
+
 class LanguageManager {
   constructor() {
     if (!sessionStorage.getItem('languageForced')) {
-  localStorage.setItem('selectedLanguage', 'en');
-  sessionStorage.setItem('languageForced', 'true');
-}
+      localStorage.setItem('selectedLanguage', 'en');
+      sessionStorage.setItem('languageForced', 'true');
+    }
 
-this.currentLanguage = 'en';
+    this.currentLanguage = localStorage.getItem('selectedLanguage') || 'en';
+    this.selectedLanguage = this.currentLanguage;
     this.supportedLanguages = [
       { code: 'en', name: 'English', flagCode: 'us' },
       { code: 'es', name: 'Español', flagCode: 'es' },
@@ -28,24 +30,27 @@ this.currentLanguage = 'en';
       { code: 'fi', name: 'Suomi', flagCode: 'fi' },
       { code: 'pl', name: 'Polski', flagCode: 'pl' },
       { code: 'tr', name: 'Türkçe', flagCode: 'tr' },
-      { code: 'th', name: 'ไทย', flagCode: 'th' },
+      { code: 'th', name: 'ไทย', flagCode: 'th' }
     ];
+
     this.cache = new Map();
     this.translating = false;
+
+    // 🔗 Attach the helper method
+    this.translateText = translateText;
   }
 
   showLanguageModal() {
     const modal = document.getElementById('languageModalCustom');
     const grid = document.getElementById('languageGrid');
     if (!modal || !grid) return;
+
     grid.innerHTML = '';
 
     this.supportedLanguages.forEach(lang => {
       const option = document.createElement('div');
       option.className = 'language-option';
-      if (lang.code === this.currentLanguage) {
-        option.classList.add('selected');
-      }
+      if (lang.code === this.currentLanguage) option.classList.add('selected');
 
       option.innerHTML = `
         <span class="language-flag">
@@ -82,9 +87,7 @@ this.currentLanguage = 'en';
 
   hideLanguageModal() {
     const modal = document.getElementById('languageModalCustom');
-    if (modal) {
-      modal.style.display = 'none';
-    }
+    if (modal) modal.style.display = 'none';
   }
 
   async applyLanguageChanges() {
@@ -95,6 +98,7 @@ this.currentLanguage = 'en';
 
     if (this.translating) return;
     this.translating = true;
+
     const applyBtn = document.getElementById('applyLanguageBtn');
     const originalText = applyBtn.textContent;
 
@@ -126,94 +130,70 @@ this.currentLanguage = 'en';
 
     const elements = this.getTranslatableElements();
     const batches = this.createBatches(elements, 20);
+
     for (const batch of batches) {
       await this.translateBatch(batch);
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
-getTranslatableElements() {
-  const elements = [];
-  const selectors = [
-    'h1, h2, h3, h4, h5, h6',
-    'button:not(.close-button):not(.language-apply-btn):not(.language-cancel-btn)',
-    'label',
-    '.button',
-    '.nav-links a',
-    '.sidebar h3',
-    '.rightbar h3',
-    '.planning-cards-section h3',
-    '.section-heading',
-    '.user-name',
-    '.no-stories-message',
-    'input[placeholder]',
-    'textarea[placeholder]' // <-- added for future-proofing
-  ];
 
-  selectors.forEach(selector => {
-    document.querySelectorAll(selector).forEach(el => {
-      if (this.shouldTranslateElement(el)) {
-        elements.push({
-          element: el,
-          type: 'text',
-          original: el.textContent.trim()
-        });
+  getTranslatableElements() {
+    const elements = [];
+    const selectors = [
+      'h1, h2, h3, h4, h5, h6',
+      'button:not(.close-button):not(.language-apply-btn):not(.language-cancel-btn)',
+      'label',
+      '.button',
+      '.nav-links a',
+      '.sidebar h3',
+      '.rightbar h3',
+      '.planning-cards-section h3',
+      '.section-heading',
+      '.user-name',
+      '.no-stories-message',
+      'input[placeholder]',
+      'textarea[placeholder]'
+    ];
+
+    selectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        if (this.shouldTranslateElement(el)) {
+          elements.push({ element: el, type: 'text', original: el.textContent.trim() });
+        }
+      });
+    });
+
+    document.querySelectorAll('.story-title').forEach(el => {
+      if (el.textContent.trim()) {
+        elements.push({ element: el, type: 'story', original: el.textContent.trim() });
       }
     });
-  });
 
-  // Translate story titles
-  document.querySelectorAll('.story-title').forEach(el => {
-    if (el.textContent.trim()) {
-      elements.push({
-        element: el,
-        type: 'story',
-        original: el.textContent.trim()
-      });
-    }
-  });
-
-  // Translate placeholders from inputs
-  document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
-    if (el.placeholder.trim()) {
-      elements.push({
-        element: el,
-        type: 'placeholder',
-        original: el.placeholder.trim()
-      });
-    }
-  });
-
-  // ✅ NEW: Handle ticket modal fields by ID (exact target)
-  const ticketId = document.getElementById('ticketNameInput');
-  const ticketDesc = document.getElementById('ticketDescriptionEditor');
-
-  if (ticketId && ticketId.placeholder.trim()) {
-    elements.push({
-      element: ticketId,
-      type: 'placeholder',
-      original: ticketId.placeholder.trim()
+    document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+      if (el.placeholder.trim()) {
+        elements.push({ element: el, type: 'placeholder', original: el.placeholder.trim() });
+      }
     });
+
+    const ticketId = document.getElementById('ticketNameInput');
+    const ticketDesc = document.getElementById('ticketDescriptionEditor');
+
+    if (ticketId && ticketId.placeholder.trim()) {
+      elements.push({ element: ticketId, type: 'placeholder', original: ticketId.placeholder.trim() });
+    }
+
+    if (ticketDesc && ticketDesc.placeholder?.trim()) {
+      elements.push({ element: ticketDesc, type: 'placeholder', original: ticketDesc.placeholder.trim() });
+    }
+
+    return elements;
   }
 
-  if (ticketDesc && ticketDesc.placeholder && ticketDesc.placeholder.trim()) {
-    elements.push({
-      element: ticketDesc,
-      type: 'placeholder',
-      original: ticketDesc.placeholder.trim()
-    });
-  }
-
-  return elements;
-}
-
-
-
-  shouldTranslateElement(element) {
-    const text = element.textContent.trim();
+  shouldTranslateElement(el) {
+    const text = el.textContent.trim();
     if (!text || text.length < 2) return false;
     if (/^[\d\s\-\+\*\/\=\(\)\[\]\{\}]+$/.test(text)) return false;
-    if (element.classList.contains('no-translate')) return false;
-    if (element.closest('.no-translate')) return false;
+    if (el.classList.contains('no-translate') || el.closest('.no-translate')) return false;
     return true;
   }
 
@@ -235,8 +215,8 @@ getTranslatableElements() {
           this.applyTranslation(item, translation);
         }
       });
-    } catch (error) {
-      console.error('Batch translation failed:', error);
+    } catch (err) {
+      console.error('Batch translation failed:', err);
     }
   }
 
@@ -255,88 +235,31 @@ getTranslatableElements() {
     }
   }
 
-  updateStoryData(element, translation) {
-    const storyCard = element.closest('.story-card');
+  updateStoryData(el, translation) {
+    const storyCard = el.closest('.story-card');
     if (storyCard) {
       if (!storyCard.dataset.originalText) {
-        storyCard.dataset.originalText = element.textContent;
+        storyCard.dataset.originalText = el.textContent;
       }
       storyCard.dataset.translatedText = translation;
     }
   }
 
   async translateTexts(texts) {
-    const translations = [];
+    const results = [];
     for (const text of texts) {
-      try {
-        const cacheKey = `${text}_${this.currentLanguage}`;
-        if (this.cache.has(cacheKey)) {
-          translations.push(this.cache.get(cacheKey));
-          continue;
-        }
-
-        const translation = await this.translateText(text, this.currentLanguage);
-        this.cache.set(cacheKey, translation);
-        translations.push(translation);
-      } catch (error) {
-        console.error('Translation error for text:', text, error);
-        translations.push(text);
+      const cacheKey = `${text}_${this.currentLanguage}`;
+      if (this.cache.has(cacheKey)) {
+        results.push(this.cache.get(cacheKey));
+        continue;
       }
+
+      const translated = await this.translateText(text, this.currentLanguage);
+      this.cache.set(cacheKey, translated);
+      results.push(translated);
     }
-    return translations;
+    return results;
   }
-
-
-
-async function translateText(text, targetLang) {
-  const cacheKey = `${text}::${targetLang}`;
-  if (translationCache[cacheKey]) return translationCache[cacheKey];
-
-  // Primary: LibreTranslate
-  try {
-    const response = await fetch('https://libretranslate.com/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        q: text,
-        source: 'en',
-        target: targetLang,
-        format: 'text'
-      })
-    });
-
-    const data = await response.json();
-
-    if (data?.translatedText) {
-      translationCache[cacheKey] = data.translatedText;
-      return data.translatedText;
-    } else {
-      console.warn('[TRANSLATION] LibreTranslate returned unexpected format:', data);
-    }
-  } catch (libreError) {
-    console.warn('[TRANSLATION] LibreTranslate failed, falling back to MyMemory:', libreError);
-  }
-
-  // Fallback: MyMemory
-  try {
-    const fallbackURL = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`;
-    const fallbackResponse = await fetch(fallbackURL);
-    const fallbackData = await fallbackResponse.json();
-
-    if (fallbackData?.responseData?.translatedText) {
-      translationCache[cacheKey] = fallbackData.responseData.translatedText;
-      return fallbackData.responseData.translatedText;
-    } else {
-      console.warn('[TRANSLATION] MyMemory returned unexpected format:', fallbackData);
-    }
-  } catch (fallbackError) {
-    console.error('[TRANSLATION] MyMemory fallback also failed:', fallbackError);
-  }
-
-  // Final fallback: original text
-  return text;
-}
-
 
   showTranslationSuccess() {
     const message = document.createElement('div');
@@ -353,7 +276,7 @@ async function translateText(text, targetLang) {
       font-weight: 600;
     `;
 
-    const langName = this.supportedLanguages.find(lang => lang.code === this.currentLanguage)?.name || 'Selected Language';
+    const langName = this.supportedLanguages.find(lang => lang.code === this.currentLanguage)?.name || 'Language';
     message.textContent = `✓ Interface translated to ${langName}`;
 
     document.body.appendChild(message);
@@ -362,20 +285,58 @@ async function translateText(text, targetLang) {
 
   initialize() {
     if (this.currentLanguage !== 'en') {
-      setTimeout(() => {
-        this.translateInterface();
-      }, 1000);
+      setTimeout(() => this.translateInterface(), 1000);
     }
   }
 }
 
-// Initialize global language manager
-window.languageManager = new LanguageManager();
+// 🔗 Async translation helper (OUTSIDE the class)
+const translateText = async (text, targetLang) => {
+  const cacheKey = `${text}::${targetLang}`;
+  if (translationCache[cacheKey]) return translationCache[cacheKey];
 
+  try {
+    const response = await fetch('https://libretranslate.com/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        q: text,
+        source: 'en',
+        target: targetLang,
+        format: 'text'
+      })
+    });
+    const data = await response.json();
+    if (data?.translatedText) {
+      translationCache[cacheKey] = data.translatedText;
+      return data.translatedText;
+    }
+  } catch (libreError) {
+    console.warn('[TRANSLATION] LibreTranslate failed:', libreError);
+  }
+
+  try {
+    const fallbackURL = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`;
+    const fallbackResponse = await fetch(fallbackURL);
+    const fallbackData = await fallbackResponse.json();
+
+    if (fallbackData?.responseData?.translatedText) {
+      translationCache[cacheKey] = fallbackData.responseData.translatedText;
+      return fallbackData.responseData.translatedText;
+    }
+  } catch (fallbackError) {
+    console.error('[TRANSLATION] MyMemory fallback also failed:', fallbackError);
+  }
+
+  return text; // Fallback to original
+};
+
+// 🔗 Init global hooks
+window.languageManager = new LanguageManager();
 window.showLanguageModal = () => window.languageManager.showLanguageModal();
 window.hideLanguageModal = () => window.languageManager.hideLanguageModal();
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', () => {
   window.languageManager.initialize();
   document.getElementById('applyLanguageBtn')?.addEventListener('click', () => {
     window.languageManager.applyLanguageChanges();
