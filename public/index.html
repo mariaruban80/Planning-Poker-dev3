@@ -3260,7 +3260,7 @@ window.editStory = function(ticketData) {
    <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Check if the button exists before trying to use it
-            const logOffBtn = document.getElementById('logOffBtn');
+            const logOffBtn = document.getElementById('logoutMenuBtn');
             
             if (logOffBtn) {
                 logOffBtn.addEventListener('click', function() {
@@ -3515,7 +3515,7 @@ function handleLoginSubmit() {
   
   // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    const logOffBtn = document.getElementById('logOffBtn');
+    const logOffBtn = document.getElementById('logoutMenuBtn');
     
     if (logOffBtn) {
         logOffBtn.addEventListener('click', function() {
@@ -4054,24 +4054,32 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const avatar = document.getElementById('profileMenuTrigger');
-    const menu = document.getElementById('profileMenu');
+document.addEventListener('DOMContentLoaded', () => {
+  const trigger = document.getElementById('profileMenuTrigger');
+  const menu = document.getElementById('profileMenu');
 
-    if (avatar && menu) {
-      avatar.addEventListener('click', () => {
-        menu.classList.toggle('show');
-      });
+  if (!trigger || !menu) {
+    console.error('Trigger or menu element not found.');
+    return;
+  }
 
-      document.addEventListener('click', (e) => {
-        if (!menu.contains(e.target) && !avatar.contains(e.target)) {
-          menu.classList.remove('show');
-        }
-      });
-    } else {
-      console.warn('Avatar or menu element not found.');
-    }
+  // Toggle the dropdown
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent bubbling
+    menu.classList.toggle('show');
   });
+
+  // Hide the dropdown when clicking outside
+  document.addEventListener('click', () => {
+    menu.classList.remove('show');
+  });
+
+  // Optional: prevent menu click from closing itself
+  menu.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+});
+
 </script>
 
      
