@@ -1554,6 +1554,11 @@ white-space: nowrap;
 
   <style>
 .profile-menu {
+  display: none; 
+  position: absolute;
+  top: 65px;
+  right: 24px;
+  z-index: 99999;
   width: 300px;
   background: #fff;
   border-radius: 12px;
@@ -2020,7 +2025,10 @@ font-size: 15px;
     </div>
   </div>
   <div class="profile-menu-divider"></div>
-  <button class="profile-menu-item">🌍 Change Language</button>
+ <button class="profile-menu-item">
+  <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />
+  Change Language
+</button>
      
   <button class="profile-menu-item" id="uploadTicketMenuBtn">📝 Upload Ticket</button>
   <div class="profile-menu-divider"></div>
