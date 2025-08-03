@@ -1566,7 +1566,9 @@ white-space: nowrap;
   font-family: 'Segoe UI', Roboto, sans-serif;
   padding: 0 0 10px 0;
 }
-
+.profile-menu.show {
+  display: block;
+}
 .profile-menu-header {
   display: flex;
   align-items: center;
@@ -4051,6 +4053,26 @@ document.addEventListener('DOMContentLoaded', function() {
     <button onclick="closePremiumModal()" style="padding:8px 16px; background:#753acb; color:white; border:none; border-radius:5px; cursor:pointer;">Got it</button>
   </div>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const avatar = document.getElementById('profileMenuTrigger');
+    const menu = document.getElementById('profileMenu');
+
+    if (avatar && menu) {
+      avatar.addEventListener('click', () => {
+        menu.classList.toggle('show');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target) && !avatar.contains(e.target)) {
+          menu.classList.remove('show');
+        }
+      });
+    } else {
+      console.warn('Avatar or menu element not found.');
+    }
+  });
+</script>
 
      
 </body>
