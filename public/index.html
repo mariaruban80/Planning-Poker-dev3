@@ -1600,7 +1600,14 @@ white-space: nowrap;
   background-color: #fee;
   color: #c62828;
 }
-
+.flag-icon {
+  width: 24px; /* Size of the flag */
+  height: 18px; /* Keep aspect ratio correct */
+  border-radius: 3px;   /* Round the corners */
+  object-fit: cover; /* Prevent distortion */
+  display: inline-block; /* Ensure correct spacing */
+  vertical-align: middle; /* Fix vertical alignment (if necessary) */
+}
     
     </style>
 <style>
@@ -4042,5 +4049,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
