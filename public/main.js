@@ -3140,7 +3140,7 @@ function renderCurrentStory() {
 }
 
 /**
- * Update the user list display with the oval table layout
+ * Update the user list display with the new layout
  */
 function updateUserList(users) {
   const userListContainer = document.getElementById('userList');
@@ -3155,12 +3155,12 @@ function updateUserList(users) {
   // Store the current user's ID for comparison
   const currentUserId = socket ? socket.id : null;
 
-  // Create left sidebar user list (keep existing functionality)
+  // Create left sidebar user list
   users.forEach(user => {
     const userEntry = document.createElement('div');
     userEntry.classList.add('user-entry');
     userEntry.id = `user-${user.id}`;
-    userEntry.innerHTML = `
+      userEntry.innerHTML = `
       <img src="${generateAvatarUrl(user.name)}" class="avatar" alt="${user.name}">
       <span class="username">${user.name}</span>
       <span class="vote-badge"></span>
@@ -3168,29 +3168,50 @@ function updateUserList(users) {
     userListContainer.appendChild(userEntry);
   });
 
-  // Create the oval table layout
-  const ovalTableContainer = document.createElement('div');
-  ovalTableContainer.classList.add('oval-table-container');
+  // Create new grid layout for center area
+  const gridLayout = document.createElement('div');
+  gridLayout.classList.add('poker-table-layout');
 
-  // Create the oval table
-  const ovalTable = document.createElement('div');
-  ovalTable.classList.add('oval-table');
+  // Split users into two rows
+  const halfPoint = Math.ceil(users.length / 2);
+  const topUsers = users.slice(0, halfPoint);
+  const bottomUsers = users.slice(halfPoint);
 
-  // Create center reveal button (use existing functionality)
-  const tableCenter = document.createElement('div');
-  tableCenter.classList.add('table-center');
+  // Create top row of avatars
+  const topAvatarRow = document.createElement('div');
+  topAvatarRow.classList.add('avatar-row');
+  
+  topUsers.forEach(user => {
+    const avatarContainer = createAvatarContainer(user);
+    topAvatarRow.appendChild(avatarContainer);
+  });
+  
+  // Create top row of vote cards
+  const topVoteRow = document.createElement('div');
+  topVoteRow.classList.add('vote-row');
+  
+  topUsers.forEach(user => {
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+    topVoteRow.appendChild(voteCard);
+  });
+
+  // Create reveal button
+  const revealButtonContainer = document.createElement('div');
+  revealButtonContainer.classList.add('reveal-button-container');
   
   const revealBtn = document.createElement('button');
   revealBtn.textContent = 'REVEAL VOTES';
   revealBtn.classList.add('reveal-votes-button');
   
-  // Use existing reveal button logic
+  // Handle guest mode for the reveal button
   if (isGuestUser()) {
     revealBtn.classList.add('hide-for-guests');
   } else {
     revealBtn.onclick = () => {
+      // Get the current story ID
       const storyId = getCurrentStoryId();
       
+      // Skip for deleted stories
       if (storyId && deletedStoryIds.has(storyId)) {
         console.log(`[VOTE] Cannot reveal votes for deleted story: ${storyId}`);
         return;
@@ -3199,148 +3220,90 @@ function updateUserList(users) {
       if (socket && storyId) {
         console.log('[UI] Revealing votes for story:', storyId);
         
+        // IMPORTANT: Update local state BEFORE emitting to server
         votesRevealed[storyId] = true;
+        
+        // Get the votes for this story and apply them
         const votes = votesPerStory[storyId] || {};
         applyVotesToUI(votes, false);
         
+        // Hide planning cards
         const planningCardsSection = document.querySelector('.planning-cards-section');
         if (planningCardsSection) {
           planningCardsSection.classList.add('hidden-until-init');
           planningCardsSection.style.display = 'none';
         }
         
+        // Show statistics immediately for host
         handleVotesRevealed(storyId, votes);
+        
+        // Trigger emoji effect
         triggerGlobalEmojiBurst();
+        
+        // Then emit to server for other users
         socket.emit('revealVotes', { storyId });
+      } else {
+        console.warn('[UI] Cannot reveal votes: No story selected');
       }
     };
   }
   
-  tableCenter.appendChild(revealBtn);
+  revealButtonContainer.appendChild(revealBtn);
 
-  // Create reset button (use existing functionality)
-  const resetBtn = document.createElement('button');
-  resetBtn.textContent = 'RESET VOTES';
-  resetBtn.classList.add('table-reset-button');
+  // Create bottom row of vote cards
+  const bottomVoteRow = document.createElement('div');
+  bottomVoteRow.classList.add('vote-row');
   
-  if (isGuestUser()) {
-    resetBtn.classList.add('hide-for-guests');
-  } else {
-    resetBtn.onclick = () => {
-      const storyId = getCurrentStoryId();
-      if (socket && storyId) {
-        if (votesPerStory[storyId]) {
-          votesPerStory[storyId] = {};
-        }
-        votesRevealed[storyId] = false;
-        
-        resetAllVoteVisuals();
-        
-        const planningCardsSection = document.querySelector('.planning-cards-section');
-        if (planningCardsSection) {
-          planningCardsSection.classList.remove('hidden-until-init');
-          planningCardsSection.style.display = 'block';
-        }
-        
-        const statsContainer = document.querySelector(`.vote-statistics-container[data-story-id="${storyId}"]`);
-        if (statsContainer) {
-          statsContainer.style.display = 'none';
-        }
-        
-        socket.emit('resetVotes', { storyId });
-      }
-    };
-  }
-
-  // Position users around the oval table
-  users.slice(0, 8).forEach((user, index) => {
-    const userPosition = document.createElement('div');
-    userPosition.classList.add('table-user-position');
-    
-    // Create avatar
-    const avatar = document.createElement('div');
-    avatar.classList.add('table-avatar');
-    avatar.id = `user-circle-${user.id}`; // Keep existing ID for compatibility
-    avatar.setAttribute('data-user-id', user.id);
-    
-    // Set avatar image
-    const img = document.createElement('img');
-    img.src = generateAvatarUrl(user.name);
-    img.alt = user.name;
-    avatar.appendChild(img);
-    
-    // Create user name
-    const userName = document.createElement('div');
-    userName.classList.add('table-user-name', 'user-name'); // Keep existing class
-    userName.textContent = user.name;
-    
-    // Create vote card (use existing vote space logic)
-    const voteCard = document.createElement('div');
-    voteCard.classList.add('table-vote-card', 'vote-card-space'); // Keep existing class
-    voteCard.id = `vote-space-${user.id}`; // Keep existing ID
-    
-    if (currentUserId === user.id) {
-      voteCard.classList.add('own-vote-space');
-    }
-    
-    const voteBadge = document.createElement('span');
-    voteBadge.classList.add('vote-badge');
-    voteBadge.textContent = '';
-    voteCard.appendChild(voteBadge);
-    
-    // Keep existing drag and drop functionality
-    if (currentUserId === user.id) {
-      voteCard.addEventListener('dragover', (e) => e.preventDefault());
-      voteCard.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const vote = e.dataTransfer.getData('text/plain');
-        const storyId = getCurrentStoryId();
-        
-        if (storyId && deletedStoryIds.has(storyId)) {
-          console.log(`[VOTE] Cannot cast vote for deleted story: ${storyId}`);
-          return;
-        }
-        
-        if (socket && vote && storyId) {
-          socket.emit('castVote', { vote, targetUserId: user.id, storyId });
-          
-          if (!votesPerStory[storyId]) {
-            votesPerStory[storyId] = {};
-          }
-          
-          votesPerStory[storyId][user.id] = vote;
-          updateVoteVisuals(user.id, votesRevealed[storyId] ? vote : '👍', true);
-        }
-      });
-    } else {
-      voteCard.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        voteCard.classList.add('drop-not-allowed');
-        setTimeout(() => voteCard.classList.remove('drop-not-allowed'), 300);
-      });
-    }
-    
-    // Assemble user position
-    userPosition.appendChild(avatar);
-    userPosition.appendChild(userName);
-    userPosition.appendChild(voteCard);
-    
-    ovalTable.appendChild(userPosition);
+  bottomUsers.forEach(user => {
+    const voteCard = createVoteCardSpace(user, currentUserId === user.id);
+    bottomVoteRow.appendChild(voteCard);
   });
 
-  // Assemble the complete layout
-  ovalTable.appendChild(tableCenter);
-  ovalTable.appendChild(resetBtn);
-  ovalTableContainer.appendChild(ovalTable);
-  userCircleContainer.appendChild(ovalTableContainer);
+  // Create bottom row of avatars
+  const bottomAvatarRow = document.createElement('div');
+  bottomAvatarRow.classList.add('avatar-row');
   
-  // Use existing vote application logic
+  bottomUsers.forEach(user => {
+    const avatarContainer = createAvatarContainer(user);
+    bottomAvatarRow.appendChild(avatarContainer);
+  });
+
+  // Assemble the grid
+  gridLayout.appendChild(topAvatarRow);
+  gridLayout.appendChild(topVoteRow);
+  gridLayout.appendChild(revealButtonContainer);
+  gridLayout.appendChild(bottomVoteRow);
+  gridLayout.appendChild(bottomAvatarRow);
+  
+  userCircleContainer.appendChild(gridLayout);
+  
+  // After updating users, check if we need to request tickets
+  if (!hasRequestedTickets && users.length > 0) {
+    setTimeout(() => {
+      if (socket && socket.connected) {
+        console.log('[INFO] Requesting all tickets after user list update');
+        socket.emit('requestAllTickets');
+        hasRequestedTickets = true;
+      }
+    }, 500);
+  }
+  
+  // Get current story ID
   const storyId = getCurrentStoryId();
+  
+  // Skip for deleted stories
+  if (storyId && deletedStoryIds.has(storyId)) {
+    return;
+  }
+  
+  // After updating users, also update votes
   if (storyId && votesPerStory[storyId]) {
+    // Apply the votes
     const votes = votesPerStory[storyId];
     const reveal = votesRevealed[storyId];
     applyVotesToUI(votes, !reveal);
     
+    // If votes were revealed, also show statistics
     if (reveal) {
       setTimeout(() => {
         handleVotesRevealed(storyId, votes);
@@ -3348,17 +3311,12 @@ function updateUserList(users) {
     }
   }
   
-  // Use existing vote request logic
+  // Request the latest votes for current story to ensure we're in sync
   if (storyId && socket && socket.connected) {
     console.log('[USERLIST] Requesting votes for current story to ensure UI is up to date');
     socket.emit('requestStoryVotes', { storyId });
   }
 }
-
-
-
-
-
 
 /**
  * Create avatar container for a user
@@ -4365,7 +4323,6 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
-
 
 
 
