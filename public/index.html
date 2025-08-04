@@ -1981,7 +1981,6 @@ font-size: 15px;
     <span>Planning Poker</span>
   </div>
   <div class="nav-links">    
-       <button class="invite-button" id="inviteButton">Invite Others</button>
     <!-- New user display element -->
   <div class="current-user-display" id="profileMenuTrigger" style="cursor:pointer;position:relative;">
     <div class="user-avatar" id="headerUserAvatar"></div>
@@ -2063,7 +2062,16 @@ font-size: 15px;
     </div>
   </div>
 </div>    
-
+<!-- Updated Upload Section - moved to right side as per screenshot -->
+<div class="upload-section">
+<div class="upload-right">
+<div class="file-input" id="fileInputContainer">
+<span class="file-button">Upload Ticket</span>
+<input accept=".csv" id="csvInput" type="file"/>
+</div>
+<button class="invite-button" id="inviteButton">Invite Others</button>
+</div>
+</div>
 <div class="container">
 <div class="sidebar">
 <h3>Current Members</h3>
@@ -4008,11 +4016,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('loginModalCustom').style.display = 'none';
   });
 </script>
-<!-- Translation Loading Overlay (for language-manager.js) -->
-<div id="translationOverlay" style="display:none; position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10001; background:rgba(0,0,0,0.45); color: white; font-size: 2em; align-items:center;justify-content:center; flex-direction:column;">
-  <div class="loading-spinner" style="margin-bottom:16px;"></div>
-  Translating, please wait...
-</div>
+
   
      
 </body>
