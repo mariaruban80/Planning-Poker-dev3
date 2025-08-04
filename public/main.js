@@ -340,10 +340,6 @@ window.updateTicketFromModal = function(ticketData) {
   }
 };
 
-
-
-
-
 /**
  * Update ticket in the UI
  * @param {Object} ticketData - Updated ticket data
@@ -367,50 +363,69 @@ function updateTicketInUI(ticketData) {
   const descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
   const idForDisplay = ticketData.idDisplay || '';
 
-  // Extract plain text from description HTML
-  const tmpDiv = document.createElement('div');
-  tmpDiv.innerHTML = descriptionHTML;
-  let previewText = (tmpDiv.innerText || tmpDiv.textContent || '').trim();
-
-  if (
-    !previewText ||
-    descriptionHTML === '' ||
-    descriptionHTML === '<p><br></p>' ||
-    descriptionHTML.trim() === ''
-  ) {
-    previewText = '';
+  // **FIX: Extract plain text from description HTML properly**
+  let previewText = '';
+  if (descriptionHTML) {
+    const tmpDiv = document.createElement('div');
+    tmpDiv.innerHTML = descriptionHTML;
+    
+    // Get the text content and clean it up
+    previewText = (tmpDiv.innerText || tmpDiv.textContent || '').trim();
+    
+    // Remove any remaining HTML tags if they somehow got through
+    previewText = previewText.replace(/<[^>]*>/g, '');
+    
+    // Handle empty content cases (like <p><br></p> or <p></p>)
+    if (
+      !previewText ||
+      descriptionHTML === '' ||
+      descriptionHTML === '<p><br></p>' ||
+      descriptionHTML === '<p></p>' ||
+      descriptionHTML.trim() === ''
+    ) {
+      previewText = '';
+    }
   }
 
-  // Fallback display string
-  let fallbackDisplay;
+  // **FIX: Build display text properly**
+  let displayText;
   if (idForDisplay && previewText) {
-    fallbackDisplay = `${idForDisplay}: ${previewText}`;
+    displayText = `${idForDisplay}: ${previewText}`;
   } else if (idForDisplay) {
-    fallbackDisplay = idForDisplay;
+    displayText = idForDisplay;
   } else if (previewText) {
-    fallbackDisplay = previewText;
+    displayText = previewText;
   } else {
-    fallbackDisplay = '[No ticket info]';
+    displayText = '[No ticket info]';
   }
 
   // Store metadata on the card
   storyCard.dataset.id = idForDisplay;
-  storyCard.dataset.description = descriptionHTML;
-  storyCard.dataset.original = originalText;
+  storyCard.dataset.description = descriptionHTML; // Keep original HTML for editing
+  storyCard.dataset.original = displayText; // Store clean text version
   storyCard.dataset.originallang = originalLang;
 
-  // Show untranslated for same-language users
+  // **FIX: Update the display with clean text**
   if (userLang === originalLang) {
-    storyTitle.textContent = originalText;
+    storyTitle.textContent = displayText; // Use clean text, not HTML
   } else {
-    languageManager.translateText(originalText, userLang).then(translated => {
-      storyTitle.textContent = translated;
-    }).catch(err => {
-      console.error('[Translation] Fallback to original:', err);
-      storyTitle.textContent = originalText;
-    });
+    // Handle translation if needed
+    if (window.languageManager && typeof window.languageManager.translateText === 'function') {
+      window.languageManager.translateText(displayText, userLang).then(translated => {
+        storyTitle.textContent = translated;
+      }).catch(err => {
+        console.error('[Translation] Fallback to original:', err);
+        storyTitle.textContent = displayText;
+      });
+    } else {
+      storyTitle.textContent = displayText;
+    }
   }
 }
+
+
+
+
 
 
 
@@ -4308,6 +4323,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
