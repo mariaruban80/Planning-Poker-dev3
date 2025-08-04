@@ -2013,27 +2013,33 @@ font-size: 15px;
   <div class="nav-links">    
        <button class="invite-button" id="inviteButton">Invite Others</button>
     <!-- New user display element -->
-  <div class="current-user-display" id="profileMenuTrigger" style="cursor:pointer;position:relative;">
-    <div class="user-avatar" id="headerUserAvatar"></div>
-    <span id="headerUsername">User</span>
-    
-  </div>
-   </div>
-      <!-- Profile Dropdown Menu -->
-<div id="profileMenu" class="profile-menu">
-  <div class="profile-menu-header">
-    <img id="profileMenuAvatar" class="profile-avatar" src="" alt="avatar">
-    <div>
-      <div class="profile-menu-name" id="profileMenuName">User</div>
-      <div class="profile-menu-email" id="profileMenuEmail" style="font-size:12px;color:#555;"></div>
+<div class="current-user-display" id="profileMenuTrigger" style="cursor:pointer;position:relative;">
+  <div class="user-avatar" id="headerUserAvatar"></div>
+  <span id="headerUsername">User</span>
+  
+  <!-- Profile Dropdown Menu - should be INSIDE the trigger element -->
+  <div id="profileMenu" class="profile-menu">
+    <div class="profile-menu-header">
+      <div class="avatar-circle" id="profileMenuAvatar">
+        <!-- Avatar will be populated by JavaScript -->
+      </div>
+      <div>
+        <div class="profile-menu-name" id="profileMenuName">User</div>
+        <div class="profile-menu-email" id="profileMenuEmail" style="font-size:12px;color:#555;"></div>
+      </div>
     </div>
+    <div class="profile-menu-divider"></div>
+    <button class="profile-menu-item" onclick="showLanguageModal()">
+      <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />
+      Change Language
+    </button>
+    <button class="profile-menu-item" id="uploadTicketMenuBtn">📝 Upload Ticket</button>
+    <div class="profile-menu-divider"></div>
+    <button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
   </div>
-  <div class="profile-menu-divider"></div>
-  <button class="profile-menu-item" id="changeLanguageBtn">🌐 Change language</button>
-  <button class="profile-menu-item" id="uploadTicketMenuBtn">📁 Upload Ticket</button>
-  <div class="profile-menu-divider"></div>
-  <button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
 </div>
+
+       
  <!-- Language Selection Modal -->
 <div id="languageModalCustom" style="display: none;">
   <div class="language-modal-content">
@@ -4053,8 +4059,187 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
      
+<script>
+
+function updateProfileMenu(username) {
+  try {
+    const profileMenuName = document.getElementById('profileMenuName');
+    const profileMenuAvatar = document.getElementById('profileMenuAvatar');
+    
+    if (profileMenuName) {
+      profileMenuName.textContent = username || 'User';
+    }
+    
+    if (profileMenuAvatar) {
+      // Try to use the same avatar URL first
+      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(username || 'User')}&background=random&rounded=true`;
+      
+      const img = document.createElement('img');
+      img.src = avatarUrl;
+      img.alt = username || 'User';
+      img.style.cssText = 'width: 100%; height: 100%; border-radius: 50%; object-fit: cover;';
+      
+      img.onload = function() {
+        profileMenuAvatar.innerHTML = '';
+        profileMenuAvatar.appendChild(img);
+      };
+      
+      img.onerror = function() {
+        // Fallback to initials
+        const initials = (username || 'User').split(' ')
+          .map(part => part.charAt(0))
+          .join('')
+          .toUpperCase()
+          .substring(0, 2);
+          
+        profileMenuAvatar.innerHTML = initials;
+        profileMenuAvatar.style.fontSize = '16px';
+        profileMenuAvatar.style.fontWeight = 'bold';
+        
+        const hue = Math.abs((username || 'User').split('').reduce((a, b) => {
+          return a + b.charCodeAt(0);
+        }, 0) % 360);
+        
+        profileMenuAvatar.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
+        profileMenuAvatar.style.color = 'white';
+        profileMenuAvatar.style.display = 'flex';
+        profileMenuAvatar.style.alignItems = 'center';
+        profileMenuAvatar.style.justifyContent = 'center';
+      };
+    }
+  } catch (error) {
+    console.error('Error updating profile menu:', error);
+  }
+}
+
+
+     
+document.addEventListener('DOMContentLoaded', () => {
+  // Use a more robust approach with retries
+  function initProfileMenu() {
+    const trigger = document.getElementById('profileMenuTrigger');
+    const menu = document.getElementById('profileMenu');
+
+    if (!trigger || !menu) {
+      console.log('Profile menu elements not ready, retrying...');
+      setTimeout(initProfileMenu, 100);
+      return;
+    }
+
+    // Check if already initialized
+    if (trigger.hasAttribute('data-profile-initialized')) {
+      console.log('Profile menu already initialized');
+      return;
+    }
+
+    // Mark as initialized
+    trigger.setAttribute('data-profile-initialized', 'true');
+
+    // Add the click event listener with error handling
+    try {
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Profile menu clicked');
+        menu.classList.toggle('show');
+      });
+
+      // Hide the dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!trigger.contains(e.target) && !menu.contains(e.target)) {
+          menu.classList.remove('show');
+        }
+      });
+
+      // Prevent menu click from closing itself
+      menu.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+
+      console.log('Profile menu initialized successfully');
+      
+      // Initialize the profile menu content
+      if (typeof updateProfileMenu === 'function') {
+        updateProfileMenu(sessionStorage.getItem('userName'));
+      }
+    } catch (error) {
+      console.error('Error initializing profile menu:', error);
+      // Remove the initialized flag so fallback can try
+      trigger.removeAttribute('data-profile-initialized');
+    }
+  }
+
+  // Wait a bit for all other scripts to finish
+  setTimeout(initProfileMenu, 200);
+});
+
+// Safer fallback initialization
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    try {
+      const trigger = document.getElementById('profileMenuTrigger');
+      const menu = document.getElementById('profileMenu');
+      
+      console.log('Fallback check:', { trigger, menu, initialized: trigger?.hasAttribute('data-profile-initialized') });
+      
+      if (trigger && menu && !trigger.hasAttribute('data-profile-initialized')) {
+        console.log('Running fallback initialization');
+        
+        trigger.setAttribute('data-profile-initialized', 'true');
+        
+        // Use a safer approach - clone the element to remove any problematic listeners
+        const newTrigger = trigger.cloneNode(true);
+        trigger.parentNode.replaceChild(newTrigger, trigger);
+        
+        // Now add the event listener to the clean element
+        newTrigger.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Profile menu clicked (fallback)');
+          menu.classList.toggle('show');
+        });
+        
+        // Update the menu reference to use the new trigger
+        document.addEventListener('click', (e) => {
+          if (!newTrigger.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.remove('show');
+          }
+        });
+        
+        menu.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+        
+        console.log('Profile menu fallback initialization complete');
+        
+        if (typeof updateProfileMenu === 'function') {
+          updateProfileMenu(sessionStorage.getItem('userName'));
+        }
+      }
+    } catch (error) {
+      console.error('Error in fallback profile menu initialization:', error);
+      
+      // Last resort - direct onclick handler
+      const trigger = document.getElementById('profileMenuTrigger');
+      const menu = document.getElementById('profileMenu');
+      
+      if (trigger && menu) {
+        trigger.onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Profile menu clicked (onclick fallback)');
+          menu.classList.toggle('show');
+        };
+        console.log('Applied onclick fallback handler');
+      }
+    }
+  }, 500);
+});
+</script>
+     
 </body>
 </html>
         
              
+
 
