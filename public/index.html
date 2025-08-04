@@ -2063,7 +2063,16 @@ font-size: 15px;
     </div>
   </div>
 </div>    
+<!-- Updated Upload Section - moved to right side as per screenshot -->
+<div class="upload-section">
+<div class="upload-right">
+<div class="file-input" id="fileInputContainer">
+<span class="file-button">Upload Ticket</span>
+<input accept=".csv" id="csvInput" type="file"/>
 
+
+
+</div>
 <div class="container">
 <div class="sidebar">
 <h3>Current Members</h3>
@@ -2578,7 +2587,7 @@ function handleAddTicketSubmit() {
         storyCard.id = ticketData.id;
         const storyTitle = document.createElement('div');
         storyTitle.className = 'story-title';
-        storyTitle.textContent = ticketData.text;
+        storyTitle.innerHTML  = ticketData.text;
         storyCard.appendChild(storyTitle);
         storyList.appendChild(storyCard);
         if (window.socket) {
