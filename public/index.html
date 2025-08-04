@@ -4105,7 +4105,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 <script>
-
 document.addEventListener('DOMContentLoaded', () => {
   // Use a more robust approach with retries
   function initProfileMenu() {
@@ -4120,72 +4119,122 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Check if already initialized
     if (trigger.hasAttribute('data-profile-initialized')) {
+      console.log('Profile menu already initialized');
       return;
     }
 
     // Mark as initialized
     trigger.setAttribute('data-profile-initialized', 'true');
 
-    // Add the click event listener
-    trigger.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('Profile menu clicked');
-      menu.classList.toggle('show');
-    });
+    // Add the click event listener with error handling
+    try {
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Profile menu clicked');
+        menu.classList.toggle('show');
+      });
 
-    // Hide the dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!trigger.contains(e.target) && !menu.contains(e.target)) {
-        menu.classList.remove('show');
+      // Hide the dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!trigger.contains(e.target) && !menu.contains(e.target)) {
+          menu.classList.remove('show');
+        }
+      });
+
+      // Prevent menu click from closing itself
+      menu.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+
+      console.log('Profile menu initialized successfully');
+      
+      // Initialize the profile menu content
+      if (typeof updateProfileMenu === 'function') {
+        updateProfileMenu(sessionStorage.getItem('userName'));
       }
-    });
-
-    // Prevent menu click from closing itself
-    menu.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-
-    console.log('Profile menu initialized successfully');
-    
-    // Initialize the profile menu content
-    updateProfileMenu(sessionStorage.getItem('userName'));
+    } catch (error) {
+      console.error('Error initializing profile menu:', error);
+      // Remove the initialized flag so fallback can try
+      trigger.removeAttribute('data-profile-initialized');
+    }
   }
 
   // Wait a bit for all other scripts to finish
   setTimeout(initProfileMenu, 200);
 });
 
-// Also add a fallback initialization
+// Safer fallback initialization
 window.addEventListener('load', () => {
   setTimeout(() => {
-    const trigger = document.getElementById('profileMenuTrigger');
-    const menu = document.getElementById('profileMenu');
-    
-    if (trigger && menu && !trigger.hasAttribute('data-profile-initialized')) {
-      trigger.setAttribute('data-profile-initialized', 'true');
+    try {
+      const trigger = document.getElementById('profileMenuTrigger');
+      const menu = document.getElementById('profileMenu');
       
-      trigger.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Profile menu clicked (fallback)');
-        menu.classList.toggle('show');
-      });
+      console.log('Fallback check:', { trigger, menu, initialized: trigger?.hasAttribute('data-profile-initialized') });
       
-      console.log('Profile menu fallback initialization complete');
-      updateProfileMenu(sessionStorage.getItem('userName'));
+      if (trigger && menu && !trigger.hasAttribute('data-profile-initialized')) {
+        console.log('Running fallback initialization');
+        
+        trigger.setAttribute('data-profile-initialized', 'true');
+        
+        // Use a safer approach - clone the element to remove any problematic listeners
+        const newTrigger = trigger.cloneNode(true);
+        trigger.parentNode.replaceChild(newTrigger, trigger);
+        
+        // Now add the event listener to the clean element
+        newTrigger.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Profile menu clicked (fallback)');
+          menu.classList.toggle('show');
+        });
+        
+        // Update the menu reference to use the new trigger
+        document.addEventListener('click', (e) => {
+          if (!newTrigger.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.remove('show');
+          }
+        });
+        
+        menu.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+        
+        console.log('Profile menu fallback initialization complete');
+        
+        if (typeof updateProfileMenu === 'function') {
+          updateProfileMenu(sessionStorage.getItem('userName'));
+        }
+      }
+    } catch (error) {
+      console.error('Error in fallback profile menu initialization:', error);
+      
+      // Last resort - direct onclick handler
+      const trigger = document.getElementById('profileMenuTrigger');
+      const menu = document.getElementById('profileMenu');
+      
+      if (trigger && menu) {
+        trigger.onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Profile menu clicked (onclick fallback)');
+          menu.classList.toggle('show');
+        };
+        console.log('Applied onclick fallback handler');
+      }
     }
   }, 500);
 });
-
-     
-
 </script>
 
+
+     
      
 </body>
 </html>
         
              
+
 
 
