@@ -3500,11 +3500,24 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
 
 /**
  * Update story title
- */
+ 
 function updateStory(story) {
   const storyTitle = document.getElementById('currentStory');
   if (storyTitle) storyTitle.innerHTML  = story;
+} */
+
+function updateStory(story) {
+  const storyTitle = document.getElementById('currentStory');
+  if (!storyTitle) return;
+
+  const { id, title, description } = story;
+
+  storyTitle.innerHTML = `
+    <div style="font-weight: bold; margin-bottom: 5px;">${id} ${title}</div>
+    <div>${description}</div>
+  `;
 }
+
 
 /**
  * Setup story navigation
@@ -4306,4 +4319,5 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
