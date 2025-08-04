@@ -8,12 +8,7 @@
 <!-- Quill Editor CSS -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <!-- Quill Editor JS -->
-<script src="https://cdn.quilljs.com/1.3.6/quill.min.js">
-function editStory(storyId) {
-  console.warn('[EDIT] Stub: editStory called for story ID:', storyId);
-  alert('Edit story feature is not implemented yet.');
-}
-</script>
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="language-manager.js"></script>
 <script type="module" src="main.js"></script>      
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
@@ -3546,25 +3541,47 @@ document.addEventListener('DOMContentLoaded', function() {
          
 </script>
  <!-- Add this before the closing 
+
+
+
+<input type="file" id="uploadInput" style="display:none" />
+
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none; position:fixed; top:20%; left:30%; width:40%; background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000;">
+  <h3>Edit Story</h3>
+  <input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;" />
+  <textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
+  <input type="hidden" id="editModalStoryId" />
+  <button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+  <button onclick="alert('Update logic not implemented')">Update</button>
+</div>
+
+
 <script>
 function setupProfileMenuHandler(retries = 10) {
   const trigger = document.getElementById('profileMenuTrigger');
   const menu = document.getElementById('profileMenu');
+  const uploadTrigger = document.getElementById("uploadTicketTrigger");
+  const uploadInput = document.getElementById("uploadInput");
 
-  if (!trigger || !menu) {
+  if (!trigger || !menu || !uploadTrigger || !uploadInput) {
     if (retries > 0) {
-      console.warn('[AVATAR] Retrying profile menu setup...');
       return setTimeout(() => setupProfileMenuHandler(retries - 1), 300);
     } else {
-      console.error('[AVATAR] profileMenuTrigger or profileMenu not found.');
+      console.error("One or more menu elements not found.");
       return;
     }
   }
 
   trigger.addEventListener('click', (e) => {
-    console.log("Profile menu clicked");
     e.stopPropagation();
     menu.classList.toggle('show');
+    console.log("Profile menu clicked");
+  });
+
+  uploadTrigger.addEventListener("click", () => {
+    uploadInput.click();
   });
 
   document.addEventListener('click', () => {
@@ -3575,10 +3592,26 @@ function setupProfileMenuHandler(retries = 10) {
     e.stopPropagation();
   });
 
-  console.log('[AVATAR] Profile menu listener initialized.');
+  menu.querySelectorAll("div").forEach(item => {
+    item.addEventListener("click", () => {
+      menu.classList.remove("show");
+    });
+  });
+
+  console.log("[AVATAR] Profile menu listener initialized.");
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function editStory(storyId) {
+  console.log("Editing story:", storyId);
+  const story = window.allStories?.find((s) => s.id === storyId);
+  if (!story) return alert("Story not found.");
+  document.getElementById("editModal").style.display = "block";
+  document.getElementById("editModalTitle").value = story.title || "";
+  document.getElementById("editModalDescription").value = story.description || "";
+  document.getElementById("editModalStoryId").value = storyId;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
   setupProfileMenuHandler();
 });
 </script>
@@ -3934,25 +3967,47 @@ document.addEventListener('DOMContentLoaded', function() {
         
 </script>
 <!-- Add this just before the closing 
+
+
+
+<input type="file" id="uploadInput" style="display:none" />
+
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none; position:fixed; top:20%; left:30%; width:40%; background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000;">
+  <h3>Edit Story</h3>
+  <input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;" />
+  <textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
+  <input type="hidden" id="editModalStoryId" />
+  <button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+  <button onclick="alert('Update logic not implemented')">Update</button>
+</div>
+
+
 <script>
 function setupProfileMenuHandler(retries = 10) {
   const trigger = document.getElementById('profileMenuTrigger');
   const menu = document.getElementById('profileMenu');
+  const uploadTrigger = document.getElementById("uploadTicketTrigger");
+  const uploadInput = document.getElementById("uploadInput");
 
-  if (!trigger || !menu) {
+  if (!trigger || !menu || !uploadTrigger || !uploadInput) {
     if (retries > 0) {
-      console.warn('[AVATAR] Retrying profile menu setup...');
       return setTimeout(() => setupProfileMenuHandler(retries - 1), 300);
     } else {
-      console.error('[AVATAR] profileMenuTrigger or profileMenu not found.');
+      console.error("One or more menu elements not found.");
       return;
     }
   }
 
   trigger.addEventListener('click', (e) => {
-    console.log("Profile menu clicked");
     e.stopPropagation();
     menu.classList.toggle('show');
+    console.log("Profile menu clicked");
+  });
+
+  uploadTrigger.addEventListener("click", () => {
+    uploadInput.click();
   });
 
   document.addEventListener('click', () => {
@@ -3963,10 +4018,26 @@ function setupProfileMenuHandler(retries = 10) {
     e.stopPropagation();
   });
 
-  console.log('[AVATAR] Profile menu listener initialized.');
+  menu.querySelectorAll("div").forEach(item => {
+    item.addEventListener("click", () => {
+      menu.classList.remove("show");
+    });
+  });
+
+  console.log("[AVATAR] Profile menu listener initialized.");
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function editStory(storyId) {
+  console.log("Editing story:", storyId);
+  const story = window.allStories?.find((s) => s.id === storyId);
+  if (!story) return alert("Story not found.");
+  document.getElementById("editModal").style.display = "block";
+  document.getElementById("editModalTitle").value = story.title || "";
+  document.getElementById("editModalDescription").value = story.description || "";
+  document.getElementById("editModalStoryId").value = storyId;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
   setupProfileMenuHandler();
 });
 </script>
@@ -4275,25 +4346,47 @@ window.addEventListener('load', () => {
 </script>
      
 
+
+
+
+<input type="file" id="uploadInput" style="display:none" />
+
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none; position:fixed; top:20%; left:30%; width:40%; background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000;">
+  <h3>Edit Story</h3>
+  <input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;" />
+  <textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
+  <input type="hidden" id="editModalStoryId" />
+  <button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+  <button onclick="alert('Update logic not implemented')">Update</button>
+</div>
+
+
 <script>
 function setupProfileMenuHandler(retries = 10) {
   const trigger = document.getElementById('profileMenuTrigger');
   const menu = document.getElementById('profileMenu');
+  const uploadTrigger = document.getElementById("uploadTicketTrigger");
+  const uploadInput = document.getElementById("uploadInput");
 
-  if (!trigger || !menu) {
+  if (!trigger || !menu || !uploadTrigger || !uploadInput) {
     if (retries > 0) {
-      console.warn('[AVATAR] Retrying profile menu setup...');
       return setTimeout(() => setupProfileMenuHandler(retries - 1), 300);
     } else {
-      console.error('[AVATAR] profileMenuTrigger or profileMenu not found.');
+      console.error("One or more menu elements not found.");
       return;
     }
   }
 
   trigger.addEventListener('click', (e) => {
-    console.log("Profile menu clicked");
     e.stopPropagation();
     menu.classList.toggle('show');
+    console.log("Profile menu clicked");
+  });
+
+  uploadTrigger.addEventListener("click", () => {
+    uploadInput.click();
   });
 
   document.addEventListener('click', () => {
@@ -4304,10 +4397,26 @@ function setupProfileMenuHandler(retries = 10) {
     e.stopPropagation();
   });
 
-  console.log('[AVATAR] Profile menu listener initialized.');
+  menu.querySelectorAll("div").forEach(item => {
+    item.addEventListener("click", () => {
+      menu.classList.remove("show");
+    });
+  });
+
+  console.log("[AVATAR] Profile menu listener initialized.");
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function editStory(storyId) {
+  console.log("Editing story:", storyId);
+  const story = window.allStories?.find((s) => s.id === storyId);
+  if (!story) return alert("Story not found.");
+  document.getElementById("editModal").style.display = "block";
+  document.getElementById("editModalTitle").value = story.title || "";
+  document.getElementById("editModalDescription").value = story.description || "";
+  document.getElementById("editModalStoryId").value = storyId;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
   setupProfileMenuHandler();
 });
 </script>
