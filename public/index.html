@@ -398,13 +398,6 @@
       justify-content: center;
       z-index: 10000;
     }
-     .flag-icon {
-  width: 20px;
-  height: 14px;
-  margin-right: 10px;
-  border-radius: 2px;
-  object-fit: cover;
-}
     
     .modal-content {
       background-color: #fff;
@@ -1554,54 +1547,35 @@ white-space: nowrap;
 
   <style>
 .profile-menu {
-  display: none; 
+  display: none;
   position: absolute;
-  top: 65px;
+  top: 65px; /* adjust if your header height is different */
   right: 24px;
-  z-index: 99999;
-  width: 300px;
+  width: 320px;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
-  font-family: 'Segoe UI', Roboto, sans-serif;
-  padding: 0 0 10px 0;
+  box-shadow: 0 4px 24px rgba(103,58,183,0.17);
+  z-index: 99999;
+  font-family: inherit;
+  padding-bottom: 10px;
 }
-.profile-menu.show {
-  display: block;
-}
+.profile-menu.show { display: block; }
+
 .profile-menu-header {
   display: flex;
   align-items: center;
-  padding: 20px;
-  gap: 14px;
+  padding: 20px 20px 12px 20px;
 }
-
-.avatar-circle {
+.profile-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: #7c3aed;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: bold;
+  margin-right: 14px;
 }
-
-.profile-menu-name {
-  font-weight: bold;
-  font-size: 16px;
-  color: #000;
-}
-
-.profile-menu-email {
-  font-size: 13px;
-  color: #666;
-}
-
+.profile-menu-name { font-weight: bold; font-size: 18px; }
+.profile-menu-divider { border-bottom: 1px solid #eee; margin:8px 0; }
 .profile-menu-item {
-  display: block;
+ display: block;
   width: 100%;
   padding: 12px 20px;
   background: none;
@@ -1609,25 +1583,23 @@ white-space: nowrap;
   text-align: left;
   font-size: 14px;
   font-weight: 600;
-  color: #000;
-  font-family: inherit;
+  color: #673ab7;
+  font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   cursor: pointer;
   transition: background 0.2s ease;
 }
-
-.profile-menu-item:hover {
-  background: #f3f3f3;
+.profile-menu-item:hover {  
+  background: #f0e6ff;
+  color: #501ca3;
 }
-
-.profile-menu-item.logout {
-  color: #d32f2f;
+.profile-menu-item.logout { 
+  color: #e53935;
   font-weight: 700;
 }
-
-.profile-menu-item.logout:hover {
-  background: #ffeaea;
+  .profile-menu-item.logout:hover {
+  background-color: #fee;
+  color: #c62828;
 }
-
 
     
     </style>
@@ -2027,12 +1999,8 @@ font-size: 15px;
     </div>
   </div>
   <div class="profile-menu-divider"></div>
-  <button class="profile-menu-item" onclick="showLanguageModal()">
-    <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />
-    Change Language
-  </button>
-     
-  <button class="profile-menu-item" id="uploadTicketMenuBtn">📝 Upload Ticket</button>
+  <button class="profile-menu-item" id="changeLanguageBtn">🌐 Change language</button>
+  <button class="profile-menu-item" id="uploadTicketMenuBtn">📁 Upload Ticket</button>
   <div class="profile-menu-divider"></div>
   <button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
 </div>
@@ -2253,6 +2221,7 @@ function updateHeaderStyle() {
         }
       }
     }
+// Initialize the user display in header - improved version
 
 function initUserHeaderDisplay() {
   // Get username from session storage - prioritize the one set through login modal
@@ -2293,59 +2262,7 @@ function initUserHeaderDisplay() {
       };
     }
   }
-  
-  // Also update the profile menu dropdown
-  updateProfileMenu(username);
 }
-
-// Function to update profile menu with user info
-function updateProfileMenu(username) {
-  const profileMenuName = document.getElementById('profileMenuName');
-  const profileMenuAvatar = document.getElementById('profileMenuAvatar');
-  
-  if (profileMenuName) {
-    profileMenuName.textContent = username || 'User';
-  }
-  
-  if (profileMenuAvatar) {
-    // Try to use the same avatar URL first
-    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(username || 'User')}&background=random&rounded=true`;
-    
-    const img = document.createElement('img');
-    img.src = avatarUrl;
-    img.alt = username || 'User';
-    img.style.cssText = 'width: 100%; height: 100%; border-radius: 50%; object-fit: cover;';
-    
-    img.onload = function() {
-      profileMenuAvatar.innerHTML = '';
-      profileMenuAvatar.appendChild(img);
-    };
-    
-    img.onerror = function() {
-      // Fallback to initials
-      const initials = (username || 'User').split(' ')
-        .map(part => part.charAt(0))
-        .join('')
-        .toUpperCase()
-        .substring(0, 2);
-        
-      profileMenuAvatar.innerHTML = initials;
-      profileMenuAvatar.style.fontSize = '16px';
-      profileMenuAvatar.style.fontWeight = 'bold';
-      
-      const hue = Math.abs((username || 'User').split('').reduce((a, b) => {
-        return a + b.charCodeAt(0);
-      }, 0) % 360);
-      
-      profileMenuAvatar.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
-      profileMenuAvatar.style.color = 'white';
-      profileMenuAvatar.style.display = 'flex';
-      profileMenuAvatar.style.alignItems = 'center';
-      profileMenuAvatar.style.justifyContent = 'center';
-    };
-  }
-}
-     
 
 // Handle username synchronization and prompt for invited users
 document.addEventListener('DOMContentLoaded', function() {
@@ -3311,7 +3228,7 @@ window.editStory = function(ticketData) {
    <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Check if the button exists before trying to use it
-            const logOffBtn = document.getElementById('logoutMenuBtn');
+            const logOffBtn = document.getElementById('logOffBtn');
             
             if (logOffBtn) {
                 logOffBtn.addEventListener('click', function() {
@@ -3566,7 +3483,7 @@ function handleLoginSubmit() {
   
   // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    const logOffBtn = document.getElementById('logoutMenuBtn');
+    const logOffBtn = document.getElementById('logOffBtn');
     
     if (logOffBtn) {
         logOffBtn.addEventListener('click', function() {
@@ -4104,137 +4021,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <button onclick="closePremiumModal()" style="padding:8px 16px; background:#753acb; color:white; border:none; border-radius:5px; cursor:pointer;">Got it</button>
   </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  // Use a more robust approach with retries
-  function initProfileMenu() {
-    const trigger = document.getElementById('profileMenuTrigger');
-    const menu = document.getElementById('profileMenu');
 
-    if (!trigger || !menu) {
-      console.log('Profile menu elements not ready, retrying...');
-      setTimeout(initProfileMenu, 100);
-      return;
-    }
-
-    // Check if already initialized
-    if (trigger.hasAttribute('data-profile-initialized')) {
-      console.log('Profile menu already initialized');
-      return;
-    }
-
-    // Mark as initialized
-    trigger.setAttribute('data-profile-initialized', 'true');
-
-    // Add the click event listener with error handling
-    try {
-      trigger.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Profile menu clicked');
-        menu.classList.toggle('show');
-      });
-
-      // Hide the dropdown when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!trigger.contains(e.target) && !menu.contains(e.target)) {
-          menu.classList.remove('show');
-        }
-      });
-
-      // Prevent menu click from closing itself
-      menu.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-
-      console.log('Profile menu initialized successfully');
-      
-      // Initialize the profile menu content
-      if (typeof updateProfileMenu === 'function') {
-        updateProfileMenu(sessionStorage.getItem('userName'));
-      }
-    } catch (error) {
-      console.error('Error initializing profile menu:', error);
-      // Remove the initialized flag so fallback can try
-      trigger.removeAttribute('data-profile-initialized');
-    }
-  }
-
-  // Wait a bit for all other scripts to finish
-  setTimeout(initProfileMenu, 200);
-});
-
-// Safer fallback initialization
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    try {
-      const trigger = document.getElementById('profileMenuTrigger');
-      const menu = document.getElementById('profileMenu');
-      
-      console.log('Fallback check:', { trigger, menu, initialized: trigger?.hasAttribute('data-profile-initialized') });
-      
-      if (trigger && menu && !trigger.hasAttribute('data-profile-initialized')) {
-        console.log('Running fallback initialization');
-        
-        trigger.setAttribute('data-profile-initialized', 'true');
-        
-        // Use a safer approach - clone the element to remove any problematic listeners
-        const newTrigger = trigger.cloneNode(true);
-        trigger.parentNode.replaceChild(newTrigger, trigger);
-        
-        // Now add the event listener to the clean element
-        newTrigger.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Profile menu clicked (fallback)');
-          menu.classList.toggle('show');
-        });
-        
-        // Update the menu reference to use the new trigger
-        document.addEventListener('click', (e) => {
-          if (!newTrigger.contains(e.target) && !menu.contains(e.target)) {
-            menu.classList.remove('show');
-          }
-        });
-        
-        menu.addEventListener('click', (e) => {
-          e.stopPropagation();
-        });
-        
-        console.log('Profile menu fallback initialization complete');
-        
-        if (typeof updateProfileMenu === 'function') {
-          updateProfileMenu(sessionStorage.getItem('userName'));
-        }
-      }
-    } catch (error) {
-      console.error('Error in fallback profile menu initialization:', error);
-      
-      // Last resort - direct onclick handler
-      const trigger = document.getElementById('profileMenuTrigger');
-      const menu = document.getElementById('profileMenu');
-      
-      if (trigger && menu) {
-        trigger.onclick = function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Profile menu clicked (onclick fallback)');
-          menu.classList.toggle('show');
-        };
-        console.log('Applied onclick fallback handler');
-      }
-    }
-  }, 500);
-});
-</script>
-
-
-     
      
 </body>
 </html>
         
              
-
-
-
