@@ -1,16 +1,17 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<link rel="preload" href="spade.png" as="image">
-<link rel="icon" type="image/png" sizes="32x32" href="spade.png">
-<link rel="shortcut icon" href="spade.png">
+<link as="image" href="spade.png" rel="preload"/>
+<link href="spade.png" rel="icon" sizes="32x32" type="image/png"/>
+<link href="spade.png" rel="shortcut icon"/>
 <!-- Quill Editor CSS -->
-<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet"/>
 <!-- Quill Editor JS -->
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="language-manager.js"></script>
-<script type="module" src="main.js"></script>      
+<script src="main.js" type="module"></script>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Planning Poker Interactive</title>
 <style>
@@ -1543,9 +1544,7 @@ white-space: nowrap;
   }
 
   </style>
-
-
-  <style>
+<style>
 
 .profile-menu {
   display: none; 
@@ -1757,10 +1756,7 @@ font-size: 15px;
 }
 
 </style>
-
-
-     
-     <style>
+<style>
 
 .planning-cards-section {
   position: fixed;
@@ -2004,59 +2000,55 @@ font-size: 15px;
 </style>
 </head>
 <body>
-
-    <header>
-  <div class="logo">
-    <img src="spade.png" alt="Planning Poker" />
-    <span>Planning Poker</span>
-  </div>
-  <div class="nav-links">    
-       <button class="invite-button" id="inviteButton">Invite Others</button>
-    <!-- New user display element -->
+<header>
+<div class="logo">
+<img alt="Planning Poker" src="spade.png"/>
+<span>Planning Poker</span>
+</div>
+<div class="nav-links">
+<button class="invite-button" id="inviteButton">Invite Others</button>
+<!-- New user display element -->
 <div class="current-user-display" id="profileMenuTrigger" style="cursor:pointer;position:relative;">
-  <div class="user-avatar" id="headerUserAvatar"></div>
-  <span id="headerUsername">User</span>
-  
-  <!-- Profile Dropdown Menu - should be INSIDE the trigger element -->
-  <div id="profileMenu" class="profile-menu">
-    <div class="profile-menu-header">
-      <div class="avatar-circle" id="profileMenuAvatar">
-        <!-- Avatar will be populated by JavaScript -->
-      </div>
-      <div>
-        <div class="profile-menu-name" id="profileMenuName">User</div>
-        <div class="profile-menu-email" id="profileMenuEmail" style="font-size:12px;color:#555;"></div>
-      </div>
-    </div>
-    <div class="profile-menu-divider"></div>
-    <button class="profile-menu-item" onclick="showLanguageModal()">
-      <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />
+<div class="user-avatar" id="headerUserAvatar"></div>
+<span id="headerUsername">User</span>
+<!-- Profile Dropdown Menu - should be INSIDE the trigger element -->
+<div class="profile-menu" id="profileMenu">
+<div class="profile-menu-header">
+<div class="avatar-circle" id="profileMenuAvatar">
+<!-- Avatar will be populated by JavaScript -->
+</div>
+<div>
+<div class="profile-menu-name" id="profileMenuName">User</div>
+<div class="profile-menu-email" id="profileMenuEmail" style="font-size:12px;color:#555;"></div>
+</div>
+</div>
+<div class="profile-menu-divider"></div>
+<button class="profile-menu-item" onclick="showLanguageModal()">
+<img alt="UK Flag" class="flag-icon" src="https://flagcdn.com/gb.svg"/>
       Change Language
     </button>
-    <button class="profile-menu-item" id="uploadTicketMenuBtn">📝 Upload Ticket</button>
-    <div class="profile-menu-divider"></div>
-    <button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
-  </div>
+<button class="profile-menu-item" id="uploadTicketMenuBtn">📝 Upload Ticket</button>
+<div class="profile-menu-divider"></div>
+<button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
 </div>
-
-       
- <!-- Language Selection Modal -->
+</div>
+<!-- Language Selection Modal -->
 <div id="languageModalCustom" style="display: none;">
-  <div class="language-modal-content">
-    <div class="language-modal-header">
-      <h3>🌐 Select Language</h3>
-      <button class="close-button" onclick="hideLanguageModal()">&times;</button>
-    </div>
-    <div class="language-grid" id="languageGrid">
-      <!-- Languages will be populated dynamically -->
-    </div>
-    <div class="language-modal-footer">
-      <button id="applyLanguageBtn" class="language-apply-btn">Apply Changes</button>
-      <button onclick="hideLanguageModal()" class="language-cancel-btn">Cancel</button>
-    </div>
-  </div>
-</div>     
-</header>
+<div class="language-modal-content">
+<div class="language-modal-header">
+<h3>🌐 Select Language</h3>
+<button class="close-button" onclick="hideLanguageModal()">×</button>
+</div>
+<div class="language-grid" id="languageGrid">
+<!-- Languages will be populated dynamically -->
+</div>
+<div class="language-modal-footer">
+<button class="language-apply-btn" id="applyLanguageBtn">Apply Changes</button>
+<button class="language-cancel-btn" onclick="hideLanguageModal()">Cancel</button>
+</div>
+</div>
+</div>
+</div><button id="logOffBtn">Log Off</button></header>
 <!-- Create a completely new custom invite modal that doesn't use the same ID or classes as the original -->
 <div id="inviteModalCustom">
 <div class="modal-content">
@@ -2070,36 +2062,35 @@ font-size: 15px;
 </div>
 <!-- Custom Login Modal -->
 <div id="loginModalCustom" style="display: none;">
-  <div class="modal-content">
-    <h3>Join Planning Poker Session</h3>
-    <p>Please enter your name to join the session</p>
-    <input id="userNameInput" type="text" placeholder="Your name" />
-    <div class="button-group">
-      <button id="joinSessionWithName" class="action-button">Join Session</button>
-    </div>
-  </div>
-</div>    
+<div class="modal-content">
+<h3>Join Planning Poker Session</h3>
+<p>Please enter your name to join the session</p>
+<input id="userNameInput" placeholder="Your name" type="text"/>
+<div class="button-group">
+<button class="action-button" id="joinSessionWithName">Join Session</button>
+</div>
+</div>
+</div>
 <!-- Custom Add Ticket Modal -->
 <div id="addTicketModalCustom" style="display: none;">
-  <div class="modal-content add-ticket-modal">
-    <h3>Add New Ticket</h3>
-    <div class="input-group">
-      <label for="ticketNameInput">ID</label>
-      <input id="ticketNameInput" type="text" placeholder="Enter ticket ID">
-    </div>
-    <div class="input-group">
-      <label for="ticketDescriptionEditor">Comment</label>
-      <div id="ticketDescriptionEditor"></div>
-    </div>
-    <div class="button-group">
-      <button id="cancelAddTicket" class="cancel-button">CANCEL</button>
-      <button id="confirmAddTicket" class="confirm-button">
-        <span class="plus-icon">+</span> ADD
+<div class="modal-content add-ticket-modal">
+<h3>Add New Ticket</h3>
+<div class="input-group">
+<label for="ticketNameInput">ID</label>
+<input id="ticketNameInput" placeholder="Enter ticket ID" type="text"/>
+</div>
+<div class="input-group">
+<label for="ticketDescriptionEditor">Comment</label>
+<div id="ticketDescriptionEditor"></div>
+</div>
+<div class="button-group">
+<button class="cancel-button" id="cancelAddTicket">CANCEL</button>
+<button class="confirm-button" id="confirmAddTicket">
+<span class="plus-icon">+</span> ADD
       </button>
-    </div>
-  </div>
-</div>    
-
+</div>
+</div>
+</div>
 <div class="container">
 <div class="sidebar">
 <h3>Current Members</h3>
@@ -2119,11 +2110,11 @@ font-size: 15px;
 <!-- Simple no stories message -->
 <div class="no-stories-message" id="noStoriesMessage">
         No stories available. Please upload or add stories to start voting.
-      </div> 
+      </div>
 <!-- Planning cards -->
-<div class="planning-cards-section">     
+<div class="planning-cards-section">
 <h3>Planning Cards</h3>
-     <div class="card-panel">
+<div class="card-panel">
 <div class="cards" id="planningCards">
 <!--  <div class="card" data-value="0" draggable="true">0</div>
 <div class="card" data-value="1" draggable="true">1</div>
@@ -2131,8 +2122,8 @@ font-size: 15px;
 <div class="card" data-value="5" draggable="true">5</div>
 <div class="card" data-value="8" draggable="true">8</div>
 <div class="card" data-value="13" draggable="true">13</div>
-<div class="card" data-value="21" draggable="true">21</div> -->    
-</div>    
+<div class="card" data-value="21" draggable="true">21</div> -->
+</div>
 </div>
 </div>
 </div>
@@ -2151,7 +2142,6 @@ font-size: 15px;
 </div>
 </div>
 <!-- Scripts -->
-
 <script>
 
 function updateHeaderStyle() {
@@ -3260,8 +3250,7 @@ window.editStory = function(ticketData) {
 
   
   </script>
-
-   <script>
+<script>
         document.addEventListener('DOMContentLoaded', function() {
             // Check if the button exists before trying to use it
             const logOffBtn = document.getElementById('logOffBtn');
@@ -3279,7 +3268,7 @@ window.editStory = function(ticketData) {
             }
         });
     </script>
-   <!-- ENHANCED SCRIPT FOR USERNAME HANDLING -->
+<!-- ENHANCED SCRIPT FOR USERNAME HANDLING -->
 <script>
   // Global flag to track if username is ready
   window.userNameReady = false;
@@ -3480,9 +3469,8 @@ function handleLoginSubmit() {
     }
   `;
   document.head.appendChild(style);
-</script> 
-    
-    <script>
+</script>
+<script>
   // Expose modal functions to window scope for main.js to use
   window.showInviteModalCustom = function() {
     // First hide any existing modals from the original app
@@ -3540,7 +3528,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
          
 </script>
- <!-- Add this before the closing 
+<!-- Add this before the closing 
 
 
 
@@ -3549,15 +3537,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Edit Modal -->
 <div id="editModal" style="display:none; position:fixed; top:20%; left:30%; width:40%; background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000;">
-  <h3>Edit Story</h3>
-  <input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;" />
-  <textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
-  <input type="hidden" id="editModalStoryId" />
-  <button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
-  <button onclick="alert('Update logic not implemented')">Update</button>
-</div>
-
-
+<h3>Edit Story</h3>
+<input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;">
+<textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
+<input id="editModalStoryId" type="hidden"/>
+<button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+<button onclick="alert('Update logic not implemented')">Update</button>
+</input></div>
 <script>
 function setupProfileMenuHandler(retries = 10) {
   const trigger = document.getElementById('profileMenuTrigger');
@@ -3615,9 +3601,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfileMenuHandler();
 });
 </script>
-
 </body> tag 
-<script src="userlist-fix.js"></script> -->
+<script src="userlist-fix.js"></script> --&gt;
 <script>
   // Force user list fix on page interaction
   document.addEventListener('click', function() {
@@ -3626,7 +3611,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, { once: true });
 </script>
-   <script>
+<script>
   // Helper function to hide all original modals
   function hideAllOriginalModals() {
     const modals = document.querySelectorAll('.modal');
@@ -3975,15 +3960,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Edit Modal -->
 <div id="editModal" style="display:none; position:fixed; top:20%; left:30%; width:40%; background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000;">
-  <h3>Edit Story</h3>
-  <input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;" />
-  <textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
-  <input type="hidden" id="editModalStoryId" />
-  <button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
-  <button onclick="alert('Update logic not implemented')">Update</button>
+<h3>Edit Story</h3>
+<input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;"/>
+<textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
+<input id="editModalStoryId" type="hidden"/>
+<button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+<button onclick="alert('Update logic not implemented')">Update</button>
 </div>
-
-
 <script>
 function setupProfileMenuHandler(retries = 10) {
   const trigger = document.getElementById('profileMenuTrigger');
@@ -4041,8 +4024,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfileMenuHandler();
 });
 </script>
-
-</body> tag in index.html -->
+ tag in index.html --&gt;
 <script>
 // Mobile layout to match desktop view
 document.addEventListener('DOMContentLoaded', function() {
@@ -4161,11 +4143,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
-</script> 
-
-    <script type="module" src="main.js"></script>
-
-     <script>
+</script>
+<script src="main.js" type="module"></script>
+<script>
   document.getElementById('joinSessionWithName').addEventListener('click', function () {
     const nameInput = document.getElementById('userNameInput');
     const userName = nameInput.value.trim();
@@ -4198,19 +4178,17 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <!-- Translation Loading Overlay (for language-manager.js) -->
 <div id="translationOverlay" style="display:none; position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10001; background:rgba(0,0,0,0.45); color: white; font-size: 2em; align-items:center;justify-content:center; flex-direction:column;">
-  <div class="loading-spinner" style="margin-bottom:16px;"></div>
+<div class="loading-spinner" style="margin-bottom:16px;"></div>
   Translating, please wait...
 </div>
-  <!-- Premium Upgrade Modal -->
+<!-- Premium Upgrade Modal -->
 <div id="premiumModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
-  <div style="background:white; padding:24px 32px; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.2); max-width:400px; text-align:center;">
-    <h2 style="margin-bottom:12px;">🔒 Premium Feature</h2>
-    <p style="margin-bottom:20px;">This feature is only available in the Premium version.</p>
-    <button onclick="closePremiumModal()" style="padding:8px 16px; background:#753acb; color:white; border:none; border-radius:5px; cursor:pointer;">Got it</button>
-  </div>
+<div style="background:white; padding:24px 32px; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.2); max-width:400px; text-align:center;">
+<h2 style="margin-bottom:12px;">🔒 Premium Feature</h2>
+<p style="margin-bottom:20px;">This feature is only available in the Premium version.</p>
+<button onclick="closePremiumModal()" style="padding:8px 16px; background:#753acb; color:white; border:none; border-radius:5px; cursor:pointer;">Got it</button>
 </div>
-
-     
+</div>
 <script>
 
 function updateProfileMenu(username) {
@@ -4344,25 +4322,16 @@ window.addEventListener('load', () => {
 
      
 </script>
-     
-
-
-
-
-<input type="file" id="uploadInput" style="display:none" />
-
-
+<input id="uploadInput" style="display:none" type="file"/>
 <!-- Edit Modal -->
 <div id="editModal" style="display:none; position:fixed; top:20%; left:30%; width:40%; background:#fff; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:1000;">
-  <h3>Edit Story</h3>
-  <input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;" />
-  <textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
-  <input type="hidden" id="editModalStoryId" />
-  <button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
-  <button onclick="alert('Update logic not implemented')">Update</button>
+<h3>Edit Story</h3>
+<input id="editModalTitle" placeholder="Title" style="width:100%; margin-bottom:10px;"/>
+<textarea id="editModalDescription" placeholder="Description" style="width:100%; margin-bottom:10px;"></textarea>
+<input id="editModalStoryId" type="hidden"/>
+<button onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+<button onclick="alert('Update logic not implemented')">Update</button>
 </div>
-
-
 <script>
 function setupProfileMenuHandler(retries = 10) {
   const trigger = document.getElementById('profileMenuTrigger');
@@ -4421,10 +4390,4 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
-</body>
 </html>
-        
-             
-
-
-
