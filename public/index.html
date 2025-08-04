@@ -2253,7 +2253,6 @@ function updateHeaderStyle() {
         }
       }
     }
-// Initialize the user display in header - improved version
 
 function initUserHeaderDisplay() {
   // Get username from session storage - prioritize the one set through login modal
@@ -2294,7 +2293,59 @@ function initUserHeaderDisplay() {
       };
     }
   }
+  
+  // Also update the profile menu dropdown
+  updateProfileMenu(username);
 }
+
+// Function to update profile menu with user info
+function updateProfileMenu(username) {
+  const profileMenuName = document.getElementById('profileMenuName');
+  const profileMenuAvatar = document.getElementById('profileMenuAvatar');
+  
+  if (profileMenuName) {
+    profileMenuName.textContent = username || 'User';
+  }
+  
+  if (profileMenuAvatar) {
+    // Try to use the same avatar URL first
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(username || 'User')}&background=random&rounded=true`;
+    
+    const img = document.createElement('img');
+    img.src = avatarUrl;
+    img.alt = username || 'User';
+    img.style.cssText = 'width: 100%; height: 100%; border-radius: 50%; object-fit: cover;';
+    
+    img.onload = function() {
+      profileMenuAvatar.innerHTML = '';
+      profileMenuAvatar.appendChild(img);
+    };
+    
+    img.onerror = function() {
+      // Fallback to initials
+      const initials = (username || 'User').split(' ')
+        .map(part => part.charAt(0))
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+        
+      profileMenuAvatar.innerHTML = initials;
+      profileMenuAvatar.style.fontSize = '16px';
+      profileMenuAvatar.style.fontWeight = 'bold';
+      
+      const hue = Math.abs((username || 'User').split('').reduce((a, b) => {
+        return a + b.charCodeAt(0);
+      }, 0) % 360);
+      
+      profileMenuAvatar.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
+      profileMenuAvatar.style.color = 'white';
+      profileMenuAvatar.style.display = 'flex';
+      profileMenuAvatar.style.alignItems = 'center';
+      profileMenuAvatar.style.justifyContent = 'center';
+    };
+  }
+}
+     
 
 // Handle username synchronization and prompt for invited users
 document.addEventListener('DOMContentLoaded', function() {
@@ -4054,6 +4105,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 <script>
+
 document.addEventListener('DOMContentLoaded', () => {
   // Use a more robust approach with retries
   function initProfileMenu() {
@@ -4066,12 +4118,16 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Remove any existing event listeners to prevent duplicates
-    const newTrigger = trigger.cloneNode(true);
-    trigger.parentNode.replaceChild(newTrigger, trigger);
+    // Check if already initialized
+    if (trigger.hasAttribute('data-profile-initialized')) {
+      return;
+    }
 
-    // Add the event listener to the new element
-    newTrigger.addEventListener('click', (e) => {
+    // Mark as initialized
+    trigger.setAttribute('data-profile-initialized', 'true');
+
+    // Add the click event listener
+    trigger.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       console.log('Profile menu clicked');
@@ -4080,7 +4136,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Hide the dropdown when clicking outside
     document.addEventListener('click', (e) => {
-      if (!newTrigger.contains(e.target) && !menu.contains(e.target)) {
+      if (!trigger.contains(e.target) && !menu.contains(e.target)) {
         menu.classList.remove('show');
       }
     });
@@ -4091,20 +4147,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     console.log('Profile menu initialized successfully');
+    
+    // Initialize the profile menu content
+    updateProfileMenu(sessionStorage.getItem('userName'));
   }
 
   // Wait a bit for all other scripts to finish
   setTimeout(initProfileMenu, 200);
 });
 
-// Also add a fallback initialization that runs after everything else
+// Also add a fallback initialization
 window.addEventListener('load', () => {
   setTimeout(() => {
     const trigger = document.getElementById('profileMenuTrigger');
     const menu = document.getElementById('profileMenu');
     
-    if (trigger && menu && !trigger.hasAttribute('data-initialized')) {
-      trigger.setAttribute('data-initialized', 'true');
+    if (trigger && menu && !trigger.hasAttribute('data-profile-initialized')) {
+      trigger.setAttribute('data-profile-initialized', 'true');
       
       trigger.addEventListener('click', (e) => {
         e.preventDefault();
@@ -4114,9 +4173,12 @@ window.addEventListener('load', () => {
       });
       
       console.log('Profile menu fallback initialization complete');
+      updateProfileMenu(sessionStorage.getItem('userName'));
     }
   }, 500);
 });
+
+     
 
 </script>
 
@@ -4125,4 +4187,5 @@ window.addEventListener('load', () => {
 </html>
         
              
+
 
