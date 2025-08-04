@@ -3503,7 +3503,7 @@ function updateVoteVisuals(userId, vote, hasVoted = false) {
  */
 function updateStory(story) {
   const storyTitle = document.getElementById('currentStory');
-  if (storyTitle) storyTitle.textContent = story;
+  if (storyTitle) storyTitle.innerHTML  = story;
 }
 
 /**
@@ -4306,3 +4306,4 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
