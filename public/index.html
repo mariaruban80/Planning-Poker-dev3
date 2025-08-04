@@ -1999,7 +1999,11 @@ font-size: 15px;
     </div>
   </div>
   <div class="profile-menu-divider"></div>
-  <button class="profile-menu-item" id="changeLanguageBtn">🌐 Change language</button>
+  <button class="profile-menu-item" onclick="showLanguageModal()">
+              <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />
+              Change Language
+            </button>   
+<!--  <button class="profile-menu-item" id="changeLanguageBtn">🌐 Change language</button> -->
   <button class="profile-menu-item" id="uploadTicketMenuBtn">📁 Upload Ticket</button>
   <div class="profile-menu-divider"></div>
   <button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
@@ -2064,6 +2068,16 @@ font-size: 15px;
   </div>
 </div>    
 <!-- Updated Upload Section - moved to right side as per screenshot -->
+
+<div class="upload-section">
+<div class="upload-right">
+<div class="file-input" id="fileInputContainer">
+<!--  <span class="file-button">Upload Ticket</span> -->
+<input accept=".csv" id="csvInput" type="file"/>
+</div>
+<button class="invite-button" id="inviteButton">Invite Others</button>
+</div>
+</div>
 
 <div class="container">
 <div class="sidebar">
@@ -4028,4 +4042,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
