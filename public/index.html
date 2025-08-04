@@ -4110,93 +4110,65 @@ function updateProfileMenu(username) {
   } catch (error) {
     console.error('Error updating profile menu:', error);
   }
-}
-
-     document.addEventListener('DOMContentLoaded', () => {
-  // Inline version: only run if trigger & menu exist
-  setTimeout(() => {
+}   
+     
+</script>
+     <script>
+document.addEventListener('DOMContentLoaded', function() {
+  function safeProfileMenuInit() {
+   
     const trigger = document.getElementById('profileMenuTrigger');
     const menu = document.getElementById('profileMenu');
 
     if (!trigger || !menu) {
-      console.log('Profile menu elements not ready, not initializing listeners');
+  
+      console.warn('Profile menu elements not found. Skipping event listener attachment.');
       return;
     }
-
-    // Double-init protection
-    if (trigger.hasAttribute('data-profile-initialized')) {
-      return;
-    }
+    if (trigger.hasAttribute('data-profile-initialized')) return;
     trigger.setAttribute('data-profile-initialized', 'true');
 
-    // Handler for avatar click
-    trigger.addEventListener('click', (e) => {
+    trigger.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
       menu.classList.toggle('show');
+      // For clarity in debugging:
+      console.log('Profile menu clicked');
     });
 
-    // Hide dropdown if clicking elsewhere
-    document.addEventListener('click', (e) => {
-      if (!trigger.contains(e.target) && !menu.contains(e.target)) {
-        menu.classList.remove('show');
+    document.addEventListener('click', function(e) {
+      
+      const trig = document.getElementById('profileMenuTrigger');
+      const men = document.getElementById('profileMenu');
+      if (!trig || !men) return;
+      if (!trig.contains(e.target) && !men.contains(e.target)) {
+        men.classList.remove('show');
       }
     });
 
-    // Stop menu from closing itself if clicked inside
-    menu.addEventListener('click', (e) => {
+    menu.addEventListener('click', function(e) {
       e.stopPropagation();
     });
 
+    // Update the menu contents (optional)
     if (typeof updateProfileMenu === 'function') {
       updateProfileMenu(sessionStorage.getItem('userName'));
     }
+
     console.log('Profile menu initialized successfully');
-  }, 200);
+  }
+
+  // Run once on DOMContentLoaded
+  safeProfileMenuInit();
+
 });
-
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const trigger = document.getElementById('profileMenuTrigger');
-    const menu = document.getElementById('profileMenu');
-
-    console.log('Fallback check:', { trigger, menu, initialized: trigger?.hasAttribute('data-profile-initialized') });
-
-    if (trigger && menu && !trigger.hasAttribute('data-profile-initialized')) {
-      trigger.setAttribute('data-profile-initialized', 'true');
-
-      // Always check trigger/menu exist **right before using**
-      trigger.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        menu.classList.toggle('show');
-      });
-
-      document.addEventListener('click', (e) => {
-        if (!trigger.contains(e.target) && !menu.contains(e.target)) {
-          menu.classList.remove('show');
-        }
-      });
-
-      menu.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-
-      if (typeof updateProfileMenu === 'function') {
-        updateProfileMenu(sessionStorage.getItem('userName'));
-      }
-      console.log('Profile menu fallback initialization complete');
-    }
-  }, 500);
-});
-
-     
 </script>
      
 </body>
 </html>
         
              
+
 
 
 
