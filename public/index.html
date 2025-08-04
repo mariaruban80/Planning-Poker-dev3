@@ -3212,7 +3212,7 @@ document.getElementById('csvInput').addEventListener('change', function(e) {
         return false;
       };
     }
-// Make editStory function available globally for CSV stories
+
 window.editStory = function(ticketData) {
   let ticketName = ticketData.idDisplay !== undefined ? ticketData.idDisplay : '';
   let ticketDescription = ticketData.descriptionDisplay !== undefined ? ticketData.descriptionDisplay : '';
@@ -3228,9 +3228,27 @@ window.editStory = function(ticketData) {
     }
   }
 
-  document.getElementById('ticketNameInput').value = ticketName;  
-  window.quill.root.innerHTML = ticketData.descriptionDisplay || '';
+  // Set the ticket name
+  document.getElementById('ticketNameInput').value = ticketName;
+  
+  // **FIX: Handle HTML content properly in Quill editor**
+  if (window.quill) {
+    if (ticketDescription) {
+      // If it's HTML, set it as HTML; if it's plain text, convert to HTML
+      if (ticketDescription.includes('<') && ticketDescription.includes('>')) {
+        // It's HTML content
+        window.quill.root.innerHTML = ticketDescription;
+      } else {
+        // It's plain text, set as text
+        window.quill.setText(ticketDescription);
+      }
+    } else {
+      // Clear the editor
+      window.quill.setText('');
+    }
+  }
 
+  // Show modal and set editing state
   document.getElementById('addTicketModalCustom').style.display = 'flex';
   setTimeout(() => {
     document.getElementById('ticketNameInput').focus();
@@ -3244,6 +3262,7 @@ window.editStory = function(ticketData) {
   if (confirmButton) confirmButton.innerHTML = '<span class="plus-icon">✓</span> UPDATE';
 };
 
+     
   
   </script>
 
@@ -4049,6 +4068,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
