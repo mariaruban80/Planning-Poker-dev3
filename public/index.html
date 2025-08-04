@@ -3540,7 +3540,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
          
 </script>
- <!-- Add this before the closing </body> tag 
+ <!-- Add this before the closing 
+<script>
+function setupProfileMenuHandler(retries = 10) {
+  const trigger = document.getElementById('profileMenuTrigger');
+  const menu = document.getElementById('profileMenu');
+
+  if (!trigger || !menu) {
+    if (retries > 0) {
+      console.warn('[AVATAR] Retrying profile menu setup...');
+      return setTimeout(() => setupProfileMenuHandler(retries - 1), 300);
+    } else {
+      console.error('[AVATAR] profileMenuTrigger or profileMenu not found.');
+      return;
+    }
+  }
+
+  trigger.addEventListener('click', (e) => {
+    console.log("Profile menu clicked");
+    e.stopPropagation();
+    menu.classList.toggle('show');
+  });
+
+  document.addEventListener('click', () => {
+    menu.classList.remove('show');
+  });
+
+  menu.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  console.log('[AVATAR] Profile menu listener initialized.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupProfileMenuHandler();
+});
+</script>
+
+</body> tag 
 <script src="userlist-fix.js"></script> -->
 <script>
   // Force user list fix on page interaction
@@ -3890,7 +3928,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
         
 </script>
-<!-- Add this just before the closing </body> tag in index.html -->
+<!-- Add this just before the closing 
+<script>
+function setupProfileMenuHandler(retries = 10) {
+  const trigger = document.getElementById('profileMenuTrigger');
+  const menu = document.getElementById('profileMenu');
+
+  if (!trigger || !menu) {
+    if (retries > 0) {
+      console.warn('[AVATAR] Retrying profile menu setup...');
+      return setTimeout(() => setupProfileMenuHandler(retries - 1), 300);
+    } else {
+      console.error('[AVATAR] profileMenuTrigger or profileMenu not found.');
+      return;
+    }
+  }
+
+  trigger.addEventListener('click', (e) => {
+    console.log("Profile menu clicked");
+    e.stopPropagation();
+    menu.classList.toggle('show');
+  });
+
+  document.addEventListener('click', () => {
+    menu.classList.remove('show');
+  });
+
+  menu.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  console.log('[AVATAR] Profile menu listener initialized.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupProfileMenuHandler();
+});
+</script>
+
+</body> tag in index.html -->
 <script>
 // Mobile layout to match desktop view
 document.addEventListener('DOMContentLoaded', function() {
@@ -4110,65 +4186,131 @@ function updateProfileMenu(username) {
   } catch (error) {
     console.error('Error updating profile menu:', error);
   }
-}   
-     
-</script>
-     <script>
-document.addEventListener('DOMContentLoaded', function() {
-  function safeProfileMenuInit() {
-   
+}
+
+     document.addEventListener('DOMContentLoaded', () => {
+  // Inline version: only run if trigger & menu exist
+  setTimeout(() => {
     const trigger = document.getElementById('profileMenuTrigger');
     const menu = document.getElementById('profileMenu');
 
     if (!trigger || !menu) {
-  
-      console.warn('Profile menu elements not found. Skipping event listener attachment.');
+      console.log('Profile menu elements not ready, not initializing listeners');
       return;
     }
-    if (trigger.hasAttribute('data-profile-initialized')) return;
+
+    // Double-init protection
+    if (trigger.hasAttribute('data-profile-initialized')) {
+      return;
+    }
     trigger.setAttribute('data-profile-initialized', 'true');
 
-    trigger.addEventListener('click', function(e) {
+    // Handler for avatar click
+    trigger.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       menu.classList.toggle('show');
-      // For clarity in debugging:
-      console.log('Profile menu clicked');
     });
 
-    document.addEventListener('click', function(e) {
-      
-      const trig = document.getElementById('profileMenuTrigger');
-      const men = document.getElementById('profileMenu');
-      if (!trig || !men) return;
-      if (!trig.contains(e.target) && !men.contains(e.target)) {
-        men.classList.remove('show');
+    // Hide dropdown if clicking elsewhere
+    document.addEventListener('click', (e) => {
+      if (!trigger.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('show');
       }
     });
 
-    menu.addEventListener('click', function(e) {
+    // Stop menu from closing itself if clicked inside
+    menu.addEventListener('click', (e) => {
       e.stopPropagation();
     });
 
-    // Update the menu contents (optional)
     if (typeof updateProfileMenu === 'function') {
       updateProfileMenu(sessionStorage.getItem('userName'));
     }
-
     console.log('Profile menu initialized successfully');
-  }
-
-  // Run once on DOMContentLoaded
-  safeProfileMenuInit();
-
+  }, 200);
 });
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const trigger = document.getElementById('profileMenuTrigger');
+    const menu = document.getElementById('profileMenu');
+
+    console.log('Fallback check:', { trigger, menu, initialized: trigger?.hasAttribute('data-profile-initialized') });
+
+    if (trigger && menu && !trigger.hasAttribute('data-profile-initialized')) {
+      trigger.setAttribute('data-profile-initialized', 'true');
+
+      // Always check trigger/menu exist **right before using**
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        menu.classList.toggle('show');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!trigger.contains(e.target) && !menu.contains(e.target)) {
+          menu.classList.remove('show');
+        }
+      });
+
+      menu.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+
+      if (typeof updateProfileMenu === 'function') {
+        updateProfileMenu(sessionStorage.getItem('userName'));
+      }
+      console.log('Profile menu fallback initialization complete');
+    }
+  }, 500);
+});
+
+     
 </script>
      
+
+<script>
+function setupProfileMenuHandler(retries = 10) {
+  const trigger = document.getElementById('profileMenuTrigger');
+  const menu = document.getElementById('profileMenu');
+
+  if (!trigger || !menu) {
+    if (retries > 0) {
+      console.warn('[AVATAR] Retrying profile menu setup...');
+      return setTimeout(() => setupProfileMenuHandler(retries - 1), 300);
+    } else {
+      console.error('[AVATAR] profileMenuTrigger or profileMenu not found.');
+      return;
+    }
+  }
+
+  trigger.addEventListener('click', (e) => {
+    console.log("Profile menu clicked");
+    e.stopPropagation();
+    menu.classList.toggle('show');
+  });
+
+  document.addEventListener('click', () => {
+    menu.classList.remove('show');
+  });
+
+  menu.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  console.log('[AVATAR] Profile menu listener initialized.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupProfileMenuHandler();
+});
+</script>
+
 </body>
 </html>
         
              
-
 
 
 
