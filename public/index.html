@@ -2027,10 +2027,10 @@ font-size: 15px;
     </div>
   </div>
   <div class="profile-menu-divider"></div>
- <button class="profile-menu-item">
-  <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />
-  Change Language
-</button>
+  <button class="profile-menu-item" onclick="showLanguageModal()">
+    <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />
+    Change Language
+  </button>
      
   <button class="profile-menu-item" id="uploadTicketMenuBtn">📝 Upload Ticket</button>
   <div class="profile-menu-divider"></div>
@@ -4055,29 +4055,67 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const trigger = document.getElementById('profileMenuTrigger');
-  const menu = document.getElementById('profileMenu');
+  // Use a more robust approach with retries
+  function initProfileMenu() {
+    const trigger = document.getElementById('profileMenuTrigger');
+    const menu = document.getElementById('profileMenu');
 
-  if (!trigger || !menu) {
-    console.error('Trigger or menu element not found.');
-    return;
+    if (!trigger || !menu) {
+      console.log('Profile menu elements not ready, retrying...');
+      setTimeout(initProfileMenu, 100);
+      return;
+    }
+
+    // Remove any existing event listeners to prevent duplicates
+    const newTrigger = trigger.cloneNode(true);
+    trigger.parentNode.replaceChild(newTrigger, trigger);
+
+    // Add the event listener to the new element
+    newTrigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Profile menu clicked');
+      menu.classList.toggle('show');
+    });
+
+    // Hide the dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!newTrigger.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('show');
+      }
+    });
+
+    // Prevent menu click from closing itself
+    menu.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    console.log('Profile menu initialized successfully');
   }
 
-  // Toggle the dropdown
-  trigger.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent bubbling
-    menu.classList.toggle('show');
-  });
+  // Wait a bit for all other scripts to finish
+  setTimeout(initProfileMenu, 200);
+});
 
-  // Hide the dropdown when clicking outside
-  document.addEventListener('click', () => {
-    menu.classList.remove('show');
-  });
-
-  // Optional: prevent menu click from closing itself
-  menu.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
+// Also add a fallback initialization that runs after everything else
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const trigger = document.getElementById('profileMenuTrigger');
+    const menu = document.getElementById('profileMenu');
+    
+    if (trigger && menu && !trigger.hasAttribute('data-initialized')) {
+      trigger.setAttribute('data-initialized', 'true');
+      
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Profile menu clicked (fallback)');
+        menu.classList.toggle('show');
+      });
+      
+      console.log('Profile menu fallback initialization complete');
+    }
+  }, 500);
 });
 
 </script>
@@ -4087,3 +4125,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </html>
         
              
+
