@@ -1700,7 +1700,29 @@ white-space: nowrap;
   height: 16px;
   accent-color: #673ab7;
 }
+/* AI Story Item Styling */
+.ai-story-item {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+}
 
+.ai-story-item > label { /* Target the label directly */
+    width: 100%; /* Ensure full width for click target */
+}
+
+.ai-story-item .ai-story-checkbox {
+    accent-color: #673ab7; /* Align checkbox style with existing theme */
+    margin-top: 0; /* Remove extraneous margin on checkbox */
+}
+
+.ai-story-item div {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.4;
+    white-space: pre-wrap; /* Preserve newlines and wrap text correctly */
+}
     
     </style>
 <style>
@@ -4177,6 +4199,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
