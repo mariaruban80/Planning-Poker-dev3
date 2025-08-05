@@ -89,6 +89,8 @@ function openAIEstimateModal() {
       
       const storyItem = document.createElement('div');
       storyItem.style.cssText = 'margin-bottom:15px; padding:10px; border:1px solid #e0e0e0; border-radius:6px;';
+      
+      // Fixed template literal - using proper backticks
       storyItem.innerHTML = `
         <div style="display:flex; align-items:flex-start; gap:10px;">
           <input type="checkbox" class="ai-story-checkbox" data-id="${storyId}" data-title="${title}" data-description="${description}" style="margin-top:2px;">
@@ -106,6 +108,8 @@ function openAIEstimateModal() {
   console.log('[AI_ESTIMATE] Modal content populated, showing modal');
   modal.style.display = 'flex';
 }
+
+
 // AI Estimation Modal Event Handlers
 document.addEventListener('DOMContentLoaded', function() {
   const cancelBtn = document.getElementById('aiEstimateCancel');
@@ -4445,6 +4449,16 @@ document.getElementById('aiEstimateCancel')?.addEventListener('click', () => {
   document.getElementById('aiEstimateModal').style.display = 'none';
 });
 
+document.getElementById('aiEstimateConfirm')?.addEventListener('click', () => {
+  const checkboxes = document.querySelectorAll('.ai-story-checkbox:checked');
+  if (checkboxes.length === 0) {
+    alert('Please select at least one story for estimation.');
+    return;
+  }
+	  alert(`Selected ${checkboxes.length} stories for AI estimation!`);
+  document.getElementById('aiEstimateModal').style.display = 'none';
+});
+
 // Close modal when clicking outside
 document.getElementById('aiEstimateModal')?.addEventListener('click', (e) => {
   if (e.target.id === 'aiEstimateModal') {
@@ -4490,6 +4504,7 @@ async function estimateWithAI(title, description) {
     return '?';
   }
 }
+
 
 
 
