@@ -1708,14 +1708,29 @@ white-space: nowrap;
     border-radius: 6px;
 }
 
-.ai-story-item > label { /* Target the label directly */
-    width: 100%; /* Ensure full width for click target */
+.ai-story-item label {
+    display: flex;
+    align-items: center; /* Vertically center checkbox and text */
+    gap: 10px;
+    cursor: pointer;
 }
 
 .ai-story-item .ai-story-checkbox {
-    accent-color: #673ab7; /* Align checkbox style with existing theme */
-    margin-top: 0; /* Remove extraneous margin on checkbox */
+  /*  margin-top: 3px;  Removed this to keep vertical alignment */
+    accent-color: #673ab7;
 }
+
+
+
+.ai-story-item span {
+  font-size: 14px;
+  color: #333;
+    line-height: 1.4;
+    white-space: pre-wrap;    flex: 1; /* Allow text to take available space */
+   overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;   -webkit-box-orient: vertical;
 
 .ai-story-item div {
     font-size: 14px;
@@ -4199,6 +4214,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
