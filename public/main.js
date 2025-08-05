@@ -4337,22 +4337,57 @@ function stripHtml(html) {
 }
 
 function openAIEstimateModal() {
+  console.log('[AI_ESTIMATE] Opening AI estimation modal');
+  
   const modal = document.getElementById('aiEstimateModal');
   const list = document.getElementById('aiStoryList');
+  
+  if (!modal || !list) {
+    console.error('[AI_ESTIMATE] Modal or story list element not found');
+    alert('AI Estimation modal not properly loaded. Please refresh the page.');
+    return;
+  }
+
+  // Clear previous content
   list.innerHTML = '';
 
+  // Get all story cards
   const cards = document.querySelectorAll('.story-card');
-  cards.forEach(card => {
-    const title = card.querySelector('.story-title')?.textContent || '[No title]';
-    const description = card.dataset.description || '';
-    list.innerHTML += `
-      <div style="margin-bottom:10px;">
-        <input type="checkbox" class="ai-story-checkbox" data-id="${card.id}" data-title="${title}" data-description="${description}">
-        <strong>${title}</strong><br/>
-        <small>${stripHtml(description).slice(0, 100)}...</small>
-      </div>`;
-  });
+  
+  if (cards.length === 0) {
+    list.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">No stories available for estimation.</p>';
+  } else {
+    cards.forEach(card => {
+      const title = card.querySelector('.story-title')?.textContent || '[No title]';
+      const description = card.dataset.description || '';
+      const storyId = card.id;
+      
+      // Create a more robust description preview
+      let descriptionPreview = '';
+      if (description) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = description;
+        descriptionPreview = (tempDiv.textContent || tempDiv.innerText || '').slice(0, 100);
+        if (descriptionPreview.length === 100) descriptionPreview += '...';
+      }
+      
+      const storyItem = document.createElement('div');
+      storyItem.style.cssText = 'margin-bottom:15px; padding:10px; border:1px solid #e0e0e0; border-radius:6px;';
+      storyItem.innerHTML = `
+        <div style="display:flex; align-items:flex-start; gap:10px;">
+          <input type="checkbox" class="ai-story-checkbox" data-id="${storyId}" data-title="${title}" data-description="${description}" style="margin-top:2px;">
+          <div style="flex:1;">
+            <div style="font-weight:bold; margin-bottom:5px;">${title}</div>
+            ${descriptionPreview ? `<div style="font-size:13px; color:#666;">${descriptionPreview}</div>` : ''}
+          </div>
+        </div>
+      `;
+      
+      list.appendChild(storyItem);
+    });
+  }
 
+  console.log('[AI_ESTIMATE] Modal content populated, showing modal');
   modal.style.display = 'flex';
 }
 
@@ -4398,6 +4433,7 @@ async function estimateWithAI(title, description) {
     return '?';
   }
 }
+
 
 
 
