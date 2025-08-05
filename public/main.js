@@ -4330,6 +4330,75 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+function openAIEstimateModal() {
+  const modal = document.getElementById('aiEstimateModal');
+  const list = document.getElementById('aiStoryList');
+  list.innerHTML = '';
+
+  const cards = document.querySelectorAll('.story-card');
+  cards.forEach(card => {
+    const title = card.querySelector('.story-title')?.textContent || '[No title]';
+    const description = card.dataset.description || '';
+    list.innerHTML += `
+      <div style="margin-bottom:10px;">
+        <input type="checkbox" class="ai-story-checkbox" data-id="${card.id}" data-title="${title}" data-description="${description}">
+        <strong>${title}</strong><br/>
+        <small>${stripHtml(description).slice(0, 100)}...</small>
+      </div>`;
+  });
+
+  modal.style.display = 'flex';
+}
+
+document.getElementById('aiEstimateCancel')?.addEventListener('click', () => {
+  document.getElementById('aiEstimateModal').style.display = 'none';
+});
+
+document.getElementById('aiEstimateConfirm')?.addEventListener('click', async () => {
+  const checkboxes = document.querySelectorAll('.ai-story-checkbox:checked');
+  if (checkboxes.length === 0) return alert('Select at least one story.');
+
+  const stories = Array.from(checkboxes).map(cb => ({
+    id: cb.dataset.id,
+    title: cb.dataset.title,
+    description: cb.dataset.description
+  }));
+
+  for (const story of stories) {
+    const estimate = await estimateWithAI(story.title, story.description);
+    alert(`Estimate for "${story.title}": ${estimate}`);
+  }
+
+  document.getElementById('aiEstimateModal').style.display = 'none';
+});
+
+async function estimateWithAI(title, description) {
+  const fullText = `${title}. ${stripHtml(description)}`;
+
+  // You can replace this fetch with a real backend call later
+  try {
+    const response = await fetch('/api/estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description })
+    });
+
+    const data = await response.json();
+    const estimated = parseFloat(data.estimate || 0);
+    const fibonacci = [0, 1, 2, 3, 5, 8, 13, 21];
+    return fibonacci.find(f => f >= estimated) || 21;
+  } catch (e) {
+    console.warn('Fallback: AI estimate failed', e);
+    return '?';
+  }
+}
+
 
 
 
