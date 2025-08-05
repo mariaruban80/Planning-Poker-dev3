@@ -77,47 +77,42 @@ function openAIEstimateModal() {
             const description = card.dataset.description || '';
             const storyId = card.id;
 
-            let displayId = storyId;
-            let displayDescription = description;
 
-            // Improved ID and Description extraction
-            if (title.includes(':')) {
-                const parts = title.split(':', 2);
-                displayId = parts[0].trim();
-                displayDescription = parts[1].trim();
-            } else if (title && description) {
-                displayId = title.trim();
-                if (typeof description === 'string' && description.length > 0) {
-                    displayDescription = description.trim();
+            let displayText = ""; // Initialize for combined text
+
+            if (title && title.includes(':')) {
+              const parts = title.split(':', 2);
+              const displayId = parts[0].trim();
+              const displayDescription = parts[1].trim();
+                // Combine ID and first 3 lines, or just ID if no description
+                displayText = displayDescription
+                    ? `${displayId}: ${displayDescription.split('\n').slice(0, 3).join('\n')}`
+                    : displayId;
+
+
+
+            } else if (description) {
+                  displayText = description.split('\n').slice(0, 3).join('\n').trim()
+                if(title){
+                     displayText=title +": " + displayText;
                 }
-            } else if (!title && description) { //If there is no title but a description
-                displayId = description.trim().split(' ')[0]; //get the first words as id
-                displayDescription = description.substring(displayId.length).trim();
+            } else { // Fallback
+                displayText = storyId||'[No Data]'; //use story id if title and descp are null
             }
 
 
-            let descriptionPreview = '';
-            if (displayDescription) {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = displayDescription;
-                descriptionPreview = (tempDiv.textContent || tempDiv.innerText || '').trim();
-
-                // Truncate if more than 3 lines
-                const lines = descriptionPreview.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                if (lines.length > 3) {
-                    descriptionPreview = lines.slice(0, 3).join('\n') + '...';
-                }
+             //Further truncate if still too long (after combining)
+             if (displayText.length > 150) {
+                displayText = displayText.slice(0, 150) + "...";
             }
 
             const storyItem = document.createElement('div');
-            storyItem.className = 'ai-story-item'; // Added class for styling
-            storyItem.innerHTML = `
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">                </label>
-                  <input type="checkbox" class="ai-story-checkbox" data-id="${storyId}" data-title="${title}" data-description="${description}">
-                  <div>
-                    <div style="font-weight: bold;">${displayId}</div>
-                    ${descriptionPreview ? `<div>${descriptionPreview}</div>` : ''}
-                  </div>
+            storyItem.className = 'ai-story-item';
+            storyItem.innerHTML = `                <label style="display:flex; align-items:center; gap: 10px; cursor:pointer;">
+                    <input type="checkbox" class="ai-story-checkbox" data-id="${storyId}" data-title="${title}" data-description="${description}">
+                    <span>${displayText}</span>
+                </label>
+
             `;
             list.appendChild(storyItem);
         });
@@ -4520,6 +4515,7 @@ async function estimateWithAI(title, description) {
     return '?';
   }
 }
+
 
 
 
