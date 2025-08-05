@@ -52,6 +52,98 @@ function showPremiumUpgradePopup() {
     modal.style.display = 'flex';
   }
 }
+function openAIEstimateModal() {
+  console.log('[AI_ESTIMATE] Opening AI estimation modal');
+  
+  const modal = document.getElementById('aiEstimateModal');
+  const list = document.getElementById('aiStoryList');
+  
+  if (!modal || !list) {
+    console.error('[AI_ESTIMATE] Modal or story list element not found');
+    alert('AI Estimation modal not properly loaded. Please refresh the page.');
+    return;
+  }
+
+  // Clear previous content
+  list.innerHTML = '';
+
+  // Get all story cards
+  const cards = document.querySelectorAll('.story-card');
+  
+  if (cards.length === 0) {
+    list.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">No stories available for estimation.</p>';
+  } else {
+    cards.forEach(card => {
+      const title = card.querySelector('.story-title')?.textContent || '[No title]';
+      const description = card.dataset.description || '';
+      const storyId = card.id;
+      
+      // Create a more robust description preview
+      let descriptionPreview = '';
+      if (description) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = description;
+        descriptionPreview = (tempDiv.textContent || tempDiv.innerText || '').slice(0, 100);
+        if (descriptionPreview.length === 100) descriptionPreview += '...';
+      }
+      
+      const storyItem = document.createElement('div');
+      storyItem.style.cssText = 'margin-bottom:15px; padding:10px; border:1px solid #e0e0e0; border-radius:6px;';
+      storyItem.innerHTML = `
+        <div style="display:flex; align-items:flex-start; gap:10px;">
+          <input type="checkbox" class="ai-story-checkbox" data-id="${storyId}" data-title="${title}" data-description="${description}" style="margin-top:2px;">
+          <div style="flex:1;">
+            <div style="font-weight:bold; margin-bottom:5px;">${title}</div>
+            ${descriptionPreview ? `<div style="font-size:13px; color:#666;">${descriptionPreview}</div>` : ''}
+          </div>
+        </div>
+      `;
+      
+      list.appendChild(storyItem);
+    });
+  }
+
+  console.log('[AI_ESTIMATE] Modal content populated, showing modal');
+  modal.style.display = 'flex';
+}
+// AI Estimation Modal Event Handlers
+document.addEventListener('DOMContentLoaded', function() {
+  const cancelBtn = document.getElementById('aiEstimateCancel');
+  const confirmBtn = document.getElementById('aiEstimateConfirm');
+  
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      document.getElementById('aiEstimateModal').style.display = 'none';
+    });
+  }
+  
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      const checkboxes = document.querySelectorAll('.ai-story-checkbox:checked');
+      if (checkboxes.length === 0) {
+        alert('Please select at least one story for estimation.');
+        return;
+      }
+
+      const stories = Array.from(checkboxes).map(cb => ({
+        id: cb.dataset.id,
+        title: cb.dataset.title,
+        description: cb.dataset.description
+      }));
+
+      console.log('[AI_ESTIMATE] Estimating stories:', stories);
+      
+      for (const story of stories) {
+        const estimate = await estimateWithAI(story.title, story.description);
+        alert(`Estimate for "${story.title}": ${estimate}`);
+      }
+
+      document.getElementById('aiEstimateModal').style.display = 'none';
+    });
+  }
+});
+
+
 
 window.closePremiumModal = function () {
   const modal = document.getElementById('premiumModal');
@@ -192,14 +284,25 @@ document.addEventListener('DOMContentLoaded', function() {
 	window.location.href = 'About.html';
 	});			
  }			
-
-  const aiEstimateMenuBtn = document.getElementById('aiEstimateMenuBtn');
-  if (aiEstimateMenuBtn) {
-    aiEstimateMenuBtn.addEventListener('click', function () {
-      openAIEstimateModal(); // this function opens the modal
-      document.getElementById('profileMenu')?.classList.remove('show'); // close menu
-    });
-  }	
+const aiEstimateMenuBtn = document.getElementById('aiEstimateMenuBtn');
+if (aiEstimateMenuBtn) {
+  aiEstimateMenuBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('[AI_ESTIMATE] AI Estimate menu button clicked');
+    
+    // Close the profile menu
+    const profileMenu = document.getElementById('profileMenu');
+    if (profileMenu) {
+      profileMenu.classList.remove('show');
+    }
+    
+    // Call the modal function
+    openAIEstimateModal();
+  });
+} else {
+  console.error('[AI_ESTIMATE] aiEstimateMenuBtn element not found');
+}	
 /** working code commented for later release
 
 const changeLanguageBtn = document.getElementById('changeLanguageBtn');
@@ -4336,60 +4439,7 @@ function stripHtml(html) {
   return tmp.textContent || tmp.innerText || '';
 }
 
-function openAIEstimateModal() {
-  console.log('[AI_ESTIMATE] Opening AI estimation modal');
-  
-  const modal = document.getElementById('aiEstimateModal');
-  const list = document.getElementById('aiStoryList');
-  
-  if (!modal || !list) {
-    console.error('[AI_ESTIMATE] Modal or story list element not found');
-    alert('AI Estimation modal not properly loaded. Please refresh the page.');
-    return;
-  }
 
-  // Clear previous content
-  list.innerHTML = '';
-
-  // Get all story cards
-  const cards = document.querySelectorAll('.story-card');
-  
-  if (cards.length === 0) {
-    list.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">No stories available for estimation.</p>';
-  } else {
-    cards.forEach(card => {
-      const title = card.querySelector('.story-title')?.textContent || '[No title]';
-      const description = card.dataset.description || '';
-      const storyId = card.id;
-      
-      // Create a more robust description preview
-      let descriptionPreview = '';
-      if (description) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = description;
-        descriptionPreview = (tempDiv.textContent || tempDiv.innerText || '').slice(0, 100);
-        if (descriptionPreview.length === 100) descriptionPreview += '...';
-      }
-      
-      const storyItem = document.createElement('div');
-      storyItem.style.cssText = 'margin-bottom:15px; padding:10px; border:1px solid #e0e0e0; border-radius:6px;';
-      storyItem.innerHTML = `
-        <div style="display:flex; align-items:flex-start; gap:10px;">
-          <input type="checkbox" class="ai-story-checkbox" data-id="${storyId}" data-title="${title}" data-description="${description}" style="margin-top:2px;">
-          <div style="flex:1;">
-            <div style="font-weight:bold; margin-bottom:5px;">${title}</div>
-            ${descriptionPreview ? `<div style="font-size:13px; color:#666;">${descriptionPreview}</div>` : ''}
-          </div>
-        </div>
-      `;
-      
-      list.appendChild(storyItem);
-    });
-  }
-
-  console.log('[AI_ESTIMATE] Modal content populated, showing modal');
-  modal.style.display = 'flex';
-}
 
 document.getElementById('aiEstimateCancel')?.addEventListener('click', () => {
   document.getElementById('aiEstimateModal').style.display = 'none';
@@ -4433,6 +4483,7 @@ async function estimateWithAI(title, description) {
     return '?';
   }
 }
+
 
 
 
