@@ -52,63 +52,79 @@ function showPremiumUpgradePopup() {
     modal.style.display = 'flex';
   }
 }
+
 function openAIEstimateModal() {
-  console.log('[AI_ESTIMATE] Opening AI estimation modal');
-  
-  const modal = document.getElementById('aiEstimateModal');
-  const list = document.getElementById('aiStoryList');
-  
-  if (!modal || !list) {
-    console.error('[AI_ESTIMATE] Modal or story list element not found');
-    alert('AI Estimation modal not properly loaded. Please refresh the page.');
-    return;
-  }
+    console.log('[AI_ESTIMATE] Opening AI estimation modal');
 
-  // Clear previous content
-  list.innerHTML = '';
+    const modal = document.getElementById('aiEstimateModal');
+    const list = document.getElementById('aiStoryList');
 
-  // Get all story cards
-  const cards = document.querySelectorAll('.story-card');
-  
-  if (cards.length === 0) {
-    list.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">No stories available for estimation.</p>';
-  } else {
-    cards.forEach(card => {
-      const title = card.querySelector('.story-title')?.textContent || '[No title]';
-      const description = card.dataset.description || '';
-      const storyId = card.id;
-      
-      // Create a more robust description preview
-      let descriptionPreview = '';
-      if (description) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = description;
-        descriptionPreview = (tempDiv.textContent || tempDiv.innerText || '').slice(0, 100);
-        if (descriptionPreview.length === 100) descriptionPreview += '...';
-      }
-      
-      const storyItem = document.createElement('div');
-      storyItem.style.cssText = 'margin-bottom:15px; padding:10px; border:1px solid #e0e0e0; border-radius:6px;';
-      
-      // Fixed template literal - using proper backticks
-      storyItem.innerHTML = `
-        <div style="display:flex; align-items:flex-start; gap:10px;">
-          <input type="checkbox" class="ai-story-checkbox" data-id="${storyId}" data-title="${title}" data-description="${description}" style="margin-top:2px;">
-          <div style="flex:1;">
-            <div style="font-weight:bold; margin-bottom:5px;">${title}</div>
-            ${descriptionPreview ? `<div style="font-size:13px; color:#666;">${descriptionPreview}</div>` : ''}
-          </div>
-        </div>
-      `;
-      
-      list.appendChild(storyItem);
-    });
-  }
+    if (!modal || !list) {
+        console.error('[AI_ESTIMATE] Modal or list element not found');
+        alert('AI Estimation modal not loaded. Please refresh.');
+        return;
+    }
 
-  console.log('[AI_ESTIMATE] Modal content populated, showing modal');
-  modal.style.display = 'flex';
+    list.innerHTML = ''; // Clear previous content
+
+    const cards = document.querySelectorAll('.story-card');
+
+    if (cards.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">No stories for estimation.</p>';
+    } else {
+        cards.forEach(card => {
+            const title = card.querySelector('.story-title')?.textContent || '[No title]';
+            const description = card.dataset.description || '';
+            const storyId = card.id;
+
+            let displayId = storyId;
+            let displayDescription = description;
+
+            // Improved ID and Description extraction
+            if (title.includes(':')) {
+                const parts = title.split(':', 2);
+                displayId = parts[0].trim();
+                displayDescription = parts[1].trim();
+            } else if (title && description) {
+                displayId = title.trim();
+                if (typeof description === 'string' && description.length > 0) {
+                    displayDescription = description.trim();
+                }
+            } else if (!title && description) { //If there is no title but a description
+                displayId = description.trim().split(' ')[0]; //get the first words as id
+                displayDescription = description.substring(displayId.length).trim();
+            }
+
+
+            let descriptionPreview = '';
+            if (displayDescription) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = displayDescription;
+                descriptionPreview = (tempDiv.textContent || tempDiv.innerText || '').trim();
+
+                // Truncate if more than 3 lines
+                const lines = descriptionPreview.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                if (lines.length > 3) {
+                    descriptionPreview = lines.slice(0, 3).join('\n') + '...';
+                }
+            }
+
+            const storyItem = document.createElement('div');
+            storyItem.className = 'ai-story-item'; // Added class for styling
+            storyItem.innerHTML = `
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">                </label>
+                  <input type="checkbox" class="ai-story-checkbox" data-id="${storyId}" data-title="${title}" data-description="${description}">
+                  <div>
+                    <div style="font-weight: bold;">${displayId}</div>
+                    ${descriptionPreview ? `<div>${descriptionPreview}</div>` : ''}
+                  </div>
+            `;
+            list.appendChild(storyItem);
+        });
+    }
+
+    modal.style.display = 'flex';
 }
-
 
 // AI Estimation Modal Event Handlers
 document.addEventListener('DOMContentLoaded', function() {
@@ -4504,6 +4520,7 @@ async function estimateWithAI(title, description) {
     return '?';
   }
 }
+
 
 
 
