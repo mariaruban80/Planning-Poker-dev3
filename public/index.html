@@ -3673,7 +3673,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
          
 </script>
- <!-- Add this before the closing </body> tag 
+ <!-- Add this before the closing 
+<!-- CSV Import Modal -->
+<div id="csvImportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
+  <div style="background:white; padding:20px; border-radius:10px; min-width:300px; max-width:90%; width:500px;">
+    <h3>Import from CSV</h3>
+    <input type="file" id="csvInputModal" accept=".csv" />
+    <div id="csvFieldMapping" style="margin-top:20px;"></div>
+    <div id="csvConfirmSection" style="margin-top:20px; display:none;">
+      <button onclick="alert('Mapping Confirmed')" style="background:#673ab7; color:white; padding:10px 20px; border:none; border-radius:5px;">Confirm Mapping</button>
+    </div>
+    <button onclick="document.getElementById('csvImportModal').style.display='none'" style="margin-top:15px;">Close</button>
+  </div>
+</div>
+
+</body> tag 
 <script src="userlist-fix.js"></script> -->
 <script>
   // Force user list fix on page interaction
@@ -4023,7 +4037,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         
 </script>
-<!-- Add this just before the closing </body> tag in index.html -->
+<!-- Add this just before the closing 
+<!-- CSV Import Modal -->
+<div id="csvImportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
+  <div style="background:white; padding:20px; border-radius:10px; min-width:300px; max-width:90%; width:500px;">
+    <h3>Import from CSV</h3>
+    <input type="file" id="csvInputModal" accept=".csv" />
+    <div id="csvFieldMapping" style="margin-top:20px;"></div>
+    <div id="csvConfirmSection" style="margin-top:20px; display:none;">
+      <button onclick="alert('Mapping Confirmed')" style="background:#673ab7; color:white; padding:10px 20px; border:none; border-radius:5px;">Confirm Mapping</button>
+    </div>
+    <button onclick="document.getElementById('csvImportModal').style.display='none'" style="margin-top:15px;">Close</button>
+  </div>
+</div>
+
+</body> tag in index.html -->
 <script>
 // Mobile layout to match desktop view
 document.addEventListener('DOMContentLoaded', function() {
@@ -4202,13 +4230,36 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+
+<!-- CSV Import Modal -->
+<div id="csvImportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
+  <div style="background:white; padding:20px; border-radius:10px; min-width:300px; max-width:90%; width:500px;">
+    <h3>Import from CSV</h3>
+    <input type="file" id="csvInputModal" accept=".csv" />
+    <div id="csvFieldMapping" style="margin-top:20px;"></div>
+    <div id="csvConfirmSection" style="margin-top:20px; display:none;">
+      <button onclick="alert('Mapping Confirmed')" style="background:#673ab7; color:white; padding:10px 20px; border:none; border-radius:5px;">Confirm Mapping</button>
+    </div>
+    <button onclick="document.getElementById('csvImportModal').style.display='none'" style="margin-top:15px;">Close</button>
+  </div>
+</div>
+<!-- CSV Import Modal -->
+<div id="csvImportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
+  <div style="background:white; padding:20px; border-radius:10px; min-width:300px; max-width:90%; width:500px;">
+    <h3>Import from CSV</h3>
+    <input type="file" id="csvInputModal" accept=".csv" />
+    <div id="csvFieldMapping" style="margin-top:20px;"></div>
+    <div id="csvConfirmSection" style="margin-top:20px; display:none;">
+      <button onclick="alert('Mapping Confirmed')" style="background:#673ab7; color:white; padding:10px 20px; border:none; border-radius:5px;">Confirm Mapping</button>
+    </div>
+    <button onclick="document.getElementById('csvImportModal').style.display='none'" style="margin-top:15px;">Close</button>
+  </div>
+</div>
+     
+
 </body>
 </html>
 
-     
-</body>
-</html>
-        
              
 
 
