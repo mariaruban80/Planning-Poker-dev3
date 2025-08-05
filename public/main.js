@@ -193,6 +193,13 @@ document.addEventListener('DOMContentLoaded', function() {
 	});			
  }			
 
+  const aiEstimateMenuBtn = document.getElementById('aiEstimateMenuBtn');
+  if (aiEstimateMenuBtn) {
+    aiEstimateMenuBtn.addEventListener('click', function () {
+      openAIEstimateModal(); // this function opens the modal
+      document.getElementById('profileMenu')?.classList.remove('show'); // close menu
+    });
+  }	
 /** working code commented for later release
 
 const changeLanguageBtn = document.getElementById('changeLanguageBtn');
@@ -4323,6 +4330,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
