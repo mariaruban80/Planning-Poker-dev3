@@ -1608,132 +1608,6 @@ white-space: nowrap;
   display: inline-block; /* Ensure correct spacing */
   vertical-align: middle; /* Fix vertical alignment (if necessary) */
 }
-/* AI Estimation Modal - Fixed Styling */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 10002;
-}
-
-.modal-overlay.show {
-  display: flex !important;
-}
-
-#aiEstimateModal .modal-content {
-  background-color: white;
-  border-radius: 12px;
-  padding: 25px 30px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  position: relative;
-}
-
-#aiEstimateModal h3 {
-  color: #673ab7;
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-#aiStoryList {
-  max-height: 300px;
-  overflow-y: auto;
-  text-align: left;
-  margin-bottom: 20px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 15px;
-  background-color: #f9f9f9;
-}
-
-#aiEstimateModal .button-group {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-#aiEstimateConfirm, #aiEstimateCancel {
-  flex: 1;
-  padding: 12px 20px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-#aiEstimateConfirm {
-  background-color: #673ab7;
-  color: white;
-}
-
-#aiEstimateConfirm:hover {
-  background-color: #5c33a4;
-}
-
-#aiEstimateCancel {
-  background-color: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
-}
-
-#aiEstimateCancel:hover {
-  background-color: #e8e8e8;
-}
-
-.ai-story-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: #673ab7;
-}
-/* AI Story Item Styling */
-.ai-story-item {
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #eee;
-    border-radius: 6px;
-}
-
-.ai-story-item label {
-    display: flex;
-    align-items: center; /* Vertically center checkbox and text */
-    gap: 10px;
-    cursor: pointer;
-}
-
-.ai-story-item .ai-story-checkbox {
-  /*  margin-top: 3px;  Removed this to keep vertical alignment */
-    accent-color: #673ab7;
-}
-
-
-
-.ai-story-item span {
-  font-size: 14px;
-  color: #333;
-    line-height: 1.4;
-    white-space: pre-wrap;    flex: 1; /* Allow text to take available space */
-   overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;   -webkit-box-orient: vertical;
-
-
-}
     
     </style>
 <style>
@@ -2138,8 +2012,6 @@ font-size: 15px;
             </button>   
 <!--  <button class="profile-menu-item" id="changeLanguageBtn">🌐 Change language</button> -->
   <button class="profile-menu-item" id="uploadTicketMenuBtn">📁 Upload Ticket</button>
-     <!-- ✅ Add AI Estimation button here -->
-  <button class="profile-menu-item" id="aiEstimateMenuBtn">🧠 AI Estimation</button>  
   <div class="profile-menu-divider"></div>
   <button class="profile-menu-item logout" id="logoutMenuBtn">🚪 Logout</button>
 </div>
@@ -3673,21 +3545,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
          
 </script>
- <!-- Add this before the closing 
-<!-- CSV Import Modal -->
-<div id="csvImportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
-  <div style="background:white; padding:20px; border-radius:10px; min-width:300px; max-width:90%; width:500px;">
-    <h3>Import from CSV</h3>
-    <input type="file" id="csvInputModal" accept=".csv" />
-    <div id="csvFieldMapping" style="margin-top:20px;"></div>
-    <div id="csvConfirmSection" style="margin-top:20px; display:none;">
-      <button onclick="alert('Mapping Confirmed')" style="background:#673ab7; color:white; padding:10px 20px; border:none; border-radius:5px;">Confirm Mapping</button>
-    </div>
-    <button onclick="document.getElementById('csvImportModal').style.display='none'" style="margin-top:15px;">Close</button>
-  </div>
-</div>
-
-</body> tag 
+ <!-- Add this before the closing </body> tag 
 <script src="userlist-fix.js"></script> -->
 <script>
   // Force user list fix on page interaction
@@ -4037,21 +3895,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         
 </script>
-<!-- Add this just before the closing 
-<!-- CSV Import Modal -->
-<div id="csvImportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
-  <div style="background:white; padding:20px; border-radius:10px; min-width:300px; max-width:90%; width:500px;">
-    <h3>Import from CSV</h3>
-    <input type="file" id="csvInputModal" accept=".csv" />
-    <div id="csvFieldMapping" style="margin-top:20px;"></div>
-    <div id="csvConfirmSection" style="margin-top:20px; display:none;">
-      <button onclick="alert('Mapping Confirmed')" style="background:#673ab7; color:white; padding:10px 20px; border:none; border-radius:5px;">Confirm Mapping</button>
-    </div>
-    <button onclick="document.getElementById('csvImportModal').style.display='none'" style="margin-top:15px;">Close</button>
-  </div>
-</div>
-
-</body> tag in index.html -->
+<!-- Add this just before the closing </body> tag in index.html -->
 <script>
 // Mobile layout to match desktop view
 document.addEventListener('DOMContentLoaded', function() {
@@ -4218,57 +4062,12 @@ document.addEventListener('DOMContentLoaded', function() {
     <button onclick="closePremiumModal()" style="padding:8px 16px; background:#753acb; color:white; border:none; border-radius:5px; cursor:pointer;">Got it</button>
   </div>
 </div>
-<!-- AI Estimation Modal -->
-<div id="aiEstimateModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:10002; align-items:center; justify-content:center;">
-  <div style="background:white; border-radius:12px; padding:25px 30px; max-width:600px; width:90%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-    <h3 style="color:#673ab7; margin-top:0; margin-bottom:20px; font-size:20px; font-weight:600;">Select Stories for AI Estimation</h3>
-    <div id="aiStoryList" style="max-height:300px; overflow-y:auto; text-align:left; margin-bottom:20px; border:1px solid #e0e0e0; border-radius:6px; padding:15px; background-color:#f9f9f9;"></div>
-    <div style="display:flex; justify-content:space-between; gap:12px; margin-top:10px;">
-      <button id="aiEstimateCancel" style="flex:1; padding:12px 20px; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; background:#f5f5f5; color:#666; border:1px solid #ddd;">Cancel</button>
-      <button id="aiEstimateConfirm" style="flex:1; padding:12px 20px; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; background:#673ab7; color:white; border:none;">Estimate</button>
-    </div>
-  </div>
-</div>
 
-
-<!-- CSV Import Modal -->
-<div id="csvImportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
-  <div style="background:white; padding:20px; border-radius:10px; min-width:300px; max-width:90%; width:500px;">
-    <h3>Import from CSV</h3>
-    <input type="file" id="csvInputModal" accept=".csv" />
-    <div id="csvFieldMapping" style="margin-top:20px;"></div>
-    <div id="csvConfirmSection" style="margin-top:20px; display:none;">
-      <button onclick="alert('Mapping Confirmed')" style="background:#673ab7; color:white; padding:10px 20px; border:none; border-radius:5px;">Confirm Mapping</button>
-    </div>
-    <button onclick="document.getElementById('csvImportModal').style.display='none'" style="margin-top:15px;">Close</button>
-  </div>
-</div>
-<!-- CSV Import Modal -->
-<div id="csvImportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
-  <div style="background:white; padding:20px; border-radius:10px; min-width:300px; max-width:90%; width:500px;">
-    <h3>Import from CSV</h3>
-    <input type="file" id="csvInputModal" accept=".csv" />
-    <div id="csvFieldMapping" style="margin-top:20px;"></div>
-    <div id="csvConfirmSection" style="margin-top:20px; display:none;">
-      <button onclick="alert('Mapping Confirmed')" style="background:#673ab7; color:white; padding:10px 20px; border:none; border-radius:5px;">Confirm Mapping</button>
-    </div>
-    <button onclick="document.getElementById('csvImportModal').style.display='none'" style="margin-top:15px;">Close</button>
-  </div>
-</div>
      
-
 </body>
 </html>
-
+        
              
-
-
-
-
-
-
-
-
 
 
 
