@@ -4445,6 +4445,13 @@ document.getElementById('aiEstimateCancel')?.addEventListener('click', () => {
   document.getElementById('aiEstimateModal').style.display = 'none';
 });
 
+// Close modal when clicking outside
+document.getElementById('aiEstimateModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'aiEstimateModal') {
+    document.getElementById('aiEstimateModal').style.display = 'none';
+  }
+});
+
 document.getElementById('aiEstimateConfirm')?.addEventListener('click', async () => {
   const checkboxes = document.querySelectorAll('.ai-story-checkbox:checked');
   if (checkboxes.length === 0) return alert('Select at least one story.');
@@ -4483,6 +4490,7 @@ async function estimateWithAI(title, description) {
     return '?';
   }
 }
+
 
 
 
