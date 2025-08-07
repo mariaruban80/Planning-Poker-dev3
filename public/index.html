@@ -2308,6 +2308,12 @@ font-size: 15px;
   .csv-drop-text {
     font-size: 16px;
   }
+     /* Hide old CSV upload system */
+#csvInput,
+#fileInputContainer {
+  display: none !important;
+  visibility: hidden !important;
+}
 }
      
 </style>
@@ -4595,25 +4601,29 @@ function populatePreviewTable() {
 }
 
 // Process CSV import
+// Process CSV import - Fix existing function
 function processCsvImport() {
-  const summaryIndex = document.getElementById('summaryMapping').value;
+  const summaryIndex = document.getElementById('summaryMapping')?.value;
   
-  if (summaryIndex === '') {
+  if (summaryIndex === '' || summaryIndex === undefined) {
     alert('Summary field mapping is required.');
     return;
   }
   
-  const keyIndex = document.getElementById('keyMapping').value;
-  const descIndex = document.getElementById('descriptionMapping').value;
+  const keyIndex = document.getElementById('keyMapping')?.value;
+  const descIndex = document.getElementById('descriptionMapping')?.value;
+  
+  // Generate unique timestamp to avoid ID conflicts
+  const timestamp = Date.now();
   
   // Process the data
-  const processedTickets = csvData.map((row, index) => {
+  const processedTickets = csvModalData.map((row, index) => {
     const summary = row[summaryIndex] || '';
-    const key = keyIndex !== '' ? row[keyIndex] : `CSV-${index + 1}`;
-    const description = descIndex !== '' ? row[descIndex] : '';
+    const key = keyIndex !== '' && keyIndex !== undefined ? row[keyIndex] : `CSV-${index + 1}`;
+    const description = descIndex !== '' && descIndex !== undefined ? row[descIndex] : '';
     
     return {
-      id: `story_csv_${key.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')}`,
+      id: `story_${timestamp}_${index}`, // Changed from story_csv_ to avoid deletion conflicts
       text: summary,
       idDisplay: key,
       descriptionDisplay: description,
@@ -4622,25 +4632,33 @@ function processCsvImport() {
     };
   });
   
-  // Add tickets to the UI using existing functionality
-  processedTickets.forEach(ticket => {
+  console.log('Processing tickets:', processedTickets);
+  
+  // Add tickets using your existing system
+  processedTickets.forEach((ticket, index) => {
+    // Use your existing addTicketFromModal function if available
     if (window.addTicketFromModal) {
-      window.addTicketFromModal(ticket);
-    } else if (window.addTicketToUI) {
-      window.addTicketToUI(ticket, false);
+      setTimeout(() => {
+        window.addTicketFromModal(ticket);
+      }, index * 100);
+    } else {
+      // Fallback: Use existing displayCSVData approach
+      setTimeout(() => {
+        addTicketDirectly(ticket);
+      }, index * 100);
     }
   });
-  
-  // Emit to server if socket is available
-  if (window.emitCSVData) {
-    window.emitCSVData(processedTickets);
-  }
   
   // Close modal
   hideCsvUploadModal();
   
-  console.log(`Imported ${processedTickets.length} tickets from CSV`);
+  setTimeout(() => {
+    alert(`Successfully imported ${processedTickets.length} tickets from CSV`);
+  }, processedTickets.length * 100 + 500);
 }
+
+
+     
 
 </script>
 
