@@ -1979,6 +1979,339 @@ font-size: 15px;
 }
   
 </style>
+<style>
+/* CSV Upload Modal Styles */
+#csvUploadModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10002;
+}
+
+.csv-modal-content {
+  background-color: white;
+  border-radius: 12px;
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+.csv-step {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+}
+
+.csv-step.active {
+  display: flex;
+}
+
+.csv-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+.csv-modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+  flex: 1;
+  text-align: center;
+}
+
+.csv-back-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 5px 10px;
+  margin-right: 10px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.csv-back-btn:hover {
+  background-color: #e9ecef;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: #f5f5f5;
+}
+
+/* Step 1: Upload Section */
+.csv-upload-section {
+  padding: 30px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.csv-checkbox-container {
+  margin-bottom: 30px;
+}
+
+.csv-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  color: #333;
+  user-select: none;
+}
+
+.csv-checkbox-label input[type="checkbox"] {
+  margin-right: 12px;
+  width: 18px;
+  height: 18px;
+  accent-color: #673ab7;
+}
+
+.csv-dropzone {
+  flex: 1;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 60px 40px;
+  text-align: center;
+  background-color: #f9fafb;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.csv-dropzone:hover,
+.csv-dropzone.dragover {
+  border-color: #673ab7;
+  background-color: #f8f5ff;
+}
+
+.csv-drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.csv-drop-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.csv-drop-text {
+  font-size: 18px;
+  color: #6b7280;
+}
+
+.csv-choose-file-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  font-size: 18px;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.csv-choose-file-btn:hover {
+  color: #2563eb;
+}
+
+/* Step 2: Mapping Section */
+.csv-mapping-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 70vh;
+}
+
+.csv-mapping-dropdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+  padding: 25px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+.csv-mapping-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.csv-mapping-item label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.csv-mapping-select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.csv-mapping-select:focus {
+  outline: none;
+  border-color: #673ab7;
+  box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
+}
+
+.csv-mapping-select[required] {
+  border-color: #3b82f6;
+}
+
+.csv-preview-section {
+  flex: 1;
+  padding: 25px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.csv-preview-table-container {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: white;
+}
+
+.csv-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.csv-preview-table th,
+.csv-preview-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  vertical-align: top;
+}
+
+.csv-preview-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #374151;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.csv-preview-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.csv-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 25px;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+.csv-cancel-btn,
+.csv-import-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.csv-cancel-btn {
+  background-color: white;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.csv-cancel-btn:hover {
+  background-color: #f9fafb;
+}
+
+.csv-import-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.csv-import-btn:hover {
+  background-color: #2563eb;
+}
+
+.csv-import-btn:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .csv-modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .csv-mapping-dropdowns {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .csv-upload-section {
+    padding: 20px;
+  }
+  
+  .csv-dropzone {
+    padding: 40px 20px;
+    min-height: 200px;
+  }
+  
+  .csv-drop-text {
+    font-size: 16px;
+  }
+}
+     
+</style>
+     
 </head>
 <body>
 
@@ -2074,6 +2407,103 @@ font-size: 15px;
     </div>
   </div>
 </div>    
+<!-- CSV Upload Modal -->
+<div id="csvUploadModal" style="display: none;">
+  <div class="csv-modal-content">
+    <!-- Step 1: File Upload -->
+    <div id="csvUploadStep" class="csv-step active">
+      <div class="csv-modal-header">
+        <h3>Import from CSV file</h3>
+        <button class="close-button" onclick="hideCsvUploadModal()">&times;</button>
+      </div>
+      
+      <div class="csv-upload-section">
+        <div class="csv-checkbox-container">
+          <label class="csv-checkbox-label">
+            <input type="checkbox" id="useFirstRowAsHeaders" checked>
+            <span class="checkmark"></span>
+            Use first csv row as headers
+          </label>
+        </div>
+        
+        <div class="csv-dropzone" id="csvDropzone">
+          <div class="csv-drop-content">
+            <div class="csv-drop-icon">📄</div>
+            <div class="csv-drop-text">
+              <span>Drag 'n' drop some files here, or </span>
+              <button class="csv-choose-file-btn" onclick="triggerCsvFileInput()">choose file</button>
+            </div>
+          </div>
+          <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+        </div>
+      </div>
+    </div>
+    
+    <!-- Step 2: Field Mapping -->
+    <div id="csvMappingStep" class="csv-step">
+      <div class="csv-modal-header">
+        <button class="csv-back-btn" onclick="goBackToCsvUpload()">←</button>
+        <h3>Import from CSV file</h3>
+        <button class="close-button" onclick="hideCsvUploadModal()">&times;</button>
+      </div>
+      
+      <div class="csv-mapping-section">
+        <div class="csv-mapping-dropdowns">
+          <div class="csv-mapping-item">
+            <label>Summary (required)</label>
+            <select id="summaryMapping" class="csv-mapping-select" required>
+              <option value="">Select...</option>
+            </select>
+          </div>
+          
+          <div class="csv-mapping-item">
+            <label>Key</label>
+            <select id="keyMapping" class="csv-mapping-select">
+              <option value="">Select...</option>
+            </select>
+          </div>
+          
+          <div class="csv-mapping-item">
+            <label>Description</label>
+            <select id="descriptionMapping" class="csv-mapping-select">
+              <option value="">Select...</option>
+            </select>
+          </div>
+          
+          <div class="csv-mapping-item">
+            <label>Link</label>
+            <select id="linkMapping" class="csv-mapping-select">
+              <option value="">Select...</option>
+            </select>
+          </div>
+          
+          <div class="csv-mapping-item">
+            <label>Estimate</label>
+            <select id="estimateMapping" class="csv-mapping-select">
+              <option value="">Select...</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="csv-preview-section">
+          <div class="csv-preview-table-container">
+            <table class="csv-preview-table" id="csvPreviewTable">
+              <thead id="csvPreviewHeader"></thead>
+              <tbody id="csvPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="csv-modal-footer">
+          <button class="csv-cancel-btn" onclick="hideCsvUploadModal()">Cancel</button>
+          <button class="csv-import-btn" onclick="processCsvImport()">Import Issues</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+     
 <!-- Updated Upload Section - moved to right side as per screenshot -->
 
 <div class="upload-section">
@@ -3893,6 +4323,336 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+<script>
+// CSV Upload Modal Functions
+let csvData = [];
+let csvHeaders = [];
+
+// Show CSV Upload Modal
+function showCsvUploadModal() {
+  document.getElementById('csvUploadModal').style.display = 'flex';
+  document.getElementById('csvUploadStep').classList.add('active');
+  document.getElementById('csvMappingStep').classList.remove('active');
+}
+
+// Hide CSV Upload Modal
+function hideCsvUploadModal() {
+  document.getElementById('csvUploadModal').style.display = 'none';
+  document.getElementById('csvUploadStep').classList.add('active');
+  document.getElementById('csvMappingStep').classList.remove('active');
+  
+  // Reset form
+  document.getElementById('csvFileInput').value = '';
+  document.getElementById('useFirstRowAsHeaders').checked = true;
+  csvData = [];
+  csvHeaders = [];
+}
+
+// Trigger file input
+function triggerCsvFileInput() {
+  document.getElementById('csvFileInput').click();
+}
+
+// Go back to upload step
+function goBackToCsvUpload() {
+  document.getElementById('csvUploadStep').classList.add('active');
+  document.getElementById('csvMappingStep').classList.remove('active');
+}
+
+// Setup drag and drop functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const dropzone = document.getElementById('csvDropzone');
+  const fileInput = document.getElementById('csvFileInput');
+  
+  // Drag and drop events
+  dropzone.addEventListener('click', function() {
+    fileInput.click();
+  });
+  
+  dropzone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.classList.add('dragover');
+  });
+  
+  dropzone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.classList.remove('dragover');
+  });
+  
+  dropzone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
+      processCsvFile(files[0]);
+    } else {
+      alert('Please select a valid CSV file.');
+    }
+  });
+  
+  // File input change
+  fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      processCsvFile(file);
+    }
+  });
+  
+  // Update the existing CSV input click handler to use the new modal
+  const existingCsvInput = document.getElementById('csvInput');
+  if (existingCsvInput) {
+    existingCsvInput.addEventListener('change', function() {
+      // Prevent the old handler
+      return false;
+    });
+  }
+  
+  // Update the upload ticket menu button to show the new modal
+  const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
+  if (uploadTicketMenuBtn) {
+    uploadTicketMenuBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      showCsvUploadModal();
+    });
+  }
+});
+
+// Process CSV file
+function processCsvFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const csvText = e.target.result;
+    parseCsvContent(csvText);
+  };
+  reader.readAsText(file);
+}
+
+// Parse CSV content
+function parseCsvContent(csvText) {
+  const lines = csvText.trim().split('\n');
+  const useHeaders = document.getElementById('useFirstRowAsHeaders').checked;
+  
+  if (lines.length === 0) {
+    alert('The CSV file appears to be empty.');
+    return;
+  }
+  
+  // Parse CSV (simple parsing - you might want to use a more robust parser)
+  const parsedData = lines.map(line => {
+    // Simple CSV parsing - handles basic cases
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          current += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current.trim());
+    return result;
+  });
+  
+  if (useHeaders && parsedData.length > 0) {
+    csvHeaders = parsedData[0];
+    csvData = parsedData.slice(1);
+  } else {
+    csvHeaders = parsedData[0].map((_, index) => `Column ${index + 1}`);
+    csvData = parsedData;
+  }
+  
+  showMappingStep();
+}
+
+// Show mapping step
+function showMappingStep() {
+  document.getElementById('csvUploadStep').classList.remove('active');
+  document.getElementById('csvMappingStep').classList.add('active');
+  
+  populateMappingDropdowns();
+  populatePreviewTable();
+}
+
+// Populate mapping dropdowns
+function populateMappingDropdowns() {
+  const mappingSelects = [
+    'summaryMapping',
+    'keyMapping', 
+    'descriptionMapping',
+    'linkMapping',
+    'estimateMapping'
+  ];
+  
+  mappingSelects.forEach(selectId => {
+    const select = document.getElementById(selectId);
+    select.innerHTML = '<option value="">Select...</option>';
+    
+    csvHeaders.forEach((header, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = header;
+      select.appendChild(option);
+    });
+  });
+  
+  // Auto-map common fields
+  autoMapFields();
+}
+
+// Auto-map common fields
+function autoMapFields() {
+  const mappings = {
+    'summaryMapping': ['summary', 'title', 'subject', 'description', 'issue', 'story'],
+    'keyMapping': ['key', 'id', 'number', 'ticket', 'issue_id'],
+    'descriptionMapping': ['description', 'detail', 'details', 'body', 'content'],
+    'linkMapping': ['link', 'url', 'href'],
+    'estimateMapping': ['estimate', 'points', 'story_points', 'effort', 'size']
+  };
+  
+  Object.keys(mappings).forEach(selectId => {
+    const select = document.getElementById(selectId);
+    const keywords = mappings[selectId];
+    
+    for (let i = 0; i < csvHeaders.length; i++) {
+      const header = csvHeaders[i].toLowerCase();
+      if (keywords.some(keyword => header.includes(keyword))) {
+        select.value = i;
+        break;
+      }
+    }
+  });
+}
+
+// Populate preview table
+function populatePreviewTable() {
+  const header = document.getElementById('csvPreviewHeader');
+  const body = document.getElementById('csvPreviewBody');
+  
+  // Clear existing content
+  header.innerHTML = '';
+  body.innerHTML = '';
+  
+  // Create header
+  const headerRow = document.createElement('tr');
+  const previewHeaders = ['Summary', 'Key', 'Description', 'Link', 'Estimate'];
+  previewHeaders.forEach(headerText => {
+    const th = document.createElement('th');
+    th.textContent = headerText;
+    headerRow.appendChild(th);
+  });
+  header.appendChild(headerRow);
+  
+  // Create preview rows (show first 5 rows)
+  const previewData = csvData.slice(0, 5);
+  previewData.forEach(row => {
+    const tr = document.createElement('tr');
+    
+    // Get mapped values
+    const summaryIndex = document.getElementById('summaryMapping').value;
+    const keyIndex = document.getElementById('keyMapping').value;
+    const descIndex = document.getElementById('descriptionMapping').value;
+    const linkIndex = document.getElementById('linkMapping').value;
+    const estimateIndex = document.getElementById('estimateMapping').value;
+    
+    const values = [
+      summaryIndex !== '' ? (row[summaryIndex] || '') : '',
+      keyIndex !== '' ? (row[keyIndex] || '') : '',
+      descIndex !== '' ? (row[descIndex] || '') : '',
+      linkIndex !== '' ? (row[linkIndex] || '') : '',
+      estimateIndex !== '' ? (row[estimateIndex] || '') : ''
+    ];
+    
+    values.forEach(value => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      td.style.maxWidth = '200px';
+      td.style.overflow = 'hidden';
+      td.style.textOverflow = 'ellipsis';
+      tr.appendChild(td);
+    });
+    
+    body.appendChild(tr);
+  });
+  
+  // Update preview when mappings change
+  const selects = document.querySelectorAll('.csv-mapping-select');
+  selects.forEach(select => {
+    select.addEventListener('change', populatePreviewTable);
+  });
+}
+
+// Process CSV import
+function processCsvImport() {
+  const summaryIndex = document.getElementById('summaryMapping').value;
+  
+  if (summaryIndex === '') {
+    alert('Summary field mapping is required.');
+    return;
+  }
+  
+  const keyIndex = document.getElementById('keyMapping').value;
+  const descIndex = document.getElementById('descriptionMapping').value;
+  
+  // Process the data
+  const processedTickets = csvData.map((row, index) => {
+    const summary = row[summaryIndex] || '';
+    const key = keyIndex !== '' ? row[keyIndex] : `CSV-${index + 1}`;
+    const description = descIndex !== '' ? row[descIndex] : '';
+    
+    return {
+      id: `story_csv_${key.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')}`,
+      text: summary,
+      idDisplay: key,
+      descriptionDisplay: description,
+      originalText: summary,
+      originalLang: 'en'
+    };
+  });
+  
+  // Add tickets to the UI using existing functionality
+  processedTickets.forEach(ticket => {
+    if (window.addTicketFromModal) {
+      window.addTicketFromModal(ticket);
+    } else if (window.addTicketToUI) {
+      window.addTicketToUI(ticket, false);
+    }
+  });
+  
+  // Emit to server if socket is available
+  if (window.emitCSVData) {
+    window.emitCSVData(processedTickets);
+  }
+  
+  // Close modal
+  hideCsvUploadModal();
+  
+  console.log(`Imported ${processedTickets.length} tickets from CSV`);
+}
+
+</script>
+
+
+
+
+        
         
 </script>
 <!-- Add this just before the closing </body> tag in index.html -->
@@ -4068,6 +4828,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
