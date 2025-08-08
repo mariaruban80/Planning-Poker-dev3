@@ -2501,8 +2501,8 @@ font-size: 15px;
         </div>
         
         <div class="csv-modal-footer">
-          <button class="csv-cancel-btn" onclick="hideCsvUploadModal()">Cancel</button>
-          <button class="csv-import-btn" onclick="processCsvImport()">Import Issues</button>
+  <button class="csv-cancel-btn" onclick="hideCsvUploadModal()">Cancel</button>
+  <button id="importCsvBtn" class="csv-import-btn">Import Issues</button>
         </div>
       </div>
     </div>
@@ -4605,63 +4605,6 @@ function populatePreviewTable() {
   });
 }
 
-// Process CSV import
-// Process CSV import - Fix existing function
-function processCsvImport() {
-  const summaryIndex = document.getElementById('summaryMapping')?.value;
-  
-  if (summaryIndex === '' || summaryIndex === undefined) {
-    alert('Summary field mapping is required.');
-    return;
-  }
-  
-  const keyIndex = document.getElementById('keyMapping')?.value;
-  const descIndex = document.getElementById('descriptionMapping')?.value;
-  
-  // Generate unique timestamp to avoid ID conflicts
-  const timestamp = Date.now();
-  
-  // Process the data
-  const processedTickets = csvModalData.map((row, index) => {
-    const summary = row[summaryIndex] || '';
-    const key = keyIndex !== '' && keyIndex !== undefined ? row[keyIndex] : `CSV-${index + 1}`;
-    const description = descIndex !== '' && descIndex !== undefined ? row[descIndex] : '';
-    
-    return {
-      id: `story_${timestamp}_${index}`, // Changed from story_csv_ to avoid deletion conflicts
-      text: summary,
-      idDisplay: key,
-      descriptionDisplay: description,
-      originalText: summary,
-      originalLang: 'en'
-    };
-  });
-  
-  console.log('Processing tickets:', processedTickets);
-  
-  // Add tickets using your existing system
-  processedTickets.forEach((ticket, index) => {
-    // Use your existing addTicketFromModal function if available
-    if (window.addTicketFromModal) {
-      setTimeout(() => {
-        window.addTicketFromModal(ticket);
-      }, index * 100);
-    } else {
-      // Fallback: Use existing displayCSVData approach
-      setTimeout(() => {
-        addTicketDirectly(ticket);
-      }, index * 100);
-    }
-  });
-  
-  // Close modal
-  hideCsvUploadModal();
-  
-  setTimeout(() => {
-    alert(`Successfully imported ${processedTickets.length} tickets from CSV`);
-  }, processedTickets.length * 100 + 500);
-}
-
 
      
 
@@ -4846,6 +4789,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
