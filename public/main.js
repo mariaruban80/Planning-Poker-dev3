@@ -243,9 +243,8 @@ function handleCSVFile(file) {
     const reader = new FileReader();
     reader.onload = function (e) {
         const csvText = e.target.result;
-        const rows = csvText.split(/
-?
-/).filter(r => r.trim() !== "");
+      const rows = csvText.split(/\r?\n/).filter(r => r.trim() !== "");
+
         const tickets = [];
 
         rows.forEach((row, idx) => {
@@ -4396,6 +4395,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
