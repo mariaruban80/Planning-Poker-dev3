@@ -2437,7 +2437,8 @@ font-size: 15px;
             <div class="csv-drop-icon">📄</div>
             <div class="csv-drop-text">
               <span>Drag 'n' drop some files here, or </span>
-              <button class="csv-choose-file-btn" onclick="triggerCsvFileInput()">choose file</button>
+              
+                 <button class="csv-choose-file-btn">choose file</button>
             </div>
           </div>
           <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
@@ -4329,9 +4330,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-
 <script>
-// CSV Upload Modal System - COMPLETE REWRITE WITH FIXED FILE INPUT
+// CSV Upload Modal System - FIXED FILE INPUT VERSION
 let csvData = [];
 let csvHeaders = [];
 let processedCsvData = [];
@@ -4350,20 +4350,57 @@ function hideCsvUploadModal() {
   document.getElementById('csvMappingStep').classList.remove('active');
   
   // Reset form
-  document.getElementById('csvFileInput').value = '';
+  const fileInput = document.getElementById('csvFileInput');
+  if (fileInput) fileInput.value = '';
   document.getElementById('useFirstRowAsHeaders').checked = true;
   csvData = [];
   csvHeaders = [];
   processedCsvData = [];
 }
 
-// Trigger file input - FIXED VERSION
+// Trigger file input - IMPROVED VERSION
 function triggerCsvFileInput() {
   console.log('triggerCsvFileInput called');
   const fileInput = document.getElementById('csvFileInput');
   if (fileInput) {
-    console.log('File input found, clicking...');
-    fileInput.click();
+    console.log('File input found, attempting to click...');
+    
+    // Make sure the input is visible and clickable
+    fileInput.style.display = 'block';
+    fileInput.style.visibility = 'visible';
+    fileInput.style.opacity = '1';
+    fileInput.style.position = 'absolute';
+    fileInput.style.left = '-9999px';  // Move off-screen but keep accessible
+    fileInput.style.width = '1px';
+    fileInput.style.height = '1px';
+    
+    // Try multiple methods to trigger the click
+    try {
+      fileInput.focus();
+      fileInput.click();
+    } catch (e) {
+      console.error('Error clicking file input:', e);
+      
+      // Fallback: create a new temporary input
+      const tempInput = document.createElement('input');
+      tempInput.type = 'file';
+      tempInput.accept = '.csv';
+      tempInput.style.display = 'none';
+      
+      tempInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file && file.name.toLowerCase().endsWith('.csv')) {
+          console.log('Processing CSV file:', file.name);
+          processCsvFile(file);
+        } else if (file) {
+          alert('Please select a valid CSV file.');
+        }
+        document.body.removeChild(tempInput);
+      };
+      
+      document.body.appendChild(tempInput);
+      tempInput.click();
+    }
   } else {
     console.error('File input not found!');
   }
@@ -4677,11 +4714,11 @@ function createStoryCardManually(ticketData) {
   storyList.appendChild(storyCard);
 }
 
-// Setup drag and drop functionality and event listeners - FIXED VERSION
+// Setup drag and drop functionality and event listeners - IMPROVED VERSION
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Setting up CSV modal event listeners...');
   
-  // Wait a bit for all elements to be ready
+  // Wait for elements to be ready and ensure file input is properly styled
   setTimeout(() => {
     const dropzone = document.getElementById('csvDropzone');
     const fileInput = document.getElementById('csvFileInput');
@@ -4700,8 +4737,20 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // FIXED: Choose file button click handler
+    // Fix file input styling to ensure it's clickable
+    fileInput.style.position = 'absolute';
+    fileInput.style.left = '-9999px';
+    fileInput.style.opacity = '0';
+    fileInput.style.width = '1px';
+    fileInput.style.height = '1px';
+    fileInput.style.display = 'block';
+    fileInput.style.visibility = 'visible';
+    
+    // Choose file button click handler - REMOVE onclick from HTML first
     if (chooseFileBtn) {
+      // Remove any inline onclick handlers
+      chooseFileBtn.removeAttribute('onclick');
+      
       chooseFileBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -4710,8 +4759,13 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
     
-    // Dropzone click handler  
+    // Dropzone click handler - but prevent double triggering
     dropzone.addEventListener('click', function(e) {
+      // Don't trigger if the click was on the choose file button
+      if (e.target === chooseFileBtn || chooseFileBtn.contains(e.target)) {
+        return;
+      }
+      
       e.preventDefault();
       e.stopPropagation();
       console.log('Dropzone clicked');
@@ -4787,7 +4841,9 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Remove all event listeners by cloning
       const newOldInput = oldCsvInput.cloneNode(true);
-      oldCsvInput.parentNode.replaceChild(newOldInput, oldCsvInput);
+      if (oldCsvInput.parentNode) {
+        oldCsvInput.parentNode.replaceChild(newOldInput, oldCsvInput);
+      }
     }
     
     // Hide the old file input container
@@ -4807,6 +4863,9 @@ window.triggerCsvFileInput = triggerCsvFileInput;
 window.goBackToCsvUpload = goBackToCsvUpload;
 window.importCsvData = importCsvData;
 </script>
+
+     
+
 
         
 
@@ -4862,6 +4921,7 @@ window.importCsvData = importCsvData;
 </html>
         
              
+
 
 
 
