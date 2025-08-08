@@ -156,7 +156,6 @@ document.addEventListener('DOMContentLoaded', function() {
   trigger.addEventListener('click', function(e) {
     e.stopPropagation();
     menu.classList.toggle('show');
-    // Set avatar, name and email (if you track it), fallbacks:
     document.getElementById('profileMenuAvatar').src = document.querySelector('#headerUserAvatar img')?.src || '';
     document.getElementById('profileMenuName').textContent = sessionStorage.getItem('userName') || "User";
     document.getElementById('profileMenuEmail').textContent = sessionStorage.getItem('userEmail') || "";
@@ -169,86 +168,85 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-const csvInputEl = document.getElementById('csvInput');
-if (csvInputEl) {
+  /** ---------- CSV INPUT HANDLER ---------- **/
+  const csvInputEl = document.getElementById('csvInput');
+  if (csvInputEl) {
     csvInputEl.addEventListener('change', function () {
-        if (csvInputEl.files && csvInputEl.files.length > 0) {
-            // Store the file temporarily for Import button
-            window.selectedCSVFile = csvInputEl.files[0];
-        }
-    });
-}
-
-	
-const uploadTicketBtn = document.getElementById('uploadTicketMenuBtn');
-if (uploadTicketBtn) {
-    uploadTicketBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation(); // prevent bubbling to other listeners
-
-        const csvInput = document.getElementById('csvInput');
-        if (csvInput) {
-            csvInput.value = ''; // reset so selecting the same file re-triggers change
-            csvInput.click();    // open OS file dialog once
-        }
-
-        menu.classList.remove('show');
-    });
-}
-
-
-
-  const logoutMenuBtn =  document.getElementById('logoutMenuBtn');
- if(typeof(logoutMenuBtn) != undefined &&  logoutMenuBtn != null)
- {		
-
-	logoutMenuBtn.addEventListener('click', function() {
-	sessionStorage.clear();
-	window.location.href = 'About.html';
-	});			
- }			
-
-/** working code commented for later release
-
-const changeLanguageBtn = document.getElementById('changeLanguageBtn');
-
-  if (changeLanguageBtn) {
-    changeLanguageBtn.addEventListener('click', function () {
-      if (typeof window.showLanguageModal === 'function') {
-        window.showLanguageModal();
-      } else {
-        console.error('❌ showLanguageModal is not defined');
+      if (csvInputEl.files && csvInputEl.files.length > 0) {
+        // Store the file temporarily for Import button
+        window.selectedCSVFile = csvInputEl.files[0];
       }
     });
-  } else {
-    console.log('❌ changeLanguageBtn element does not exist in HTML');
-  } */
+  }
 
-const changeLanguageBtn = document.getElementById('changeLanguageBtn');
+  /** ---------- UPLOAD TICKET MENU OPTION ---------- **/
+  const uploadTicketBtn = document.getElementById('uploadTicketMenuBtn');
+  if (uploadTicketBtn) {
+    uploadTicketBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation(); // prevent bubbling to other listeners
+      if (csvInputEl) {
+        csvInputEl.value = ''; // reset so selecting the same file re-triggers change
+        csvInputEl.click();    // open OS file dialog once
+      }
+      menu.classList.remove('show');
+    });
+  }
 
-if (changeLanguageBtn) {
-  changeLanguageBtn.addEventListener('click', function () {
-    const isGuest = isGuestUser(); // assumes you have this function
-    if (isGuest || !isPremiumUser) {
-      showPremiumUpgradePopup(); // already discussed
-    } else {
-      window.showLanguageModal();
-    }
-  });
-}
+  /** ---------- IMPORT BUTTON IN MODAL ---------- **/
+  const importCsvBtn = document.getElementById('importCsvBtn');
+  if (importCsvBtn) {
+    importCsvBtn.addEventListener('click', function () {
+      if (!window.selectedCSVFile) {
+        alert('Please choose a file first.');
+        return;
+      }
+      handleCSVFile(window.selectedCSVFile);
+      window.selectedCSVFile = null; // clear after import
+    });
+  }
 
+  /** ---------- CSV FILE PROCESSING ---------- **/
+  function handleCSVFile(file) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const csvText = e.target.result;
+      emitCSVData(csvText); // existing function in your app to send data
+    };
+    reader.readAsText(file);
+  }
 
-	
-const quillContainer = document.getElementById('ticketDescriptionEditor');
+  /** ---------- LOGOUT ---------- **/
+  const logoutMenuBtn =  document.getElementById('logoutMenuBtn');
+  if (logoutMenuBtn) {
+    logoutMenuBtn.addEventListener('click', function() {
+      sessionStorage.clear();
+      window.location.href = 'About.html';
+    });
+  }
+
+  /** ---------- CHANGE LANGUAGE ---------- **/
+  const changeLanguageBtn = document.getElementById('changeLanguageBtn');
+  if (changeLanguageBtn) {
+    changeLanguageBtn.addEventListener('click', function () {
+      const isGuest = isGuestUser();
+      if (isGuest || !isPremiumUser) {
+        showPremiumUpgradePopup();
+      } else {
+        window.showLanguageModal();
+      }
+    });
+  }
+
+  /** ---------- QUILL EDITOR ---------- **/
+  const quillContainer = document.getElementById('ticketDescriptionEditor');
   if (quillContainer) {
     window.quill = new Quill('#ticketDescriptionEditor', {
       theme: 'snow'
     });
   }
-	
+});
 
-
-}); //End document add Event listener
 
 
 
@@ -4338,6 +4336,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
