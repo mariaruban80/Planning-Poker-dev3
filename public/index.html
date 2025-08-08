@@ -4548,43 +4548,36 @@ function populatePreviewTable() {
 
 // Process and import CSV data - THIS IS THE KEY MISSING FUNCTION
 function importCsvData() {
-  // Get mapping selections
-  const summaryIndex = document.getElementById('summaryMapping').value;
-  const keyIndex = document.getElementById('keyMapping').value;
-  const descIndex = document.getElementById('descriptionMapping').value;
-  
-  // Validate that at least summary is selected
-  if (summaryIndex === '') {
-    alert('Please select a Summary field to continue.');
-    return;
-  }
-  
-  // Clear previous processed data
-  processedCsvData = [];
-  
-  // Process each row of CSV data
-  csvData.forEach((row, index) => {
-    if (!row || row.length === 0) return; // Skip empty rows
-    
-    const summary = summaryIndex !== '' ? (row[summaryIndex] || '').trim() : '';
-    const key = keyIndex !== '' ? (row[keyIndex] || '').trim() : '';
-    const description = descIndex !== '' ? (row[descIndex] || '').trim() : '';
-    
-    // Skip rows with empty summary
-    if (!summary) return;
-    
-    // Create ticket data structure
-    const ticketData = {
-      id: `story_csv_${Date.now()}_${index}`,
-      text: summary,
-      idDisplay: key || summary,
-      descriptionDisplay: description || summary,
-      originalText: summary,
-      originalLang: 'en'
-    };
-    
-    processedCsvData.push(ticketData);
-  });
+    const summaryIndex = parseInt(document.getElementById('summaryMapping').value);
+    const keyIndex = parseInt(document.getElementById('keyMapping').value);
+    const descIndex = parseInt(document.getElementById('descriptionMapping').value);
+
+    // Validate that at least summary is selected
+    if (isNaN(summaryIndex)) {
+        alert('Please select a Summary field to continue.');
+        return;
+    }
+
+    processedCsvData = []; // Clear any previous data
+
+    csvData.forEach((row, index) => {
+        // IMPORTANT: Check for valid indices before accessing data
+        const summary = !isNaN(summaryIndex) && row[summaryIndex] ? row[summaryIndex].trim() : '';
+        const key = !isNaN(keyIndex) && row[keyIndex] ? row[keyIndex].trim() : '';
+        const description = !isNaN(descIndex) && row[descIndex] ? row[descIndex].trim() : '';
+
+        if (summary) { // Only process if summary exists
+            const ticketData = {
+                id: `story_csv_${Date.now()}_${index}`,
+                text: summary,
+                idDisplay: key || summary, // Use key if available, otherwise summary
+                descriptionDisplay: description || summary, // Use description if available, otherwise summary
+                originalText: summary,
+                originalLang: 'en'
+            };
+            processedCsvData.push(ticketData);
+        }
+    });
   
   console.log(`Processed ${processedCsvData.length} tickets from CSV`);
   
@@ -4597,25 +4590,26 @@ function importCsvData() {
 
 // Create story cards from processed CSV data
 function createStoryCardsFromCsvData() {
-  console.log('Creating story cards from CSV data...');
-  
-  // Add each ticket to the UI using the main app's logic
-  processedCsvData.forEach((ticketData, index) => {
-    console.log(`Adding ticket ${index + 1}:`, ticketData);
-    
-    // Use the main app's addTicketToUI function if available
-    if (window.addTicketToUI && typeof window.addTicketToUI === 'function') {
-      window.addTicketToUI(ticketData, false);
-    } else {
-      // Fallback: create story card manually
-      createStoryCardManually(ticketData);
-    }
-    
-    // Emit to server if socket is available
-    if (window.socket) {
-      window.socket.emit('addTicket', ticketData);
-    } else if (typeof emitAddTicket === 'function') {
-      emitAddTicket(ticketData);
+  const existingStoryIds = new Set();
+  const storyList = document.getElementById("storyList");
+  if (storyList) {
+    storyList.querySelectorAll(".story-card").forEach(card => existingStoryIds.add(card.id));
+  }
+
+  processedCsvData.forEach(ticketData => {
+    if (!existingStoryIds.has(ticketData.id)) { // Skip if already exists
+      if (typeof addTicketToUI === "function") {
+        addTicketToUI(ticketData, false); // Prefer this function if available
+      } else {
+        createStoryCardManually(ticketData); // Fallback
+      }
+
+      // Emit to the server or use main app's logic to add
+      if (window.socket) {
+        window.socket.emit("addTicket", ticketData);
+      } else if (typeof emitAddTicket === "function") {
+        emitAddTicket(ticketData);
+      }
     }
   });
   
@@ -4819,6 +4813,7 @@ window.importCsvData = importCsvData;
 </html>
         
              
+
 
 
 
