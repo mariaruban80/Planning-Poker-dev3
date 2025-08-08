@@ -228,7 +228,7 @@ if (importCsvBtn) {
         handleCSVFile(window.selectedCSVFile);
         window.selectedCSVFile = null;
 
-        // Close modal after import (optional)
+        // Close modal after import
         const csvModal = document.getElementById('csvModal');
         if (csvModal) {
             csvModal.style.display = 'none';
