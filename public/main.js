@@ -228,7 +228,7 @@ if (importCsvBtn) {
         handleCSVFile(window.selectedCSVFile);
         window.selectedCSVFile = null;
 
-        // Close modal after import
+        // Close modal after import (optional)
         const csvModal = document.getElementById('csvModal');
         if (csvModal) {
             csvModal.style.display = 'none';
@@ -237,15 +237,44 @@ if (importCsvBtn) {
 }
 
 
+  
   /** ---------- CSV FILE PROCESSING ---------- **/
 function handleCSVFile(file) {
     const reader = new FileReader();
     reader.onload = function (e) {
         const csvText = e.target.result;
-        emitCSVData(csvText); // Your existing function to create story cards
+        const rows = csvText.split(/
+?
+/).filter(r => r.trim() !== "");
+        const tickets = [];
+
+        rows.forEach((row, idx) => {
+            const cols = row.split(",");
+            if (cols.length > 0) {
+                const id = `story_csv_${Date.now()}_${idx}`;
+                const text = cols.join(" ").trim();
+                if (text) {
+                    tickets.push({ id, text, idDisplay: cols[0].trim(), descriptionDisplay: cols.slice(1).join(" ").trim() });
+                }
+            }
+        });
+
+        if (tickets.length > 0) {
+            tickets.forEach(ticket => {
+                if (typeof emitAddTicket === 'function') {
+                    emitAddTicket(ticket);
+                } else if (socket) {
+                    socket.emit('addTicket', ticket);
+                }
+                addTicketToUI(ticket, true);
+            });
+        } else {
+            alert('No valid tickets found in the CSV.');
+        }
     };
     reader.readAsText(file);
 }
+
 
   /** ---------- LOGOUT ---------- **/
   const logoutMenuBtn =  document.getElementById('logoutMenuBtn');
