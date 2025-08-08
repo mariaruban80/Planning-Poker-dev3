@@ -4331,7 +4331,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// CSV Upload Modal System - COMPLETE REWRITE
+// CSV Upload Modal System - COMPLETE REWRITE WITH FIXED FILE INPUT
 let csvData = [];
 let csvHeaders = [];
 let processedCsvData = [];
@@ -4357,9 +4357,16 @@ function hideCsvUploadModal() {
   processedCsvData = [];
 }
 
-// Trigger file input
+// Trigger file input - FIXED VERSION
 function triggerCsvFileInput() {
-  document.getElementById('csvFileInput').click();
+  console.log('triggerCsvFileInput called');
+  const fileInput = document.getElementById('csvFileInput');
+  if (fileInput) {
+    console.log('File input found, clicking...');
+    fileInput.click();
+  } else {
+    console.error('File input not found!');
+  }
 }
 
 // Go back to upload step
@@ -4370,6 +4377,7 @@ function goBackToCsvUpload() {
 
 // Process CSV file
 function processCsvFile(file) {
+  console.log('Processing CSV file:', file.name);
   const reader = new FileReader();
   reader.onload = function(e) {
     const csvText = e.target.result;
@@ -4380,6 +4388,7 @@ function processCsvFile(file) {
 
 // Parse CSV content
 function parseCsvContent(csvText) {
+  console.log('Parsing CSV content...');
   const lines = csvText.trim().split('\n');
   const useHeaders = document.getElementById('useFirstRowAsHeaders').checked;
   
@@ -4390,7 +4399,6 @@ function parseCsvContent(csvText) {
   
   // Parse CSV (simple parsing - handles basic cases)
   const parsedData = lines.map(line => {
-    // Simple CSV parsing - handles basic cases
     const result = [];
     let current = '';
     let inQuotes = false;
@@ -4426,6 +4434,7 @@ function parseCsvContent(csvText) {
     csvData = parsedData;
   }
   
+  console.log('CSV parsed successfully. Headers:', csvHeaders, 'Data rows:', csvData.length);
   showMappingStep();
 }
 
@@ -4546,38 +4555,47 @@ function populatePreviewTable() {
   });
 }
 
-// Process and import CSV data - THIS IS THE KEY MISSING FUNCTION
+// Process and import CSV data
 function importCsvData() {
-    const summaryIndex = parseInt(document.getElementById('summaryMapping').value);
-    const keyIndex = parseInt(document.getElementById('keyMapping').value);
-    const descIndex = parseInt(document.getElementById('descriptionMapping').value);
-
-    // Validate that at least summary is selected
-    if (isNaN(summaryIndex)) {
-        alert('Please select a Summary field to continue.');
-        return;
-    }
-
-    processedCsvData = []; // Clear any previous data
-
-    csvData.forEach((row, index) => {
-        // IMPORTANT: Check for valid indices before accessing data
-        const summary = !isNaN(summaryIndex) && row[summaryIndex] ? row[summaryIndex].trim() : '';
-        const key = !isNaN(keyIndex) && row[keyIndex] ? row[keyIndex].trim() : '';
-        const description = !isNaN(descIndex) && row[descIndex] ? row[descIndex].trim() : '';
-
-        if (summary) { // Only process if summary exists
-            const ticketData = {
-                id: `story_csv_${Date.now()}_${index}`,
-                text: summary,
-                idDisplay: key || summary, // Use key if available, otherwise summary
-                descriptionDisplay: description || summary, // Use description if available, otherwise summary
-                originalText: summary,
-                originalLang: 'en'
-            };
-            processedCsvData.push(ticketData);
-        }
-    });
+  console.log('Import CSV data called');
+  
+  // Get mapping selections
+  const summaryIndex = document.getElementById('summaryMapping').value;
+  const keyIndex = document.getElementById('keyMapping').value;  
+  const descIndex = document.getElementById('descriptionMapping').value;
+  
+  // Validate that at least summary is selected
+  if (summaryIndex === '') {
+    alert('Please select a Summary field to continue.');
+    return;
+  }
+  
+  // Clear previous processed data
+  processedCsvData = [];
+  
+  // Process each row of CSV data
+  csvData.forEach((row, index) => {
+    if (!row || row.length === 0) return; // Skip empty rows
+    
+    const summary = summaryIndex !== '' ? (row[summaryIndex] || '').trim() : '';
+    const key = keyIndex !== '' ? (row[keyIndex] || '').trim() : '';
+    const description = descIndex !== '' ? (row[descIndex] || '').trim() : '';
+    
+    // Skip rows with empty summary
+    if (!summary) return;
+    
+    // Create ticket data structure
+    const ticketData = {
+      id: `story_csv_${Date.now()}_${index}`,
+      text: summary,
+      idDisplay: key || summary,
+      descriptionDisplay: description || summary,
+      originalText: summary,
+      originalLang: 'en'
+    };
+    
+    processedCsvData.push(ticketData);
+  });
   
   console.log(`Processed ${processedCsvData.length} tickets from CSV`);
   
@@ -4590,24 +4608,32 @@ function importCsvData() {
 
 // Create story cards from processed CSV data
 function createStoryCardsFromCsvData() {
+  console.log('Creating story cards from CSV data...');
+  
+  // Check for existing stories to prevent duplicates
   const existingStoryIds = new Set();
-  const storyList = document.getElementById("storyList");
+  const storyList = document.getElementById('storyList');
   if (storyList) {
-    storyList.querySelectorAll(".story-card").forEach(card => existingStoryIds.add(card.id));
+    storyList.querySelectorAll('.story-card').forEach(card => existingStoryIds.add(card.id));
   }
-
-  processedCsvData.forEach(ticketData => {
-    if (!existingStoryIds.has(ticketData.id)) { // Skip if already exists
-      if (typeof addTicketToUI === "function") {
-        addTicketToUI(ticketData, false); // Prefer this function if available
+  
+  // Add each ticket to the UI using the main app's logic
+  processedCsvData.forEach((ticketData, index) => {
+    if (!existingStoryIds.has(ticketData.id)) {
+      console.log(`Adding ticket ${index + 1}:`, ticketData);
+      
+      // Use the main app's addTicketToUI function if available
+      if (window.addTicketToUI && typeof window.addTicketToUI === 'function') {
+        window.addTicketToUI(ticketData, false);
       } else {
-        createStoryCardManually(ticketData); // Fallback
+        // Fallback: create story card manually
+        createStoryCardManually(ticketData);
       }
-
-      // Emit to the server or use main app's logic to add
+      
+      // Emit to server if socket is available
       if (window.socket) {
-        window.socket.emit("addTicket", ticketData);
-      } else if (typeof emitAddTicket === "function") {
+        window.socket.emit('addTicket', ticketData);
+      } else if (typeof emitAddTicket === 'function') {
         emitAddTicket(ticketData);
       }
     }
@@ -4618,7 +4644,7 @@ function createStoryCardsFromCsvData() {
     window.notifyStoriesUpdated();
   }
   
-  // Check for stories and update UI
+  // Check for stories and update UI  
   if (typeof checkForStories === 'function') {
     checkForStories();
   }
@@ -4651,102 +4677,127 @@ function createStoryCardManually(ticketData) {
   storyList.appendChild(storyCard);
 }
 
-// Setup drag and drop functionality and event listeners
+// Setup drag and drop functionality and event listeners - FIXED VERSION
 document.addEventListener('DOMContentLoaded', function() {
-  const dropzone = document.getElementById('csvDropzone');
-  const fileInput = document.getElementById('csvFileInput');
-  const importBtn = document.getElementById('importCsvBtn');
+  console.log('Setting up CSV modal event listeners...');
   
-  if (!dropzone || !fileInput || !importBtn) {
-    console.error('CSV modal elements not found');
-    return;
-  }
-  
-  // Drag and drop events
-  dropzone.addEventListener('click', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    fileInput.click();
-  });
-  
-  dropzone.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.add('dragover');
-  });
-  
-  dropzone.addEventListener('dragleave', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.remove('dragover');
-  });
-  
-  dropzone.addEventListener('drop', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.remove('dragover');
+  // Wait a bit for all elements to be ready
+  setTimeout(() => {
+    const dropzone = document.getElementById('csvDropzone');
+    const fileInput = document.getElementById('csvFileInput');
+    const importBtn = document.getElementById('importCsvBtn');
+    const chooseFileBtn = document.querySelector('.csv-choose-file-btn');
     
-    const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
-      processCsvFile(files[0]);
-    } else {
-      alert('Please select a valid CSV file.');
+    console.log('CSV Elements found:', {
+      dropzone: !!dropzone,
+      fileInput: !!fileInput,
+      importBtn: !!importBtn,
+      chooseFileBtn: !!chooseFileBtn
+    });
+    
+    if (!dropzone || !fileInput || !importBtn) {
+      console.error('CSV modal elements not found');
+      return;
     }
-  });
-  
-  // File input change event
-  fileInput.addEventListener('change', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
     
-    const file = e.target.files[0];
-    if (file && file.name.toLowerCase().endsWith('.csv')) {
-      console.log('Processing CSV file:', file.name);
-      processCsvFile(file);
-    } else if (file) {
-      alert('Please select a valid CSV file.');
+    // FIXED: Choose file button click handler
+    if (chooseFileBtn) {
+      chooseFileBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Choose file button clicked');
+        triggerCsvFileInput();
+      });
     }
-  });
-  
-  // Import button click event - THIS WAS MISSING
-  importBtn.addEventListener('click', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Import button clicked');
-    importCsvData();
-  });
-  
-  // Update the upload ticket menu button to show the new modal
-  const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
-  if (uploadTicketMenuBtn) {
-    // Remove existing event listeners
-    const newBtn = uploadTicketMenuBtn.cloneNode(true);
-    uploadTicketMenuBtn.parentNode.replaceChild(newBtn, uploadTicketMenuBtn);
     
-    newBtn.addEventListener('click', function(e) {
+    // Dropzone click handler  
+    dropzone.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
-      console.log('Upload ticket menu clicked');
-      showCsvUploadModal();
+      console.log('Dropzone clicked');
+      triggerCsvFileInput();
     });
-  }
-  
-  // DISABLE the old CSV input to prevent conflicts
-  const oldCsvInput = document.getElementById('csvInput');
-  if (oldCsvInput) {
-    oldCsvInput.style.display = 'none';
-    oldCsvInput.disabled = true;
     
-    // Remove all event listeners by cloning
-    const newOldInput = oldCsvInput.cloneNode(true);
-    oldCsvInput.parentNode.replaceChild(newOldInput, oldCsvInput);
-  }
-  
-  // Hide the old file input container
-  const fileInputContainer = document.getElementById('fileInputContainer');
-  if (fileInputContainer) {
-    fileInputContainer.style.display = 'none';
-  }
+    // Drag and drop events
+    dropzone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add('dragover');
+    });
+    
+    dropzone.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+    });
+    
+    dropzone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
+        processCsvFile(files[0]);
+      } else {
+        alert('Please select a valid CSV file.');
+      }
+    });
+    
+    // File input change event
+    fileInput.addEventListener('change', function(e) {
+      console.log('File input changed');
+      const file = e.target.files[0];
+      if (file && file.name.toLowerCase().endsWith('.csv')) {
+        console.log('Processing CSV file:', file.name);
+        processCsvFile(file);
+      } else if (file) {
+        alert('Please select a valid CSV file.');
+      }
+    });
+    
+    // Import button click event
+    importBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Import button clicked');
+      importCsvData();
+    });
+    
+    // Update the upload ticket menu button to show the new modal
+    const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
+    if (uploadTicketMenuBtn) {
+      // Remove existing event listeners
+      const newBtn = uploadTicketMenuBtn.cloneNode(true);
+      uploadTicketMenuBtn.parentNode.replaceChild(newBtn, uploadTicketMenuBtn);
+      
+      newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Upload ticket menu clicked');
+        showCsvUploadModal();
+      });
+    }
+    
+    // DISABLE the old CSV input to prevent conflicts
+    const oldCsvInput = document.getElementById('csvInput');
+    if (oldCsvInput) {
+      oldCsvInput.style.display = 'none';
+      oldCsvInput.disabled = true;
+      
+      // Remove all event listeners by cloning
+      const newOldInput = oldCsvInput.cloneNode(true);
+      oldCsvInput.parentNode.replaceChild(newOldInput, oldCsvInput);
+    }
+    
+    // Hide the old file input container
+    const fileInputContainer = document.getElementById('fileInputContainer');
+    if (fileInputContainer) {
+      fileInputContainer.style.display = 'none';
+    }
+    
+    console.log('CSV modal setup complete');
+  }, 1000); // Wait 1 second for DOM to be fully ready
 });
 
 // Make functions available globally
@@ -4756,8 +4807,6 @@ window.triggerCsvFileInput = triggerCsvFileInput;
 window.goBackToCsvUpload = goBackToCsvUpload;
 window.importCsvData = importCsvData;
 </script>
-
-
 
         
 
@@ -4813,6 +4862,7 @@ window.importCsvData = importCsvData;
 </html>
         
              
+
 
 
 
