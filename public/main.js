@@ -169,52 +169,83 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   /** ---------- CSV INPUT HANDLER ---------- **/
-  const csvInputEl = document.getElementById('csvInput');
-  if (csvInputEl) {
+const csvInputEl = document.getElementById('csvInput');
+if (csvInputEl) {
     csvInputEl.addEventListener('change', function () {
-      if (csvInputEl.files && csvInputEl.files.length > 0) {
-        // Store the file temporarily for Import button
-        window.selectedCSVFile = csvInputEl.files[0];
-      }
+        if (csvInputEl.files && csvInputEl.files.length > 0) {
+            window.selectedCSVFile = csvInputEl.files[0];
+			
+        }
     });
-  }
+}
+/** ---------- CSV DRAG AND DROP HANDLER ---------- **/
+const dropZone = document.getElementById('csvDropZone');
+if (dropZone) {
+    dropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', function () {
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            window.selectedCSVFile = e.dataTransfer.files[0];
+        }
+    });
+}	
+	
 
   /** ---------- UPLOAD TICKET MENU OPTION ---------- **/
-  const uploadTicketBtn = document.getElementById('uploadTicketMenuBtn');
-  if (uploadTicketBtn) {
+const uploadTicketBtn = document.getElementById('uploadTicketMenuBtn');
+if (uploadTicketBtn) {
     uploadTicketBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation(); // prevent bubbling to other listeners
-      if (csvInputEl) {
-        csvInputEl.value = ''; // reset so selecting the same file re-triggers change
-        csvInputEl.click();    // open OS file dialog once
-      }
-      menu.classList.remove('show');
+        e.preventDefault();
+        e.stopPropagation();
+
+        const csvModal = document.getElementById('csvModal');
+        if (csvModal) {
+            csvModal.style.display = 'flex';
+        }
+
+        menu.classList.remove('show');
     });
-  }
+}
+
 
   /** ---------- IMPORT BUTTON IN MODAL ---------- **/
-  const importCsvBtn = document.getElementById('importCsvBtn');
-  if (importCsvBtn) {
+const importCsvBtn = document.getElementById('importCsvBtn');
+if (importCsvBtn) {
     importCsvBtn.addEventListener('click', function () {
-      if (!window.selectedCSVFile) {
-        alert('Please choose a file first.');
-        return;
-      }
-      handleCSVFile(window.selectedCSVFile);
-      window.selectedCSVFile = null; // clear after import
+        if (!window.selectedCSVFile) {
+            alert('Please choose a file first.');
+            return;
+        }
+        handleCSVFile(window.selectedCSVFile);
+        window.selectedCSVFile = null;
+
+        // Close modal after import (optional)
+        const csvModal = document.getElementById('csvModal');
+        if (csvModal) {
+            csvModal.style.display = 'none';
+        }
     });
-  }
+}
+
 
   /** ---------- CSV FILE PROCESSING ---------- **/
-  function handleCSVFile(file) {
+function handleCSVFile(file) {
     const reader = new FileReader();
     reader.onload = function (e) {
-      const csvText = e.target.result;
-      emitCSVData(csvText); // existing function in your app to send data
+        const csvText = e.target.result;
+        emitCSVData(csvText); // Your existing function to create story cards
     };
     reader.readAsText(file);
-  }
+}
 
   /** ---------- LOGOUT ---------- **/
   const logoutMenuBtn =  document.getElementById('logoutMenuBtn');
@@ -4336,6 +4367,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
