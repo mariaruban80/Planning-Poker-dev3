@@ -169,18 +169,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Upload Ticket triggers the file input
-  const uploadTicketBtn = document.getElementById('uploadTicketMenuBtn');		
+const csvInputEl = document.getElementById('csvInput');
+if (csvInputEl) {
+    csvInputEl.addEventListener('change', function () {
+        if (csvInputEl.files && csvInputEl.files.length > 0) {
+            // Store the file temporarily for Import button
+            window.selectedCSVFile = csvInputEl.files[0];
+        }
+    });
+}
 
- if(typeof(uploadTicketBtn) != undefined &&  uploadTicketBtn != null)
- {	
+	
+const uploadTicketBtn = document.getElementById('uploadTicketMenuBtn');
+if (uploadTicketBtn) {
+    uploadTicketBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation(); // prevent bubbling to other listeners
 
-	uploadTicketBtn.addEventListener('click', function(e) {
-	e.preventDefault();
-	 document.getElementById('csvInput').click();
-	menu.classList.remove('show');
-	              });		
-	    }	
+        const csvInput = document.getElementById('csvInput');
+        if (csvInput) {
+            csvInput.value = ''; // reset so selecting the same file re-triggers change
+            csvInput.click();    // open OS file dialog once
+        }
+
+        menu.classList.remove('show');
+    });
+}
+
 
 
   const logoutMenuBtn =  document.getElementById('logoutMenuBtn');
@@ -4323,6 +4338,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
