@@ -2501,8 +2501,8 @@ font-size: 15px;
         </div>
         
         <div class="csv-modal-footer">
-  <button class="csv-cancel-btn" onclick="hideCsvUploadModal()">Cancel</button>
-  <button id="importCsvBtn" class="csv-import-btn">Import Issues</button>
+  <button class="csv-cancel-btn" onclick="hideCsvUploadModal()">Cancel</button>             
+  <button id="importCsvBtn" class="csv-import-btn" onclick="importCsvData()">Import Issues</button>  
         </div>
       </div>
     </div>
@@ -4329,10 +4329,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-<script>
 
+<script>
+// CSV Upload Modal System - COMPLETE REWRITE
 let csvData = [];
 let csvHeaders = [];
+let processedCsvData = [];
 
 // Show CSV Upload Modal
 function showCsvUploadModal() {
@@ -4352,6 +4354,7 @@ function hideCsvUploadModal() {
   document.getElementById('useFirstRowAsHeaders').checked = true;
   csvData = [];
   csvHeaders = [];
+  processedCsvData = [];
 }
 
 // Trigger file input
@@ -4364,68 +4367,6 @@ function goBackToCsvUpload() {
   document.getElementById('csvUploadStep').classList.add('active');
   document.getElementById('csvMappingStep').classList.remove('active');
 }
-
-// Setup drag and drop functionality
-document.addEventListener('DOMContentLoaded', function() {
-  const dropzone = document.getElementById('csvDropzone');
-  const fileInput = document.getElementById('csvFileInput');
-  
-  // Drag and drop events
-  dropzone.addEventListener('click', function() {
-    fileInput.click();
-  });
-  
-  dropzone.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.add('dragover');
-  });
-  
-  dropzone.addEventListener('dragleave', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.remove('dragover');
-  });
-  
-  dropzone.addEventListener('drop', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.remove('dragover');
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
-      processCsvFile(files[0]);
-    } else {
-      alert('Please select a valid CSV file.');
-    }
-  });
-  
-  // File input change
-  fileInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-      processCsvFile(file);
-    }
-  });
-  
-  // Update the existing CSV input click handler to use the new modal
-  const existingCsvInput = document.getElementById('csvInput');
-  if (existingCsvInput) {
-    existingCsvInput.addEventListener('change', function() {
-      // Prevent the old handler
-      return false;
-    });
-  }
-  
-  // Update the upload ticket menu button to show the new modal
-  const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
-  if (uploadTicketMenuBtn) {
-    uploadTicketMenuBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      showCsvUploadModal();
-    });
-  }
-});
 
 // Process CSV file
 function processCsvFile(file) {
@@ -4447,7 +4388,7 @@ function parseCsvContent(csvText) {
     return;
   }
   
-  // Parse CSV (simple parsing - you might want to use a more robust parser)
+  // Parse CSV (simple parsing - handles basic cases)
   const parsedData = lines.map(line => {
     // Simple CSV parsing - handles basic cases
     const result = [];
@@ -4481,7 +4422,7 @@ function parseCsvContent(csvText) {
     csvHeaders = parsedData[0];
     csvData = parsedData.slice(1);
   } else {
-    csvHeaders = parsedData[0].map((_, index) => `Column ${index + 1}`);
+    csvHeaders = parsedData[0] ? parsedData[0].map((_, index) => `Column ${index + 1}`) : [];
     csvData = parsedData;
   }
   
@@ -4605,137 +4546,226 @@ function populatePreviewTable() {
   });
 }
 
+// Process and import CSV data - THIS IS THE KEY MISSING FUNCTION
+function importCsvData() {
+  // Get mapping selections
+  const summaryIndex = document.getElementById('summaryMapping').value;
+  const keyIndex = document.getElementById('keyMapping').value;
+  const descIndex = document.getElementById('descriptionMapping').value;
+  
+  // Validate that at least summary is selected
+  if (summaryIndex === '') {
+    alert('Please select a Summary field to continue.');
+    return;
+  }
+  
+  // Clear previous processed data
+  processedCsvData = [];
+  
+  // Process each row of CSV data
+  csvData.forEach((row, index) => {
+    if (!row || row.length === 0) return; // Skip empty rows
+    
+    const summary = summaryIndex !== '' ? (row[summaryIndex] || '').trim() : '';
+    const key = keyIndex !== '' ? (row[keyIndex] || '').trim() : '';
+    const description = descIndex !== '' ? (row[descIndex] || '').trim() : '';
+    
+    // Skip rows with empty summary
+    if (!summary) return;
+    
+    // Create ticket data structure
+    const ticketData = {
+      id: `story_csv_${Date.now()}_${index}`,
+      text: summary,
+      idDisplay: key || summary,
+      descriptionDisplay: description || summary,
+      originalText: summary,
+      originalLang: 'en'
+    };
+    
+    processedCsvData.push(ticketData);
+  });
+  
+  console.log(`Processed ${processedCsvData.length} tickets from CSV`);
+  
+  // Create story cards using the same logic as the main app
+  createStoryCardsFromCsvData();
+  
+  // Hide the modal
+  hideCsvUploadModal();
+}
 
-     
+// Create story cards from processed CSV data
+function createStoryCardsFromCsvData() {
+  console.log('Creating story cards from CSV data...');
+  
+  // Add each ticket to the UI using the main app's logic
+  processedCsvData.forEach((ticketData, index) => {
+    console.log(`Adding ticket ${index + 1}:`, ticketData);
+    
+    // Use the main app's addTicketToUI function if available
+    if (window.addTicketToUI && typeof window.addTicketToUI === 'function') {
+      window.addTicketToUI(ticketData, false);
+    } else {
+      // Fallback: create story card manually
+      createStoryCardManually(ticketData);
+    }
+    
+    // Emit to server if socket is available
+    if (window.socket) {
+      window.socket.emit('addTicket', ticketData);
+    } else if (typeof emitAddTicket === 'function') {
+      emitAddTicket(ticketData);
+    }
+  });
+  
+  // Notify that stories were updated
+  if (window.notifyStoriesUpdated && typeof window.notifyStoriesUpdated === 'function') {
+    window.notifyStoriesUpdated();
+  }
+  
+  // Check for stories and update UI
+  if (typeof checkForStories === 'function') {
+    checkForStories();
+  }
+  
+  console.log(`Successfully created ${processedCsvData.length} story cards`);
+}
 
+// Fallback function to create story card manually
+function createStoryCardManually(ticketData) {
+  const storyList = document.getElementById('storyList');
+  if (!storyList) return;
+  
+  const storyCard = document.createElement('div');
+  storyCard.className = 'story-card';
+  storyCard.id = ticketData.id;
+  storyCard.dataset.index = storyList.children.length;
+  storyCard.dataset.id = ticketData.idDisplay || '';
+  storyCard.dataset.description = ticketData.descriptionDisplay || '';
+  
+  const storyTitle = document.createElement('div');
+  storyTitle.className = 'story-title';
+  
+  if (ticketData.idDisplay && ticketData.descriptionDisplay) {
+    storyTitle.textContent = `${ticketData.idDisplay}: ${ticketData.descriptionDisplay}`;
+  } else {
+    storyTitle.textContent = ticketData.text;
+  }
+  
+  storyCard.appendChild(storyTitle);
+  storyList.appendChild(storyCard);
+}
+
+// Setup drag and drop functionality and event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  const dropzone = document.getElementById('csvDropzone');
+  const fileInput = document.getElementById('csvFileInput');
+  const importBtn = document.getElementById('importCsvBtn');
+  
+  if (!dropzone || !fileInput || !importBtn) {
+    console.error('CSV modal elements not found');
+    return;
+  }
+  
+  // Drag and drop events
+  dropzone.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInput.click();
+  });
+  
+  dropzone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.classList.add('dragover');
+  });
+  
+  dropzone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.classList.remove('dragover');
+  });
+  
+  dropzone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
+      processCsvFile(files[0]);
+    } else {
+      alert('Please select a valid CSV file.');
+    }
+  });
+  
+  // File input change event
+  fileInput.addEventListener('change', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const file = e.target.files[0];
+    if (file && file.name.toLowerCase().endsWith('.csv')) {
+      console.log('Processing CSV file:', file.name);
+      processCsvFile(file);
+    } else if (file) {
+      alert('Please select a valid CSV file.');
+    }
+  });
+  
+  // Import button click event - THIS WAS MISSING
+  importBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Import button clicked');
+    importCsvData();
+  });
+  
+  // Update the upload ticket menu button to show the new modal
+  const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
+  if (uploadTicketMenuBtn) {
+    // Remove existing event listeners
+    const newBtn = uploadTicketMenuBtn.cloneNode(true);
+    uploadTicketMenuBtn.parentNode.replaceChild(newBtn, uploadTicketMenuBtn);
+    
+    newBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Upload ticket menu clicked');
+      showCsvUploadModal();
+    });
+  }
+  
+  // DISABLE the old CSV input to prevent conflicts
+  const oldCsvInput = document.getElementById('csvInput');
+  if (oldCsvInput) {
+    oldCsvInput.style.display = 'none';
+    oldCsvInput.disabled = true;
+    
+    // Remove all event listeners by cloning
+    const newOldInput = oldCsvInput.cloneNode(true);
+    oldCsvInput.parentNode.replaceChild(newOldInput, oldCsvInput);
+  }
+  
+  // Hide the old file input container
+  const fileInputContainer = document.getElementById('fileInputContainer');
+  if (fileInputContainer) {
+    fileInputContainer.style.display = 'none';
+  }
+});
+
+// Make functions available globally
+window.showCsvUploadModal = showCsvUploadModal;
+window.hideCsvUploadModal = hideCsvUploadModal;
+window.triggerCsvFileInput = triggerCsvFileInput;
+window.goBackToCsvUpload = goBackToCsvUpload;
+window.importCsvData = importCsvData;
 </script>
 
 
 
-
         
-        
-
-<!-- Add this just before the closing </body> tag in index.html -->
-<script>
-// Mobile layout to match desktop view
-document.addEventListener('DOMContentLoaded', function() {
-  // Check if mobile device
-  const isMobile = window.innerWidth <= 1024;
-  if (isMobile) {
-    console.log("Applying mobile layout optimizations");
-    
-    // Create mobile-optimized styles
-    const mobileStyle = document.createElement('style');
-    mobileStyle.id = 'mobile-layout-inline';
-    mobileStyle.textContent = `
-      /* Mobile optimizations */
-      @media (max-width: 1024px) {
-        body {
-          overflow-x: hidden;
-        }
-        
-        /* Enable horizontal scrolling for container */
-        .container {
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          scroll-snap-type: x mandatory;
-          padding-bottom: 0 !important;
-        }
-        
-        /* Make columns fixed-width for scrolling */
-        .sidebar, .rightbar {
-          min-width: 300px;
-          scroll-snap-align: start;
-        }
-        
-        .main {
-          min-width: 600px;
-          scroll-snap-align: start;
-        }
-        
-        /* Larger touch targets */
-        .card, .story-card, .button, .user-entry, .avatar-container {
-          min-height: 44px;
-        }
-        
-        /* Touch feedback */
-        .card:active {
-          transform: scale(0.95);
-          background-color: #d6bcfa !important;
-        }
-        
-        /* Story list scrolling */
-        .story-container {
-          max-height: 400px;
-          overflow-y: auto;
-        }
-        
-        /* Larger gap between elements */
-        .avatar-row, .vote-row {
-          gap: 40px;
-        }
-        
-        /* Better visibility */
-        .vote-badge, .vote-card-space .vote-badge {
-          font-weight: bold;
-          font-size: 20px;
-        }
-        
-        /* Scale the user circle area */
-        #userCircle {
-          width: 100%;
-          max-width: 100%;
-        }
-        
-        /* Better card colors */
-        .card {
-          background-color: #e1d4f9 !important;
-        }
-        
-        /* Proper header alignment */
-        header {
-          padding: 15px 20px !important;
-        }
-      }
-    `;
-    
-    document.head.appendChild(mobileStyle);
-    
-    // Setup touch handling for cards
-    setupMobileTouchHandling();
-  }
-  
-  // Set up touch handling for mobile devices
-  function setupMobileTouchHandling() {
-    // Make cards work with touch events
-    document.querySelectorAll('.card').forEach(card => {
-      card.addEventListener('touchend', function(e) {
-        e.preventDefault();
-        
-        // Clear selections
-        document.querySelectorAll('.card').forEach(c => {
-          c.classList.remove('selected-card');
-        });
-        
-        // Select this card
-        this.classList.add('selected-card');
-        
-        // Get vote value
-        const vote = this.getAttribute('data-value');
-        const userName = sessionStorage.getItem('userName');
-        
-        // Emit vote if possible
-        if (userName && typeof window.emitVote === 'function') {
-          window.emitVote(vote, userName);
-        } else if (userName && window.socket) {
-          window.socket.emit('castVote', { vote, targetUserId: userName });
-        }
-      });
-    });
-  }
-});
-</script> 
 
     <script type="module" src="main.js"></script>
 
@@ -4789,6 +4819,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
