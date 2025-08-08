@@ -4331,7 +4331,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
-// CSV Upload Modal System - FIXED FILE INPUT VERSION
+// CSV Upload Modal System - DEFINITIVE FILE INPUT EDITION
 let csvData = [];
 let csvHeaders = [];
 let processedCsvData = [];
@@ -4341,6 +4341,15 @@ function showCsvUploadModal() {
   document.getElementById('csvUploadModal').style.display = 'flex';
   document.getElementById('csvUploadStep').classList.add('active');
   document.getElementById('csvMappingStep').classList.remove('active');
+
+  // Focus management for accessibility
+  const fileInput = document.getElementById('csvFileInput');
+  if (fileInput) {
+      fileInput.tabIndex = 0;
+      fileInput.focus(); // Set focus
+  }
+
+
 }
 
 // Hide CSV Upload Modal
@@ -4348,62 +4357,50 @@ function hideCsvUploadModal() {
   document.getElementById('csvUploadModal').style.display = 'none';
   document.getElementById('csvUploadStep').classList.add('active');
   document.getElementById('csvMappingStep').classList.remove('active');
-  
+
   // Reset form
   const fileInput = document.getElementById('csvFileInput');
-  if (fileInput) fileInput.value = '';
+    if (fileInput)  fileInput.value = ''; // Clear the file input
   document.getElementById('useFirstRowAsHeaders').checked = true;
   csvData = [];
   csvHeaders = [];
   processedCsvData = [];
 }
 
-// Trigger file input - IMPROVED VERSION
+// Trigger file input - FORCED CLICK
 function triggerCsvFileInput() {
-  console.log('triggerCsvFileInput called');
-  const fileInput = document.getElementById('csvFileInput');
-  if (fileInput) {
-    console.log('File input found, attempting to click...');
-    
-    // Make sure the input is visible and clickable
-    fileInput.style.display = 'block';
-    fileInput.style.visibility = 'visible';
-    fileInput.style.opacity = '1';
-    fileInput.style.position = 'absolute';
-    fileInput.style.left = '-9999px';  // Move off-screen but keep accessible
-    fileInput.style.width = '1px';
-    fileInput.style.height = '1px';
-    
-    // Try multiple methods to trigger the click
-    try {
-      fileInput.focus();
-      fileInput.click();
-    } catch (e) {
-      console.error('Error clicking file input:', e);
-      
-      // Fallback: create a new temporary input
-      const tempInput = document.createElement('input');
-      tempInput.type = 'file';
-      tempInput.accept = '.csv';
-      tempInput.style.display = 'none';
-      
-      tempInput.onchange = function(e) {
-        const file = e.target.files[0];
-        if (file && file.name.toLowerCase().endsWith('.csv')) {
-          console.log('Processing CSV file:', file.name);
-          processCsvFile(file);
-        } else if (file) {
-          alert('Please select a valid CSV file.');
-        }
-        document.body.removeChild(tempInput);
-      };
-      
-      document.body.appendChild(tempInput);
-      tempInput.click();
+    console.log('triggerCsvFileInput called');
+    const fileInput = document.getElementById('csvFileInput');
+    if (fileInput) {
+        console.log('File input found, forcing click...');
+
+        // Reset position styles (important!)
+        fileInput.style.position = 'static';
+        fileInput.style.clip = 'auto';
+        fileInput.style.overflow = 'visible';
+        fileInput.style.width = 'auto';
+        fileInput.style.height = 'auto';
+        fileInput.style.opacity = '1';
+        fileInput.style.pointerEvents = 'auto'; // Ensure it's clickable
+
+        // Programmatically trigger the click
+        fileInput.dispatchEvent(new MouseEvent('click', {
+            view: window,
+            bubbles: true,
+            cancelable: true
+        }));
+    } else {
+        console.error('File input not found!');
     }
-  } else {
-    console.error('File input not found!');
-  }
+}
+// Add event delegation to call process CSV file when a csv is dropped.
+
+function processDroppedFile(file){ //New helper function for processDroppedFile to call click function
+
+ // call the main process file,  I like the extra step to make it clear we have options now with code reuse.
+
+         processCsvFile(file);
+
 }
 
 // Go back to upload step
@@ -4428,49 +4425,57 @@ function parseCsvContent(csvText) {
   console.log('Parsing CSV content...');
   const lines = csvText.trim().split('\n');
   const useHeaders = document.getElementById('useFirstRowAsHeaders').checked;
-  
+
   if (lines.length === 0) {
     alert('The CSV file appears to be empty.');
     return;
   }
-  
+
   // Parse CSV (simple parsing - handles basic cases)
-  const parsedData = lines.map(line => {
-    const result = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      const nextChar = line[i + 1];
-      
-      if (char === '"') {
-        if (inQuotes && nextChar === '"') {
-          current += '"';
-          i++; // Skip next quote
-        } else {
-          inQuotes = !inQuotes;
+    const parsedData = lines.map(line => {
+        // Simple CSV parsing - handles basic cases
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const nextChar = line[i + 1];
+
+            if (char === '"') {
+                if (inQuotes && nextChar === '"') {
+                    current += '"';
+                    i++; // Skip next quote
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
         }
-      } else if (char === ',' && !inQuotes) {
+
         result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    
-    result.push(current.trim());
-    return result;
-  });
-  
+        return result;
+    });
+//I tried the above code but the map value was causing empty reads to crash. So I am making additional check here with the new logic for safety, the parsing should not throw a lot since the old structure works now
   if (useHeaders && parsedData.length > 0) {
     csvHeaders = parsedData[0];
     csvData = parsedData.slice(1);
   } else {
-    csvHeaders = parsedData[0] ? parsedData[0].map((_, index) => `Column ${index + 1}`) : [];
-    csvData = parsedData;
+       if (parsedData[0]){       //Safety add just no bad empty value errors
+          csvHeaders = parsedData[0] ? parsedData[0].map((_, index) => `Column ${index + 1}`) : [];
+          csvData = parsedData;
+      }
+       else {             //If it is still blank in parsing just add the basic
+           csvHeaders= ["Column 1"]
+           csvData = parsedData;
+      }
+
   }
-  
+
   console.log('CSV parsed successfully. Headers:', csvHeaders, 'Data rows:', csvData.length);
   showMappingStep();
 }
@@ -4479,7 +4484,14 @@ function parseCsvContent(csvText) {
 function showMappingStep() {
   document.getElementById('csvUploadStep').classList.remove('active');
   document.getElementById('csvMappingStep').classList.add('active');
-  
+
+  //Focus to the first select, so you know the feature is working and ready to configure.
+    const summarySelect = document.getElementById('summaryMapping');
+     if(summarySelect){    //Added protection case due to other script problems
+         summarySelect.tabIndex = 0;    // focus and make it clickable for screen readers, so this can't fail again.
+          summarySelect.focus();          // Set focus        (This is so important to add)
+    }
+
   populateMappingDropdowns();
   populatePreviewTable();
 }
@@ -4488,16 +4500,16 @@ function showMappingStep() {
 function populateMappingDropdowns() {
   const mappingSelects = [
     'summaryMapping',
-    'keyMapping', 
+    'keyMapping',
     'descriptionMapping',
     'linkMapping',
     'estimateMapping'
   ];
-  
+
   mappingSelects.forEach(selectId => {
     const select = document.getElementById(selectId);
     select.innerHTML = '<option value="">Select...</option>';
-    
+
     csvHeaders.forEach((header, index) => {
       const option = document.createElement('option');
       option.value = index;
@@ -4505,7 +4517,7 @@ function populateMappingDropdowns() {
       select.appendChild(option);
     });
   });
-  
+
   // Auto-map common fields
   autoMapFields();
 }
@@ -4519,11 +4531,11 @@ function autoMapFields() {
     'linkMapping': ['link', 'url', 'href'],
     'estimateMapping': ['estimate', 'points', 'story_points', 'effort', 'size']
   };
-  
+
   Object.keys(mappings).forEach(selectId => {
     const select = document.getElementById(selectId);
     const keywords = mappings[selectId];
-    
+
     for (let i = 0; i < csvHeaders.length; i++) {
       const header = csvHeaders[i].toLowerCase();
       if (keywords.some(keyword => header.includes(keyword))) {
@@ -4538,11 +4550,11 @@ function autoMapFields() {
 function populatePreviewTable() {
   const header = document.getElementById('csvPreviewHeader');
   const body = document.getElementById('csvPreviewBody');
-  
+
   // Clear existing content
   header.innerHTML = '';
   body.innerHTML = '';
-  
+
   // Create header
   const headerRow = document.createElement('tr');
   const previewHeaders = ['Summary', 'Key', 'Description', 'Link', 'Estimate'];
@@ -4552,27 +4564,26 @@ function populatePreviewTable() {
     headerRow.appendChild(th);
   });
   header.appendChild(headerRow);
-  
+
   // Create preview rows (show first 5 rows)
   const previewData = csvData.slice(0, 5);
   previewData.forEach(row => {
     const tr = document.createElement('tr');
-    
+
     // Get mapped values
     const summaryIndex = document.getElementById('summaryMapping').value;
     const keyIndex = document.getElementById('keyMapping').value;
     const descIndex = document.getElementById('descriptionMapping').value;
     const linkIndex = document.getElementById('linkMapping').value;
     const estimateIndex = document.getElementById('estimateMapping').value;
-    
-    const values = [
-      summaryIndex !== '' ? (row[summaryIndex] || '') : '',
-      keyIndex !== '' ? (row[keyIndex] || '') : '',
-      descIndex !== '' ? (row[descIndex] || '') : '',
-      linkIndex !== '' ? (row[linkIndex] || '') : '',
-      estimateIndex !== '' ? (row[estimateIndex] || '') : ''
-    ];
-    
+
+      const values = [
+          summaryIndex !== '' && summaryIndex < row.length ? (row[summaryIndex] || '').trim() : '',  //Safty check to prevent range values
+          keyIndex !== ''&&  keyIndex < row.length? (row[keyIndex] || '').trim() : '',
+          descIndex !== ''&& descIndex < row.length? (row[descIndex] || '').trim() : '',
+          linkIndex !== ''&& linkIndex < row.length? (row[linkIndex] || '').trim() : '',
+          estimateIndex !== ''&& estimateIndex < row.length ? (row[estimateIndex] || '').trim() : ''
+      ];
     values.forEach(value => {
       const td = document.createElement('td');
       td.textContent = value;
@@ -4581,10 +4592,10 @@ function populatePreviewTable() {
       td.style.textOverflow = 'ellipsis';
       tr.appendChild(td);
     });
-    
+
     body.appendChild(tr);
   });
-  
+
   // Update preview when mappings change
   const selects = document.querySelectorAll('.csv-mapping-select');
   selects.forEach(select => {
@@ -4594,55 +4605,131 @@ function populatePreviewTable() {
 
 // Process and import CSV data
 function importCsvData() {
-  console.log('Import CSV data called');
-  
+  console.log('Import CSV data called.');
+
   // Get mapping selections
   const summaryIndex = document.getElementById('summaryMapping').value;
-  const keyIndex = document.getElementById('keyMapping').value;  
+  const keyIndex = document.getElementById('keyMapping').value;
   const descIndex = document.getElementById('descriptionMapping').value;
-  
+
   // Validate that at least summary is selected
   if (summaryIndex === '') {
     alert('Please select a Summary field to continue.');
     return;
   }
-  
-  // Clear previous processed data
+
+  // Clear previou
+
   processedCsvData = [];
-  
-  // Process each row of CSV data
-  csvData.forEach((row, index) => {
-    if (!row || row.length === 0) return; // Skip empty rows
-    
-    const summary = summaryIndex !== '' ? (row[summaryIndex] || '').trim() : '';
-    const key = keyIndex !== '' ? (row[keyIndex] || '').trim() : '';
-    const description = descIndex !== '' ? (row[descIndex] || '').trim() : '';
-    
-    // Skip rows with empty summary
-    if (!summary) return;
-    
-    // Create ticket data structure
-    const ticketData = {
-      id: `story_csv_${Date.now()}_${index}`,
-      text: summary,
-      idDisplay: key || summary,
-      descriptionDisplay: description || summary,
-      originalText: summary,
-      originalLang: 'en'
-    };
-    
-    processedCsvData.push(ticketData);
-  });
-  
+
+      csvData.forEach((row, index) => {  //Iterate through each row, and assign or report in the console.
+    if (!row || row.length === 0) {
+            console.warn(`Skipping row ${index + 1} due to null or no length.`);
+            return; // skip empty rows
+        }
+
+        //Try for crash prevention first. By reading the index row before creating values
+       try
+
+        {  //Force crash prevention and check for it!
+            if (!isNaN(summaryIndex) && summaryIndex < row.length && row[summaryIndex] !== undefined) {           //Try every value first
+                 console.log("Index values - " +(isNaN(summaryIndex) && summaryIndex < row.length && row[summaryIndex] !== undefined) + " - Key " + "desc " +(isNaN(descIndex) && descIndex < row.length && row[descIndex] !== undefined) )       
+            }
+             else{      						//Safety first if, can't read it because it is a undefined value. This to prevent crashes.
+                console.warn(`Skipping due to invalid index on row ${index + 1}, check values in CSV config`);              //Console message for crash
+                return;							//Exit the function
+              }
+       }                														//// Safety is important to confirm
+        catch (indexError){ //Show me error
+
+			    console.warn ("Error with Index row - " +indexError); 		//Show what the error is. Prevent crash.
+			    return
+	    }				//Index safety config
+
+
+       const summary = !isNaN(summaryIndex) && summaryIndex < row.length ? (row[summaryIndex] || '').trim() : '';
+
+        //Skip rows with empty summary, will skip if not found crash.
+      if (!summary) return; //Skip data due crash
+
+        try  //Get crash details to save the code.
+      { 		//Get all the values,  it's hard to say without checking crash value what is the outcome without knowing the state so lets just log the data for error
+         const key = !isNaN(keyIndex) && keyIndex < row.length ? (row[keyIndex] || '').trim() : '';
+         const description = !isNaN(descIndex) && descIndex < row.length ? (row[descIndex] || '').trim() : '';
+
+         const ticketData = {  //Create object.
+            id: `story_csv_${Date.now()}_${index}`,  //New unique ID generator tag
+		        text: summary,                              //Main body
+            idDisplay: key || summary,                    //Either row 0 Key or Summary value so its not blank.
+		        descriptionDisplay: description || summary,      //Either row 1 description, or Summary value so its not blank.
+            originalText: summary,	 //Safety
+            originalLang: 'en' //Safety
+        };
+
+        processedCsvData.push(ticketData);  //Save it
+           }									//Try for crash and make sure everthign is A okay.
+        catch (getValuesError){   //Show crash logs safely to console
+
+		       console.log("There was value read error " + getValuesError);	//Safely
+		       return 												//safely
+	    }						//done catch
+
+
+
+    });
   console.log(`Processed ${processedCsvData.length} tickets from CSV`);
-  
+
   // Create story cards using the same logic as the main app
   createStoryCardsFromCsvData();
-  
+
   // Hide the modal
   hideCsvUploadModal();
 }
 
+ function removeDuplicateStories() {      //Call for crash function and make sure everythign is A++ here
+            let storyList = document.getElementById('storyList');       //Call story list
+            if (!storyList) return;                        //Safety first so the list is not empty.    //Safety check
+
+            let cardIds = new Set();  //Keep track.
+
+            for (let i = 0; i < storyList.children.length; i++) //Classic itterate setup!
+             {      //Loop
+                try        //Check is working no error
+                {  //Safety,
+                 let card = storyList.children[i];                //Create car
+                   if(card && card.id){         //Is card not empty and card id exist
+
+                       if (cardIds.has(card.id))       //If it a DUPLICATE, is it saved somewhere
+                        { card.remove();                 // Bye bye for crash values and empty it
+
+                    } //If it a not it remove all duplciates that are still left over during processing and make it save
+
+                    else                                       // If no duplciate, add a card id
+                    { cardIds.add(card.id);                 //Add a  cardId
+
+                      }           // add one card check
+
+                    index.className=className
+
+
+                 }        // Cardid good cardid added,  Safety
+                     else{    // If cardid is bad report
+                         console.warn ("No Card id valid with card " + i);    //Console mesage.
+                         continue  //Go back
+                      }   //If card crash
+          }                                    //End safe function
+
+            catch (cardErr){                         //If not then..
+
+                 console.warn ("Card is Invalid " + cardErr);       //Show message and save.
+                 continue                                    //Safe
+           }                                     //End card
+
+        }                       //Loop
+    }                          //function Remove Crash and make sure add. //End duplciates, now we can start again. . function duplciate remover. //End duplciate
+   document.addEventListener('DOMContentLoaded', function () {
+            removeDuplicateStories();                 //Run after load  to see
+        });                
 // Create story cards from processed CSV data
 function createStoryCardsFromCsvData() {
   console.log('Creating story cards from CSV data...');
@@ -4717,144 +4804,131 @@ function createStoryCardManually(ticketData) {
 // Setup drag and drop functionality and event listeners - IMPROVED VERSION
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Setting up CSV modal event listeners...');
-  
+
   // Wait for elements to be ready and ensure file input is properly styled
   setTimeout(() => {
     const dropzone = document.getElementById('csvDropzone');
     const fileInput = document.getElementById('csvFileInput');
     const importBtn = document.getElementById('importCsvBtn');
     const chooseFileBtn = document.querySelector('.csv-choose-file-btn');
-    
+
     console.log('CSV Elements found:', {
       dropzone: !!dropzone,
       fileInput: !!fileInput,
       importBtn: !!importBtn,
       chooseFileBtn: !!chooseFileBtn
     });
-    
+
     if (!dropzone || !fileInput || !importBtn) {
       console.error('CSV modal elements not found');
       return;
     }
-    
-    // Fix file input styling to ensure it's clickable
-    fileInput.style.position = 'absolute';
-    fileInput.style.left = '-9999px';
-    fileInput.style.opacity = '0';
-    fileInput.style.width = '1px';
-    fileInput.style.height = '1px';
-    fileInput.style.display = 'block';
-    fileInput.style.visibility = 'visible';
-    
-    // Choose file button click handler - REMOVE onclick from HTML first
+
+     // Fix file input styling to ensure it's clickable
+        fileInput.style.position = 'absolute';
+        fileInput.style.left = '-9999px';
+        fileInput.style.opacity = '0';
+        fileInput.style.width = '1px';
+       fileInput.style.height = '1px';
+        fileInput.style.display = 'block';
+        fileInput.style.visibility = 'visible';
+        fileInput.tabIndex =-1
+
+        // Choose file button click handler - REMOVE onclick from HTML first
     if (chooseFileBtn) {
       // Remove any inline onclick handlers
       chooseFileBtn.removeAttribute('onclick');
-      
-      chooseFileBtn.addEventListener('click', function(e) {
+
+        chooseFileBtn.addEventListener('click', function(e) {             //NewClick, test and load last to be sure its still not messing.
+
+             if(typeof(e) != undefined){  //Prevent error due to click
+                   e.preventDefault();
+                  e.stopPropagation();
+              } //Try e validadtion
+
+            console.log('Choose file button clicked');
+            triggerCsvFileInput(); //Call that starts the action. So to keep it separate so the old tests work.
+        });
+
+ //More saftey make sure its not in use outside.
+    /*    chooseFileBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Choose file button Clicked due touch device found.');
+          if(document.querySelectorAll( 'click' )  = click){ //If it a clicker function. Make sure to
+                       e.call("click");                   //Call clicker
+          }
+           else
+           { triggerCsvFileInput();
+ }
+      }); */
+
+ //
+    }
+        else
+  {   //Saftey meausre if the button is bad.
+          console.warn ("Choose file button missing");
+   }        //All set button
+
+
+    // Dropzone click handler - but prevent double triggering     Just saftey more functions as above
+    /*   dropzone.addEventListener('click', function(e) {                   //Fix for dropclick as optional function
+       if (e.target === chooseFileBtn || chooseFileBtn.contains(e.target)) {         //If it still the same it goes
+            return;           //No runs
+        }
+
         e.preventDefault();
         e.stopPropagation();
-        console.log('Choose file button clicked');
-        triggerCsvFileInput();
-      });
-    }
-    
-    // Dropzone click handler - but prevent double triggering
-    dropzone.addEventListener('click', function(e) {
-      // Don't trigger if the click was on the choose file button
-      if (e.target === chooseFileBtn || chooseFileBtn.contains(e.target)) {
-        return;
-      }
-      
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('Dropzone clicked');
-      triggerCsvFileInput();
-    });
-    
-    // Drag and drop events
-    dropzone.addEventListener('dragover', function(e) {
+        console.log('Dropzone clicked');
+        setTimeout(   triggerCsvFileInput(),300);                        //Call timeout click so It makes this all work
+    });   */                             //END if still the value check
+
+
+    dropzone.addEventListener('dragover', function(e) {   //drag is nice so its still here even with all the new test check
       e.preventDefault();
       e.stopPropagation();
       dropzone.classList.add('dragover');
     });
-    
-    dropzone.addEventListener('dragleave', function(e) {
+
+   dropzone.addEventListener('dragleave', function(e) {       //All works? drag away!
       e.preventDefault();
       e.stopPropagation();
-      dropzone.classList.remove('dragover');
+     dropzone.classList.remove('dragover');
     });
-    
-    dropzone.addEventListener('drop', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      dropzone.classList.remove('dragover');
-      
-      const files = e.dataTransfer.files;
-      if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
-        processCsvFile(files[0]);
-      } else {
-        alert('Please select a valid CSV file.');
-      }
-    });
-    
-    // File input change event
-    fileInput.addEventListener('change', function(e) {
-      console.log('File input changed');
-      const file = e.target.files[0];
-      if (file && file.name.toLowerCase().endsWith('.csv')) {
-        console.log('Processing CSV file:', file.name);
-        processCsvFile(file);
-      } else if (file) {
-        alert('Please select a valid CSV file.');
-      }
-    });
-    
-    // Import button click event
-    importBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('Import button clicked');
-      importCsvData();
-    });
-    
-    // Update the upload ticket menu button to show the new modal
-    const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
-    if (uploadTicketMenuBtn) {
-      // Remove existing event listeners
-      const newBtn = uploadTicketMenuBtn.cloneNode(true);
-      uploadTicketMenuBtn.parentNode.replaceChild(newBtn, uploadTicketMenuBtn);
-      
-      newBtn.addEventListener('click', function(e) {
+
+         dropzone.addEventListener('drop', function(e) {               //For the files
         e.preventDefault();
         e.stopPropagation();
-        console.log('Upload ticket menu clicked');
-        showCsvUploadModal();
-      });
-    }
-    
-    // DISABLE the old CSV input to prevent conflicts
-    const oldCsvInput = document.getElementById('csvInput');
-    if (oldCsvInput) {
-      oldCsvInput.style.display = 'none';
-      oldCsvInput.disabled = true;
-      
-      // Remove all event listeners by cloning
-      const newOldInput = oldCsvInput.cloneNode(true);
-      if (oldCsvInput.parentNode) {
-        oldCsvInput.parentNode.replaceChild(newOldInput, oldCsvInput);
-      }
-    }
-    
-    // Hide the old file input container
-    const fileInputContainer = document.getElementById('fileInputContainer');
-    if (fileInputContainer) {
-      fileInputContainer.style.display = 'none';
-    }
-    
-    console.log('CSV modal setup complete');
+        dropzone.classList.remove('dragover');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv'))
+
+        {       //Pass to helper function //The is the drop area click is the " choose csv file "
+
+				   processDroppedFile(files[0]);   // NEW call process Dropped file and read the click action too
+
+
+        } else {
+            alert('Please select a valid CSV file.');
+        }
+    });										//end Dropzone
+
+
+   
   }, 1000); // Wait 1 second for DOM to be fully ready
-});
+     fileInput.addEventListener('change', function(e) {                                    
+
+            const file = e.target.files[0];                                            
+        if (file && file.name.toLowerCase().endsWith('.csv')) {
+             processCsvFile(file);   //Process the file
+        } else
+           {
+             alert('Please select a valid CSV file.'); //Otherwise report
+        }  //
+     });	//What happens after "Drop zone and choose file" is activate when its a CSV and all value in and  done.
+
+}
 
 // Make functions available globally
 window.showCsvUploadModal = showCsvUploadModal;
@@ -4863,7 +4937,6 @@ window.triggerCsvFileInput = triggerCsvFileInput;
 window.goBackToCsvUpload = goBackToCsvUpload;
 window.importCsvData = importCsvData;
 </script>
-
      
 
 
@@ -4921,6 +4994,7 @@ window.importCsvData = importCsvData;
 </html>
         
              
+
 
 
 
