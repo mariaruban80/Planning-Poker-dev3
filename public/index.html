@@ -2446,7 +2446,8 @@ font-size: 15px;
             <div class="csv-drop-icon">📄</div>
             <div class="csv-drop-text">
               <span>Drag 'n' drop some files here, or </span>
-              <button class="csv-choose-file-btn" type="button">choose file</button>
+             
+                 <button class="csv-choose-file-btn" type="button" onclick="triggerCsvFileInput()">choose file</button>
             </div>
           </div>
           <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
@@ -4342,7 +4343,7 @@ document.addEventListener('DOMContentLoaded', function() {
 let csvData = [];
 let csvHeaders = [];
 let selectedCsvFile = null;
-let importInProgress = false; // Add this flag to prevent duplicate imports
+let importInProgress = false;
 
 // Show CSV Upload Modal
 function showCsvUploadModal() {
@@ -4373,9 +4374,16 @@ function hideCsvUploadModal() {
   document.getElementById('useFirstRowAsHeaders').checked = true;
 }
 
-// Trigger file input
+// Trigger file input - Make this a simple global function
 function triggerCsvFileInput() {
-  document.getElementById('csvFileInput').click();
+  console.log('triggerCsvFileInput called');
+  const fileInput = document.getElementById('csvFileInput');
+  if (fileInput) {
+    console.log('File input found, clicking...');
+    fileInput.click();
+  } else {
+    console.error('File input not found');
+  }
 }
 
 // Go back to upload step
@@ -4384,31 +4392,27 @@ function goBackToCsvUpload() {
   document.getElementById('csvMappingStep').classList.remove('active');
 }
 
-// Setup drag and drop functionality - ONLY RUN ONCE
+// Setup - Run only once
 document.addEventListener('DOMContentLoaded', function() {
   // Prevent multiple setups
   if (window.csvSetupDone) return;
   window.csvSetupDone = true;
   
-  const dropzone = document.getElementById('csvDropzone');
-  const fileInput = document.getElementById('csvFileInput');
-  const importBtn = document.getElementById('importCsvBtn');
-  
   console.log('Setting up CSV upload handlers');
   
-  // COMPLETELY DISABLE old CSV system
+  const fileInput = document.getElementById('csvFileInput');
+  const importBtn = document.getElementById('importCsvBtn');
+  const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
+  
+  // Disable old CSV system completely
   const oldCsvInput = document.getElementById('csvInput');
   if (oldCsvInput) {
-    oldCsvInput.style.display = 'none !important';
+    oldCsvInput.style.display = 'none';
     oldCsvInput.disabled = true;
-    // Remove all event listeners
-    const newOldInput = oldCsvInput.cloneNode(true);
-    oldCsvInput.parentNode.replaceChild(newOldInput, oldCsvInput);
   }
   
-  // SINGLE event listener for file input
-  if (fileInput && !fileInput.hasAttribute('data-handler-added')) {
-    fileInput.setAttribute('data-handler-added', 'true');
+  // File input change handler
+  if (fileInput) {
     fileInput.addEventListener('change', function(e) {
       console.log('File input changed');
       const file = e.target.files[0];
@@ -4416,56 +4420,28 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedCsvFile = file;
         console.log('Selected file:', file.name);
         processCsvFile(file);
+      } else if (file) {
+        alert('Please select a valid CSV file.');
       }
     });
   }
   
-  // Dropzone events
-  if (dropzone) {
-    dropzone.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      fileInput.click();
-    });
-    
-    dropzone.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      dropzone.classList.add('dragover');
-    });
-    
-    dropzone.addEventListener('dragleave', function(e) {
-      e.preventDefault();
-      dropzone.classList.remove('dragover');
-    });
-    
-    dropzone.addEventListener('drop', function(e) {
-      e.preventDefault();
-      dropzone.classList.remove('dragover');
-      const files = e.dataTransfer.files;
-      if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
-        selectedCsvFile = files[0];
-        processCsvFile(files[0]);
-      }
-    });
-  }
-  
-  // SINGLE import button handler
-  if (importBtn && !importBtn.hasAttribute('data-handler-added')) {
-    importBtn.setAttribute('data-handler-added', 'true');
+  // Import button handler
+  if (importBtn) {
     importBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
+      console.log('Import button clicked');
       handleCsvImport();
     });
   }
   
   // Menu button handler
-  const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
-  if (uploadTicketMenuBtn && !uploadTicketMenuBtn.hasAttribute('data-csv-handler-added')) {
-    uploadTicketMenuBtn.setAttribute('data-csv-handler-added', 'true');
+  if (uploadTicketMenuBtn) {
     uploadTicketMenuBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
+      console.log('Upload ticket menu clicked');
       showCsvUploadModal();
     });
   }
@@ -4666,16 +4642,14 @@ function populatePreviewTable() {
   // Update preview when mappings change
   const selects = document.querySelectorAll('.csv-mapping-select');
   selects.forEach(select => {
-    select.removeEventListener('change', populatePreviewTable); // Remove old listeners
     select.addEventListener('change', populatePreviewTable);
   });
 }
 
-// Handle CSV Import - FIXED VERSION
+// Handle CSV Import
 function handleCsvImport() {
-  // Prevent duplicate imports
   if (importInProgress) {
-    console.log('Import already in progress, ignoring duplicate call');
+    console.log('Import already in progress');
     return;
   }
   
@@ -4762,7 +4736,6 @@ function handleCsvImport() {
   }
 }
 </script>
-
 
         
 
@@ -4939,6 +4912,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
