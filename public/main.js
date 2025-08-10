@@ -216,7 +216,7 @@ if (uploadTicketBtn) {
         menu.classList.remove('show');
     });
 }
-}
+
 
 
   /** ---------- IMPORT BUTTON IN MODAL ---------- **/
@@ -4401,6 +4401,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
