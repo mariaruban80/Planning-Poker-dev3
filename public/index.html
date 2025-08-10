@@ -2437,7 +2437,7 @@ font-size: 15px;
             <div class="csv-drop-icon">📄</div>
             <div class="csv-drop-text">
               <span>Drag 'n' drop some files here, or </span>
-              <button class="csv-choose-file-btn" onclick="triggerCsvFileInput()">choose file</button>
+              <button class="csv-choose-file-btn" type="button">choose file</button>
             </div>
           </div>
           <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
@@ -4329,16 +4329,24 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-<script>
 
+
+<script>
 let csvData = [];
 let csvHeaders = [];
+let selectedCsvFile = null; // Add this to track the selected file
 
 // Show CSV Upload Modal
 function showCsvUploadModal() {
   document.getElementById('csvUploadModal').style.display = 'flex';
   document.getElementById('csvUploadStep').classList.add('active');
   document.getElementById('csvMappingStep').classList.remove('active');
+  
+  // Reset the file input and data
+  document.getElementById('csvFileInput').value = '';
+  selectedCsvFile = null;
+  csvData = [];
+  csvHeaders = [];
 }
 
 // Hide CSV Upload Modal
@@ -4350,6 +4358,7 @@ function hideCsvUploadModal() {
   // Reset form
   document.getElementById('csvFileInput').value = '';
   document.getElementById('useFirstRowAsHeaders').checked = true;
+  selectedCsvFile = null;
   csvData = [];
   csvHeaders = [];
 }
@@ -4369,12 +4378,18 @@ function goBackToCsvUpload() {
 document.addEventListener('DOMContentLoaded', function() {
   const dropzone = document.getElementById('csvDropzone');
   const fileInput = document.getElementById('csvFileInput');
+  const importBtn = document.getElementById('importCsvBtn');
   
-  // Drag and drop events
-  dropzone.addEventListener('click', function() {
-    fileInput.click();
-  });
+  // REMOVE any existing event listeners from the old CSV input
+  const oldCsvInput = document.getElementById('csvInput');
+  if (oldCsvInput) {
+    oldCsvInput.style.display = 'none'; // Hide the old input
+    // Remove all event listeners by cloning
+    const newInput = oldCsvInput.cloneNode(true);
+    oldCsvInput.parentNode.replaceChild(newInput, oldCsvInput);
+  }
   
+  // Drag and drop events - ONLY on dropzone
   dropzone.addEventListener('dragover', function(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -4386,7 +4401,15 @@ document.addEventListener('DOMContentLoaded', function() {
     e.stopPropagation();
     dropzone.classList.remove('dragover');
   });
-  
+
+  dropzone.addEventListener('click', function(e) {
+  // Only trigger if clicking on the dropzone itself, not the button
+  if (e.target === dropzone || e.target.closest('.csv-drop-content')) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInput.click();
+  }
+});   
   dropzone.addEventListener('drop', function(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -4394,34 +4417,35 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const files = e.dataTransfer.files;
     if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
+      selectedCsvFile = files[0]; // Store the file
       processCsvFile(files[0]);
     } else {
       alert('Please select a valid CSV file.');
     }
   });
   
-  // File input change
+  // File input change - SINGLE event listener
   fileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
+      selectedCsvFile = file; // Store the file
       processCsvFile(file);
     }
   });
   
-  // Update the existing CSV input click handler to use the new modal
-  const existingCsvInput = document.getElementById('csvInput');
-  if (existingCsvInput) {
-    existingCsvInput.addEventListener('change', function() {
-      // Prevent the old handler
-      return false;
+  // Import button click handler
+  if (importBtn) {
+    importBtn.addEventListener('click', function() {
+      handleCsvImport();
     });
   }
   
-  // Update the upload ticket menu button to show the new modal
+  // Update the upload ticket menu button
   const uploadTicketMenuBtn = document.getElementById('uploadTicketMenuBtn');
   if (uploadTicketMenuBtn) {
     uploadTicketMenuBtn.addEventListener('click', function(e) {
       e.preventDefault();
+      e.stopPropagation();
       showCsvUploadModal();
     });
   }
@@ -4429,10 +4453,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Process CSV file
 function processCsvFile(file) {
+  if (!file) {
+    alert('No file selected');
+    return;
+  }
+  
   const reader = new FileReader();
   reader.onload = function(e) {
     const csvText = e.target.result;
     parseCsvContent(csvText);
+  };
+  reader.onerror = function() {
+    alert('Error reading file');
   };
   reader.readAsText(file);
 }
@@ -4447,9 +4479,8 @@ function parseCsvContent(csvText) {
     return;
   }
   
-  // Parse CSV (simple parsing - you might want to use a more robust parser)
+  // Parse CSV (simple parsing)
   const parsedData = lines.map(line => {
-    // Simple CSV parsing - handles basic cases
     const result = [];
     let current = '';
     let inQuotes = false;
@@ -4485,6 +4516,7 @@ function parseCsvContent(csvText) {
     csvData = parsedData;
   }
   
+  console.log('CSV parsed:', csvData.length, 'rows');
   showMappingStep();
 }
 
@@ -4509,14 +4541,16 @@ function populateMappingDropdowns() {
   
   mappingSelects.forEach(selectId => {
     const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">Select...</option>';
-    
-    csvHeaders.forEach((header, index) => {
-      const option = document.createElement('option');
-      option.value = index;
-      option.textContent = header;
-      select.appendChild(option);
-    });
+    if (select) {
+      select.innerHTML = '<option value="">Select...</option>';
+      
+      csvHeaders.forEach((header, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = header;
+        select.appendChild(option);
+      });
+    }
   });
   
   // Auto-map common fields
@@ -4535,13 +4569,15 @@ function autoMapFields() {
   
   Object.keys(mappings).forEach(selectId => {
     const select = document.getElementById(selectId);
-    const keywords = mappings[selectId];
-    
-    for (let i = 0; i < csvHeaders.length; i++) {
-      const header = csvHeaders[i].toLowerCase();
-      if (keywords.some(keyword => header.includes(keyword))) {
-        select.value = i;
-        break;
+    if (select) {
+      const keywords = mappings[selectId];
+      
+      for (let i = 0; i < csvHeaders.length; i++) {
+        const header = csvHeaders[i].toLowerCase();
+        if (keywords.some(keyword => header.includes(keyword))) {
+          select.value = i;
+          break;
+        }
       }
     }
   });
@@ -4551,6 +4587,8 @@ function autoMapFields() {
 function populatePreviewTable() {
   const header = document.getElementById('csvPreviewHeader');
   const body = document.getElementById('csvPreviewBody');
+  
+  if (!header || !body) return;
   
   // Clear existing content
   header.innerHTML = '';
@@ -4605,14 +4643,56 @@ function populatePreviewTable() {
   });
 }
 
-
-     
-
+// Handle CSV Import
+function handleCsvImport() {
+  if (!selectedCsvFile || csvData.length === 0) {
+    alert('Please select and process a CSV file first.');
+    return;
+  }
+  
+  // Get the mapping selections
+  const summaryMapping = document.getElementById('summaryMapping').value;
+  
+  // Require at least summary mapping
+  if (!summaryMapping) {
+    alert('Please select a Summary field mapping.');
+    return;
+  }
+  
+  const keyMapping = document.getElementById('keyMapping').value;
+  const descMapping = document.getElementById('descriptionMapping').value;
+  
+  console.log('Starting CSV import with', csvData.length, 'rows');
+  
+  // Process each row and create tickets
+  csvData.forEach((row, index) => {
+    const summary = summaryMapping ? row[summaryMapping] : '';
+    const key = keyMapping ? row[keyMapping] : `Item_${index + 1}`;
+    const description = descMapping ? row[descMapping] : '';
+    
+    if (summary || key) { // Only import if we have at least summary or key
+      const ticketData = {
+        id: `story_csv_${Date.now()}_${index}`,
+        text: summary || key,
+        idDisplay: key,
+        descriptionDisplay: description
+      };
+      
+      // Add to UI using the existing function
+      if (window.addTicketFromModal) {
+        window.addTicketFromModal(ticketData);
+      } else if (window.emitAddTicket) {
+        window.emitAddTicket(ticketData);
+      }
+    }
+  });
+  
+  // Close the modal
+  hideCsvUploadModal();
+  
+  alert(`Successfully imported ${csvData.length} tickets!`);
+}
 </script>
-
-
-
-
         
         
 
@@ -4789,6 +4869,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
