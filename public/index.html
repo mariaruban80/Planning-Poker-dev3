@@ -4655,18 +4655,11 @@ function populatePreviewTable() {
   });
 }
 
-// Handle CSV Import
-
+// Handle CSV Import - FIXED VERSION
 function handleCsvImport() {
   if (importInProgress) {
     console.log('Import already in progress');
     return;
-  }
-  
-  // PREVENT OLD SYSTEM FROM TRIGGERING
-  const oldCsvInput = document.getElementById('csvInput');
-  if (oldCsvInput) {
-    oldCsvInput.value = ''; // Clear to prevent old system from processing
   }
   
   console.log('Starting CSV import...');
@@ -4697,82 +4690,73 @@ function handleCsvImport() {
     }
     
     console.log('Import mappings - Summary:', summaryMapping, 'Key:', keyMapping, 'Desc:', descMapping);
+    console.log('CSV Headers:', csvHeaders);
+    console.log('Sample CSV row:', csvData[0]);
     
     let importedCount = 0;
     
-    // BATCH THE IMPORTS TO PREVENT UI CONFLICTS
-    const ticketsToImport = [];
-    
-    // First, prepare all tickets
+    // Import each row
     csvData.forEach((row, index) => {
-      const summary = summaryMapping !== '' ? (row[summaryMapping] || '').trim() : '';
-      const key = keyMapping !== '' ? (row[keyMapping] || '').trim() : `Item_${index + 1}`;
-      const description = descMapping !== '' ? (row[descMapping] || '').trim() : '';
+      console.log(`Processing row ${index}:`, row);
       
-      console.log(`Row ${index}: summary="${summary}", key="${key}", desc="${description}"`);
+      // FIXED: Get the actual values using parseInt for mapping indices
+      const summaryIndex = summaryMapping !== '' ? parseInt(summaryMapping) : -1;
+      const keyIndex = keyMapping !== '' ? parseInt(keyMapping) : -1;
+      const descIndex = descMapping !== '' ? parseInt(descMapping) : -1;
+      
+      const summary = summaryIndex >= 0 ? (row[summaryIndex] || '').trim() : '';
+      const key = keyIndex >= 0 ? (row[keyIndex] || '').trim() : `Item_${index + 1}`;
+      const description = descIndex >= 0 ? (row[descIndex] || '').trim() : '';
+      
+      console.log(`Row ${index} extracted: summary="${summary}", key="${key}", desc="${description}"`);
       
       // Only import if we have meaningful data
       if (summary || (key && key !== `Item_${index + 1}`)) {
+        // FIXED: Use the correct displayText logic
         const displayText = summary || key;
         
         const ticketData = {
           id: `story_csv_${Date.now()}_${index}`,
-          text: displayText,
-          idDisplay: key,
-          descriptionDisplay: description,
+          text: displayText, // This should be the main display text
+          idDisplay: key,    // This is the key/ID field
+          descriptionDisplay: description, // This is the description field
           originalText: displayText,
           originalLang: 'en'
         };
         
-        ticketsToImport.push(ticketData);
+        console.log('Creating ticket with correct data:', ticketData);
+        
+        // Add to UI using the main.js function
+        if (window.addTicketFromModal && typeof window.addTicketFromModal === 'function') {
+          window.addTicketFromModal(ticketData);
+          importedCount++;
+        } else {
+          console.error('addTicketFromModal function not available');
+        }
+      } else {
+        console.log(`Row ${index} skipped - no meaningful data`);
       }
     });
     
-    // Then import them with a small delay to prevent conflicts
-    if (ticketsToImport.length > 0) {
-      let importIndex = 0;
-      
-      function importNext() {
-        if (importIndex < ticketsToImport.length) {
-          const ticketData = ticketsToImport[importIndex];
-          console.log('Creating ticket:', ticketData);
-          
-          if (window.addTicketFromModal && typeof window.addTicketFromModal === 'function') {
-            window.addTicketFromModal(ticketData);
-            importedCount++;
-          }
-          
-          importIndex++;
-          
-          // Small delay between imports to prevent UI conflicts
-          setTimeout(importNext, 10);
-        } else {
-          // All done
-          console.log(`Import completed. Created ${importedCount} tickets.`);
-          hideCsvUploadModal();
-          
-          if (importedCount > 0) {
-            alert(`Successfully imported ${importedCount} tickets!`);
-          } else {
-            alert('No tickets were imported. Please check your data and field mappings.');
-          }
-          
-          importInProgress = false;
-        }
-      }
-      
-      importNext();
+    console.log(`Import completed. Created ${importedCount} tickets.`);
+    
+    // Close modal and show success
+    hideCsvUploadModal();
+    
+    if (importedCount > 0) {
+      alert(`Successfully imported ${importedCount} tickets!`);
     } else {
-      alert('No valid tickets found to import.');
-      importInProgress = false;
+      alert('No tickets were imported. Please check your data and field mappings.');
     }
     
   } catch (error) {
     console.error('Error during import:', error);
     alert('Error during import: ' + error.message);
+  } finally {
     importInProgress = false;
   }
 }
+
 
      
 </script>
@@ -4952,6 +4936,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
