@@ -235,7 +235,7 @@ if (importCsvBtn) {
         if (csvInputEl) { csvInputEl.value = ''; }
 
         // Close modal after import (optional)
-        const csvModal = document.getElementById('csvModal');
+      
         if (csvModal) {
             csvModal.style.display = 'none';
         }
@@ -4401,6 +4401,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
