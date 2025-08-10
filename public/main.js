@@ -2507,6 +2507,29 @@ function setupCSVUploader() {
   const csvInput = document.getElementById('csvInput');
   if (!csvInput) return;
 
+  // DISABLE OLD CSV SYSTEM - Using new modal system instead
+  console.log('[CSV] Old CSV uploader disabled - using new modal system');
+  
+  // Hide the old CSV input completely
+  csvInput.style.display = 'none';
+  csvInput.disabled = true;
+  
+  // Remove any existing event listeners by cloning
+  const newInput = csvInput.cloneNode(true);
+  if (csvInput.parentNode) {
+    csvInput.parentNode.replaceChild(newInput, csvInput);
+  }
+  
+  // Also hide the file input container
+  const fileInputContainer = document.getElementById('fileInputContainer');
+  if (fileInputContainer) {
+    fileInputContainer.style.display = 'none';
+  }
+  
+  return; // Exit early - don't set up the old handler
+  
+  // OLD CODE BELOW IS NOW DISABLED
+  /*
   csvInput.addEventListener('change', (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -2569,7 +2592,11 @@ function setupCSVUploader() {
     };
     reader.readAsText(file);
   });
+  */
 }
+
+
+
 
 /**
  * Parse CSV text into array structure
@@ -4401,6 +4428,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
