@@ -208,17 +208,15 @@ if (uploadTicketBtn) {
     uploadTicketBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-
         const csvModal = document.getElementById('csvModal');
         if (csvModal) {
             csvModal.style.display = 'flex';
         }
-
-        // Ensure we do not trigger file input automatically to avoid double popups
+        // Do NOT auto-trigger file input click here to avoid double popups
         menu.classList.remove('show');
     });
 }
-
+}
 
 
   /** ---------- IMPORT BUTTON IN MODAL ---------- **/
@@ -229,15 +227,15 @@ if (importCsvBtn) {
             alert('Please choose a file first.');
             return;
         }
+        console.log('[CSV] Import button clicked, parsing file:', window.selectedCSVFile.name);
         handleCSVFile(window.selectedCSVFile);
-        // Removed immediate reset to allow proper processing
-const csvModal = document.getElementById('csvModal');
-if (csvModal) { csvModal.style.display = 'none'; }
-window.selectedCSVFile = null;
-if (csvInputEl) { csvInputEl.value = ''; }
+        const csvModal = document.getElementById('csvModal');
+        if (csvModal) { csvModal.style.display = 'none'; }
+        window.selectedCSVFile = null;
+        if (csvInputEl) { csvInputEl.value = ''; }
 
         // Close modal after import (optional)
-       
+        const csvModal = document.getElementById('csvModal');
         if (csvModal) {
             csvModal.style.display = 'none';
         }
@@ -4403,8 +4401,6 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
-
-
 
 
 
