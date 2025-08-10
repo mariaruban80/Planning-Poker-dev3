@@ -225,16 +225,19 @@ if (importCsvBtn) {
             alert('Please choose a file first.');
             return;
         }
-        handleCSVFile(window.selectedCSVFile);
-        window.selectedCSVFile = null;
 
-        // Close modal after import (optional)
+        handleCSVFile(window.selectedCSVFile);
+
+        // ✅ Don't reset immediately — keep the file until after import finishes
+        // window.selectedCSVFile = null; 
+
         const csvModal = document.getElementById('csvModal');
         if (csvModal) {
             csvModal.style.display = 'none';
         }
     });
 }
+
 
 
   
@@ -4395,6 +4398,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
