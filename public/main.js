@@ -172,11 +172,13 @@ document.addEventListener('DOMContentLoaded', function() {
 const csvInputEl = document.getElementById('csvInput');
 if (csvInputEl) {
     csvInputEl.addEventListener('change', function () {
-        if (csvInputEl.files && csvInputEl.files.length > 0) {
-            window.selectedCSVFile = csvInputEl.files[0];
-			
-        }
-    });
+    if (csvInputEl.files && csvInputEl.files.length > 0) {
+        window.selectedCSVFile = csvInputEl.files[0];
+        console.log('[CSV] File selected:', window.selectedCSVFile.name);
+        var nameEl = document.getElementById('selectedFileName');
+        if (nameEl) { nameEl.textContent = window.selectedCSVFile.name; }
+    }
+});
 }
 /** ---------- CSV DRAG AND DROP HANDLER ---------- **/
 const dropZone = document.getElementById('csvDropZone');
@@ -212,8 +214,10 @@ if (uploadTicketBtn) {
             csvModal.style.display = 'flex';
         }
 
+        // Ensure we do not trigger file input automatically to avoid double popups
         menu.classList.remove('show');
     });
+}
 }
 
 
@@ -225,19 +229,20 @@ if (importCsvBtn) {
             alert('Please choose a file first.');
             return;
         }
-
         handleCSVFile(window.selectedCSVFile);
+        // Removed immediate reset to allow proper processing
+const csvModal = document.getElementById('csvModal');
+if (csvModal) { csvModal.style.display = 'none'; }
+window.selectedCSVFile = null;
+if (csvInputEl) { csvInputEl.value = ''; }
 
-        // ✅ Don't reset immediately — keep the file until after import finishes
-        // window.selectedCSVFile = null; 
-
+        // Close modal after import (optional)
         const csvModal = document.getElementById('csvModal');
         if (csvModal) {
             csvModal.style.display = 'none';
         }
     });
 }
-
 
 
   
@@ -4398,7 +4403,6 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
-
 
 
 
