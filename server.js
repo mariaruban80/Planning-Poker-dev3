@@ -1,3 +1,4 @@
+// PATCH COPY (unchanged server logic) - original server.js preserved
 // === server.js ===
 import express from 'express';
 import { createServer } from 'http';
