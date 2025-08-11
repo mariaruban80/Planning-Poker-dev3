@@ -2471,6 +2471,35 @@ font-size: 15px;
 
 </style>
      
+
+<!-- PATCH: hide default inline vote-bubbles and make room for moved bubble -->
+<style id="patch-vote-bubble-style">
+/* Hide legacy vote-bubble instances that may have been injected in multiple places */
+.vote-bubble { display: none !important; }
+.story-actions { position: relative; }
+/* Our new standardized vote-bubble styling (will be injected by main.js patch) */
+.vote-bubble-standard {
+  position: absolute;
+  right: 36px; /* right of 3-dot menu */
+  top: 34px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: transparent;
+  color: #673ab7;
+  border: 1px solid rgba(103,58,183,0.12);
+  box-shadow: none;
+  z-index: 50;
+  pointer-events: none;
+}
+</style>
+<!-- END PATCH -->
+
 </head>
 <body>
 
