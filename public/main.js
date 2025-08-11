@@ -1936,58 +1936,6 @@ function addVoteStatisticsStyles() {
 
 function handleVotesRevealed(storyId, votes) {
   if (!votes || typeof votes !== 'object') return;
-  
-  // Ensure style block is added for vote statistics
-  if (typeof addFixedVoteStatisticsStyles === 'function') {
-    addFixedVoteStatisticsStyles();
-  }
-
-  // First, apply the votes to the UI
-  applyVotesToUI(votes, false);
-
-  // CRITICAL PART: Create a username → vote map that completely ignores socket IDs
-  const userMap = window.userMap || {};
-  const usernameToVoteMap = new Map();
-
-  // -----------------------------------------------------
-  // FIRST STEP: Build a complete mapping of user → votes
-  // -----------------------------------------------------
-  // For each vote in the input, map it to a username
-  Object.entries(votes).forEach(([socketId, vote]) => {
-    const userName = userMap[socketId] || socketId;
-    
-    // Store this vote for this username
-    if (!usernameToVoteMap.has(userName)) {
-      usernameToVoteMap.set(userName, { vote, socketIds: [socketId] });
-    } else {
-      // User already has a vote registered, record this socket ID
-      usernameToVoteMap.get(userName).socketIds.push(socketId);
-    }
-  });
-
-  // -----------------------------------------------------
-  // SECOND STEP: Log the deduplication for debugging
-  // -----------------------------------------------------
-  let duplicateVotesFound = false;
-  usernameToVoteMap.forEach((data, userName) => {
-    if (data.socketIds.length > 1) {
-      duplicateVotesFound = true;
-      console.log(`[DEDUP] User ${userName} has ${data.socketIds.length} socket IDs with votes`);
-    }
-  });
-
-  if (duplicateVotesFound) {
-    console.log('[DEDUP] Found duplicate votes! Original count:', Object.keys(votes).length, 
-      'Deduplicated count:', usernameToVoteMap.size);
-  }
-
-  // -----------------------------------------------------
-  // THIRD STEP: Extract ONLY unique votes (one per user)
-  // -----------------------------------------------------
-  const uniqueVoteValues = Array.from(usernameToVoteMap.values()).map(data => data.vote);
-
-function handleVotesRevealed(storyId, votes) {
-  if (!votes || typeof votes !== 'object') return;
 
   // Add styles for vote statistics if needed
   if (typeof addFixedVoteStatisticsStyles === 'function') {
@@ -4513,6 +4461,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
