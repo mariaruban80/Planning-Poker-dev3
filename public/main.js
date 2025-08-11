@@ -1102,13 +1102,16 @@ function initializeApp(roomId) {
         if (storyId === currentId) {
           if (isRevealed) {
             applyVotesToUI(votes, false);
-            handleVotesRevealed(storyId, votes);  // ✅ Render stats layout
+            handleVotesRevealed(storyId, votes);
+            updateVoteCountUI(storyId);
+        updateVoteCountUI(storyId);  // ✅ Render stats layout
           } else {
             applyVotesToUI(votes, true);
           }
         } else if (isRevealed) {
           // ✅ ALSO render stats layout for other stories if needed
           handleVotesRevealed(storyId, votes);
+        updateVoteCountUI(storyId);
         }
       }
     }
@@ -1142,6 +1145,42 @@ console.log('[RESTORE] Skipped manual session restoration — server handles vot
   });
   
   socket.on('votesRevealed', ({ storyId }) => {
+// Update vote count UI helper: counts unique revealed votes and shows badge
+function updateVoteCountUI(storyId) {
+  try {
+    const votes = votesPerStory[storyId] || {};
+    const unique = new Set();
+    for (const [user, v] of Object.entries(votes)) {
+      // if userMap maps socketId to name, prefer name; otherwise use key
+      const name = window.userMap?.[user] || user;
+      unique.add(name);
+    }
+    const count = unique.size;
+    const el = document.getElementById(`vote-count-${storyId}`);
+    if (el) {
+      el.textContent = `${count} vote${count !== 1 ? 's' : ''}`;
+      // show when revealed
+      if (votesRevealed[storyId]) {
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+  } catch (err) {
+    console.warn('[VOTE COUNT] update failed', err);
+  }
+}
+
+// Listen for storyPointsUpdated from server to sync across clients
+if (typeof socket !== 'undefined' && socket) {
+  socket.on('storyPointsUpdated', ({ storyId, points }) => {
+    const el = document.getElementById(`story-points-${storyId}`);
+    const card = document.getElementById(storyId);
+    if (el) el.textContent = (points !== undefined && points !== null) ? String(points) : '?';
+    if (card) card.dataset.storyPoints = points;
+  });
+}
+
     if (deletedStoryIds.has(storyId)) return;
     
     // Skip if already revealed to avoid duplicate animations
@@ -1161,6 +1200,7 @@ console.log('[RESTORE] Skipped manual session restoration — server handles vot
     }
     
     handleVotesRevealed(storyId, votes);
+        updateVoteCountUI(storyId);
     
     // Log action for debugging
     console.log(`[VOTE] Votes revealed for story: ${storyId}, stats should now be visible`);
@@ -2194,6 +2234,75 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   // Add to DOM
   storyCard.appendChild(storyTitle);
 
+// --- Story meta (vote count + editable story points) ---
+const storyMeta = document.createElement('div');
+storyMeta.className = 'story-meta';
+
+// Vote count element (hidden until revealed)
+const voteCountEl = document.createElement('div');
+voteCountEl.className = 'vote-count';
+voteCountEl.id = `vote-count-${ticketData.id}`;
+voteCountEl.textContent = '0 votes';
+storyMeta.appendChild(voteCountEl);
+
+// Story points display (editable in-place)
+const storyPointsEl = document.createElement('div');
+storyPointsEl.className = 'story-points';
+storyPointsEl.id = `story-points-${ticketData.id}`;
+// if ticketData.points exists prefer it, otherwise blank
+storyPointsEl.textContent = (ticketData.points !== undefined && ticketData.points !== null) ? String(ticketData.points) : '?';
+storyMeta.appendChild(storyPointsEl);
+
+storyCard.appendChild(storyMeta);
+
+// in-place editing behaviour
+storyPointsEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const current = storyPointsEl.textContent.trim();
+  storyPointsEl.classList.add('editing');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current === '?' ? '' : current;
+  input.id = `story-points-input-${ticketData.id}`;
+  storyPointsEl.textContent = '';
+  storyPointsEl.appendChild(input);
+  input.focus();
+  input.select();
+
+  function commit() {
+    const newVal = input.value.trim() || '?';
+    // update UI immediately
+    storyPointsEl.classList.remove('editing');
+    storyPointsEl.textContent = newVal;
+    // persist to dataset for later use
+    storyCard.dataset.storyPoints = newVal;
+    // emit update to server
+    if (typeof socket !== 'undefined' && socket && socket.connected) {
+      socket.emit('updateStoryPoints', { storyId: ticketData.id, points: newVal });
+    } else {
+      console.log('[STORY POINTS] socket not available, local update only', ticketData.id, newVal);
+    }
+    // cleanup listeners
+    input.removeEventListener('blur', onBlur);
+    input.removeEventListener('keydown', onKey);
+  }
+  function onBlur() { commit(); }
+  function onKey(e) {
+    if (e.key === 'Enter') {
+      commit();
+    } else if (e.key === 'Escape') {
+      // cancel
+      storyPointsEl.classList.remove('editing');
+      storyPointsEl.textContent = current;
+      input.removeEventListener('blur', onBlur);
+      input.removeEventListener('keydown', onKey);
+    }
+  }
+  input.addEventListener('blur', onBlur);
+  input.addEventListener('keydown', onKey);
+});
+
+
   // Add 3-dot menu for hosts only
   if (isCurrentUserHost()) {
     const actionsContainer = document.createElement('div');
@@ -2479,6 +2588,7 @@ function setupRevealResetButtons() {
         
         // Show statistics immediately for host
         handleVotesRevealed(storyId, votes);
+        updateVoteCountUI(storyId);
         
         // Trigger emoji effect
         triggerGlobalEmojiBurst();
@@ -3364,6 +3474,7 @@ function updateUserList(users) {
         
         // Show statistics immediately for host
         handleVotesRevealed(storyId, votes);
+        updateVoteCountUI(storyId);
         
         // Trigger emoji effect
         triggerGlobalEmojiBurst();
@@ -3435,6 +3546,7 @@ function updateUserList(users) {
     if (reveal) {
       setTimeout(() => {
         handleVotesRevealed(storyId, votes);
+        updateVoteCountUI(storyId);
       }, 200);
     }
   }
@@ -4196,6 +4308,7 @@ async function handleSocketMessage(message)  {
         
         // Show statistics  
         handleVotesRevealed(storyId, votes);
+        updateVoteCountUI(storyId);
         
         // Trigger emoji burst for fun effect - ONLY ONCE
         triggerGlobalEmojiBurst();
