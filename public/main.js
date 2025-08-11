@@ -130,6 +130,11 @@ window.addTicketFromModal = function(ticketData) {
     addTicketToUI(ticketData, true);
     
   } else {
+    const voteBubble = document.createElement('div');
+    voteBubble.className = 'vote-bubble';
+    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.textContent = '0';
+    storyCard.appendChild(voteBubble);
     // For manual adds, get data from form inputs
     console.log('[MODAL] Processing manual ticket add');
     
@@ -172,6 +177,11 @@ window.addTicketFromModal = function(ticketData) {
 Script for drop down menu 
 */
 document.addEventListener('DOMContentLoaded', function() {
+    const voteBubble = document.createElement('div');
+    voteBubble.className = 'vote-bubble';
+    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.textContent = '0';
+    storyCard.appendChild(voteBubble);
   // Toggle menu when avatar/name is clicked
   const trigger = document.getElementById('profileMenuTrigger');
   const menu = document.getElementById('profileMenu');
@@ -297,6 +307,11 @@ function handleCSVFile(file) {
                 addTicketToUI(ticket, true);
             });
         } else {
+    const voteBubble = document.createElement('div');
+    voteBubble.className = 'vote-bubble';
+    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.textContent = '0';
+    storyCard.appendChild(voteBubble);
             alert('No valid tickets found in the CSV.');
         }
     };
@@ -2060,6 +2075,11 @@ function setupAddTicketButton() {
 }
 
 function getVoteEmoji(vote) {
+    const voteBubble = document.createElement('div');
+    voteBubble.className = 'vote-bubble';
+    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.textContent = '0';
+    storyCard.appendChild(voteBubble);
   const map = {
     '1': '🟢',
     '2': '🟡',
@@ -2078,6 +2098,11 @@ function getVoteEmoji(vote) {
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
 function addTicketToUI(ticketData, selectAfterAdd = false) {
+    const voteBubble = document.createElement('div');
+    voteBubble.className = 'vote-bubble';
+    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.textContent = '0';
+    storyCard.appendChild(voteBubble);
   if (!ticketData || !ticketData.id || !ticketData.text) return;
 
   // Check if this ticket is in our deleted set
@@ -2433,6 +2458,11 @@ function processAllTickets(tickets) {
   });
 
   if (filtered.length > 0) {
+    const voteBubble = document.createElement('div');
+    voteBubble.className = 'vote-bubble';
+    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.textContent = '0';
+    storyCard.appendChild(voteBubble);
     if (currentStoryIndex === null || currentStoryIndex === undefined || currentStoryIndex < 0 || currentStoryIndex >= filtered.length) {
       currentStoryIndex = 0;
       selectStory(0, false);
@@ -2616,6 +2646,11 @@ function setupCSVUploader() {
       
       // Reset current story index only if no stories were selected before
       if (!document.querySelector('.story-card.selected')) {
+    const voteBubble = document.createElement('div');
+    voteBubble.className = 'vote-bubble';
+    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.textContent = '0';
+    storyCard.appendChild(voteBubble);
         currentStoryIndex = 0;
         renderCurrentStory();
       }
