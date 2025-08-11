@@ -1196,14 +1196,6 @@ if (planningCardsSection) {
 handleVotesRevealed(storyId, votes);
 updateVoteCountUI(storyId);
 
-// ✅ NEW: update story points from tickets array
-if (typeof tickets !== 'undefined') {
-  const ticket = tickets.find(t => t.id === storyId);
-  if (ticket && ticket.points !== undefined && ticket.points !== null) {
-    const pointsEl = document.getElementById(`story-points-${storyId}`);
-    if (pointsEl) pointsEl.textContent = String(ticket.points);
-  }
-}
 
 console.log(`[VOTE] Votes revealed for story: ${storyId}, stats should now be visible`);
 
@@ -1994,136 +1986,89 @@ function handleVotesRevealed(storyId, votes) {
   // -----------------------------------------------------
   const uniqueVoteValues = Array.from(usernameToVoteMap.values()).map(data => data.vote);
 
-  // -----------------------------------------------------
-  // FOURTH STEP: Calculate statistics
-  // -----------------------------------------------------
-  // Parse numeric values for average calculation
-  function parseNumericVote(vote) {
-    if (typeof vote !== 'string' && typeof vote !== 'number') return NaN;
-    if (vote === '½') return 0.5;
-    if (vote === '?' || vote === '☕' || vote === '∞') return NaN;
+function handleVotesRevealed(storyId, votes) {
+  if (!votes || typeof votes !== 'object') return;
 
-    // Handle T-shirt sizes with numbers in parentheses
-    if (typeof vote === 'string') {
-      const match = vote.match(/\((\d+(?:\.\d+)?)\)$/);
-      if (match) return parseFloat(match[1]);
-    }
-
-    const parsed = parseFloat(vote);
-    return isNaN(parsed) ? NaN : parsed;
+  // Add styles for vote statistics if needed
+  if (typeof addFixedVoteStatisticsStyles === 'function') {
+    addFixedVoteStatisticsStyles();
   }
 
-  const numericValues = uniqueVoteValues.map(parseNumericVote).filter(v => !isNaN(v));
+  // Show revealed votes in the main table
+  applyVotesToUI(votes, false);
 
-  // Default values
-  let mostCommonVote = uniqueVoteValues.length > 0 ? uniqueVoteValues[0] : '0';
-  let averageValue = null;
+  // --- Deduplicate and calculate stats ---
+  const userMap = window.userMap || {};
+  const usernameToVote = {};
 
-  // Calculate statistics if we have votes
-  if (uniqueVoteValues.length > 0) {
-    // Find most common vote
-    const frequency = {};
-    let maxFreq = 0;
+  Object.entries(votes).forEach(([socketId, vote]) => {
+    const userName = userMap[socketId] || socketId;
+    usernameToVote[userName] = vote;
+  });
 
-    uniqueVoteValues.forEach(vote => {
-      frequency[vote] = (frequency[vote] || 0) + 1;
-      if (frequency[vote] > maxFreq) {
-        maxFreq = frequency[vote];
-        mostCommonVote = vote;
-      }
+  const uniqueVotes = Object.values(usernameToVote);
+
+  // Find most common vote
+  let mostCommonVote = '?';
+  if (uniqueVotes.length > 0) {
+    const freq = {};
+    let max = 0;
+    uniqueVotes.forEach(v => {
+      freq[v] = (freq[v] || 0) + 1;
+      if (freq[v] > max) { max = freq[v]; mostCommonVote = v; }
     });
-
-    // Calculate average if we have numeric values
-    if (numericValues.length > 0) {
-      averageValue = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
-      averageValue = Math.round(averageValue * 10) / 10;
-    }
   }
 
-  // Log final statistics data
-  console.log(`[VOTES] Showing stats for ${usernameToVoteMap.size} unique users (${Object.keys(votes).length} total votes)`);
-  console.log(`[VOTES] Most common: ${mostCommonVote}, Average: ${averageValue}`);
+  // Calculate numeric average
+  const numericVotes = uniqueVotes
+    .map(v => v === '½' ? 0.5 : (isNaN(Number(v)) ? null : Number(v)))
+    .filter(v => v !== null);
+  let averageValue = '';
+  if (numericVotes.length > 0) {
+    averageValue = (numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length).toFixed(1);
+  }
 
-  // -----------------------------------------------------
-  // FIFTH STEP: Create statistics UI
-  // -----------------------------------------------------
-  // Remove any existing stats containers for this story
-  const existingStatsContainers = document.querySelectorAll(`.vote-statistics-container[data-story-id="${storyId}"]`);
-  existingStatsContainers.forEach(el => el.remove());
+  // --- Remove any existing stats containers ---
+  document.querySelectorAll(`.vote-statistics-container[data-story-id="${storyId}"]`).forEach(el => el.remove());
 
-  // Create the stats container
+  // --- Insert new stats panel ---
   const statsContainer = document.createElement('div');
   statsContainer.className = 'vote-statistics-container';
   statsContainer.setAttribute('data-story-id', storyId);
-  
-  // Use the deduplicated count for the UI display - this is critical!
-  const voteCount = usernameToVoteMap.size;
-  
   statsContainer.innerHTML = `
     <div class="fixed-vote-display">
       <div class="fixed-vote-card">
         ${mostCommonVote}
-        <div class="fixed-vote-count">${voteCount} Vote${voteCount !== 1 ? 's' : ''}</div>
+        <div class="fixed-vote-count">${uniqueVotes.length} Vote${uniqueVotes.length !== 1 ? 's' : ''}</div>
       </div>
       <div class="fixed-vote-stats">
-        ${averageValue !== null ? `
-          <div class="fixed-stat-group">
-            <div class="fixed-stat-label">Average:</div>
-            <div class="fixed-stat-value">${averageValue}</div>
-          </div>` : ''}
+        <div class="fixed-stat-group">
+          <div class="fixed-stat-label">Average:</div>
+          <div class="fixed-stat-value">${averageValue || '-'}</div>
+        </div>
         <div class="fixed-stat-group">
           <div class="fixed-stat-label">Agreement:</div>
-          <div class="fixed-agreement-circle">
-            <div class="agreement-icon">👍</div>
-          </div>
+          <div class="fixed-agreement-circle"><div class="agreement-icon">👍</div></div>
         </div>
       </div>
     </div>
   `;
 
-  // Insert the stats container into the DOM
+  // Place stats right after planning cards section
   const planningCardsSection = document.querySelector('.planning-cards-section');
-  const currentStoryCard = document.querySelector('.story-card.selected');
-
   if (planningCardsSection && planningCardsSection.parentNode) {
-    planningCardsSection.classList.add('hidden-until-init');
-    planningCardsSection.style.display = 'none';
     planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
-  } else if (currentStoryCard && currentStoryCard.parentNode) {
-    currentStoryCard.parentNode.insertBefore(statsContainer, currentStoryCard.nextSibling);
   } else {
     document.body.appendChild(statsContainer);
   }
-
   statsContainer.style.display = 'block';
 
-  // -----------------------------------------------------
-  // SIXTH STEP: UPDATE VOTE ON STORY CARD
-  // -----------------------------------------------------
-
-	// === UPDATE STORY CARD POINTS DISPLAY WHEN VOTES ARE REVEALED ===
-const storyCard = document.getElementById(storyId);
-if (storyCard) {
-    // Find the points element
-    const storyPointsEl = storyCard.querySelector('.story-points');
-
-    // Use mostCommonVote or averageValue as desired
-    let finalPoints = mostCommonVote;
-    // If you want to show the average, uncomment the next line instead
-    // let finalPoints = averageValue !== null ? averageValue : mostCommonVote;
-
-    if (storyPointsEl) {
-        storyPointsEl.textContent = finalPoints;
-        storyPointsEl.classList.add('revealed');    // style
-    }
-
-    // Move the points element under the description/title (bottom of card)
-    const storyTitleOrDesc = storyCard.querySelector('.story-title') || storyCard; // fallback to card itself
-    if (storyTitleOrDesc && storyPointsEl) {
-        storyTitleOrDesc.parentNode.appendChild(storyPointsEl);
-    }
-}
-	
+  // --- Update story-points bubble on the story card ---
+  const pointsEl = document.getElementById(`story-points-${storyId}`);
+  if (pointsEl) {
+    pointsEl.textContent = mostCommonVote;
+    pointsEl.classList.add('revealed');
+  }
 }
 
 
@@ -4568,6 +4513,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
