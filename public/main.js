@@ -247,7 +247,7 @@ const importCsvBtn = document.getElementById('importCsvBtn');
 if (importCsvBtn) {
     importCsvBtn.addEventListener('click', function () {
         if (!window.selectedCSVFile) {
-            alert('Please choose a file first.');
+        /*    alert('Please choose a file first.');*/
             return;
         }
         console.log('[CSV] Import button clicked, parsing file:', window.selectedCSVFile.name);
@@ -4451,6 +4451,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
