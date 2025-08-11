@@ -545,7 +545,7 @@ function refreshVoteDisplay() {
   }
 }
 
-// **FIXED: Add the missing updateVoteCountUI function**
+
 function updateVoteCountUI(storyId) {
   try {
     const votes = votesPerStory[storyId] || {};
@@ -555,13 +555,21 @@ function updateVoteCountUI(storyId) {
       unique.add(name);
     }
     const count = unique.size;
-    const el = document.getElementById(`vote-count-${storyId}`);
-    if (el) {
-      el.textContent = `${count} vote${count !== 1 ? 's' : ''}`;
-      el.style.display = votesRevealed[storyId] ? 'block' : 'none';
+    
+    // Update the vote count in story meta
+    const voteCountEl = document.getElementById(`vote-count-${storyId}`);
+    if (voteCountEl) {
+      if (votesRevealed[storyId] && count > 0) {
+        voteCountEl.textContent = `${count} vote${count !== 1 ? 's' : ''}`;
+        voteCountEl.style.display = 'block';
+        voteCountEl.classList.add('revealed');
+      } else {
+        voteCountEl.style.display = 'none';
+        voteCountEl.classList.remove('revealed');
+      }
     }
     
-    // **FIXED: Also update standardized vote bubble**
+    // Also update standardized vote bubble
     const bubbleEl = document.getElementById(`vote-bubble-${storyId}`);
     if (bubbleEl) {
       if (votesRevealed[storyId]) {
@@ -1751,6 +1759,7 @@ function handleVotesRevealed(storyId, votes) {
     });
   }
 
+  // Calculate numeric average
   const numericVotes = uniqueVotes
     .map(v => v === '½' ? 0.5 : (isNaN(Number(v)) ? null : Number(v)))
     .filter(v => v !== null);
@@ -1759,8 +1768,10 @@ function handleVotesRevealed(storyId, votes) {
     averageValue = (numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length).toFixed(1);
   }
 
+  // Remove any existing stats containers
   document.querySelectorAll(`.vote-statistics-container[data-story-id="${storyId}"]`).forEach(el => el.remove());
 
+  // Create stats panel
   const statsContainer = document.createElement('div');
   statsContainer.className = 'vote-statistics-container';
   statsContainer.setAttribute('data-story-id', storyId);
@@ -1791,11 +1802,15 @@ function handleVotesRevealed(storyId, votes) {
   }
   statsContainer.style.display = 'block';
 
+  // Update story points display in the card's meta section
   const pointsEl = document.getElementById(`story-points-${storyId}`);
-  if (pointsEl) {
+  if (pointsEl && mostCommonVote !== '?') {
     pointsEl.textContent = mostCommonVote;
     pointsEl.classList.add('revealed');
   }
+  
+  // Update vote count display in the card's meta section
+  updateVoteCountUI(storyId);
 }
 
 /**
@@ -4063,3 +4078,4 @@ window.addEventListener('beforeunload', () => {
 
 
       
+
