@@ -4515,3 +4515,236 @@ window.addEventListener('beforeunload', () => {
 
 
 
+
+
+
+/* ===== PATCH: Centralize and stabilize vote bubble handling =====
+   - Ensures exactly one vote bubble per .story-card
+   - Moves the bubble under the 3-dot menu (.story-actions)
+   - Updates bubble count in real-time from 'voteUpdate' and 'votesUpdate' socket events
+   - Listens for common reveal events: 'revealVotes', 'votesRevealed', 'reveal' (server may use any)
+   - Non-invasive: does not change existing logic, only augments UI and avoids duplicate bubble creation
+*/
+(function() {
+  // Utility: ensure single vote bubble inside .story-actions for a given story card
+  function ensureVoteBubbleForCard(storyCard) {
+    if (!storyCard) return null;
+    const storyId = storyCard.id || storyCard.getAttribute('data-id') || storyCard.dataset.id;
+    if (!storyId) return null;
+
+    // Find or create story-actions container (3-dot menu container)
+    let actions = storyCard.querySelector('.story-actions');
+    if (!actions) {
+      // create container to host menu and bubble if missing
+      actions = document.createElement('div');
+      actions.className = 'story-actions';
+      // place it as first child so it's visually at top-right
+      storyCard.style.position = storyCard.style.position || 'relative';
+      storyCard.insertBefore(actions, storyCard.firstChild);
+    }
+
+    // Remove any duplicate standardized bubble inside this actions
+    const existingStandard = actions.querySelector('.vote-bubble-standard');
+    if (existingStandard) {
+      // ensure id matches
+      existingStandard.id = `vote-bubble-${storyId}`;
+      return existingStandard;
+    }
+
+    // Remove any legacy .vote-bubble children in the card to avoid duplicates
+    const legacyBubbles = storyCard.querySelectorAll('.vote-bubble');
+    legacyBubbles.forEach(b => b.remove());
+
+    // Create a single standardized bubble
+    const bubble = document.createElement('div');
+    bubble.className = 'vote-bubble-standard';
+    bubble.id = `vote-bubble-${storyId}`;
+    bubble.textContent = '?'; // default to question mark until votes start coming in
+    bubble.setAttribute('aria-label', 'vote count');
+    actions.appendChild(bubble);
+    return bubble;
+  }
+
+  // Create/refresh bubbles for all existing story cards on init
+  function initAllBubbles() {
+    document.querySelectorAll('.story-card').forEach(card => ensureVoteBubbleForCard(card));
+  }
+
+  // MutationObserver to handle dynamically added/updated story cards
+  const storyList = document.getElementById('storyList') || document.querySelector('.story-container') || document.body;
+  if (storyList) {
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.addedNodes && m.addedNodes.length) {
+          m.addedNodes.forEach(node => {
+            if (node.nodeType === 1 && node.classList && node.classList.contains('story-card')) {
+              ensureVoteBubbleForCard(node);
+            } else if (node.querySelectorAll) {
+              // in case a wrapper was inserted
+              node.querySelectorAll('.story-card').forEach(card => ensureVoteBubbleForCard(card));
+            }
+          });
+        }
+      }
+    });
+    mo.observe(storyList, { childList: true, subtree: true });
+  }
+
+  // Helper to get current vote count for a storyId from the in-memory structure
+  function getVoteCountForStory(storyId) {
+    try {
+      const votesObj = window.currentVotesPerStory?.[storyId] || {};
+      return Object.keys(votesObj).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // Update bubble display for a story: shows '?' before reveal, count after reveal
+  function updateVoteCountBubble(storyId) {
+    if (!storyId) return;
+    const bubble = document.getElementById(`vote-bubble-${storyId}`);
+    if (!bubble) {
+      // try to find corresponding card and ensure bubble exists
+      const card = document.getElementById(storyId);
+      if (card) ensureVoteBubbleForCard(card);
+    }
+    const finalBubble = document.getElementById(`vote-bubble-${storyId}`);
+    if (!finalBubble) return;
+
+    // Determine whether this story is revealed: check global votesRevealed or a body class
+    const revealed = (typeof window.votesRevealed === 'object' && window.votesRevealed[storyId]) || document.body.classList.contains('votes-revealed');
+
+    const count = getVoteCountForStory(storyId);
+    if (revealed) {
+      finalBubble.textContent = String(count);
+    } else {
+      // If there are zero votes, still show '?', otherwise show current count but as '?' as requested
+      finalBubble.textContent = count > 0 ? '?' : '?';
+    }
+  }
+
+  // Update all bubbles (useful after a bulk votesUpdate)
+  function updateAllBubbles() {
+    Object.keys(window.currentVotesPerStory || {}).forEach(storyId => updateVoteCountBubble(storyId));
+    // Also ensure bubbles exist for story cards without votes present yet
+    document.querySelectorAll('.story-card').forEach(card => {
+      const sid = card.id || card.dataset.id;
+      if (sid) updateVoteCountBubble(sid);
+    });
+  }
+
+  // Socket integration: listen for vote updates and reflect them in the bubble
+  function bindSocketUpdateHandlers() {
+    if (typeof socket === 'undefined' || !socket) return;
+
+    // When a single vote changes
+    socket.off && socket.off('voteUpdate');
+    socket.on && socket.on('voteUpdate', (payload) => {
+      try {
+        const { storyId, userId, vote } = payload;
+        // Update local cache (server already broadcasts full votesUpdate elsewhere)
+        if (!window.currentVotesPerStory) window.currentVotesPerStory = {};
+        if (!window.currentVotesPerStory[storyId]) window.currentVotesPerStory[storyId] = {};
+        window.currentVotesPerStory[storyId][userId] = vote;
+        updateVoteCountBubble(storyId);
+      } catch (e) {
+        console.warn('voteUpdate handler error', e);
+      }
+    });
+
+    // When server broadcasts full votes snapshot
+    socket.off && socket.off('votesUpdate');
+    socket.on && socket.on('votesUpdate', (votesSnapshot) => {
+      try {
+        // Expected shape: { storyId: { socketId: vote }, ... }
+        window.currentVotesPerStory = votesSnapshot || {};
+        updateAllBubbles();
+      } catch (e) {
+        console.warn('votesUpdate handler error', e);
+      }
+    });
+
+    // Some servers emit 'restoreUserVote' for a client to restore; keep bubble in sync
+    socket.off && socket.off('restoreUserVote');
+    socket.on && socket.on('restoreUserVote', ({ storyId, vote }) => {
+      try {
+        if (!window.currentVotesPerStory) window.currentVotesPerStory = {};
+        if (!window.currentVotesPerStory[storyId]) window.currentVotesPerStory[storyId] = {};
+        // We can't know socket id here, but refresh all bubbles
+        updateVoteCountBubble(storyId);
+      } catch (e) {}
+    });
+
+    // Listen for common reveal events (server may name these differently)
+    const revealEvents = ['revealVotes', 'votesRevealed', 'reveal', 'votesReveal'];
+    revealEvents.forEach(evt => {
+      socket.off && socket.off(evt);
+      socket.on && socket.on(evt, (data) => {
+        try {
+          // server may send storyId or full object; if full object, merge into votesRevealed
+          if (!window.votesRevealed) window.votesRevealed = {};
+          if (data && typeof data === 'object' && data.storyId) {
+            window.votesRevealed[data.storyId] = true;
+            document.body.classList.add('votes-revealed');
+            updateVoteCountBubble(data.storyId);
+          } else if (typeof data === 'string') {
+            window.votesRevealed[data] = true;
+            document.body.classList.add('votes-revealed');
+            updateVoteCountBubble(data);
+          } else {
+            // generic reveal -> set body class and refresh all
+            document.body.classList.add('votes-revealed');
+            if (data && data.votesRevealed) {
+              Object.assign(window.votesRevealed, data.votesRevealed);
+            }
+            updateAllBubbles();
+          }
+        } catch (e) {
+          console.warn('reveal handler error', e);
+        }
+      });
+    });
+
+    // Listen for unreveal / reset events (common names)
+    const resetEvents = ['resetVotes', 'hideVotes', 'votesHidden', 'reset'];
+    resetEvents.forEach(evt => {
+      socket.off && socket.off(evt);
+      socket.on && socket.on(evt, (data) => {
+        try {
+          if (data && data.storyId) {
+            if (window.votesRevealed) window.votesRevealed[data.storyId] = false;
+            updateVoteCountBubble(data.storyId);
+          } else {
+            document.body.classList.remove('votes-revealed');
+            window.votesRevealed = {};
+            updateAllBubbles();
+          }
+        } catch (e) {}
+      });
+    });
+  }
+
+  // Wait for DOM ready and for the app's socket to be available then initialize
+  function waitForAppInit() {
+    // ensure existing functions are preserved; run init after slight delay so original code sets up
+    setTimeout(() => {
+      initAllBubbles();
+      bindSocketUpdateHandlers();
+      // try updating after a short delay (in case votes already loaded)
+      setTimeout(updateAllBubbles, 400);
+    }, 400);
+  }
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    waitForAppInit();
+  } else {
+    document.addEventListener('DOMContentLoaded', waitForAppInit);
+  }
+
+  // Expose helpers for debugging/testing
+  window._ensureVoteBubbleForCard = ensureVoteBubbleForCard;
+  window._updateVoteCountBubble = updateVoteCountBubble;
+
+})();
+
