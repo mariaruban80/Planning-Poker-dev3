@@ -98,15 +98,9 @@ async function translateTicketsIfNeeded(tickets) {
  * Handle adding a ticket from the modal
  * @param {Object} ticketData - Ticket data {id, text} - [Will now properly set name/description]
  */
+
 window.addTicketFromModal = function(ticketData) {
   if (!ticketData || !ticketData.id) return;
-
-  const ticketName = document.getElementById('ticketNameInput').value?.trim() || '';
-  const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
-
-  const displayText = ticketName && ticketDescription
-    ? `${ticketName} : ${ticketDescription}`
-    : (ticketName || ticketDescription);
 
   if (deletedStoryIds.has(ticketData.id)) {
     console.log('[MODAL] Cannot add previously deleted ticket:', ticketData.id);
@@ -115,33 +109,62 @@ window.addTicketFromModal = function(ticketData) {
 
   console.log('[MODAL] Adding ticket from modal:', ticketData);
 
-  let validData = false;
-  if (ticketName != null && ticketDescription != null) {
+  // Check if this is a CSV import (has idDisplay/descriptionDisplay) or a manual add
+  const isCSVImport = ticketData.idDisplay !== undefined || ticketData.descriptionDisplay !== undefined;
+  
+  if (isCSVImport) {
+    // For CSV imports, use the data as-is
+    console.log('[MODAL] Processing CSV import ticket');
+    
+    // Ensure we have the required fields for CSV
+    if (!ticketData.text && ticketData.idDisplay) {
+      ticketData.text = ticketData.idDisplay;
+    }
+    
+    if (typeof emitAddTicket === 'function') {
+      emitAddTicket(ticketData);
+    } else if (socket) {
+      socket.emit('addTicket', ticketData);
+    }
+
+    addTicketToUI(ticketData, true);
+    
+  } else {
+    // For manual adds, get data from form inputs
+    console.log('[MODAL] Processing manual ticket add');
+    
+    const ticketName = document.getElementById('ticketNameInput')?.value?.trim() || '';
+    const ticketDescription = window.quill ? window.quill.root.innerHTML.trim() : '';
+
+    const displayText = ticketName && ticketDescription
+      ? `${ticketName} : ${ticketDescription}`
+      : (ticketName || ticketDescription);
+
+    if (!ticketName && !ticketDescription) {
+      console.warn('[MODAL] No valid data for manual ticket add');
+      return;
+    }
+
     const hostLang = localStorage.getItem('selectedLanguage') || 'en';
 
     ticketData.text = displayText;
     ticketData.idDisplay = ticketName;
     ticketData.descriptionDisplay = ticketDescription;
-    ticketData.originalText = displayText;        // 🔥 new
-    ticketData.originalLang = hostLang;           // 🔥 new
+    ticketData.originalText = displayText;
+    ticketData.originalLang = hostLang;
 
-    validData = true;
-  }
+    if (typeof emitAddTicket === 'function') {
+      emitAddTicket(ticketData);
+    } else if (socket) {
+      socket.emit('addTicket', ticketData);
+    }
 
-  if ((typeof emitAddTicket === 'function') && validData) {
-    emitAddTicket(ticketData);
-  } else if (socket && validData) {
-    socket.emit('addTicket', ticketData);
-  }
-
-  if (validData) {
     addTicketToUI(ticketData, true);
   }
 
   manuallyAddedTickets.push(ticketData);
   return;
 };
-
 
 
 
@@ -4428,6 +4451,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
