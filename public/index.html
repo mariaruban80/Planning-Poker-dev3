@@ -2248,7 +2248,6 @@ font-size: 15px;
   border-top: 1px solid #e0e0e0;
   background-color: #f8f9fa;
 }
-
 .csv-cancel-btn,
 .csv-import-btn {
   padding: 12px 24px;
@@ -2257,34 +2256,39 @@ font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  border: 2px solid;
 }
 
 .csv-cancel-btn {
   background-color: white;
-  color: #6b7280;
-  border: 1px solid #d1d5db;
+  color: #753acb; 
+  border-color: #753acb; 
 }
 
 .csv-cancel-btn:hover {
-  background-color: #f9fafb;
+  background-color: #f3e8ff; 
+  border-color: #501ca3; 
+  color: #501ca3;
 }
 
+
 .csv-import-btn {
-  background-color: #3b82f6;
+  background-color: #753acb; 
   color: white;
-  border: none;
+  border-color: #753acb; 
 }
 
 .csv-import-btn:hover {
-  background-color: #2563eb;
+  background-color: #501ca3; 
+  border-color: #501ca3;
 }
 
 .csv-import-btn:disabled {
   background-color: #9ca3af;
+  border-color: #9ca3af;
   cursor: not-allowed;
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
   .csv-modal-content {
     width: 95%;
@@ -4666,10 +4670,10 @@ function handleCsvImport() {
   console.log('Selected file:', selectedCsvFile?.name);
   console.log('CSV data rows:', csvData.length);
   
-  if (!selectedCsvFile) {
+/*  if (!selectedCsvFile) {
     alert('Please select a CSV file first.');
     return;
-  }
+  }*/
   
   if (!csvData || csvData.length === 0) {
     alert('No CSV data to import. Please select a valid CSV file.');
@@ -4743,11 +4747,11 @@ function handleCsvImport() {
     // Close modal and show success
     hideCsvUploadModal();
     
-    if (importedCount > 0) {
+ /*   if (importedCount > 0) {
       alert(`Successfully imported ${importedCount} tickets!`);
     } else {
       alert('No tickets were imported. Please check your data and field mappings.');
-    }
+    } */
     
   } catch (error) {
     console.error('Error during import:', error);
@@ -4936,6 +4940,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
