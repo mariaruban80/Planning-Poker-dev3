@@ -2096,6 +2096,34 @@ function handleVotesRevealed(storyId, votes) {
   }
 
   statsContainer.style.display = 'block';
+
+  // -----------------------------------------------------
+  // SIXTH STEP: UPDATE VOTE ON STORY CARD
+  // -----------------------------------------------------
+
+	// === UPDATE STORY CARD POINTS DISPLAY WHEN VOTES ARE REVEALED ===
+const storyCard = document.getElementById(storyId);
+if (storyCard) {
+    // Find the points element
+    const storyPointsEl = storyCard.querySelector('.story-points');
+
+    // Use mostCommonVote or averageValue as desired
+    let finalPoints = mostCommonVote;
+    // If you want to show the average, uncomment the next line instead
+    // let finalPoints = averageValue !== null ? averageValue : mostCommonVote;
+
+    if (storyPointsEl) {
+        storyPointsEl.textContent = finalPoints;
+        storyPointsEl.classList.add('revealed');    // style
+    }
+
+    // Move the points element under the description/title (bottom of card)
+    const storyTitleOrDesc = storyCard.querySelector('.story-title') || storyCard; // fallback to card itself
+    if (storyTitleOrDesc && storyPointsEl) {
+        storyTitleOrDesc.parentNode.appendChild(storyPointsEl);
+    }
+}
+	
 }
 
 
@@ -4540,6 +4568,7 @@ window.addEventListener('beforeunload', () => {
     clearInterval(heartbeatInterval);
   }
 });
+
 
 
 
