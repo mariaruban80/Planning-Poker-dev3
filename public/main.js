@@ -132,9 +132,9 @@ window.addTicketFromModal = function(ticketData) {
   } else {
     const voteBubble = document.createElement('div');
     voteBubble.className = 'vote-bubble';
-    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.id = (typeof ticketData !== 'undefined' && ticketData && ticketData.id) ? `vote-bubble-${ticketData.id}` : (typeof ticket !== 'undefined' && ticket && ticket.id) ? `vote-bubble-${ticket.id}` : `vote-bubble-${Math.random().toString(36).slice(2,8)}`;
     voteBubble.textContent = '0';
-    storyCard.appendChild(voteBubble);
+    if (typeof storyCard !== 'undefined' && storyCard) storyCard.appendChild(voteBubble);
     // For manual adds, get data from form inputs
     console.log('[MODAL] Processing manual ticket add');
     
@@ -179,9 +179,9 @@ Script for drop down menu
 document.addEventListener('DOMContentLoaded', function() {
     const voteBubble = document.createElement('div');
     voteBubble.className = 'vote-bubble';
-    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.id = (typeof ticketData !== 'undefined' && ticketData && ticketData.id) ? `vote-bubble-${ticketData.id}` : (typeof ticket !== 'undefined' && ticket && ticket.id) ? `vote-bubble-${ticket.id}` : `vote-bubble-${Math.random().toString(36).slice(2,8)}`;
     voteBubble.textContent = '0';
-    storyCard.appendChild(voteBubble);
+    if (typeof storyCard !== 'undefined' && storyCard) storyCard.appendChild(voteBubble);
   // Toggle menu when avatar/name is clicked
   const trigger = document.getElementById('profileMenuTrigger');
   const menu = document.getElementById('profileMenu');
@@ -309,9 +309,9 @@ function handleCSVFile(file) {
         } else {
     const voteBubble = document.createElement('div');
     voteBubble.className = 'vote-bubble';
-    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.id = (typeof ticketData !== 'undefined' && ticketData && ticketData.id) ? `vote-bubble-${ticketData.id}` : (typeof ticket !== 'undefined' && ticket && ticket.id) ? `vote-bubble-${ticket.id}` : `vote-bubble-${Math.random().toString(36).slice(2,8)}`;
     voteBubble.textContent = '0';
-    storyCard.appendChild(voteBubble);
+    if (typeof storyCard !== 'undefined' && storyCard) storyCard.appendChild(voteBubble);
             alert('No valid tickets found in the CSV.');
         }
     };
@@ -2077,9 +2077,9 @@ function setupAddTicketButton() {
 function getVoteEmoji(vote) {
     const voteBubble = document.createElement('div');
     voteBubble.className = 'vote-bubble';
-    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.id = (typeof ticketData !== 'undefined' && ticketData && ticketData.id) ? `vote-bubble-${ticketData.id}` : (typeof ticket !== 'undefined' && ticket && ticket.id) ? `vote-bubble-${ticket.id}` : `vote-bubble-${Math.random().toString(36).slice(2,8)}`;
     voteBubble.textContent = '0';
-    storyCard.appendChild(voteBubble);
+    if (typeof storyCard !== 'undefined' && storyCard) storyCard.appendChild(voteBubble);
   const map = {
     '1': '🟢',
     '2': '🟡',
@@ -2098,12 +2098,7 @@ function getVoteEmoji(vote) {
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
 function addTicketToUI(ticketData, selectAfterAdd = false) {
-    const voteBubble = document.createElement('div');
-    voteBubble.className = 'vote-bubble';
-    voteBubble.id = `vote-bubble-${ticket.id}`;
-    voteBubble.textContent = '0';
-    storyCard.appendChild(voteBubble);
-  if (!ticketData || !ticketData.id || !ticketData.text) return;
+    if (!ticketData || !ticketData.id || !ticketData.text) return;
 
   // Check if this ticket is in our deleted set
   if (deletedStoryIds.has(ticketData.id)) {
@@ -2284,7 +2279,14 @@ storyPointsEl.addEventListener('click', (e) => {
     });
   }
 
-  storyList.appendChild(storyCard);
+  
+    // Vote bubble (bottom-right under the 3-dot menu)
+    const voteBubble = document.createElement('div');
+    voteBubble.className = 'vote-bubble';
+    voteBubble.id = `vote-bubble-${ticketData.id}`;
+    voteBubble.textContent = '0';
+    storyCard.appendChild(voteBubble);
+storyList.appendChild(storyCard);
 
   // Check if user is guest and handle accordingly
   if (isGuestUser()) {
@@ -2460,9 +2462,9 @@ function processAllTickets(tickets) {
   if (filtered.length > 0) {
     const voteBubble = document.createElement('div');
     voteBubble.className = 'vote-bubble';
-    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.id = (typeof ticketData !== 'undefined' && ticketData && ticketData.id) ? `vote-bubble-${ticketData.id}` : (typeof ticket !== 'undefined' && ticket && ticket.id) ? `vote-bubble-${ticket.id}` : `vote-bubble-${Math.random().toString(36).slice(2,8)}`;
     voteBubble.textContent = '0';
-    storyCard.appendChild(voteBubble);
+    if (typeof storyCard !== 'undefined' && storyCard) storyCard.appendChild(voteBubble);
     if (currentStoryIndex === null || currentStoryIndex === undefined || currentStoryIndex < 0 || currentStoryIndex >= filtered.length) {
       currentStoryIndex = 0;
       selectStory(0, false);
@@ -2648,9 +2650,9 @@ function setupCSVUploader() {
       if (!document.querySelector('.story-card.selected')) {
     const voteBubble = document.createElement('div');
     voteBubble.className = 'vote-bubble';
-    voteBubble.id = `vote-bubble-${ticket.id}`;
+    voteBubble.id = (typeof ticketData !== 'undefined' && ticketData && ticketData.id) ? `vote-bubble-${ticketData.id}` : (typeof ticket !== 'undefined' && ticket && ticket.id) ? `vote-bubble-${ticket.id}` : `vote-bubble-${Math.random().toString(36).slice(2,8)}`;
     voteBubble.textContent = '0';
-    storyCard.appendChild(voteBubble);
+    if (typeof storyCard !== 'undefined' && storyCard) storyCard.appendChild(voteBubble);
         currentStoryIndex = 0;
         renderCurrentStory();
       }
