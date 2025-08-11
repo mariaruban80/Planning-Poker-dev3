@@ -295,6 +295,21 @@ socket.on('updateTicket', (ticketData) => {
     socket.broadcast.to(roomId).emit('updateTicket', { ticketData });
   }
 });
+// Handle updating story points directly from the story card
+socket.on('updateStoryPoints', ({ storyId, points }) => {
+  const roomId = socket.data.roomId;
+  if (!roomId || !rooms[roomId] || !storyId) return;
+
+  // Find the ticket and update its points
+  const ticketIndex = rooms[roomId].tickets.findIndex(t => t.id === storyId);
+  if (ticketIndex !== -1) {
+    rooms[roomId].tickets[ticketIndex].points = points;
+    console.log(`[SERVER] Story points updated for ${storyId} in room ${roomId}: ${points}`);
+  }
+
+  // Broadcast to everyone in the room
+  io.to(roomId).emit('storyPointsUpdated', { storyId, points });
+});
 
   
   // Handler for requesting votes by username
