@@ -2082,6 +2082,69 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
       console.log("- main.js -> the window.languageManager.getTranslatableElements statement not found please check. ");       
     }
   }
+  updateStoryCardLayout(storyCard);
+}
+
+/**
+ * Update story card layout to match host1 format:
+ * - ID as header (bold, purple)
+ * - Description below (regular text)
+ * @param {HTMLElement} storyCard - The story card element to update
+ */
+function updateStoryCardLayout(storyCard) {
+  if (!storyCard) return;
+  
+  const storyTitle = storyCard.querySelector('.story-title');
+  if (!storyTitle) return;
+  
+  // Skip if already converted
+  if (storyCard.querySelector('.story-content')) return;
+  
+  const fullText = storyTitle.textContent.trim();
+  let storyId = '';
+  let storyDescription = '';
+  
+  // Parse the text to separate ID and description
+  if (fullText.includes(': ')) {
+    const parts = fullText.split(': ', 2);
+    storyId = parts[0].trim();
+    storyDescription = parts[1].trim();
+  } else if (fullText.includes(' ')) {
+    // If no colon, treat first word as ID, rest as description
+    const words = fullText.split(' ');
+    storyId = words[0];
+    storyDescription = words.slice(1).join(' ');
+  } else {
+    // Single word - use as ID
+    storyId = fullText;
+    storyDescription = '';
+  }
+  
+  // Create the new structure
+  const storyContent = document.createElement('div');
+  storyContent.className = 'story-content';
+  
+  // Create ID element (header)
+  const storyIdEl = document.createElement('div');
+  storyIdEl.className = 'story-id';
+  storyIdEl.textContent = storyId;
+  
+  // Create description element
+  const storyDescEl = document.createElement('div');
+  storyDescEl.className = 'story-description';
+  storyDescEl.textContent = storyDescription;
+  
+  // Append elements
+  storyContent.appendChild(storyIdEl);
+  if (storyDescription) {
+    storyContent.appendChild(storyDescEl);
+  }
+  
+  // Replace the old title with new structure
+  storyTitle.style.display = 'none';
+  storyCard.insertBefore(storyContent, storyCard.firstChild);
+  
+  console.log(`Updated story card layout: ID="${storyId}", Description="${storyDescription}"`);
 }
 
 /**
@@ -4078,4 +4141,5 @@ window.addEventListener('beforeunload', () => {
 
 
       
+
 
