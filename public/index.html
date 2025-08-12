@@ -1528,17 +1528,22 @@ white-space: nowrap;
 
 /* Story points styling - matches the green "21" in the image */
 .story-meta .story-points {
+  background: #10b981; /* Green matching host1 image */
+  color: white;
   font-size: 16px;
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: #4CAF50; /* Green background like in image */
-  color: white;
-  min-width: 24px;
-  text-align: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  user-select: none;
-  line-height: 1;
+  box-shadow: none;
+  flex-shrink: 0;
+  margin-left: auto; /* This pushes it to the right */
+  order: 2; /* Ensures it comes after vote count */
 }
 
 .story-meta .story-points:hover {
@@ -2478,7 +2483,7 @@ font-size: 15px;
   border-radius: 8px;
   min-height: 90px;
   max-width: 280px; /* Much smaller width to match host1 */
-  width: 100%;
+  width: 280px;
   cursor: pointer;
   transition: all 0.2s ease;
   background-color: white;
@@ -2529,16 +2534,18 @@ font-size: 15px;
 /* Story meta container - positioned at bottom */
 .story-meta {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* This is key - spreads items apart */
   align-items: center;
   margin-top: auto;
+  width: 100%; /* Use full width */
+  gap: 10px; /* Space between vote count and points */
 }
 
 /* Vote count - positioned at bottom left with people icon */
 .story-meta .vote-count {
-  display: flex;
+  display: flex !important;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
   background: transparent;
   padding: 0;
@@ -2548,6 +2555,9 @@ font-size: 15px;
   text-align: left;
   flex-shrink: 0;
   font-weight: 500;
+  opacity: 1 !important;
+  visibility: visible !important;
+  order: 1; /* Ensures it comes first */
 }
 
 .story-meta .vote-count::before {
@@ -2630,7 +2640,7 @@ font-size: 15px;
 .story-container {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: 300px;
   max-width: 300px; /* Reduce container width significantly */
 }
 
@@ -4266,7 +4276,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       /* Right sidebar styling */
       .rightbar {
-        width: 100% !important;
+        width: 320px !important;
         padding: 15px 20px !important;
         border: none !important;
         max-height: 300px !important;
