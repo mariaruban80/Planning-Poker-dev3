@@ -297,7 +297,6 @@ socket.on('updateTicket', (ticketData) => {
   }
 });
 // Handle updating story points directly from the story card
-
 socket.on('updateStoryPoints', ({ storyId, points }) => {
   const roomId = socket.data.roomId;
   if (!roomId || !rooms[roomId] || !storyId) return;
@@ -313,7 +312,7 @@ socket.on('updateStoryPoints', ({ storyId, points }) => {
   }
 
   // Broadcast to ALL users in the room (including sender for confirmation)
-  io.to(roomId).emit('storyPointsUpdate', { storyId, points }); // Changed from 'storyPointsUpdated' to 'storyPointsUpdate'
+  io.to(roomId).emit('storyPointsUpdate', { storyId, points });
 });
 
   
