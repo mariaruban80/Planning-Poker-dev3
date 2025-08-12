@@ -1937,40 +1937,47 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 
   storyCard.appendChild(storyMeta);
 
-  // Story points editing functionality
-  storyPointsEl.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const current = storyPointsEl.textContent.trim();
-    storyPointsEl.classList.add('editing');
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = current === '?' ? '' : current;
-    input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700;';
-    storyPointsEl.textContent = '';
-    storyPointsEl.appendChild(input);
-    input.focus();
-    input.select();
+// Replace the existing story points editing functionality with this:
+storyPointsEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const current = storyPointsEl.textContent.trim();
+  storyPointsEl.classList.add('editing');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current === '?' ? '' : current;
+  input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
+  storyPointsEl.textContent = '';
+  storyPointsEl.appendChild(input);
+  input.focus();
+  input.select();
 
-    function commit() {
-      const newVal = input.value.trim() || '?';
-      storyPointsEl.classList.remove('editing');
-      storyPointsEl.textContent = newVal;
-      storyCard.dataset.storyPoints = newVal;
-      if (typeof socket !== 'undefined' && socket && socket.connected) {
-        socket.emit('updateStoryPoints', { storyId: ticketData.id, points: newVal });
-      }
+  function commit() {
+    const newVal = input.value.trim() || '?';
+    storyPointsEl.classList.remove('editing');
+    storyPointsEl.textContent = newVal;
+    storyCard.dataset.storyPoints = newVal;
+    
+    // Broadcast to all users including guests
+    if (socket && socket.connected) {
+      console.log(`[POINTS] Broadcasting story points update: ${storyId} = ${newVal}`);
+      socket.emit('updateStoryPoints', { 
+        storyId: ticketData.id, 
+        points: newVal,
+        broadcast: true // Add this flag to ensure server broadcasts to all users
+      });
     }
+  }
 
-    input.addEventListener('blur', commit);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        commit();
-      } else if (e.key === 'Escape') {
-        storyPointsEl.classList.remove('editing');
-        storyPointsEl.textContent = current;
-      }
-    });
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      commit();
+    } else if (e.key === 'Escape') {
+      storyPointsEl.classList.remove('editing');
+      storyPointsEl.textContent = current;
+    }
   });
+});
 
   // Add 3-dot menu for hosts only
   if (isCurrentUserHost()) {
@@ -3181,27 +3188,37 @@ function createVoteCardSpace(user, isCurrentUser) {
 
   if (isCurrentUser) {
     voteCard.addEventListener('dragover', (e) => e.preventDefault());
-    voteCard.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const vote = e.dataTransfer.getData('text/plain');
-      const storyId = getCurrentStoryId();
-      
-      if (storyId && deletedStoryIds.has(storyId)) {
-        console.log(`[VOTE] Cannot cast vote for deleted story: ${storyId}`);
-        return;
-      }
-      
-      if (socket && vote && storyId) {
-        socket.emit('castVote', { vote, targetUserId: user.id, storyId });
-        
-        if (!votesPerStory[storyId]) {
-          votesPerStory[storyId] = {};
-        }
-        
-        votesPerStory[storyId][user.id] = vote;
-        updateVoteVisuals(user.id, votesRevealed[storyId] ? vote : '👍', true);
-      }
-    });
+ voteCard.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const vote = e.dataTransfer.getData('text/plain');
+  const storyId = getCurrentStoryId();
+  
+  if (storyId && deletedStoryIds.has(storyId)) {
+    console.log(`[VOTE] Cannot cast vote for deleted story: ${storyId}`);
+    return;
+  }
+  
+  if (socket && vote && storyId) {
+    // IMMEDIATE UI UPDATE - don't wait for server response
+    console.log(`[VOTE] Immediately showing vote feedback for host: ${vote}`);
+    
+    // Update local vote storage immediately
+    if (!votesPerStory[storyId]) {
+      votesPerStory[storyId] = {};
+    }
+    votesPerStory[storyId][user.id] = vote;
+    
+    // Update visuals immediately (show thumbs up if not revealed, actual vote if revealed)
+    const displayVote = votesRevealed[storyId] ? vote : '👍';
+    updateVoteVisuals(user.id, displayVote, true);
+    
+    // Update vote count immediately
+    updateVoteCountUI(storyId);
+    
+    // Then emit to server (this will sync with other users)
+    socket.emit('castVote', { vote, targetUserId: user.id, storyId });
+  }
+});
   } else {
     voteCard.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -3489,11 +3506,34 @@ function setupInviteButton() {
  * Setup vote cards drag functionality
  */
 function setupVoteCardsDrag() {
-  document.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', card.textContent.trim());
-    });
+// In setupVoteCardsDrag function, add immediate feedback:
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', card.textContent.trim());
   });
+  
+  // Add click handler for immediate feedback
+  card.addEventListener('click', (e) => {
+    const vote = card.textContent.trim();
+    const storyId = getCurrentStoryId();
+    const currentUserId = socket ? socket.id : null;
+    
+    if (storyId && currentUserId && !deletedStoryIds.has(storyId)) {
+      // Immediate visual feedback
+      if (!votesPerStory[storyId]) {
+        votesPerStory[storyId] = {};
+      }
+      votesPerStory[storyId][currentUserId] = vote;
+      
+      const displayVote = votesRevealed[storyId] ? vote : '👍';
+      updateVoteVisuals(currentUserId, displayVote, true);
+      updateVoteCountUI(storyId);
+      
+      // Emit to server
+      socket.emit('castVote', { vote, targetUserId: currentUserId, storyId });
+    }
+  });
+});
 }
 
 function triggerGlobalEmojiBurst() {
@@ -3550,6 +3590,20 @@ async function handleSocketMessage(message) {
       sessionStorage.setItem('votingSystem', message.votingSystem);
       setupPlanningCards();
       break;
+
+
+case 'storyPointsUpdate':
+  if (message.storyId && message.points !== undefined) {
+    const storyPointsEl = document.getElementById(`story-points-${message.storyId}`);
+    if (storyPointsEl) {
+      storyPointsEl.textContent = message.points;
+      const storyCard = document.getElementById(message.storyId);
+      if (storyCard) {
+        storyCard.dataset.storyPoints = message.points;
+      }
+    }
+  }
+  break;  
 
     case 'resyncState':
       if (Array.isArray(message.deletedStoryIds)) {
