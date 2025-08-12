@@ -191,7 +191,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            min-height: 70px;
+            min-height: 80px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -215,7 +215,22 @@ background: #f8f5ff;
   color: #333;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
-    
+      .story-id {
+            font-weight: 700;
+            color: #673ab7;
+            font-size: 13px;
+            background: #f0e6ff;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+       .story-description {
+            font-weight: 500;
+            color: #2c3e50;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
   
 
     
@@ -1510,8 +1525,7 @@ white-space: nowrap;
     
     /* Fix story list display */
     .story-title {
-      font-size: 13px;
-      -webkit-line-clamp: 2;
+  display: none;
     }
     
     /* Improve fixed card panel */
@@ -5111,4 +5125,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </body>
 </html>
   
+
 
