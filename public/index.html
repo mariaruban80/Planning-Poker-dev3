@@ -168,70 +168,7 @@
   background-color: #fed7d7;
 }
 
-/* Ensure story cards have relative positioning for absolute menu positioning */
-.story-card {
-  position: relative;
-  padding-right: 40px; /* Make room for the menu */
-}
 
-/* Hide old delete button */
-.story-delete-btn {
-   display: none !important;
-  visibility: hidden !important;
-}
-
-     .story-card { 
-        position: relative;
-            background: white;
-            border: 1px solid #e9ecef;
-            border-left: 4px solid #673ab7;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            min-height: 80px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-}
-
-.story-card:hover {
-     box-shadow: 0 4px 12px rgba(103, 58, 183, 0.15);
-            transform: translateY(-2px);
-            border-left-color: #5c33a4;
-}
-
-.story-card.selected { 
-background: #f8f5ff;
-            border-left-color: #4CAF50;
-            box-shadow: 0 4px 16px rgba(103, 58, 183, 0.25);
-}
-
-.story-card.active { 
-  background-color: #e8f0fe;
-  border-color: #4285f4;
-  color: #333;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-      .story-id {
-            font-weight: 700;
-            color: #673ab7;
-            font-size: 13px;
-            background: #f0e6ff;
-            padding: 2px 8px;
-            border-radius: 12px;
-        }
-       .story-description {
-            font-weight: 500;
-            color: #2c3e50;
-            line-height: 1.4;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        
-  
 
     
     /* Updated button styling to match the ADD TICKET reference */
@@ -1552,70 +1489,151 @@ white-space: nowrap;
       padding: 20px !important;
     }
   }
-
-  
-/* ==== Story card meta: vote count and editable points ==== */
-.story-meta {
-       display: flex;
+</style>
+<style>
+    position: relative;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-left: 4px solid #673ab7;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .story-card:hover {
+            box-shadow: 0 4px 12px rgba(103, 58, 183, 0.15);
+            transform: translateY(-2px);
+            border-left-color: #5c33a4;
+        }
+        
+        .story-card.selected {
+            background: #f8f5ff;
+            border-left-color: #4CAF50;
+            box-shadow: 0 4px 16px rgba(103, 58, 183, 0.25);
+        }
+        
+        .story-card.has-votes {
+            border-left-color: #2196F3;
+        }
+        
+        .story-card.votes-revealed {
+            border-left-color: #4CAF50;
+        }
+        
+        .story-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .story-id {
+            font-weight: 700;
+            color: #673ab7;
+            font-size: 13px;
+            background: #f0e6ff;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        
+        .story-type-badge {
+            font-size: 11px;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        
+        .story-type-badge.bug {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .story-type-badge.epic {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .story-description {
+            font-weight: 500;
+            color: #2c3e50;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .story-meta {
+            display: flex;
             align-items: center;
             justify-content: space-between;
             font-size: 12px;
             color: #666;
-}
-     /* Vote count styling - matches the "1 votes" in the image */
-.story-meta .vote-count {
-  order: 1;                   
-  flex-shrink: 0;              
-  justify-content: flex-start;
-}
-
-/* Show vote count when votes are revealed */
-.story-meta .vote-count.revealed {
-  display: block;
-}
-
-/* Story points styling - matches the green "21" in the image */
-.story-meta .story-points {
-  order: 2;                    /* Second in flex order */
-  margin-left: auto;           /* Push to right */
-  background: #10b981;         /* Green color */
-  border-radius: 10px;         /* Rounded corners */
-  padding: 2px 6px; 
-}
-
-.story-meta .story-points:hover {
-  background: #45a049;
-}
-
-.story-meta .story-points.editing {
-  background: white;
-  color: #333;
-  border: 1px solid #ddd;
-  cursor: text;
-  padding: 4px 8px;
-}
-
-.story-meta .story-points input {
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 4px;
-  min-width: 24px;
-  border: 1px solid #d1d5db;
-  outline: none;
-  font-size: 16px;
-  text-align: center;
-  background: white;
-}
-
-.story-card { display:flex; align-items:flex-start; gap:12px; }
-.story-card .story-left { flex:1; min-width:0; }
-
-
-.vote-bubble {
-   display: none !important; 
-}
-
-</style>
+        }
+        
+        .story-votes-count {
+            display: flex;
+            align-items: center;
+        }
+        
+        .story-votes-count::before {
+            content: "👥";
+            margin-right: 4px;
+        }
+        
+        .story-estimate {
+            background: #fff3cd;
+            color: #856404;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .story-estimate.estimated {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .story-status-indicator {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+        }
+        
+        .story-card.has-votes .story-status-indicator {
+            background-color: #2196F3;
+        }
+        
+        .story-card.votes-revealed .story-status-indicator {
+            background-color: #4CAF50;
+        }
+        
+        .story-actions {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .story-card:hover .story-actions {
+            opacity: 1;
+        }
+     
+     </style>
+     
+     
 
 
   <style>
@@ -2508,212 +2526,8 @@ font-size: 15px;
 }
 </style>
 
-<style>
-/* UPDATED: Fix story card layout with proper vote count and points alignment */
-/* Fix story card layout and meta positioning */
-.story-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  padding: 12px 16px 32px 16px; /* Increased bottom padding for meta elements */
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  min-height: 65px; /* Ensure minimum height for proper spacing */
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: white;
-  color: #333;
-}
 
-.story-card:hover {
-  background-color: #f5f5f5;
-  border-color: #d0d0d0;
-}
 
-.story-card.selected { 
-  background-color: #e8f0fe;
-  border-color: #4285f4;
-  color: #333;
-}
-
-.story-card.active { 
-  background-color: #e8f0fe;
-  border-color: #4285f4;
-  color: #333;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Story meta container - positioned at bottom with full width */
-.story-meta {
-  position: absolute;
-  bottom: 8px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 20px;
-  width: calc(100% - 24px); /* Account for left/right positioning */
-  pointer-events: none;
-}
-
-/* Vote count - positioned at leftmost bottom */
-.story-meta .vote-count {
-  position: static !important;
-  display: flex !important;
-  align-items: center;
-  justify-content: flex-start;
-  font-size: 12px;
-  color: #6b7280;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  border: none;
-  min-width: auto;
-  text-align: left;
-  pointer-events: auto;
-  flex-shrink: 0;
-}
-
-/* Add people icon before vote count */
-.story-meta .vote-count::before {
-  content: '👥';
-  margin-right: 4px;
-  font-size: 12px;
-}
-
-/* Story points bubble - positioned at rightmost bottom */
-.story-meta .story-points {
-  position: static !important;
-  background: #10b981 !important; /* Green background */
-  color: white !important;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 12px;
-  min-width: 24px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  pointer-events: auto;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
-  margin-left: auto; /* Push to the right */
-}
-
-/* Story title - ensure proper spacing from bottom elements */
-.story-title {
-  margin-bottom: 8px;
-  padding-right: 40px; /* Space for 3-dot menu */
-  flex-grow: 1;
-  line-height: 1.4;
-  word-wrap: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  max-height: none;
-  width: auto;
-  text-align: left;
-}
-
-/* 3-dot menu positioning - ensure it doesn't interfere */
-.story-actions {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  z-index: 10;
-}
-
-/* Default text when no votes */
-.story-meta .vote-count:empty::after {
-  content: '0 votes';
-  color: #9ca3af;
-}
-
-/* Always show vote count when there are votes */
-body.votes-revealed .story-meta .vote-count,
-.story-meta .vote-count {
-  display: flex !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* Ensure story points input styling when editing */
-.story-meta .story-points.editing {
-  background: white !important;
-  color: #111827 !important;
-  border: 1px solid #d1d5db;
-}
-
-.story-meta .story-points input {
-  background: white;
-  color: #111827;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 10px;
-  min-width: 20px;
-  height: 16px;
-  border: 1px solid #d1d5db;
-  outline: none;
-  font-size: 11px;
-  text-align: center;
-}
-
-/* Hide any other vote-related elements */
-.story-card .vote-badge {
-  display: none !important;
-}
-
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
-  .story-card {
-    padding: 10px 14px 28px 14px;
-  }
-  
-  .story-meta {
-    left: 10px;
-    right: 10px;
-    bottom: 6px;
-    width: calc(100% - 20px);
-  }
-  
-  .story-meta .vote-count {
-    font-size: 11px;
-  }
-  
-  .story-meta .story-points {
-    font-size: 10px;
-    padding: 2px 6px;
-    min-width: 20px;
-    height: 18px;
-  }
-}
-
-/* Fix for story card hover states */
-.story-card:hover .story-meta .vote-count,
-.story-card:hover .story-meta .story-points {
-  opacity: 1;
-}
-
-/* Ensure elements don't interfere with story selection */
-.story-card.selected .story-meta .vote-count,
-.story-card.selected .story-meta .story-points {
-  opacity: 1;
-}
-
-/* Remove any conflicting vote-bubble styles */
-.vote-bubble,
-.vote-bubble-standard {
-  display: none !important;
-  visibility: hidden !important;
-}
-</style>
-     
-<!-- END PATCH -->
 
 </head>
 <body>
@@ -5125,5 +4939,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </body>
 </html>
   
+
 
 
