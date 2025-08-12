@@ -1961,7 +1961,7 @@ storyPointsEl.addEventListener('click', (e) => {
     if (socket && socket.connected) {
       console.log(`[POINTS] Broadcasting story points update: ${storyId} = ${newVal}`);
       socket.emit('updateStoryPoints', { 
-        storyId: ticketData.id, 
+        storyId: storyCard.id, 
         points: newVal,
         broadcast: true // Add this flag to ensure server broadcasts to all users
       });
@@ -3188,7 +3188,7 @@ function createVoteCardSpace(user, isCurrentUser) {
 
   if (isCurrentUser) {
     voteCard.addEventListener('dragover', (e) => e.preventDefault());
- voteCard.addEventListener('drop', (e) => {
+voteCard.addEventListener('drop', (e) => {
   e.preventDefault();
   const vote = e.dataTransfer.getData('text/plain');
   const storyId = getCurrentStoryId();
@@ -3199,18 +3199,35 @@ function createVoteCardSpace(user, isCurrentUser) {
   }
   
   if (socket && vote && storyId) {
-    // IMMEDIATE UI UPDATE - don't wait for server response
     console.log(`[VOTE] Immediately showing vote feedback for host: ${vote}`);
+    
+    // IMMEDIATE UI UPDATE - don't wait for server response
+    const voteBadge = voteCard.querySelector('.vote-badge');
+    if (voteBadge) {
+      // Show immediate feedback
+      voteBadge.textContent = votesRevealed[storyId] ? vote : '👍';
+      voteBadge.style.color = '#673ab7';
+      voteBadge.style.opacity = '1';
+    }
+    
+    // Mark as having a vote immediately
+    voteCard.classList.add('has-vote');
+    
+    // Update avatar visual feedback immediately
+    const avatarContainer = document.querySelector(`#user-circle-${user.id}`);
+    if (avatarContainer) {
+      avatarContainer.classList.add('has-voted');
+      const avatar = avatarContainer.querySelector('.avatar-circle');
+      if (avatar) {
+        avatar.style.backgroundColor = '#c1e1c1';
+      }
+    }
     
     // Update local vote storage immediately
     if (!votesPerStory[storyId]) {
       votesPerStory[storyId] = {};
     }
     votesPerStory[storyId][user.id] = vote;
-    
-    // Update visuals immediately (show thumbs up if not revealed, actual vote if revealed)
-    const displayVote = votesRevealed[storyId] ? vote : '👍';
-    updateVoteVisuals(user.id, displayVote, true);
     
     // Update vote count immediately
     updateVoteCountUI(storyId);
@@ -3594,8 +3611,9 @@ async function handleSocketMessage(message) {
 
 case 'storyPointsUpdate':
   if (message.storyId && message.points !== undefined) {
+    console.log(`[POINTS] Received story points update: ${message.storyId} = ${message.points}`);
     const storyPointsEl = document.getElementById(`story-points-${message.storyId}`);
-    if (storyPointsEl) {
+    if (storyPointsEl && !storyPointsEl.classList.contains('editing')) {
       storyPointsEl.textContent = message.points;
       const storyCard = document.getElementById(message.storyId);
       if (storyCard) {
@@ -3603,7 +3621,7 @@ case 'storyPointsUpdate':
       }
     }
   }
-  break;  
+  break; 
 
     case 'resyncState':
       if (Array.isArray(message.deletedStoryIds)) {
