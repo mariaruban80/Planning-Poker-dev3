@@ -936,6 +936,24 @@ function initializeApp(roomId) {
     // **FIXED: Update vote count after vote update**
     updateVoteCountUI(storyId);
   });
+
+  socket.on('storyPointsUpdate', ({ storyId, points }) => {
+  console.log(`[SOCKET] Story points updated for ${storyId}: ${points}`);
+
+  // Update the vote bubble display
+  const bubbleEl = document.getElementById(`vote-bubble-${storyId}`);
+  if (bubbleEl) {
+    bubbleEl.textContent = points;
+  }
+
+  // If you also display points somewhere else, update that too
+  const voteCountEl = document.getElementById(`vote-count-${storyId}`);
+  if (voteCountEl) {
+    voteCountEl.textContent = `${points} point${points !== 1 ? 's' : ''}`;
+    voteCountEl.style.display = 'flex';
+  }
+});
+
   
   socket.on('storyVotes', ({ storyId, votes }) => {
     if (deletedStoryIds.has(storyId)) {
@@ -3523,35 +3541,72 @@ function setupInviteButton() {
  * Setup vote cards drag functionality
  */
 function setupVoteCardsDrag() {
-// In setupVoteCardsDrag function, add immediate feedback:
-document.querySelectorAll('.card').forEach(card => {
-  card.addEventListener('dragstart', (e) => {
-    e.dataTransfer.setData('text/plain', card.textContent.trim());
-  });
-  
-  // Add click handler for immediate feedback
-  card.addEventListener('click', (e) => {
-    const vote = card.textContent.trim();
-    const storyId = getCurrentStoryId();
-    const currentUserId = socket ? socket.id : null;
-    
-    if (storyId && currentUserId && !deletedStoryIds.has(storyId)) {
-      // Immediate visual feedback
-      if (!votesPerStory[storyId]) {
-        votesPerStory[storyId] = {};
+  // Make cards draggable
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', card.textContent.trim());
+    });
+
+    // Existing click handler for immediate vote
+    card.addEventListener('click', (e) => {
+      const vote = card.textContent.trim();
+      const storyId = getCurrentStoryId();
+      const currentUserId = socket ? socket.id : null;
+
+      if (storyId && currentUserId && !deletedStoryIds.has(storyId)) {
+        // Immediate local UI update
+        if (!votesPerStory[storyId]) {
+          votesPerStory[storyId] = {};
+        }
+        votesPerStory[storyId][currentUserId] = vote;
+        const displayVote = votesRevealed[storyId] ? vote : '👍';
+        updateVoteVisuals(currentUserId, displayVote, true);
+        updateVoteCountUI(storyId);
+
+        // Emit to server
+        socket.emit('restoreUserVoteByUsername', {
+          storyId,
+          vote,
+          userName: sessionStorage.getItem('userName') || currentUserId
+        });
       }
-      votesPerStory[storyId][currentUserId] = vote;
-      
-      const displayVote = votesRevealed[storyId] ? vote : '👍';
-      updateVoteVisuals(currentUserId, displayVote, true);
-      updateVoteCountUI(storyId);
-      
-      // Emit to server
-      socket.emit('castVote', { vote, targetUserId: currentUserId, storyId });
-    }
+    });
   });
-});
+
+  // ✅ New drop handler for drag-and-drop voting
+  document.querySelectorAll('.vote-card-space').forEach(space => {
+    space.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+
+    space.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const vote = e.dataTransfer.getData('text/plain').trim();
+      const storyId = getCurrentStoryId();
+      const currentUserId = socket ? socket.id : null;
+
+      if (storyId && currentUserId && !deletedStoryIds.has(storyId)) {
+        // Immediate local UI update
+        if (!votesPerStory[storyId]) {
+          votesPerStory[storyId] = {};
+        }
+        votesPerStory[storyId][currentUserId] = vote;
+        const displayVote = votesRevealed[storyId] ? vote : '👍';
+        updateVoteVisuals(currentUserId, displayVote, true);
+        updateVoteCountUI(storyId);
+
+        // Emit to server immediately
+        socket.emit('restoreUserVoteByUsername', {
+          storyId,
+          vote,
+          userName: sessionStorage.getItem('userName') || currentUserId
+        });
+      }
+    });
+  });
 }
+
+
 
 function triggerGlobalEmojiBurst() {
   const emojis = ['😀', '✨', '😆', '😝', '😄', '😍'];
