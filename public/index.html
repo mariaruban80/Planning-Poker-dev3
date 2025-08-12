@@ -1502,23 +1502,34 @@ white-space: nowrap;
 /* ==== Story card meta: vote count and editable points ==== */
 .story-meta {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  min-width: 60px;
-  flex-shrink: 0;
+  justify-content: space-between; /* Keep space-between */
+  align-items: center;
+  margin-top: auto;
+  width: 100%;
 }
-     /* Vote count styling - matches the "1 votes" in the image */
+
 .story-meta .vote-count {
-  font-size: 12px;
-  color: #673ab7;
+  display: flex !important;
+  align-items: center;
+  font-size: 14px;
+  color: #6b7280;
   background: transparent;
   padding: 0;
-  border-radius: 0;
-  min-width: auto;
-  text-align: right;
-  display: none; /* Hidden until votes revealed */
+  margin: 0;
+  border: none;
+  text-align: left;
+  flex-shrink: 0;
   font-weight: 500;
+  opacity: 1 !important;
+  visibility: visible !important;
+  justify-self: flex-start; /* Force to left side */
+  flex-grow: 0; /* Don't grow to fill space */
+}
+
+.story-meta .vote-count::before {
+  content: '👥';
+  margin-right: 6px;
+  font-size: 14px;
 }
 
 /* Show vote count when votes are revealed */
@@ -2642,6 +2653,11 @@ font-size: 15px;
   flex-direction: column;
   width: 300px;
   max-width: 300px; /* Reduce container width significantly */
+}
+     .rightbar {
+  width: 290px !important;
+  max-width: 290px;
+  min-width: 270px;
 }
 
 /* Hide legacy vote bubbles */
