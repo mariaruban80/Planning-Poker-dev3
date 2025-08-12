@@ -181,40 +181,38 @@
 }
 
      .story-card { 
-           position: relative;
-            background: white;
-            border: 1px solid #e9ecef;
-            border-left: 4px solid #673ab7;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            min-height: 70px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Space between title and meta info */
+  margin-bottom: 10px; 
+  padding: 14px 16px; 
+  background-color: white; 
+  color: #333;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer; 
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: normal;
+  text-align: left;
+  height: auto;
+  min-height: 42px;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  line-height: 1.4;
 }
 
 .story-card:hover {
-      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.15);
-            transform: translateY(-2px);
-            border-left-color: #5c33a4;
+  background-color: #f5f5f5;
+  border-color: #d0d0d0;
 }
 
 .story-card.selected { 
-         background: #f8f5ff;
-            border-left-color: #4CAF50;
-            box-shadow: 0 4px 16px rgba(103, 58, 183, 0.25);
+  background-color: #e8f0fe;
+  border-color: #4285f4;
+  color: #333;
 }
-       .story-card.has-votes {
-            border-left-color: #2196F3;
-        }
-        
-        .story-card.votes-revealed {
-            border-left-color: #4CAF50;
-        }
 
 .story-card.active { 
   background-color: #e8f0fe;
@@ -222,20 +220,8 @@
   color: #333;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
-       .story-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-   .story-id {
-            font-weight: 700;
-            color: #673ab7;
-            font-size: 13px;
-            background: #f0e6ff;
-            padding: 2px 8px;
-            border-radius: 12px;
-        }
+    
+  
 
     
     /* Updated button styling to match the ADD TICKET reference */
@@ -2546,23 +2532,36 @@ font-size: 15px;
 
 /* Story meta container for vote count and points - positioned inside the card */
 .story-meta {
-    display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 12px;
-            color: #666;
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 20px;
+  pointer-events: none; /* Allow clicking through to story */
 }
 
 /* Vote count display (far left inside card) */
 .story-meta .vote-count {
-    display: flex;
-            align-items: center;
+  display: flex !important;
+  align-items: left;
+  font-size: 12px;
+  color: #6b7280;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  min-width: auto;
+  pointer-events: auto;
 }
 
 /* Add people icon before vote count */
 .story-meta .vote-count::before {
-content: "👥";
-            margin-right: 4px;
+  content: '👥';
+  margin-right: 4px;
+  font-size: 12px;
 }
 
 /* Story points bubble (bottom right inside card) */
@@ -2701,6 +2700,31 @@ body.votes-revealed .story-meta .vote-count,
 </style>
      
 <!-- END PATCH -->
+
+
+<!-- START: story-card layout styles injected by assistant -->
+<style>
+/* Card layout patch to match user's screenshot-style */
+.story-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid #e6e6f2; border-radius: 10px; background: #ffffff; box-sizing: border-box; }
+.story-card .left { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.story-id { font-size: 12px; font-weight: 700; color: #4b5563; background: #f3f4f6; padding: 4px 8px; border-radius: 6px; display: inline-block; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.story-description { font-size: 14px; color: #111827; opacity: 0.95; margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.story-meta { display: flex; align-items: center; gap: 10px; margin-left: 12px; }
+.vote-bubble, .estimate-bubble { min-width: 44px; height: 32px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; padding: 0 8px; box-sizing: border-box; }
+.vote-bubble { background: #f0f6ff; color: #0b63ff; border: 1px solid #e6eefc; }
+.estimate-bubble { background: #fff7ed; color: #c2410c; border: 1px solid #fde3c6; }
+.story-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,24,40,0.04); }
+/* keep existing story-title compatibility (if other parts of app reference it) */
+.story-title { display: none; }
+/* ensure long lists still look good */
+.story-container { display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 768px) {
+  .story-id { max-width: 45%; }
+  .story-meta { margin-left: 8px; gap: 6px; }
+  .vote-bubble, .estimate-bubble { min-width: 38px; height: 30px; font-size: 12px; }
+}
+</style>
+<!-- END: story-card layout styles injected by assistant -->
 
 </head>
 <body>
@@ -4375,7 +4399,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
          
 </script>
- <!-- Add this before the closing </body> tag 
+ <!-- Add this before the closing 
+<script src="override.js"></script>
+</body> tag 
 <script src="userlist-fix.js"></script> -->
 <script>
   // Force user list fix on page interaction
@@ -5311,7 +5337,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
-
 
 
 
