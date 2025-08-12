@@ -545,7 +545,6 @@ function refreshVoteDisplay() {
   }
 }
 
-
 function updateVoteCountUI(storyId) {
   try {
     const votes = votesPerStory[storyId] || {};
@@ -556,20 +555,16 @@ function updateVoteCountUI(storyId) {
     }
     const count = unique.size;
     
-    // Update the vote count in story meta
+    // Update the vote count in story meta - ALWAYS SHOW THE VOTE COUNT
     const voteCountEl = document.getElementById(`vote-count-${storyId}`);
     if (voteCountEl) {
-      if (votesRevealed[storyId] && count > 0) {
-        voteCountEl.textContent = `${count} vote${count !== 1 ? 's' : ''}`;
-        voteCountEl.style.display = 'block';
-        voteCountEl.classList.add('revealed');
-      } else {
-        voteCountEl.style.display = 'none';
-        voteCountEl.classList.remove('revealed');
-      }
+      // Always show vote count with people icon
+      voteCountEl.textContent = `${count} vote${count !== 1 ? 's' : ''}`;
+      voteCountEl.style.display = 'flex'; // Always visible
+      voteCountEl.classList.add('revealed');
     }
     
-    // Also update standardized vote bubble
+    // Also update standardized vote bubble (if it exists)
     const bubbleEl = document.getElementById(`vote-bubble-${storyId}`);
     if (bubbleEl) {
       if (votesRevealed[storyId]) {
@@ -582,6 +577,7 @@ function updateVoteCountUI(storyId) {
     console.warn('[VOTE COUNT] update failed', err);
   }
 }
+
 
 function updateVoteBadges(storyId, votes) {
   const voteCount = Object.keys(votes).length;
@@ -2400,6 +2396,12 @@ function displayCSVData(data) {
       storyTitle.textContent = story.descriptionDisplay || 'No description';
       storyItem.appendChild(storyTitle);
 
+      // Add Feature tag - ADDED THIS SECTION
+      const featureTag = document.createElement('div');
+      featureTag.className = 'story-feature-tag';
+      featureTag.textContent = 'Feature';
+      storyItem.appendChild(featureTag);
+
       // Story meta container (vote count + story points)
       const storyMeta = document.createElement('div');
       storyMeta.className = 'story-meta';
@@ -2551,6 +2553,12 @@ function displayCSVData(data) {
       const previewText = tmpDiv.innerText || tmpDiv.textContent || 'No description';
       storyTitle.textContent = previewText;
       storyItem.appendChild(storyTitle);
+
+      // Add Feature tag - ADDED THIS SECTION FOR CSV STORIES TOO
+      const featureTag = document.createElement('div');
+      featureTag.className = 'story-feature-tag';
+      featureTag.textContent = 'Feature';
+      storyItem.appendChild(featureTag);
 
       // Story meta container (vote count + story points)
       const storyMeta = document.createElement('div');
