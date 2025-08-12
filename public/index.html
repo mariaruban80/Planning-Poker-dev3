@@ -1491,7 +1491,8 @@ white-space: nowrap;
   }
 </style>
 <style>
-    position: relative;
+    .story-card {  
+            position: relative;
             background: white;
             border: 1px solid #e9ecef;
             border-left: 4px solid #673ab7;
@@ -1630,7 +1631,55 @@ white-space: nowrap;
         .story-card:hover .story-actions {
             opacity: 1;
         }
-     
+     .story-menu-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            color: #666;
+        }
+        
+        .story-menu-btn:hover {
+            background: #f5f5f5;
+        }
+        /* Priority indicators */
+        .story-card.priority-high {
+            border-left-color: #f44336;
+        }
+        
+        .story-card.priority-medium {
+            border-left-color: #ff9800;
+        }
+        
+        .story-card.priority-low {
+            border-left-color: #4caf50;
+        }
+        
+        /* Loading state */
+        .story-card.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .story-card.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #673ab7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            transform: translateY(-50%);
+        }
+        
+        @keyframes spin {
+            0% { transform: translateY(-50%) rotate(0deg); }
+            100% { transform: translateY(-50%) rotate(360deg); }
+        }
      </style>
      
      
@@ -4939,6 +4988,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </body>
 </html>
   
+
 
 
 
