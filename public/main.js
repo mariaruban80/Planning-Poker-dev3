@@ -1888,51 +1888,60 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   const newIndex = storyList.children.length;
   storyCard.dataset.index = newIndex;
 
+  // Extract ID and description
   const idForDisplay = ticketData.idDisplay !== undefined ? ticketData.idDisplay : (
-    ticketData.id.startsWith('story_csv_') && ticketData.id.replace(/^story_csv_/, '') !== '' ? ticketData.id.replace(/^story_csv_/, '') : ticketData.id
+    ticketData.id.startsWith('story_csv_') && ticketData.id.replace(/^story_csv_/, '') !== '' ? 
+    ticketData.id.replace(/^story_csv_/, '') : ticketData.id
   );
-  const descriptionForDisplay = ticketData.descriptionDisplay !== undefined ? ticketData.descriptionDisplay : ticketData.text;
+  
+  let descriptionForDisplay = ticketData.descriptionDisplay !== undefined ? 
+    ticketData.descriptionDisplay : ticketData.text;
 
-  storyCard.dataset.id = idForDisplay;
-  storyCard.dataset.description = descriptionForDisplay;
-
-  const storyTitle = document.createElement('div');
-  storyTitle.className = 'story-title';
-  let previewText = '';
+  // Clean HTML from description if present
   if (descriptionForDisplay) {
     const tmpDiv = document.createElement('div');
     tmpDiv.innerHTML = descriptionForDisplay;
-    previewText = tmpDiv.innerText || tmpDiv.textContent || '';
-  }
-  if (idForDisplay && previewText) {
-    storyTitle.textContent = `${idForDisplay}: ${previewText}`;
-  } else {
-    storyTitle.textContent = previewText;
+    descriptionForDisplay = tmpDiv.innerText || tmpDiv.textContent || '';
   }
 
+  // Store metadata
+  storyCard.dataset.id = idForDisplay;
+  storyCard.dataset.description = descriptionForDisplay;
+
+  // Create story ID element (purple, bold, at top)
+  const storyId = document.createElement('div');
+  storyId.className = 'story-id';
+  storyId.textContent = idForDisplay;
+  storyCard.appendChild(storyId);
+
+  // Create story title/description element
+  const storyTitle = document.createElement('div');
+  storyTitle.className = 'story-title';
+  storyTitle.textContent = descriptionForDisplay || 'No description';
   storyCard.appendChild(storyTitle);
 
-  // Story meta (vote count + editable story points)
+  // Story meta container (vote count + story points)
   const storyMeta = document.createElement('div');
   storyMeta.className = 'story-meta';
 
-  // Vote count element (hidden until revealed)
+  // Vote count element (bottom left)
   const voteCountEl = document.createElement('div');
   voteCountEl.className = 'vote-count';
   voteCountEl.id = `vote-count-${ticketData.id}`;
   voteCountEl.textContent = '0 votes';
   storyMeta.appendChild(voteCountEl);
 
-  // Story points display (editable in-place)
+  // Story points element (bottom right, green)
   const storyPointsEl = document.createElement('div');
   storyPointsEl.className = 'story-points';
   storyPointsEl.id = `story-points-${ticketData.id}`;
-  storyPointsEl.textContent = (ticketData.points !== undefined && ticketData.points !== null) ? String(ticketData.points) : '?';
+  storyPointsEl.textContent = (ticketData.points !== undefined && ticketData.points !== null) ? 
+    String(ticketData.points) : '?';
   storyMeta.appendChild(storyPointsEl);
 
   storyCard.appendChild(storyMeta);
 
-  // In-place editing behaviour for story points
+  // Story points editing functionality
   storyPointsEl.addEventListener('click', (e) => {
     e.stopPropagation();
     const current = storyPointsEl.textContent.trim();
@@ -1940,7 +1949,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = current === '?' ? '' : current;
-    input.id = `story-points-input-${ticketData.id}`;
+    input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700;';
     storyPointsEl.textContent = '';
     storyPointsEl.appendChild(input);
     input.focus();
@@ -1953,25 +1962,18 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
       storyCard.dataset.storyPoints = newVal;
       if (typeof socket !== 'undefined' && socket && socket.connected) {
         socket.emit('updateStoryPoints', { storyId: ticketData.id, points: newVal });
-      } else {
-        console.log('[STORY POINTS] socket not available, local update only', ticketData.id, newVal);
       }
-      input.removeEventListener('blur', onBlur);
-      input.removeEventListener('keydown', onKey);
     }
-    function onBlur() { commit(); }
-    function onKey(e) {
+
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         commit();
       } else if (e.key === 'Escape') {
         storyPointsEl.classList.remove('editing');
         storyPointsEl.textContent = current;
-        input.removeEventListener('blur', onBlur);
-        input.removeEventListener('keydown', onKey);
       }
-    }
-    input.addEventListener('blur', onBlur);
-    input.addEventListener('keydown', onKey);
+    });
   });
 
   // Add 3-dot menu for hosts only
@@ -1997,20 +1999,16 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 
     dropdown.appendChild(editItem);
     dropdown.appendChild(deleteItem);
-
     actionsContainer.appendChild(menuBtn);
     actionsContainer.appendChild(dropdown);
     storyCard.appendChild(actionsContainer);
 
-    // Add event listeners
+    // Event listeners for menu
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-
-      // Close all other dropdowns first
       document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
         if (dd !== dropdown) dd.classList.remove('show');
       });
-
       dropdown.classList.toggle('show');
     });
 
@@ -2034,7 +2032,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   
   storyList.appendChild(storyCard);
 
-  // Check if user is guest and handle accordingly
+  // Event handling based on user role
   if (isGuestUser()) {
     storyCard.classList.add('disabled-story');
   } else {
@@ -2047,11 +2045,13 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
     selectStory(newIndex);
   }
 
+  // Hide no stories message
   const noStoriesMessage = document.getElementById('noStoriesMessage');
   if (noStoriesMessage) {
     noStoriesMessage.style.display = 'none';
   }
 
+  // Enable planning cards
   document.querySelectorAll('#planningCards .card').forEach(card => {
     card.classList.remove('disabled');
     card.setAttribute('draggable', 'true');
@@ -2059,27 +2059,16 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 
   normalizeStoryIndexes();
 
-  // **FIXED: Ensure vote bubble is created for this story**
-  ensureVoteBubbleForCard(storyCard);
-
-  // NEW: Trigger translation if needed
+  // Translation handling if needed
   if (window.languageManager && window.languageManager.currentLanguage !== 'en') {
-    console.log("Attempting to translate the new storyTitle");
-
-    if (typeof window.languageManager.getTranslatableElements === 'function') {
-      if(typeof window.languageManager.translateTexts === 'function') {   
+    if (typeof window.languageManager.translateTexts === 'function') {
+      window.languageManager.translateTexts([storyTitle.textContent]).then((translatedText) => {
         if (typeof window.languageManager.applyTranslation === 'function') {
-          window.languageManager.translateTexts([storyTitle.textContent]).then((translatedText) => {
-            window.languageManager.applyTranslation({element: storyTitle, type: 'text'}, translatedText[0]);
-          }) 
-        } else {
-          console.log("- window.languageManager.applyTranslation() function declaration not found ");
+          window.languageManager.applyTranslation({element: storyTitle, type: 'text'}, translatedText[0]);
         }
-      } else {
-        console.log("- window.languageManager.translateTexts() function declaration not found please double check the names");
-      }
-    } else {
-      console.log("- main.js -> the window.languageManager.getTranslatableElements statement not found please check. ");       
+      }).catch(err => {
+        console.warn('Translation failed:', err);
+      });
     }
   }
 }
@@ -2350,6 +2339,7 @@ function normalizeStoryIndexes() {
 /**
  * Display CSV data in the story list
  */
+
 function displayCSVData(data) {
   if (processingCSVData) {
     console.log('[CSV] Already processing CSV data, ignoring reentrant call');
@@ -2370,13 +2360,14 @@ function displayCSVData(data) {
     manualStories.forEach(card => {
       if (deletedStoryIds.has(card.id)) return;
 
-      const title = card.querySelector('.story-title');
-      if (title) {
+      const storyId = card.querySelector('.story-id');
+      const storyTitle = card.querySelector('.story-title');
+      if (storyId && storyTitle) {
         existingStories.push({
           id: card.id,
-          idDisplay: card.dataset.id || '',
-          descriptionDisplay: card.dataset.description || '',
-          text: title.textContent
+          idDisplay: card.dataset.id || storyId.textContent || '',
+          descriptionDisplay: card.dataset.description || storyTitle.textContent || '',
+          text: `${storyId.textContent}: ${storyTitle.textContent}`
         });
       }
     });
@@ -2386,7 +2377,7 @@ function displayCSVData(data) {
     storyListContainer.querySelectorAll('.story-card[id^="story_csv_"]').forEach(card => card.remove());
     storyListContainer.innerHTML = '';
 
-    // Re-add manual stories
+    // Re-add manual stories with new layout
     existingStories.forEach((story, index) => {
       if (deletedStoryIds.has(story.id)) return;
 
@@ -2397,15 +2388,74 @@ function displayCSVData(data) {
       storyItem.dataset.id = story.idDisplay || '';
       storyItem.dataset.description = story.descriptionDisplay || '';
 
+      // Create story ID element (purple, bold, at top)
+      const storyId = document.createElement('div');
+      storyId.className = 'story-id';
+      storyId.textContent = story.idDisplay || story.id;
+      storyItem.appendChild(storyId);
+
+      // Create story title/description element
       const storyTitle = document.createElement('div');
       storyTitle.classList.add('story-title');
-      if (story.idDisplay && story.descriptionDisplay) {
-        storyTitle.textContent = `${story.idDisplay}: ${story.descriptionDisplay}`;
-      } else {
-        storyTitle.textContent = story.text;
-      }
+      storyTitle.textContent = story.descriptionDisplay || 'No description';
       storyItem.appendChild(storyTitle);
 
+      // Story meta container (vote count + story points)
+      const storyMeta = document.createElement('div');
+      storyMeta.className = 'story-meta';
+
+      // Vote count element (bottom left with people icon)
+      const voteCountEl = document.createElement('div');
+      voteCountEl.className = 'vote-count';
+      voteCountEl.id = `vote-count-${story.id}`;
+      voteCountEl.textContent = '0 votes';
+      storyMeta.appendChild(voteCountEl);
+
+      // Story points element (bottom right, green)
+      const storyPointsEl = document.createElement('div');
+      storyPointsEl.className = 'story-points';
+      storyPointsEl.id = `story-points-${story.id}`;
+      storyPointsEl.textContent = '?';
+      
+      // Add story points editing functionality
+      storyPointsEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const current = storyPointsEl.textContent.trim();
+        storyPointsEl.classList.add('editing');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = current === '?' ? '' : current;
+        input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
+        storyPointsEl.textContent = '';
+        storyPointsEl.appendChild(input);
+        input.focus();
+        input.select();
+
+        function commit() {
+          const newVal = input.value.trim() || '?';
+          storyPointsEl.classList.remove('editing');
+          storyPointsEl.textContent = newVal;
+          storyItem.dataset.storyPoints = newVal;
+          if (typeof socket !== 'undefined' && socket && socket.connected) {
+            socket.emit('updateStoryPoints', { storyId: story.id, points: newVal });
+          }
+        }
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            commit();
+          } else if (e.key === 'Escape') {
+            storyPointsEl.classList.remove('editing');
+            storyPointsEl.textContent = current;
+          }
+        });
+      });
+
+      storyMeta.appendChild(storyPointsEl);
+      storyItem.appendChild(storyMeta);
+
+      // Add 3-dot menu for hosts
       if (isCurrentUserHost()) {
         const actionsContainer = document.createElement('div');
         actionsContainer.className = 'story-actions';
@@ -2447,7 +2497,7 @@ function displayCSVData(data) {
             id: story.id,
             idDisplay: storyItem.dataset.id,
             descriptionDisplay: storyItem.dataset.description,
-            text: storyTitle.textContent
+            text: `${storyId.textContent}: ${storyTitle.textContent}`
           });
         });
 
@@ -2467,7 +2517,7 @@ function displayCSVData(data) {
       }
     });
 
-    // Add CSV stories
+    // Add CSV stories with new layout
     let startIndex = existingStories.length;
     data.forEach((row, index) => {
       const rawId = (row['Id'] || `csv_${index}`).trim();
@@ -2487,14 +2537,77 @@ function displayCSVData(data) {
       storyItem.dataset.id = rawId;
       storyItem.dataset.description = storyText;
 
+      // Create story ID element (purple, bold, at top)
+      const storyId = document.createElement('div');
+      storyId.className = 'story-id';
+      storyId.textContent = rawId;
+      storyItem.appendChild(storyId);
+
+      // Create story title/description element
       const storyTitle = document.createElement('div');
       storyTitle.classList.add('story-title');
       const tmpDiv = document.createElement('div');
       tmpDiv.innerHTML = storyText || '';
-      const previewText = tmpDiv.innerText || tmpDiv.textContent || '';
-      storyTitle.textContent = `${rawId}: ${previewText}`;	      
+      const previewText = tmpDiv.innerText || tmpDiv.textContent || 'No description';
+      storyTitle.textContent = previewText;
       storyItem.appendChild(storyTitle);
 
+      // Story meta container (vote count + story points)
+      const storyMeta = document.createElement('div');
+      storyMeta.className = 'story-meta';
+
+      // Vote count element (bottom left with people icon)
+      const voteCountEl = document.createElement('div');
+      voteCountEl.className = 'vote-count';
+      voteCountEl.id = `vote-count-${csvStoryId}`;
+      voteCountEl.textContent = '0 votes';
+      storyMeta.appendChild(voteCountEl);
+
+      // Story points element (bottom right, green)
+      const storyPointsEl = document.createElement('div');
+      storyPointsEl.className = 'story-points';
+      storyPointsEl.id = `story-points-${csvStoryId}`;
+      storyPointsEl.textContent = '?';
+      
+      // Add story points editing functionality
+      storyPointsEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const current = storyPointsEl.textContent.trim();
+        storyPointsEl.classList.add('editing');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = current === '?' ? '' : current;
+        input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
+        storyPointsEl.textContent = '';
+        storyPointsEl.appendChild(input);
+        input.focus();
+        input.select();
+
+        function commit() {
+          const newVal = input.value.trim() || '?';
+          storyPointsEl.classList.remove('editing');
+          storyPointsEl.textContent = newVal;
+          storyItem.dataset.storyPoints = newVal;
+          if (typeof socket !== 'undefined' && socket && socket.connected) {
+            socket.emit('updateStoryPoints', { storyId: csvStoryId, points: newVal });
+          }
+        }
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            commit();
+          } else if (e.key === 'Escape') {
+            storyPointsEl.classList.remove('editing');
+            storyPointsEl.textContent = current;
+          }
+        });
+      });
+
+      storyMeta.appendChild(storyPointsEl);
+      storyItem.appendChild(storyMeta);
+
+      // Add 3-dot menu for hosts
       if (isCurrentUserHost()) {
         const actionsContainer = document.createElement('div');
         actionsContainer.className = 'story-actions';
@@ -2536,7 +2649,7 @@ function displayCSVData(data) {
             id: csvStoryId,
             idDisplay: storyItem.dataset.id,
             descriptionDisplay: storyItem.dataset.description,
-            text: storyTitle.textContent
+            text: `${storyId.textContent}: ${storyTitle.textContent}`
           });
         });
 
@@ -2598,6 +2711,9 @@ function displayCSVData(data) {
     });
   }
 }
+
+
+
 
 /**
  * Edit a story using the add ticket modal
