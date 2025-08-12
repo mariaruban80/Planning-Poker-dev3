@@ -2617,11 +2617,7 @@ function displayCSVData(data) {
         input.select();
 
         function commit() {
-          //const newVal = input.value.trim() || '?';
-          const newVal = typeof points === 'string' || typeof points === 'number'
-  ? points
-  : points?.textContent?.trim();
-          
+          const newVal = input.value.trim() || '?';            
           storyPointsEl.classList.remove('editing');
           storyPointsEl.textContent = newVal;
           storyItem.dataset.storyPoints = newVal;
