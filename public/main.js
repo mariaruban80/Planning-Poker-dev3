@@ -939,7 +939,7 @@ function initializeApp(roomId) {
 
     const filteredTickets = (tickets || []).filter(ticket => !deletedStoryIds.has(ticket.id));
     if (Array.isArray(filteredTickets)) {
-      processAllTickets(filteredTickets);
+      filteredTickets.forEach(ticket => addTicketToUI(ticket, false));
     }
 
     if (serverVotes) {
@@ -1822,50 +1822,72 @@ function getVoteEmoji(vote) {
  * @param {Object} ticketData - Ticket data { id, text }
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
+
 function addTicketToUI(ticketData, isNew) {
     if (!ticketData || !ticketData.id) {
         console.warn('[UI] No ticket data provided to addTicketToUI');
         return;
     }
 
-    try {
-        const storyList = document.getElementById('storyList');
-        if (!storyList) {
-            console.error('[UI] storyList element not found');
-            return;
-        }
-
-        // Create the card container
-        const card = document.createElement('div');
-        card.classList.add('story-card');
-        card.id = ticketData.id;
-
-        // Story ID / Title
-        const titleEl = document.createElement('div');
-        titleEl.classList.add('story-title');
-        titleEl.textContent = ticketData.text || '';
-        card.appendChild(titleEl);
-
-        // Optional story description
-        if (ticketData.descriptionDisplay) {
-            const descEl = document.createElement('div');
-            descEl.classList.add('story-description');
-            descEl.textContent = ticketData.descriptionDisplay;
-            card.appendChild(descEl);
-        }
-
-        // Add to DOM
-        storyList.appendChild(card);
-
-        if (isNew) {
-            console.log(`[UI] Added new ticket to UI: ${ticketData.id}`);
-        } else {
-            console.log(`[UI] Restored ticket to UI: ${ticketData.id}`);
-        }
-
-    } catch (err) {
-        console.error('[UI] Error adding ticket to UI:', err);
+    // Prevent duplicate cards (important for guests)
+    if (document.getElementById(ticketData.id)) {
+        console.log(`[UI] Ticket ${ticketData.id} already exists, skipping`);
+        return;
     }
+
+    const storyList = document.getElementById('storyList');
+    if (!storyList) {
+        console.error('[UI] storyList element not found');
+        return;
+    }
+
+    // Ensure votes array exists
+    votesPerStory[ticketData.id] = votesPerStory[ticketData.id] || {};
+
+    // Create story card container
+    const card = document.createElement('div');
+    card.className = 'story-card';
+    card.id = ticketData.id;
+
+    // Build full layout
+    card.innerHTML = `
+        <!-- Left: vote bubble -->
+        <div class="story-left">
+            <span class="vote-bubble" id="vote-bubble-${ticketData.id}">👥</span>
+        </div>
+
+        <!-- Center: story details -->
+        <div class="story-content">
+            <div class="story-id" title="${ticketData.idDisplay || ''}">
+                ${ticketData.idDisplay || ''}
+            </div>
+            <div class="story-title">${ticketData.text || ''}</div>
+            <div class="story-description">${ticketData.descriptionDisplay || ''}</div>
+        </div>
+
+        <!-- Right: estimate & menu -->
+        <div class="story-right">
+            <span class="estimate-bubble">${ticketData.estimate || '?'}</span>
+            <div class="story-actions">
+                <button class="story-menu-btn">⋮</button>
+                <div class="story-menu-dropdown">
+                    <div class="story-menu-item edit">Edit</div>
+                    <div class="story-menu-item delete">Delete</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Append to DOM
+    storyList.appendChild(card);
+
+    // Update vote count display
+    updateVoteCountUI(ticketData.id);
+
+    // Set up menu click events
+    setupStoryCardMenu(card, ticketData.id);
+
+    console.log(`[UI] ${isNew ? 'Added new' : 'Restored'} ticket to UI: ${ticketData.id}`);
 }
 
 
@@ -3228,7 +3250,7 @@ async function handleSocketMessage(message) {
         !deletedStoryIds.has(ticket.id)
       );
       await translateTicketsIfNeeded(filteredTickets);
-      processAllTickets(filteredTickets);
+      filteredTickets.forEach(ticket => addTicketToUI(ticket, false));
       
       if (message.votesPerStory) {
         for (const [storyId, votes] of Object.entries(message.votesPerStory)) {
@@ -3306,7 +3328,7 @@ async function handleSocketMessage(message) {
       if (Array.isArray(message.tickets)) {
         const filteredTickets = message.tickets.filter(ticket => !deletedStoryIds.has(ticket.id));
         console.log(`[SOCKET] Received ${filteredTickets.length} valid tickets (filtered from ${message.tickets.length})`);
-        processAllTickets(filteredTickets);
+        filteredTickets.forEach(ticket => addTicketToUI(ticket, false));
         applyGuestRestrictions();
       }
       break;
@@ -3863,4 +3885,50 @@ window.addEventListener('beforeunload', () => {
 
 
       
+
+
+
+function setupStoryCardMenu(card, storyId) {
+    const menuBtn = card.querySelector('.story-menu-btn');
+    const dropdown = card.querySelector('.story-menu-dropdown');
+
+    if (!menuBtn || !dropdown) return;
+
+    // Toggle dropdown on button click
+    menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+    });
+
+    // Close dropdown if clicking outside
+    document.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+    });
+
+    // Edit click
+    const editItem = dropdown.querySelector('.story-menu-item.edit');
+    if (editItem) {
+        editItem.addEventListener('click', () => {
+            console.log(`[UI] Edit story ${storyId}`);
+            if (typeof openEditTicketModal === 'function') {
+                openEditTicketModal(storyId);
+            }
+        });
+    }
+
+    // Delete click
+    const deleteItem = dropdown.querySelector('.story-menu-item.delete');
+    if (deleteItem) {
+        deleteItem.addEventListener('click', () => {
+            console.log(`[UI] Delete story ${storyId}`);
+            if (typeof deleteTicket === 'function') {
+                deleteTicket(storyId);
+            } else if (socket) {
+                socket.emit('deleteStory', { storyId });
+            }
+            const el = document.getElementById(storyId);
+            if (el) el.remove();
+        });
+    }
+}
 
