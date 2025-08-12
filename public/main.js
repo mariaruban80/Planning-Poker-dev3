@@ -383,77 +383,32 @@ window.updateTicketFromModal = function(ticketData) {
  * @param {Object} ticketData - Updated ticket data
  */
 function updateTicketInUI(ticketData) {
-  if (!ticketData || !ticketData.id) {
-    console.warn('[UI] Invalid or empty ticketData passed to updateTicketInUI:', ticketData);
-    return;
-  }
 
-  const storyCard = document.getElementById(ticketData.id);
-  if (!storyCard) return;
+    try {
+        var card = document.getElementById(ticket.id);
+        if (!card) return;
+        var idEl = card.querySelector('.story-id');
+        if (idEl) {
+            idEl.textContent = ticket.idDisplay || '';
+            idEl.title = ticket.idDisplay || '';
+        }
+        var descEl = card.querySelector('.story-description');
+        if (descEl) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = ticket.descriptionDisplay || '';
+            var plainDesc = tmp.textContent || tmp.innerText || '';
+            descEl.textContent = plainDesc;
+            descEl.title = plainDesc;
+        }
+        var estimateEl = card.querySelector('.estimate-bubble');
+        if (estimateEl && ticket.estimate) estimateEl.textContent = ticket.estimate;
+        var voteBubble = card.querySelector('.vote-bubble');
+        if (voteBubble && window.votesPerStory && window.votesPerStory[ticket.id]) {
+            var count = Object.keys(window.votesPerStory[ticket.id]).length;
+            voteBubble.textContent = count > 0 ? count.toString() : '?';
+        }
+    } catch (err) { console.error(err); }
 
-  const storyTitle = storyCard.querySelector('.story-title');
-  if (!storyTitle) return;
-
-  const userLang = localStorage.getItem('selectedLanguage') || 'en';
-  const originalLang = ticketData.originalLang || 'en';
-  const originalText = ticketData.originalText || ticketData.text || '[No ticket info]';
-
-  const descriptionHTML = ticketData.descriptionDisplay || ticketData.text || '';
-  const idForDisplay = ticketData.idDisplay || '';
-
-  // Extract plain text from description HTML properly
-  let previewText = '';
-  if (descriptionHTML) {
-    const tmpDiv = document.createElement('div');
-    tmpDiv.innerHTML = descriptionHTML;
-    
-    previewText = (tmpDiv.innerText || tmpDiv.textContent || '').trim();
-    previewText = previewText.replace(/<[^>]*>/g, '');
-    
-    if (
-      !previewText ||
-      descriptionHTML === '' ||
-      descriptionHTML === '<p><br></p>' ||
-      descriptionHTML === '<p></p>' ||
-      descriptionHTML.trim() === ''
-    ) {
-      previewText = '';
-    }
-  }
-
-  // Build display text properly
-  let displayText;
-  if (idForDisplay && previewText) {
-    displayText = `${idForDisplay}: ${previewText}`;
-  } else if (idForDisplay) {
-    displayText = idForDisplay;
-  } else if (previewText) {
-    displayText = previewText;
-  } else {
-    displayText = '[No ticket info]';
-  }
-
-  // Store metadata on the card
-  storyCard.dataset.id = idForDisplay;
-  storyCard.dataset.description = descriptionHTML;
-  storyCard.dataset.original = displayText;
-  storyCard.dataset.originallang = originalLang;
-
-  // Update the display with clean text
-  if (userLang === originalLang) {
-    storyTitle.textContent = displayText;
-  } else {
-    if (window.languageManager && typeof window.languageManager.translateText === 'function') {
-      window.languageManager.translateText(displayText, userLang).then(translated => {
-        storyTitle.textContent = translated;
-      }).catch(err => {
-        console.error('[Translation] Fallback to original:', err);
-        storyTitle.textContent = displayText;
-      });
-    } else {
-      storyTitle.textContent = displayText;
-    }
-  }
 }
 
 /**
@@ -1868,220 +1823,69 @@ function getVoteEmoji(vote) {
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
 function addTicketToUI(ticketData, selectAfterAdd = false) {
-  if (!ticketData || !ticketData.id || !ticketData.text) return;
 
-  if (deletedStoryIds.has(ticketData.id)) {
-    console.log('[ADD] Not adding deleted ticket to UI:', ticketData.id);
-    return;
-  }
+    try {
+        var list = document.getElementById('storyList') || document.querySelector('.story-container');
+        if (!list) return;
+        if (!ticket || !ticket.id) ticket.id = 'story_' + Date.now();
 
-  const storyList = document.getElementById('storyList');
-  if (!storyList) return;
-
-  const existingTicket = document.getElementById(ticketData.id);
-  if (existingTicket) return;
-
-  const storyCard = document.createElement('div');
-  storyCard.className = 'story-card';
-  storyCard.id = ticketData.id;
-
-  const newIndex = storyList.children.length;
-  storyCard.dataset.index = newIndex;
-
-  const idForDisplay = ticketData.idDisplay !== undefined ? ticketData.idDisplay : (
-    ticketData.id.startsWith('story_csv_') && ticketData.id.replace(/^story_csv_/, '') !== '' ? ticketData.id.replace(/^story_csv_/, '') : ticketData.id
-  );
-  const descriptionForDisplay = ticketData.descriptionDisplay !== undefined ? ticketData.descriptionDisplay : ticketData.text;
-
-  storyCard.dataset.id = idForDisplay;
-  storyCard.dataset.description = descriptionForDisplay;
-
-  const storyTitle = document.createElement('div');
-  storyTitle.className = 'story-title';
-  let previewText = '';
-  if (descriptionForDisplay) {
-    const tmpDiv = document.createElement('div');
-    tmpDiv.innerHTML = descriptionForDisplay;
-    previewText = tmpDiv.innerText || tmpDiv.textContent || '';
-  }
-  if (idForDisplay && previewText) {
-    storyTitle.textContent = `${idForDisplay}: ${previewText}`;
-  } else {
-    storyTitle.textContent = previewText;
-  }
-
-  storyCard.appendChild(storyTitle);
-
-  // Story meta (vote count + editable story points)
-  const storyMeta = document.createElement('div');
-  storyMeta.className = 'story-meta';
-
-  // Vote count element (hidden until revealed)
-  const voteCountEl = document.createElement('div');
-  voteCountEl.className = 'vote-count';
-  voteCountEl.id = `vote-count-${ticketData.id}`;
-  voteCountEl.textContent = '0 votes';
-  storyMeta.appendChild(voteCountEl);
-
-  // Story points display (editable in-place)
-  const storyPointsEl = document.createElement('div');
-  storyPointsEl.className = 'story-points';
-  storyPointsEl.id = `story-points-${ticketData.id}`;
-  storyPointsEl.textContent = (ticketData.points !== undefined && ticketData.points !== null) ? String(ticketData.points) : '?';
-  storyMeta.appendChild(storyPointsEl);
-
-  storyCard.appendChild(storyMeta);
-
-  // In-place editing behaviour for story points
-  storyPointsEl.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const current = storyPointsEl.textContent.trim();
-    storyPointsEl.classList.add('editing');
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = current === '?' ? '' : current;
-    input.id = `story-points-input-${ticketData.id}`;
-    storyPointsEl.textContent = '';
-    storyPointsEl.appendChild(input);
-    input.focus();
-    input.select();
-
-    function commit() {
-      const newVal = input.value.trim() || '?';
-      storyPointsEl.classList.remove('editing');
-      storyPointsEl.textContent = newVal;
-      storyCard.dataset.storyPoints = newVal;
-      if (typeof socket !== 'undefined' && socket && socket.connected) {
-        socket.emit('updateStoryPoints', { storyId: ticketData.id, points: newVal });
-      } else {
-        console.log('[STORY POINTS] socket not available, local update only', ticketData.id, newVal);
-      }
-      input.removeEventListener('blur', onBlur);
-      input.removeEventListener('keydown', onKey);
-    }
-    function onBlur() { commit(); }
-    function onKey(e) {
-      if (e.key === 'Enter') {
-        commit();
-      } else if (e.key === 'Escape') {
-        storyPointsEl.classList.remove('editing');
-        storyPointsEl.textContent = current;
-        input.removeEventListener('blur', onBlur);
-        input.removeEventListener('keydown', onKey);
-      }
-    }
-    input.addEventListener('blur', onBlur);
-    input.addEventListener('keydown', onKey);
-  });
-
-  // Add 3-dot menu for hosts only
-  if (isCurrentUserHost()) {
-    const actionsContainer = document.createElement('div');
-    actionsContainer.className = 'story-actions';
-
-    const menuBtn = document.createElement('button');
-    menuBtn.className = 'story-menu-btn';
-    menuBtn.innerHTML = '⋮';
-    menuBtn.title = 'Story actions';
-
-    const dropdown = document.createElement('div');
-    dropdown.className = 'story-menu-dropdown';
-
-    const editItem = document.createElement('div');
-    editItem.className = 'story-menu-item edit';
-    editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
-
-    const deleteItem = document.createElement('div');
-    deleteItem.className = 'story-menu-item delete';
-    deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
-
-    dropdown.appendChild(editItem);
-    dropdown.appendChild(deleteItem);
-
-    actionsContainer.appendChild(menuBtn);
-    actionsContainer.appendChild(dropdown);
-    storyCard.appendChild(actionsContainer);
-
-    // Add event listeners
-    menuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-
-      // Close all other dropdowns first
-      document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
-        if (dd !== dropdown) dd.classList.remove('show');
-      });
-
-      dropdown.classList.toggle('show');
-    });
-
-    editItem.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.classList.remove('show');
-      editStory({
-        id: ticketData.id,
-        idDisplay: storyCard.dataset.id,
-        descriptionDisplay: storyCard.dataset.description,
-        text: storyTitle.textContent
-      });
-    });
-
-    deleteItem.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.classList.remove('show');
-      deleteStory(ticketData.id);
-    });
-  }
-  
-  storyList.appendChild(storyCard);
-
-  // Check if user is guest and handle accordingly
-  if (isGuestUser()) {
-    storyCard.classList.add('disabled-story');
-  } else {
-    storyCard.addEventListener('click', () => {
-      selectStory(newIndex);
-    });
-  }
-
-  if (selectAfterAdd && !isGuestUser()) {
-    selectStory(newIndex);
-  }
-
-  const noStoriesMessage = document.getElementById('noStoriesMessage');
-  if (noStoriesMessage) {
-    noStoriesMessage.style.display = 'none';
-  }
-
-  document.querySelectorAll('#planningCards .card').forEach(card => {
-    card.classList.remove('disabled');
-    card.setAttribute('draggable', 'true');
-  });
-
-  normalizeStoryIndexes();
-
-  // **FIXED: Ensure vote bubble is created for this story**
-  ensureVoteBubbleForCard(storyCard);
-
-  // NEW: Trigger translation if needed
-  if (window.languageManager && window.languageManager.currentLanguage !== 'en') {
-    console.log("Attempting to translate the new storyTitle");
-
-    if (typeof window.languageManager.getTranslatableElements === 'function') {
-      if(typeof window.languageManager.translateTexts === 'function') {   
-        if (typeof window.languageManager.applyTranslation === 'function') {
-          window.languageManager.translateTexts([storyTitle.textContent]).then((translatedText) => {
-            window.languageManager.applyTranslation({element: storyTitle, type: 'text'}, translatedText[0]);
-          }) 
-        } else {
-          console.log("- window.languageManager.applyTranslation() function declaration not found ");
+        // Prevent duplicates
+        if (document.getElementById(ticket.id)) {
+            updateTicketInUI(ticket);
+            return;
         }
-      } else {
-        console.log("- window.languageManager.translateTexts() function declaration not found please double check the names");
-      }
-    } else {
-      console.log("- main.js -> the window.languageManager.getTranslatableElements statement not found please check. ");       
-    }
-  }
+
+        var card = document.createElement('div');
+        card.className = 'story-card';
+        card.id = ticket.id;
+
+        var left = document.createElement('div');
+        left.className = 'left';
+
+        var idEl = document.createElement('div');
+        idEl.className = 'story-id';
+        idEl.textContent = ticket.idDisplay || '';
+        idEl.title = ticket.idDisplay || '';
+
+        var descEl = document.createElement('div');
+        descEl.className = 'story-description';
+        var tmp = document.createElement('div');
+        tmp.innerHTML = ticket.descriptionDisplay || '';
+        var plainDesc = tmp.textContent || tmp.innerText || '';
+        descEl.textContent = plainDesc;
+        descEl.title = plainDesc;
+
+        // Keep .story-title hidden for legacy logic
+        var titleEl = document.createElement('div');
+        titleEl.className = 'story-title';
+        titleEl.textContent = ticket.name || '';
+
+        left.appendChild(idEl);
+        left.appendChild(descEl);
+        left.appendChild(titleEl);
+
+        var meta = document.createElement('div');
+        meta.className = 'story-meta';
+
+        var voteBubble = document.createElement('div');
+        voteBubble.className = 'vote-bubble';
+        voteBubble.id = 'vote-bubble-' + ticket.id;
+        voteBubble.textContent = '?';
+
+        var estimateBubble = document.createElement('div');
+        estimateBubble.className = 'estimate-bubble';
+        estimateBubble.id = 'estimate-bubble-' + ticket.id;
+        estimateBubble.textContent = '';
+
+        meta.appendChild(voteBubble);
+        meta.appendChild(estimateBubble);
+
+        card.appendChild(left);
+        card.appendChild(meta);
+
+        list.appendChild(card);
+    } catch (err) { console.error(err); }
+
 }
 
 /**
