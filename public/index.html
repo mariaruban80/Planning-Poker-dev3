@@ -181,38 +181,40 @@
 }
 
      .story-card { 
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* Space between title and meta info */
-  margin-bottom: 10px; 
-  padding: 14px 16px; 
-  background-color: white; 
-  color: #333;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  cursor: pointer; 
-  transition: all 0.2s ease;
-  font-size: 13px;
-  font-weight: normal;
-  text-align: left;
-  height: auto;
-  min-height: 42px;
-  width: 100%;
-  box-sizing: border-box;
-  position: relative;
-  line-height: 1.4;
+           position: relative;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-left: 4px solid #673ab7;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
 }
 
 .story-card:hover {
-  background-color: #f5f5f5;
-  border-color: #d0d0d0;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.15);
+            transform: translateY(-2px);
+            border-left-color: #5c33a4;
 }
 
 .story-card.selected { 
-  background-color: #e8f0fe;
-  border-color: #4285f4;
-  color: #333;
+         background: #f8f5ff;
+            border-left-color: #4CAF50;
+            box-shadow: 0 4px 16px rgba(103, 58, 183, 0.25);
 }
+       .story-card.has-votes {
+            border-left-color: #2196F3;
+        }
+        
+        .story-card.votes-revealed {
+            border-left-color: #4CAF50;
+        }
 
 .story-card.active { 
   background-color: #e8f0fe;
@@ -220,8 +222,20 @@
   color: #333;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
-    
-  
+       .story-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+   .story-id {
+            font-weight: 700;
+            color: #673ab7;
+            font-size: 13px;
+            background: #f0e6ff;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
 
     
     /* Updated button styling to match the ADD TICKET reference */
@@ -2532,36 +2546,23 @@ font-size: 15px;
 
 /* Story meta container for vote count and points - positioned inside the card */
 .story-meta {
-  position: absolute;
-  bottom: 8px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 20px;
-  pointer-events: none; /* Allow clicking through to story */
+    display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
 }
 
 /* Vote count display (far left inside card) */
 .story-meta .vote-count {
-  display: flex !important;
-  align-items: left;
-  font-size: 12px;
-  color: #6b7280;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  border-radius: 0;
-  min-width: auto;
-  pointer-events: auto;
+    display: flex;
+            align-items: center;
 }
 
 /* Add people icon before vote count */
 .story-meta .vote-count::before {
-  content: '👥';
-  margin-right: 4px;
-  font-size: 12px;
+content: "👥";
+            margin-right: 4px;
 }
 
 /* Story points bubble (bottom right inside card) */
@@ -5310,6 +5311,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </html>
         
              
+
 
 
 
