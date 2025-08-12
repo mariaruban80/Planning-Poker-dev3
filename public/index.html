@@ -2467,46 +2467,45 @@ font-size: 15px;
 </style>
 
 <style>
-/* UPDATED: Fix story card layout with proper vote count and points alignment */
+/* CORRECTED: Story card layout to match host1 image */
 .story-card {
   position: relative;
   display: flex;
   flex-direction: column;
   padding: 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  min-height: 80px;
+  border: 2px solid #e0e0e0;
+  border-left: 4px solid #4285f4; /* Blue left border like in host1 image */
+  border-radius: 8px;
+  min-height: 100px;
+  max-width: 320px; /* Limit width to make it more compact */
   cursor: pointer;
   transition: all 0.2s ease;
   background-color: white;
   color: #333;
   margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .story-card:hover {
-  background-color: #f5f5f5;
-  border-color: #d0d0d0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background-color: #f8f9fa;
+  border-color: #4285f4;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transform: translateY(-1px);
 }
 
-.story-card.selected { 
-  background-color: #e8f0fe;
+.story-card.selected, .story-card.active { 
+  background-color: #f0f4ff;
   border-color: #4285f4;
-  color: #333;
-}
-
-.story-card.active { 
-  background-color: #e8f0fe;
-  border-color: #4285f4;
+  border-left-color: #4285f4;
   color: #333;
   box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
 }
 
-/* Story ID at the top - purple and bold */
+/* Story ID at the top - purple and bold like PROJ-141 */
 .story-id {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
-  color: #673ab7;
+  color: #8b5fbf; /* Purple color matching host1 image */
   margin-bottom: 8px;
   line-height: 1.2;
 }
@@ -2515,16 +2514,16 @@ font-size: 15px;
 .story-title {
   flex-grow: 1;
   font-size: 14px;
-  font-weight: 500;
-  color: #333;
+  font-weight: 400;
+  color: #374151;
   line-height: 1.4;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   word-wrap: break-word;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  padding-right: 40px; /* Space for 3-dot menu */
+  padding-right: 60px; /* Space for feature tag and 3-dot menu */
 }
 
 /* Story meta container - positioned at bottom */
@@ -2540,7 +2539,7 @@ font-size: 15px;
 .story-meta .vote-count {
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
   background: transparent;
   padding: 0;
@@ -2549,6 +2548,7 @@ font-size: 15px;
   min-width: auto;
   text-align: left;
   flex-shrink: 0;
+  font-weight: 500;
 }
 
 .story-meta .vote-count::before {
@@ -2556,22 +2556,38 @@ font-size: 15px;
   margin-right: 4px;
   font-size: 12px;
 }
+     /* Ensure proper sidebar layout */
+.rightbar {
+  width: 350px !important;
+  max-width: 350px;
+  min-width: 300px;
+  padding: 20px;
+  border: none;
+  background: white;
+}
 
-/* Story points - positioned at bottom right */
+@media (max-width: 1024px) {
+  .rightbar {
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
+
+/* Story points - positioned at bottom right, green like in host1 */
 .story-meta .story-points {
-  background: #10b981;
+  background: #10b981; /* Green matching host1 image */
   color: white;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 6px;
-  min-width: 24px;
-  height: 24px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  min-width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 }
 
@@ -2579,19 +2595,11 @@ font-size: 15px;
   background: #059669;
 }
 
-/* 3-dot menu positioning */
-.story-actions {
-  position: absolute;
-  right: 12px;
-  top: 12px;
-  z-index: 10;
-}
-
-/* Feature tag (optional - if you want to add tags) */
-.story-tag {
+/* Feature tag - positioned at top right like in host1 image */
+.story-feature-tag {
   position: absolute;
   top: 12px;
-  right: 50px;
+  right: 45px; /* Space for 3-dot menu */
   background: #e0f7ff;
   color: #0891b2;
   font-size: 11px;
@@ -2601,26 +2609,63 @@ font-size: 15px;
   text-transform: capitalize;
 }
 
+/* 3-dot menu positioning - top right corner */
+.story-actions {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 10;
+}
+
+.story-menu-btn {
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.story-menu-btn:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
 /* Hide legacy vote bubbles */
 .vote-bubble,
 .vote-bubble-standard {
   display: none !important;
 }
 
+/* Story list container adjustments */
+.story-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 350px; /* Limit container width */
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .story-card {
     padding: 12px;
-    min-height: 70px;
+    min-height: 80px;
+    max-width: 100%;
   }
   
   .story-id {
-    font-size: 13px;
+    font-size: 14px;
   }
   
   .story-title {
     font-size: 13px;
-    padding-right: 35px;
+    padding-right: 50px;
   }
   
   .story-meta .vote-count {
@@ -2628,12 +2673,13 @@ font-size: 15px;
   }
   
   .story-meta .story-points {
-    font-size: 11px;
-    padding: 3px 6px;
-    min-width: 20px;
-    height: 20px;
+    font-size: 12px;
+    padding: 3px 8px;
+    min-width: 24px;
+    height: 24px;
   }
 }
+
 
 </style>
      
