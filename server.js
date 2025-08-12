@@ -297,9 +297,13 @@ socket.on('updateTicket', (ticketData) => {
   }
 });
 // Handle updating story points directly from the story card
+
 socket.on('updateStoryPoints', ({ storyId, points }) => {
   const roomId = socket.data.roomId;
   if (!roomId || !rooms[roomId] || !storyId) return;
+
+  // Update room activity timestamp
+  rooms[roomId].lastActivity = Date.now();
 
   // Find the ticket and update its points
   const ticketIndex = rooms[roomId].tickets.findIndex(t => t.id === storyId);
@@ -308,8 +312,8 @@ socket.on('updateStoryPoints', ({ storyId, points }) => {
     console.log(`[SERVER] Story points updated for ${storyId} in room ${roomId}: ${points}`);
   }
 
-  // Broadcast to everyone in the room
-  io.to(roomId).emit('storyPointsUpdated', { storyId, points });
+  // Broadcast to ALL users in the room (including sender for confirmation)
+  io.to(roomId).emit('storyPointsUpdate', { storyId, points }); // Changed from 'storyPointsUpdated' to 'storyPointsUpdate'
 });
 
   
