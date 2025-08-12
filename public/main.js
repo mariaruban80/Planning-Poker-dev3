@@ -1822,71 +1822,52 @@ function getVoteEmoji(vote) {
  * @param {Object} ticketData - Ticket data { id, text }
  * @param {boolean} selectAfterAdd - Whether to select the ticket after adding
  */
-function addTicketToUI(ticketData, selectAfterAdd = false) {
+function addTicketToUI(ticketData, isNew) {
+    if (!ticketData || !ticketData.id) {
+        console.warn('[UI] No ticket data provided to addTicketToUI');
+        return;
+    }
 
     try {
-        var list = document.getElementById('storyList') || document.querySelector('.story-container');
-        if (!list) return;
-        if (!ticket || !ticket.id) ticket.id = 'story_' + Date.now();
-
-        // Prevent duplicates
-        if (document.getElementById(ticket.id)) {
-            updateTicketInUI(ticket);
+        const storyList = document.getElementById('storyList');
+        if (!storyList) {
+            console.error('[UI] storyList element not found');
             return;
         }
 
-        var card = document.createElement('div');
-        card.className = 'story-card';
-        card.id = ticket.id;
+        // Create the card container
+        const card = document.createElement('div');
+        card.classList.add('story-card');
+        card.id = ticketData.id;
 
-        var left = document.createElement('div');
-        left.className = 'left';
+        // Story ID / Title
+        const titleEl = document.createElement('div');
+        titleEl.classList.add('story-title');
+        titleEl.textContent = ticketData.text || '';
+        card.appendChild(titleEl);
 
-        var idEl = document.createElement('div');
-        idEl.className = 'story-id';
-        idEl.textContent = ticket.idDisplay || '';
-        idEl.title = ticket.idDisplay || '';
+        // Optional story description
+        if (ticketData.descriptionDisplay) {
+            const descEl = document.createElement('div');
+            descEl.classList.add('story-description');
+            descEl.textContent = ticketData.descriptionDisplay;
+            card.appendChild(descEl);
+        }
 
-        var descEl = document.createElement('div');
-        descEl.className = 'story-description';
-        var tmp = document.createElement('div');
-        tmp.innerHTML = ticket.descriptionDisplay || '';
-        var plainDesc = tmp.textContent || tmp.innerText || '';
-        descEl.textContent = plainDesc;
-        descEl.title = plainDesc;
+        // Add to DOM
+        storyList.appendChild(card);
 
-        // Keep .story-title hidden for legacy logic
-        var titleEl = document.createElement('div');
-        titleEl.className = 'story-title';
-        titleEl.textContent = ticket.name || '';
+        if (isNew) {
+            console.log(`[UI] Added new ticket to UI: ${ticketData.id}`);
+        } else {
+            console.log(`[UI] Restored ticket to UI: ${ticketData.id}`);
+        }
 
-        left.appendChild(idEl);
-        left.appendChild(descEl);
-        left.appendChild(titleEl);
-
-        var meta = document.createElement('div');
-        meta.className = 'story-meta';
-
-        var voteBubble = document.createElement('div');
-        voteBubble.className = 'vote-bubble';
-        voteBubble.id = 'vote-bubble-' + ticket.id;
-        voteBubble.textContent = '?';
-
-        var estimateBubble = document.createElement('div');
-        estimateBubble.className = 'estimate-bubble';
-        estimateBubble.id = 'estimate-bubble-' + ticket.id;
-        estimateBubble.textContent = '';
-
-        meta.appendChild(voteBubble);
-        meta.appendChild(estimateBubble);
-
-        card.appendChild(left);
-        card.appendChild(meta);
-
-        list.appendChild(card);
-    } catch (err) { console.error(err); }
-
+    } catch (err) {
+        console.error('[UI] Error adding ticket to UI:', err);
+    }
 }
+
 
 /**
  * Set up a mutation observer to catch any newly added story cards
