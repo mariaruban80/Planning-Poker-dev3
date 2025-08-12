@@ -2513,41 +2513,24 @@ font-size: 15px;
 </style>
 
 <style>
-/* UPDATED: Fix story card layout with proper vote count and points alignment */
-/* Fix story card layout and meta positioning */
+/* Hide the purple vote bubble completely */
+.vote-bubble,
+.vote-bubble-standard {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Story card layout adjustments */
 .story-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 12px 16px 32px 16px; /* Increased bottom padding for meta elements */
+  padding: 12px 16px 32px 16px; /* Bottom padding for vote info */
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  min-height: 65px; /* Ensure minimum height for proper spacing */
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: white;
-  color: #333;
 }
 
-.story-card:hover {
-  background-color: #f5f5f5;
-  border-color: #d0d0d0;
-}
-
-.story-card.selected { 
-  background-color: #e8f0fe;
-  border-color: #4285f4;
-  color: #333;
-}
-
-.story-card.active { 
-  background-color: #e8f0fe;
-  border-color: #4285f4;
-  color: #333;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Story meta container - positioned at bottom with full width */
+/* Story meta container for vote count and points - positioned inside the card */
 .story-meta {
   position: absolute;
   bottom: 8px;
@@ -2557,26 +2540,21 @@ font-size: 15px;
   justify-content: space-between;
   align-items: center;
   height: 20px;
-  width: calc(100% - 24px); /* Account for left/right positioning */
-  pointer-events: none;
+  pointer-events: none; /* Allow clicking through to story */
 }
 
-/* Vote count - positioned at leftmost bottom */
+/* Vote count display (far left inside card) */
 .story-meta .vote-count {
-  position: static !important;
   display: flex !important;
-  align-items: center;
-  justify-content: flex-start;
+  align-items: left;
   font-size: 12px;
   color: #6b7280;
   background: transparent;
   padding: 0;
   margin: 0;
-  border: none;
+  border-radius: 0;
   min-width: auto;
-  text-align: left;
   pointer-events: auto;
-  flex-shrink: 0;
 }
 
 /* Add people icon before vote count */
@@ -2586,73 +2564,34 @@ font-size: 15px;
   font-size: 12px;
 }
 
-/* Story points bubble - positioned at rightmost bottom */
+/* Story points bubble (bottom right inside card) */
 .story-meta .story-points {
-  position: static !important;
+  position: static;
   background: #10b981 !important; /* Green background */
   color: white !important;
   font-size: 11px;
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 12px;
-  min-width: 24px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
   height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
-  margin-left: auto; /* Push to the right */
+  box-shadow: none;
 }
 
-/* Story title - ensure proper spacing from bottom elements */
-.story-title {
-  margin-bottom: 8px;
-  padding-right: 40px; /* Space for 3-dot menu */
-  flex-grow: 1;
-  line-height: 1.4;
-  word-wrap: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  max-height: none;
-  width: auto;
-  text-align: left;
-}
-
-/* 3-dot menu positioning - ensure it doesn't interfere */
-.story-actions {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  z-index: 10;
-}
-
-/* Default text when no votes */
-.story-meta .vote-count:empty::after {
-  content: '0 votes';
-  color: #9ca3af;
-}
-
-/* Always show vote count when there are votes */
-body.votes-revealed .story-meta .vote-count,
-.story-meta .vote-count {
-  display: flex !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* Ensure story points input styling when editing */
+/* Story points when editing */
 .story-meta .story-points.editing {
   background: white !important;
   color: #111827 !important;
   border: 1px solid #d1d5db;
+  pointer-events: auto;
 }
 
+/* Ensure story points input styling */
 .story-meta .story-points input {
   background: white;
   color: #111827;
@@ -2672,7 +2611,56 @@ body.votes-revealed .story-meta .vote-count,
   display: none !important;
 }
 
-/* Mobile responsive adjustments */
+/* Ensure story title has proper spacing from bottom elements */
+.story-title {
+  margin-bottom: 12px;
+  padding-right: 40px; /* Space for 3-dot menu */
+  flex-grow: 1;
+}
+
+/* 3-dot menu positioning */
+.story-actions {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 10;
+}
+
+/* Always show vote count when there are votes */
+body.votes-revealed .story-meta .vote-count,
+.story-meta .vote-count {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Default text when no votes */
+.story-meta .vote-count:empty::after {
+  content: '0 votes';
+  color: #9ca3af;
+}
+
+/* Ensure proper spacing in story card */
+.story-card .story-left {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 4px;
+}
+
+/* Remove any conflicting positioning */
+.story-meta .vote-count {
+  position: static !important;
+  bottom: auto !important;
+  left: auto !important;
+}
+
+.story-meta .story-points {
+  position: static !important;
+  bottom: auto !important;
+  right: auto !important;
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
   .story-card {
     padding: 10px 14px 28px 14px;
@@ -2682,7 +2670,6 @@ body.votes-revealed .story-meta .vote-count,
     left: 10px;
     right: 10px;
     bottom: 6px;
-    width: calc(100% - 20px);
   }
   
   .story-meta .vote-count {
@@ -2692,7 +2679,7 @@ body.votes-revealed .story-meta .vote-count,
   .story-meta .story-points {
     font-size: 10px;
     padding: 2px 6px;
-    min-width: 20px;
+    min-width: 18px;
     height: 18px;
   }
 }
@@ -2709,12 +2696,7 @@ body.votes-revealed .story-meta .vote-count,
   opacity: 1;
 }
 
-/* Remove any conflicting vote-bubble styles */
-.vote-bubble,
-.vote-bubble-standard {
-  display: none !important;
-  visibility: hidden !important;
-}
+     
 </style>
      
 <!-- END PATCH -->
@@ -3742,6 +3724,183 @@ function isGuestUser() {
         alert('Error exporting votes: ' + (error.message || 'Unknown error'));
       }
     }
+// Monitor for CSV file uploads - FIXED VERSION
+/* document.getElementById('csvInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const csvData = event.target.result;
+    const storyList = document.getElementById('storyList');
+    
+    // Save existing manually added stories before processing CSV
+    const existingStories = [];
+    if (storyList) {
+      const manualStories = storyList.querySelectorAll('.story-card[id^="story_"]:not([id^="story_csv_"])');
+      manualStories.forEach(card => {
+        if (card.id && !card.id.includes('story_csv_')) {
+          const titleEl = card.querySelector('.story-title');
+          if (titleEl) {
+            existingStories.push({
+              id: card.id,
+              text: titleEl.textContent
+            });
+          }
+        }
+      });
+      
+      console.log(`Saved ${existingStories.length} existing stories before CSV processing`);
+      storyList.innerHTML = '';
+    }
+    
+    // Re-add manually added stories using the same structure as addTicketToUI
+    existingStories.forEach((story, index) => {
+      const storyCard = document.createElement('div');
+      storyCard.className = 'story-card';
+      storyCard.id = story.id;
+      storyCard.dataset.index = index;
+      
+      const storyTitle = document.createElement('div');
+      storyTitle.className = 'story-title';
+      storyTitle.textContent = story.text;
+      storyCard.appendChild(storyTitle);
+      
+      // Use the EXACT same 3-dot menu code as addTicketToUI
+      if (!isGuestUser()) {
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'story-actions';
+        
+        const menuBtn = document.createElement('button');
+        menuBtn.className = 'story-menu-btn';
+        menuBtn.innerHTML = '⋮';
+        menuBtn.title = 'Story actions';
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'story-menu-dropdown';
+        
+        const editItem = document.createElement('div');
+        editItem.className = 'story-menu-item edit';
+        editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+        
+        const deleteItem = document.createElement('div');
+        deleteItem.className = 'story-menu-item delete';
+        deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        
+        dropdown.appendChild(editItem);
+        dropdown.appendChild(deleteItem);
+        actionsContainer.appendChild(menuBtn);
+        actionsContainer.appendChild(dropdown);
+        storyCard.appendChild(actionsContainer);
+        
+        // Use the EXACT same event listeners as addTicketToUI
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+            if (dd !== dropdown) dd.classList.remove('show');
+          });
+          dropdown.classList.toggle('show');
+        });
+        
+        editItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
+          if (window.editStory) window.editStory({id: story.id, text: story.text});
+        });
+        
+        deleteItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('show');
+          if (window.deleteStory) window.deleteStory(story.id);
+        });
+      }
+      
+      storyList.appendChild(storyCard);
+    });
+    
+    // Add CSV stories using the EXACT same structure as addTicketToUI
+    const stories = csvData.split('\n');
+    let startIndex = existingStories.length;
+    
+    stories.forEach(function(story, index) {
+      if (story.trim()) {
+        const storyCard = document.createElement('div');
+        storyCard.className = 'story-card';
+        storyCard.id = `story_csv_${index}`;
+        storyCard.dataset.index = startIndex + index;
+        
+        const storyTitle = document.createElement('div');
+        storyTitle.className = 'story-title';
+        storyTitle.textContent = story.trim();
+        storyCard.appendChild(storyTitle);
+        
+        // Use the EXACT same 3-dot menu code as addTicketToUI
+        if (!isGuestUser()) {
+          const actionsContainer = document.createElement('div');
+          actionsContainer.className = 'story-actions';
+          
+          const menuBtn = document.createElement('button');
+          menuBtn.className = 'story-menu-btn';
+          menuBtn.innerHTML = '⋮';
+          menuBtn.title = 'Story actions';
+          
+          const dropdown = document.createElement('div');
+          dropdown.className = 'story-menu-dropdown';
+          
+          const editItem = document.createElement('div');
+          editItem.className = 'story-menu-item edit';
+          editItem.innerHTML = '<i class="fas fa-edit"></i> Edit';
+          
+          const deleteItem = document.createElement('div');
+          deleteItem.className = 'story-menu-item delete';
+          deleteItem.innerHTML = '<i class="fas fa-trash"></i> Delete';
+          
+          dropdown.appendChild(editItem);
+          dropdown.appendChild(deleteItem);
+          actionsContainer.appendChild(menuBtn);
+          actionsContainer.appendChild(dropdown);
+          storyCard.appendChild(actionsContainer);
+          
+          // Use the EXACT same event listeners as addTicketToUI
+          menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.story-menu-dropdown.show').forEach(dd => {
+              if (dd !== dropdown) dd.classList.remove('show');
+            });
+            dropdown.classList.toggle('show');
+          });
+          
+          editItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.remove('show');
+            if (window.editStory) window.editStory({id: `story_csv_${index}`, text: story.trim()});
+          });
+          
+          deleteItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.remove('show');
+            if (window.deleteStory) window.deleteStory(`story_csv_${index}`);
+          });
+        }
+        
+        storyList.appendChild(storyCard);
+      }
+    });
+    
+    // Check for stories and select first one
+    checkForStories();
+    const firstStory = storyList.querySelector('.story-card');
+    if (firstStory) {
+      firstStory.classList.add('selected');
+    }
+    
+    if (window.notifyStoriesUpdated) {
+      window.notifyStoriesUpdated();
+    }
+  };
+  
+  reader.readAsText(file);
+}); */
 
      document.addEventListener('DOMContentLoaded', function() {
   const oldCsvInput = document.getElementById('csvInput');
@@ -4002,6 +4161,9 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('Room creator:', sessionStorage.getItem('isRoomCreator'));
 });
 
+
+     
+  
   // Function to hide main content until user provides name
   function hideMainContent() {
     const container = document.querySelector('.container');
@@ -4088,6 +4250,7 @@ function handleLoginSubmit() {
   }
 }
 
+     
   // Initialize the app with the provided username
   function initializeAppWithName(username) {
     // Initialize socket connection with the username
@@ -4209,6 +4372,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+         
 </script>
  <!-- Add this before the closing </body> tag 
 <script src="userlist-fix.js"></script> -->
@@ -4876,6 +5040,11 @@ function handleCsvImport() {
   console.log('Selected file:', selectedCsvFile?.name);
   console.log('CSV data rows:', csvData.length);
   
+/*  if (!selectedCsvFile) {
+    alert('Please select a CSV file first.');
+    return;
+  }*/
+  
   if (!csvData || csvData.length === 0) {
     alert('No CSV data to import. Please select a valid CSV file.');
     return;
@@ -4948,6 +5117,12 @@ function handleCsvImport() {
     // Close modal and show success
     hideCsvUploadModal();
     
+ /*   if (importedCount > 0) {
+      alert(`Successfully imported ${importedCount} tickets!`);
+    } else {
+      alert('No tickets were imported. Please check your data and field mappings.');
+    } */
+    
   } catch (error) {
     console.error('Error during import:', error);
     alert('Error during import: ' + error.message);
@@ -4956,7 +5131,11 @@ function handleCsvImport() {
   }
 }
 
+
+     
 </script>
+
+        
 
 <!-- Add this just before the closing </body> tag in index.html -->
 <script>
@@ -5126,6 +5305,33 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+     
 </body>
 </html>
-  
+        
+             
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
