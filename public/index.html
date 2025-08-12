@@ -2702,29 +2702,22 @@ body.votes-revealed .story-meta .vote-count,
 <!-- END PATCH -->
 
 
-<!-- START: story-card layout styles injected by assistant -->
+<!-- START: story-card layout styles (v2) -->
 <style>
-/* Card layout patch to match user's screenshot-style */
 .story-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid #e6e6f2; border-radius: 10px; background: #ffffff; box-sizing: border-box; }
-.story-card .left { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
-.story-id { font-size: 12px; font-weight: 700; color: #4b5563; background: #f3f4f6; padding: 4px 8px; border-radius: 6px; display: inline-block; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.story-card .left { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.story-id { font-size: 12px; font-weight: 700; color: #4b5563; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; display: inline-block; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .story-description { font-size: 14px; color: #111827; opacity: 0.95; margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.story-title { display: none; } /* hide visually but keep for JS logic */
 .story-meta { display: flex; align-items: center; gap: 10px; margin-left: 12px; }
 .vote-bubble, .estimate-bubble { min-width: 44px; height: 32px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; padding: 0 8px; box-sizing: border-box; }
 .vote-bubble { background: #f0f6ff; color: #0b63ff; border: 1px solid #e6eefc; }
 .estimate-bubble { background: #fff7ed; color: #c2410c; border: 1px solid #fde3c6; }
-.story-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,24,40,0.04); }
-/* keep existing story-title compatibility (if other parts of app reference it) */
-.story-title { display: none; }
-/* ensure long lists still look good */
-.story-container { display: flex; flex-direction: column; gap: 10px; }
 @media (max-width: 768px) {
   .story-id { max-width: 45%; }
-  .story-meta { margin-left: 8px; gap: 6px; }
-  .vote-bubble, .estimate-bubble { min-width: 38px; height: 30px; font-size: 12px; }
 }
 </style>
-<!-- END: story-card layout styles injected by assistant -->
+<!-- END: story-card layout styles (v2) -->
 
 </head>
 <body>
@@ -4400,7 +4393,7 @@ document.addEventListener('DOMContentLoaded', function() {
          
 </script>
  <!-- Add this before the closing 
-<script src="override.js"></script>
+<script src="override_v2.js"></script>
 </body> tag 
 <script src="userlist-fix.js"></script> -->
 <script>
