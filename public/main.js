@@ -1,6 +1,7 @@
 // Get username from sessionStorage (already set from main.html or by index.html prompt)
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
+let isCurrentlyEditingStoryPoints = false;
 const isPremiumUser = false;
 
 // Import socket functionality
@@ -1970,33 +1971,51 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 
   storyCard.appendChild(storyMeta);
 
-// Replace the existing story points editing functionality with this:
+
 storyPointsEl.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const current = storyPointsEl.textContent.trim();
-  storyPointsEl.classList.add('editing');
-  const storyItem = storyPointsEl.closest('.story-card');
-  storyPointsEl.classList.add('editing');
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = current === '?' ? '' : current;
-  input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
-  storyPointsEl.textContent = '';
-  storyPointsEl.appendChild(input);
-  input.focus();
-  input.select();
+    e.stopPropagation();
+    const current = storyPointsEl.textContent.trim();
 
-//  commit(storyItem, input);
 
-  input.addEventListener('blur', () => commit(storyItem, input));
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      commit(storyItem, input);
-    } else if (e.key === 'Escape') {
-      storyPointsEl.classList.remove('editing');
-      storyPointsEl.textContent = current;
+    if (isCurrentlyEditingStoryPoints) {
+        console.log('[EDIT] Already editing another field, ignoring click');
+        return;
     }
-  });
+
+    isCurrentlyEditingStoryPoints = true;
+    // Indicate that no other fields can be edited until this one is committed or canceled
+    storyPointsEl.classList.add('editing');
+
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = current === '?' ? '' : current;
+    input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
+    storyPointsEl.textContent = '';
+    storyPointsEl.appendChild(input);
+    input.focus();
+    input.select();
+
+
+    input.addEventListener('blur', () => {
+        commit(storyItem, input);
+        isCurrentlyEditingStoryPoints = false;
+        // Now other fields can be edited again
+    });
+
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            commit(storyItem, input);
+            isCurrentlyEditingStoryPoints = false;
+            // Now other fields can be edited again
+        } else if (e.key === 'Escape') {
+            storyPointsEl.classList.remove('editing');
+            storyPointsEl.textContent = current;
+            isCurrentlyEditingStoryPoints = false; // Allow editing other fields if ESC is pressed
+            // Now other fields can be edited again
+        }
+    });
 });
 
   // Add 3-dot menu for hosts only
@@ -2298,30 +2317,27 @@ function setupCSVUploader() {
   return;
 }
 function commit(storyEl, input) {
-  const newVal = input.value.trim() || '?';
-  const storyPointsEl = storyEl.querySelector('.story-points');
-  
-  if (storyPointsEl) {
-    // Remove editing state FIRST
-    storyPointsEl.classList.remove('editing');
-    
-    // Update the display
-    storyPointsEl.textContent = newVal;
-    
-    // Update the dataset
-    storyEl.dataset.storyPoints = newVal;
+    const newVal = input.value.trim() || '?';
+    const storyPointsEl = storyEl.querySelector('.story-points');
 
-    // Broadcast to server (which will broadcast to all other clients)
-    if (socket && socket.connected) {
-      const storyId = storyEl.id;
-      console.log(`[POINTS] Broadcasting story points update to server: ${storyId} = ${newVal}`);
-      socket.emit('updateStoryPoints', { storyId: storyId, points: newVal });
-    } else {
-      console.warn('[POINTS] Cannot broadcast - socket not connected');
+
+    if (storyPointsEl) {
+        storyPointsEl.classList.remove('editing'); // Remove editing state first
+
+
+        storyPointsEl.textContent = newVal;  // Update the story points text content
+        storyEl.dataset.storyPoints = newVal; // Update the story card's dataset
+
+
+        if (socket && socket.connected) {
+            const id = storyEl.dataset.storyId || storyEl.id;  // Use the data attribute or ID
+            console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
+            socket.emit('updateStoryPoints', { storyId: id, points: newVal });
+        }
     }
-  } else {
-    console.warn('[POINTS] Could not find .story-points element in commit function');
-  }
+
+
+    isCurrentlyEditingStoryPoints = false; // Allow editing another story after committing changes
 }
 
 /**
