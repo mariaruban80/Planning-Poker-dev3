@@ -2283,15 +2283,22 @@ function commit(storyEl, input) {
   const storyPointsEl = storyEl.querySelector('.story-points');
   
   if (storyPointsEl) {
-    storyPointsEl.classList.remove('editing'); // Remove editing state first
+    // Remove editing state first
+    storyPointsEl.classList.remove('editing');
     storyPointsEl.textContent = newVal;
+    
+    // Update the dataset
     storyEl.dataset.storyPoints = newVal;
 
     if (socket && socket.connected) {
-      const id = storyEl.dataset.storyId || storyEl.id;
-      console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
-      socket.emit('updateStoryPoints', { storyId: id, points: newVal });
+      const storyId = storyEl.id; // Use the element's ID directly
+      console.log(`[POINTS] Broadcasting story points update: ${storyId} = ${newVal}`);
+      socket.emit('updateStoryPoints', { storyId: storyId, points: newVal });
+    } else {
+      console.warn('[POINTS] Cannot broadcast - socket not connected');
     }
+  } else {
+    console.warn('[POINTS] Could not find story-points element in', storyEl);
   }
 }
 
@@ -3651,19 +3658,30 @@ async function handleSocketMessage(message) {
 
 
 case 'storyPointsUpdate':
+  console.log('[SOCKET] Received storyPointsUpdate event:', message);
   if (message.storyId && message.points !== undefined) {
     console.log(`[POINTS] Received story points update from server: ${message.storyId} = ${message.points}`);
     
     // Update the story points display element
     const storyPointsEl = document.getElementById(`story-points-${message.storyId}`);
     if (storyPointsEl) {
+      console.log(`[POINTS] Found story points element for ${message.storyId}`);
       // Only update if this element is not currently being edited by the current user
       const isCurrentlyEditing = storyPointsEl.classList.contains('editing');
       if (!isCurrentlyEditing) {
+        const oldValue = storyPointsEl.textContent;
         storyPointsEl.textContent = message.points;
-        console.log(`[POINTS] Updated story points display for ${message.storyId} to ${message.points}`);
+        console.log(`[POINTS] Updated story points display for ${message.storyId}: ${oldValue} -> ${message.points}`);
       } else {
         console.log(`[POINTS] Skipping update - element is being edited by current user`);
+      }
+    } else {
+      console.warn(`[POINTS] Could not find story points element: story-points-${message.storyId}`);
+      // Try to find it with alternative selectors
+      const altElement = document.querySelector(`[id*="${message.storyId}"] .story-points`);
+      if (altElement) {
+        console.log(`[POINTS] Found alternative story points element`);
+        altElement.textContent = message.points;
       }
     }
 
@@ -3671,7 +3689,12 @@ case 'storyPointsUpdate':
     const storyCard = document.getElementById(message.storyId);
     if (storyCard) {
       storyCard.dataset.storyPoints = message.points;
+      console.log(`[POINTS] Updated story card dataset for ${message.storyId}`);
+    } else {
+      console.warn(`[POINTS] Could not find story card: ${message.storyId}`);
     }
+  } else {
+    console.warn('[POINTS] Invalid storyPointsUpdate message:', message);
   }
   break;
 
