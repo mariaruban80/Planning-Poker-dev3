@@ -3177,7 +3177,7 @@ voteCard.addEventListener('drop', (e) => {
       votesPerStory[storyId] = {};
     }
     votesPerStory[storyId][user.id] = vote;
-    
+    updateVoteVisuals(user.id, votesRevealed[storyId] ? vote : '👍', true);
     // Update vote count immediately
     updateVoteCountUI(storyId);
     
