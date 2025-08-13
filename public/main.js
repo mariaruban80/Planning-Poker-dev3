@@ -1976,7 +1976,7 @@ storyPointsEl.addEventListener('click', (e) => {
   input.focus();
   input.select();
 
-  commit(storyItem, input);
+//  commit(storyItem, input);
 
   input.addEventListener('blur', () => commit(storyItem, input));
   input.addEventListener('keydown', (e) => {
