@@ -3587,6 +3587,7 @@ async function handleSocketMessage(message) {
 case 'storyPointsUpdate':
   if (message.storyId && message.points !== undefined) {
     console.log(`[POINTS] Received story points update: ${message.storyId} = ${message.points}`);
+    
     const storyPointsEl = document.getElementById(`story-points-${message.storyId}`);
     if (storyPointsEl && !storyPointsEl.classList.contains('editing')) {
       storyPointsEl.textContent = message.points;
@@ -3595,8 +3596,16 @@ case 'storyPointsUpdate':
         storyCard.dataset.storyPoints = message.points;
       }
     }
+    
+    // FIXED: Don't update vote count bubble with story points
+    // The vote count should remain as vote count, not story points
+    const voteCountEl = document.getElementById(`vote-count-${message.storyId}`);
+    if (voteCountEl) {
+      // Keep the existing vote count text, don't replace with story points
+      // voteCountEl.textContent should remain as "X votes" not story points
+    }
   }
-  break; 
+  break;
 
     case 'resyncState':
       if (Array.isArray(message.deletedStoryIds)) {
