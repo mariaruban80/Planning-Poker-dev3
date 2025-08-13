@@ -1955,7 +1955,6 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 
   storyCard.appendChild(storyMeta);
 
-// Replace the existing story points editing functionality with this:
 storyPointsEl.addEventListener('click', (e) => {
   e.stopPropagation();
   const current = storyPointsEl.textContent.trim();
@@ -1975,13 +1974,13 @@ storyPointsEl.addEventListener('click', (e) => {
     storyPointsEl.textContent = newVal;
     storyCard.dataset.storyPoints = newVal;
     
-    // Broadcast to all users including guests
+    // FIXED: Broadcast to all users including guests
     if (socket && socket.connected) {
-      console.log(`[POINTS] Broadcasting story points update: ${storyId} = ${newVal}`);
+      console.log(`[POINTS] Broadcasting story points update: ${storyCard.id} = ${newVal}`);
       socket.emit('updateStoryPoints', { 
-        storyId: storyCard.id, 
+        storyId: storyCard.id,  // Use storyCard.id instead of storyId
         points: newVal,
-        broadcast: true // Add this flag to ensure server broadcasts to all users
+        broadcast: true
       });
     }
   }
@@ -2442,43 +2441,7 @@ function displayCSVData(data) {
       const storyPointsEl = document.createElement('div');
       storyPointsEl.className = 'story-points';
       storyPointsEl.id = `story-points-${story.id}`;
-      storyPointsEl.textContent = '?';
-      
-      // Add story points editing functionality
-      storyPointsEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const current = storyPointsEl.textContent.trim();
-        storyPointsEl.classList.add('editing');
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = current === '?' ? '' : current;
-        input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
-        storyPointsEl.textContent = '';
-        storyPointsEl.appendChild(input);
-        input.focus();
-        input.select();
-
-        function commit() {
-          const newVal = input.value.trim() || '?';
-          storyPointsEl.classList.remove('editing');
-          storyPointsEl.textContent = newVal;
-          storyItem.dataset.storyPoints = newVal;
-          if (typeof socket !== 'undefined' && socket && socket.connected) {
-            socket.emit('updateStoryPoints', { storyId: story.id, points: newVal });
-          }
-        }
-
-        input.addEventListener('blur', commit);
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            commit();
-          } else if (e.key === 'Escape') {
-            storyPointsEl.classList.remove('editing');
-            storyPointsEl.textContent = current;
-          }
-        });
-      });
-
+      storyPointsEl.textContent = '?';      
       storyMeta.appendChild(storyPointsEl);
       storyItem.appendChild(storyMeta);
 
@@ -2601,42 +2564,6 @@ function displayCSVData(data) {
       storyPointsEl.className = 'story-points';
       storyPointsEl.id = `story-points-${csvStoryId}`;
       storyPointsEl.textContent = '?';
-      
-      // Add story points editing functionality
-      storyPointsEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const current = storyPointsEl.textContent.trim();
-        storyPointsEl.classList.add('editing');
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = current === '?' ? '' : current;
-        input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
-        storyPointsEl.textContent = '';
-        storyPointsEl.appendChild(input);
-        input.focus();
-        input.select();
-
-        function commit() {
-          const newVal = input.value.trim() || '?';            
-          storyPointsEl.classList.remove('editing');
-          storyPointsEl.textContent = newVal;
-          storyItem.dataset.storyPoints = newVal;
-          if (typeof socket !== 'undefined' && socket && socket.connected) {
-            socket.emit('updateStoryPoints', { storyId: csvStoryId, points: newVal });
-          }
-        }
-
-        input.addEventListener('blur', commit);
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            commit();
-          } else if (e.key === 'Escape') {
-            storyPointsEl.classList.remove('editing');
-            storyPointsEl.textContent = current;
-          }
-        });
-      });
-
       storyMeta.appendChild(storyPointsEl);
       storyItem.appendChild(storyMeta);
 
@@ -3206,6 +3133,7 @@ function createVoteCardSpace(user, isCurrentUser) {
 
   if (isCurrentUser) {
     voteCard.addEventListener('dragover', (e) => e.preventDefault());
+
 voteCard.addEventListener('drop', (e) => {
   e.preventDefault();
   const vote = e.dataTransfer.getData('text/plain');
@@ -3217,28 +3145,20 @@ voteCard.addEventListener('drop', (e) => {
   }
   
   if (socket && vote && storyId) {
-    console.log(`[VOTE] Immediately showing vote feedback for host: ${vote}`);
-    
     // IMMEDIATE UI UPDATE - don't wait for server response
     const voteBadge = voteCard.querySelector('.vote-badge');
     if (voteBadge) {
-      // Show immediate feedback
       voteBadge.textContent = votesRevealed[storyId] ? vote : '👍';
       voteBadge.style.color = '#673ab7';
       voteBadge.style.opacity = '1';
     }
     
-    // Mark as having a vote immediately
     voteCard.classList.add('has-vote');
     
     // Update avatar visual feedback immediately
     const avatarContainer = document.querySelector(`#user-circle-${user.id}`);
     if (avatarContainer) {
       avatarContainer.classList.add('has-voted');
-      const avatar = avatarContainer.querySelector('.avatar-circle');
-      if (avatar) {
-        avatar.style.backgroundColor = '#c1e1c1';
-      }
     }
     
     // Update local vote storage immediately
