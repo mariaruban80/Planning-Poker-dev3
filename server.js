@@ -1284,74 +1284,62 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
       io.to(roomId).emit('storySelected', { storyIndex });
     }
   });
-
-  // Handle user votes with improved story tracking and persistence
-  socket.on('castVote', ({ vote, targetUserId, storyId, userName }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId] || targetUserId !== socket.id) return;
-    
-    // Update room activity timestamp
-    rooms[roomId].lastActivity = Date.now();
-    
-    // Don't accept votes for deleted stories
-    if (rooms[roomId].deletedStoryIds && rooms[roomId].deletedStoryIds.has(storyId)) {
-      console.log(`[SERVER] Ignoring vote for deleted story: ${storyId}`);
-      return;
-    }
-    
-    // Initialize vote tracking for this story if needed
-    if (!rooms[roomId].votesPerStory[storyId]) {
-      rooms[roomId].votesPerStory[storyId] = {};
-    }
-    
-    // Get the actual username to use
-    const userNameToUse = userName || socket.data.userName;
-    
-    // Flag to track if we removed any old votes
-    let removedOldVotes = false;
-    
-    // Remove any old votes from this user to prevent duplicates
-    if (userNameToUse && userNameToIdMap[userNameToUse]) {
-      const userSocketIds = userNameToIdMap[userNameToUse].socketIds;
-      
-      for (const oldSocketId of userSocketIds) {
-        if (oldSocketId !== socket.id && rooms[roomId].votesPerStory[storyId][oldSocketId]) {
-          delete rooms[roomId].votesPerStory[storyId][oldSocketId];
-          removedOldVotes = true;
-        }
+socket.on('castVote', ({ vote, targetUserId, storyId, userName }) => {
+  const roomId = socket.data.roomId;
+  if (!roomId || !rooms[roomId] || targetUserId !== socket.id) return;
+  
+  rooms[roomId].lastActivity = Date.now();
+  
+  if (rooms[roomId].deletedStoryIds && rooms[roomId].deletedStoryIds.has(storyId)) {
+    console.log(`[SERVER] Ignoring vote for deleted story: ${storyId}`);
+    return;
+  }
+  
+  if (!rooms[roomId].votesPerStory[storyId]) {
+    rooms[roomId].votesPerStory[storyId] = {};
+  }
+  
+  const userNameToUse = userName || socket.data.userName;
+  let removedOldVotes = false;
+  
+  if (userNameToUse && userNameToIdMap[userNameToUse]) {
+    const userSocketIds = userNameToIdMap[userNameToUse].socketIds;
+    for (const oldSocketId of userSocketIds) {
+      if (oldSocketId !== socket.id && rooms[roomId].votesPerStory[storyId][oldSocketId]) {
+        delete rooms[roomId].votesPerStory[storyId][oldSocketId];
+        removedOldVotes = true;
       }
     }
-    
-    // Check if this is a new or changed vote
-    const prevVote = rooms[roomId].votesPerStory[storyId][targetUserId];
-    const isNewVote = prevVote !== vote;
-    
-    // Store the vote
-    rooms[roomId].votesPerStory[storyId][targetUserId] = vote;
-    
-    // Also store in username-based system if we have a username
-    if (userNameToUse) {
-      if (!rooms[roomId].userNameVotes) {
-        rooms[roomId].userNameVotes = {};
-      }
-      if (!rooms[roomId].userNameVotes[userNameToUse]) {
-        rooms[roomId].userNameVotes[userNameToUse] = {};
-      }
-      rooms[roomId].userNameVotes[userNameToUse][storyId] = vote;
-      console.log(`[SERVER] Stored vote for username ${userNameToUse} on story ${storyId}: ${vote}`);
-    }
-    
-    // Broadcast to all clients about the specific vote
-    io.to(roomId).emit('voteUpdate', { userId: targetUserId, vote, storyId });
-    
-    // Clean up all votes to ensure they're username-based deduplicated
-    const votesChanged = cleanupRoomVotes(roomId);
-    
-    // Broadcast updated vote stats to ensure correct counting, but only if needed
-    if (removedOldVotes || isNewVote || votesChanged) {
-      io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
-    }
+  }
+  
+  const prevVote = rooms[roomId].votesPerStory[storyId][targetUserId];
+  const isNewVote = prevVote !== vote;
+  
+  rooms[roomId].votesPerStory[storyId][targetUserId] = vote;
+  
+  if (userNameToUse) {
+    if (!rooms[roomId].userNameVotes) rooms[roomId].userNameVotes = {};
+    if (!rooms[roomId].userNameVotes[userNameToUse]) rooms[roomId].userNameVotes[userNameToUse] = {};
+    rooms[roomId].userNameVotes[userNameToUse][storyId] = vote;
+    console.log(`[SERVER] Stored vote for username ${userNameToUse} on story ${storyId}: ${vote}`);
+  }
+  
+  // ✅ Send userName so UI can show thumbs-up instantly
+  io.to(roomId).emit('voteUpdate', { 
+    userId: targetUserId,
+    userName: userNameToUse, // added
+    vote, 
+    storyId
   });
+  
+  const votesChanged = cleanupRoomVotes(roomId);
+  
+  if (removedOldVotes || isNewVote || votesChanged) {
+    io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
+  }
+});
+
+
   
   // Handle requests for votes for a specific story
   socket.on('requestStoryVotes', ({ storyId }) => {
