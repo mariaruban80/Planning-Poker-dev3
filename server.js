@@ -506,11 +506,15 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   // Add the current user
   rooms[roomId].users.push({ id: socket.id, name: userName });
   socket.join(roomId);
-      // Send all current tickets to the newly joined user without redeclaring variables
-      if (rooms[roomId] && rooms[roomId].tickets) {
-        const ticketsForGuest = rooms[roomId].tickets.filter(t => !rooms[roomId].deletedStoryIds.has(t.id));
-        socket.emit('allTickets', { tickets: ticketsForGuest });
-      }
+    // Ensure guest receives all current tickets from the room
+    if (rooms[roomId] && rooms[roomId].tickets) {
+      const ticketsForGuest = rooms[roomId].tickets.filter(
+        t => !rooms[roomId].deletedStoryIds?.has(t.id)
+      );
+      console.log(`[SERVER] Sending ${ticketsForGuest.length} tickets to guest ${socket.id}`);
+      socket.emit('allTickets', { tickets: ticketsForGuest });
+    }
+
 
   // STEP 3: RESTORE USER VOTES FROM USERNAME-BASED STORAGE
   // This approach centralizes vote handling in one place
