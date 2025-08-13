@@ -922,7 +922,7 @@ function initializeApp(roomId) {
     socket.io.timeout = 20000;
     socket.io.reconnectionDelay = 2000;
   }
-
+/* --------- commented code as it is update in the bindsocketupdatehandlers -------
   socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
     const name = userName || userId;
     mergeVote(storyId, name, vote);
@@ -935,7 +935,8 @@ function initializeApp(roomId) {
     refreshVoteDisplay();
     // **FIXED: Update vote count after vote update**
     updateVoteCountUI(storyId);
-  });
+  }); 
+  ---------------------------------------------------------------------  */
 
   socket.on('storyPointsUpdate', ({ storyId, points }) => {
   console.log(`[SOCKET] Story points updated for ${storyId}: ${points}`);
@@ -4164,20 +4165,32 @@ window.addEventListener('beforeunload', () => {
   function bindSocketUpdateHandlers() {
     if (typeof socket === 'undefined' || !socket) return;
 
-    // When a single vote changes
-    socket.off && socket.off('voteUpdate');
-    socket.on && socket.on('voteUpdate', (payload) => {
-      try {
-        const { storyId, userId, vote } = payload;
-        // Update local cache (server already broadcasts full votesUpdate elsewhere)
-        if (!window.currentVotesPerStory) window.currentVotesPerStory = {};
-        if (!window.currentVotesPerStory[storyId]) window.currentVotesPerStory[storyId] = {};
-        window.currentVotesPerStory[storyId][userId] = vote;
-        updateVoteCountBubble(storyId);
-      } catch (e) {
-        console.warn('voteUpdate handler error', e);
-      }
-    });
+   socket.off && socket.off('voteUpdate');
+  socket.on && socket.on('voteUpdate', ({ storyId, userId, userName, vote }) => {
+  try {
+    const name = userName || userId;
+
+    // Update local cache
+    if (!window.currentVotesPerStory) window.currentVotesPerStory = {};
+    if (!window.currentVotesPerStory[storyId]) window.currentVotesPerStory[storyId] = {};
+    window.currentVotesPerStory[storyId][userId] = vote;
+
+    // Update vote count bubble
+    updateVoteCountBubble(storyId);
+
+    // ✅ Instant UI update if current story
+    const currentId = getCurrentStoryId();
+    if (storyId === currentId) {
+      updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
+       refreshVoteDisplay();
+    }
+
+   
+  } catch (e) {
+    console.warn('voteUpdate handler error', e);
+  }
+});
+
 
     // When server broadcasts full votes snapshot
     socket.off && socket.off('votesUpdate');
