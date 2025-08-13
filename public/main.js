@@ -1973,7 +1973,9 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 
 
 storyPointsEl.addEventListener('click', (e) => {
-    e.stopPropagation();
+  e.stopPropagation();
+  
+const storyItem = e.target.closest('.story-card'); // Ensure the correct element is used
     const current = storyPointsEl.textContent.trim();
 
 
