@@ -311,14 +311,13 @@ socket.on('updateStoryPoints', ({ storyId, points }) => {
     rooms[roomId].lastActivity = Date.now();
   }
 
-  console.log(`[SERVER] Broadcasting story points update to all clients in room ${roomId}`);
+  console.log(`[SERVER] Broadcasting story points to all clients in room ${roomId}: ${storyId} = ${points}`);
   
-  // Broadcast to ALL clients including sender (so everyone stays in sync)
+  // Broadcast to ALL clients in the room (including sender for consistency)
   io.to(roomId).emit('storyPointsUpdate', { storyId, points });
   
-  console.log(`[SERVER] Story points broadcast complete for ${storyId} = ${points}`);
+  console.log(`[SERVER] Story points broadcast completed`);
 });
-
 
 
   
