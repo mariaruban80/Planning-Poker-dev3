@@ -221,56 +221,54 @@ io.on('connection', (socket) => {
 
   console.log(`[SERVER] New client connected: ${socket.id}`);
   
-  // New handler for username-based vote restoration
-  socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId] || !storyId || !userName) return;
-    
-    if (rooms[roomId].deletedStoryIds?.has(storyId)) return;
-    
-    // Store in username-based system
-    if (!rooms[roomId].userNameVotes) {
-      rooms[roomId].userNameVotes = {};
+socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
+  const roomId = socket.data.roomId;
+  if (!roomId || !rooms[roomId] || !storyId || !userName) return;
+  
+  if (rooms[roomId].deletedStoryIds?.has(storyId)) return;
+  
+  // Store in username-based system
+  if (!rooms[roomId].userNameVotes) {
+    rooms[roomId].userNameVotes = {};
+  }
+  if (!rooms[roomId].userNameVotes[userName]) {
+    rooms[roomId].userNameVotes[userName] = {};
+  }
+  rooms[roomId].userNameVotes[userName][storyId] = vote;
+  
+  // Get all socket IDs associated with this user
+  const userSocketIds = userNameToIdMap[userName]?.socketIds || [];
+  
+  let removedOldVotes = false;
+  
+  // Remove any previous votes by this user for this story
+  if (!rooms[roomId].votesPerStory[storyId]) {
+    rooms[roomId].votesPerStory[storyId] = {};
+  }
+  
+  for (const oldSocketId of userSocketIds) {
+    if (oldSocketId !== socket.id && rooms[roomId].votesPerStory[storyId][oldSocketId]) {
+      delete rooms[roomId].votesPerStory[storyId][oldSocketId];
+      removedOldVotes = true;
     }
-    if (!rooms[roomId].userNameVotes[userName]) {
-      rooms[roomId].userNameVotes[userName] = {};
-    }
-    rooms[roomId].userNameVotes[userName][storyId] = vote;
-    
-    // Get all socket IDs associated with this user
-    const userSocketIds = userNameToIdMap[userName]?.socketIds || [];
-    
-    // Flag to track if we removed any old votes (to avoid unnecessary broadcasts)
-    let removedOldVotes = false;
-    
-    // Remove any previous votes by this user for this story
-    if (!rooms[roomId].votesPerStory[storyId]) {
-      rooms[roomId].votesPerStory[storyId] = {};
-    }
-    
-    // IMPORTANT: Remove old socket ID votes for this user
-    for (const oldSocketId of userSocketIds) {
-      if (oldSocketId !== socket.id && rooms[roomId].votesPerStory[storyId][oldSocketId]) {
-        delete rooms[roomId].votesPerStory[storyId][oldSocketId];
-        removedOldVotes = true;
-      }
-    }
-    
-    // Add new vote with current socket ID
-    rooms[roomId].votesPerStory[storyId][socket.id] = vote;
-    
-    // Send voteUpdate to everyone including sender
-    io.to(roomId).emit('voteUpdate', { 
-      userId: socket.id,
-      vote, 
-      storyId
-    });
-    
-    // Only broadcast the full votesUpdate if we removed old votes
-    if (removedOldVotes) {
-      io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
-    }
+  }
+  
+  // Add new vote with current socket ID
+  rooms[roomId].votesPerStory[storyId][socket.id] = vote;
+  
+  // ✅ Send voteUpdate with userName so UI can instantly show the vote
+  io.to(roomId).emit('voteUpdate', { 
+    userId: socket.id,
+    userName, // <-- Added
+    vote, 
+    storyId
   });
+  
+  if (removedOldVotes) {
+    io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
+  }
+});
+
 
 // Handle ticket updates
 socket.on('updateTicket', (ticketData) => {
