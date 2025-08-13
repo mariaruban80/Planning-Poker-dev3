@@ -294,28 +294,28 @@ socket.on('updateTicket', (ticketData) => {
   }
 });
 socket.on('updateStoryPoints', ({ storyId, points }) => {
-  const roomId = socket.data.roomId;
-  const senderSocketId = socket.id; // Capture the sender's socket ID
-  console.log(`[SERVER] updateStoryPoints received from ${socket.data.userName || senderSocketId} in room ${roomId}: ${storyId} = ${points}`);
+    const roomId = socket.data.roomId;
+    const senderSocketId = socket.id; // Capture the sender's socket ID
+    console.log(`[SERVER] updateStoryPoints received from ${socket.data.userName || senderSocketId} in room ${roomId}: ${storyId} = ${points}`);
 
-  if (!roomId || !storyId) {
-      console.warn(`[SERVER] Invalid data received for updateStoryPoints`);
-      return;
-  }
+    if (!roomId || !storyId) {
+        console.warn(`[SERVER] Invalid data received for updateStoryPoints`);
+        return;
+    }
 
-  if (rooms[roomId]) {
-      rooms[roomId].lastActivity = Date.now();
-  }
+    if (rooms[roomId]) {
+        rooms[roomId].lastActivity = Date.now();
+    }
 
-  // Iterate through connected sockets in the room and emit to everyone EXCEPT the sender
-  io.in(roomId).fetchSockets().then(sockets => {
-      sockets.forEach(s => {
-          if (s.id !== senderSocketId) { // Exclude the sender
-              s.emit('storyPointsUpdate', { storyId, points }); // Emit the update
-              console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}`);
-          }
-      });
-  });
+    // Iterate through each socket in the room EXCEPT the sender
+    io.in(roomId).fetchSockets().then(sockets => {
+        sockets.forEach(s => {
+            if (s.id !== senderSocketId) {
+                s.emit('storyPointsUpdate', { storyId, points });
+                console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
+            }
+        });
+    });
 });
 
   
