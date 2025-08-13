@@ -295,28 +295,19 @@ socket.on('updateTicket', (ticketData) => {
 });
 socket.on('updateStoryPoints', ({ storyId, points }) => {
   const roomId = socket.data.roomId;
-  console.log(`[SERVER] updateStoryPoints received from ${socket.data.userName || socket.id} in room ${roomId}: ${storyId} = ${points}`);
+  console.log(`[SERVER] updateStoryPoints from ${socket.data.userName} in ${roomId}: ${storyId} = ${points}`);
 
-  if (!roomId) {
-    console.warn(`[SERVER] No roomId on socket ${socket.id}`);
-    return;
-  }
-  if (!storyId) {
-    console.warn(`[SERVER] No storyId provided`);
-    return;
-  }
+  if (!roomId || !storyId) return;
 
-  // Update room activity
   if (rooms[roomId]) {
     rooms[roomId].lastActivity = Date.now();
   }
 
-  console.log(`[SERVER] Broadcasting story points to all clients in room ${roomId}: ${storyId} = ${points}`);
-  
-  // Broadcast to ALL clients in the room (including sender for consistency)
+  // Try both broadcast methods
   io.to(roomId).emit('storyPointsUpdate', { storyId, points });
+  socket.broadcast.to(roomId).emit('storyPointsUpdate', { storyId, points });
   
-  console.log(`[SERVER] Story points broadcast completed`);
+  console.log(`[SERVER] Double broadcast completed for ${roomId}`);
 });
 
 
