@@ -506,34 +506,7 @@ socket.on('connect_error', (error) => {
     handleMessage({ type: 'storyNavigation', index });
   });
 
- socket.on('storyPointsUpdate', ({ storyId, points }) => {
-  console.log('[SOCKET] Received storyPointsUpdate directly:', { storyId, points });
-  
-  if (storyId && points !== undefined) {
-    // Update the story points display element directly
-    const storyPointsEl = document.getElementById(`story-points-${storyId}`);
-    if (storyPointsEl) {
-      const isCurrentlyEditing = storyPointsEl.classList.contains('editing');
-      if (!isCurrentlyEditing) {
-        const oldValue = storyPointsEl.textContent;
-        storyPointsEl.textContent = points;
-        console.log(`[SOCKET] Updated story points: ${storyId} from ${oldValue} to ${points}`);
-      } else {
-        console.log(`[SOCKET] Skipping update - element being edited`);
-      }
-    } else {
-      console.warn(`[SOCKET] Story points element not found: story-points-${storyId}`);
-    }
-
-    // Update the story card dataset
-    const storyCard = document.getElementById(storyId);
-    if (storyCard) {
-      storyCard.dataset.storyPoints = points;
-    }
-  }
-});
-
-  socket.on('exportData', (data) => {
+ socket.on('exportData', (data) => {
     console.log('[SOCKET] Received export data with', 
       data.stories ? data.stories.length : 0, 'stories and',
       data.votes ? Object.keys(data.votes).length : 0, 'vote sets');
@@ -1074,5 +1047,6 @@ export function cleanup() {
     }
   }
 }
+
 
 
