@@ -922,7 +922,7 @@ function initializeApp(roomId) {
     socket.io.timeout = 20000;
     socket.io.reconnectionDelay = 2000;
   }
-/* --------- commented code as it is update in the bindsocketupdatehandlers -------
+
   socket.on('voteUpdate', ({ userId, userName, vote, storyId }) => {
     const name = userName || userId;
     mergeVote(storyId, name, vote);
@@ -935,8 +935,7 @@ function initializeApp(roomId) {
     refreshVoteDisplay();
     // **FIXED: Update vote count after vote update**
     updateVoteCountUI(storyId);
-  }); 
-  ---------------------------------------------------------------------  */
+  });
 
   socket.on('storyPointsUpdate', ({ storyId, points }) => {
   console.log(`[SOCKET] Story points updated for ${storyId}: ${points}`);
@@ -1956,6 +1955,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
 
   storyCard.appendChild(storyMeta);
 
+// Replace the existing story points editing functionality with this:
 storyPointsEl.addEventListener('click', (e) => {
   e.stopPropagation();
   const current = storyPointsEl.textContent.trim();
@@ -1975,13 +1975,13 @@ storyPointsEl.addEventListener('click', (e) => {
     storyPointsEl.textContent = newVal;
     storyCard.dataset.storyPoints = newVal;
     
-    // FIXED: Broadcast to all users including guests
+    // Broadcast to all users including guests
     if (socket && socket.connected) {
-      console.log(`[POINTS] Broadcasting story points update: ${storyCard.id} = ${newVal}`);
+      console.log(`[POINTS] Broadcasting story points update: ${storyId} = ${newVal}`);
       socket.emit('updateStoryPoints', { 
-        storyId: storyCard.id,  // Use storyCard.id instead of storyId
+        storyId: storyCard.id, 
         points: newVal,
-        broadcast: true
+        broadcast: true // Add this flag to ensure server broadcasts to all users
       });
     }
   }
@@ -2442,7 +2442,43 @@ function displayCSVData(data) {
       const storyPointsEl = document.createElement('div');
       storyPointsEl.className = 'story-points';
       storyPointsEl.id = `story-points-${story.id}`;
-      storyPointsEl.textContent = '?';      
+      storyPointsEl.textContent = '?';
+      
+      // Add story points editing functionality
+      storyPointsEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const current = storyPointsEl.textContent.trim();
+        storyPointsEl.classList.add('editing');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = current === '?' ? '' : current;
+        input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
+        storyPointsEl.textContent = '';
+        storyPointsEl.appendChild(input);
+        input.focus();
+        input.select();
+
+        function commit() {
+          const newVal = input.value.trim() || '?';
+          storyPointsEl.classList.remove('editing');
+          storyPointsEl.textContent = newVal;
+          storyItem.dataset.storyPoints = newVal;
+          if (typeof socket !== 'undefined' && socket && socket.connected) {
+            socket.emit('updateStoryPoints', { storyId: story.id, points: newVal });
+          }
+        }
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            commit();
+          } else if (e.key === 'Escape') {
+            storyPointsEl.classList.remove('editing');
+            storyPointsEl.textContent = current;
+          }
+        });
+      });
+
       storyMeta.appendChild(storyPointsEl);
       storyItem.appendChild(storyMeta);
 
@@ -2565,6 +2601,42 @@ function displayCSVData(data) {
       storyPointsEl.className = 'story-points';
       storyPointsEl.id = `story-points-${csvStoryId}`;
       storyPointsEl.textContent = '?';
+      
+      // Add story points editing functionality
+      storyPointsEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const current = storyPointsEl.textContent.trim();
+        storyPointsEl.classList.add('editing');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = current === '?' ? '' : current;
+        input.style.cssText = 'width: 40px; text-align: center; font-size: 12px; font-weight: 700; background: #10b981; color: white; border: none; border-radius: 6px;';
+        storyPointsEl.textContent = '';
+        storyPointsEl.appendChild(input);
+        input.focus();
+        input.select();
+
+        function commit() {
+          const newVal = input.value.trim() || '?';            
+          storyPointsEl.classList.remove('editing');
+          storyPointsEl.textContent = newVal;
+          storyItem.dataset.storyPoints = newVal;
+          if (typeof socket !== 'undefined' && socket && socket.connected) {
+            socket.emit('updateStoryPoints', { storyId: csvStoryId, points: newVal });
+          }
+        }
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            commit();
+          } else if (e.key === 'Escape') {
+            storyPointsEl.classList.remove('editing');
+            storyPointsEl.textContent = current;
+          }
+        });
+      });
+
       storyMeta.appendChild(storyPointsEl);
       storyItem.appendChild(storyMeta);
 
@@ -3134,8 +3206,6 @@ function createVoteCardSpace(user, isCurrentUser) {
 
   if (isCurrentUser) {
     voteCard.addEventListener('dragover', (e) => e.preventDefault());
-
-// FIXED: Immediate vote feedback for drag-and-drop
 voteCard.addEventListener('drop', (e) => {
   e.preventDefault();
   const vote = e.dataTransfer.getData('text/plain');
@@ -3147,16 +3217,15 @@ voteCard.addEventListener('drop', (e) => {
   }
   
   if (socket && vote && storyId) {
-    console.log(`[VOTE] IMMEDIATE UI update for vote: ${vote}`);
+    console.log(`[VOTE] Immediately showing vote feedback for host: ${vote}`);
     
     // IMMEDIATE UI UPDATE - don't wait for server response
     const voteBadge = voteCard.querySelector('.vote-badge');
     if (voteBadge) {
-      // Show immediate feedback based on reveal state
+      // Show immediate feedback
       voteBadge.textContent = votesRevealed[storyId] ? vote : '👍';
       voteBadge.style.color = '#673ab7';
       voteBadge.style.opacity = '1';
-      voteBadge.style.visibility = 'visible';
     }
     
     // Mark as having a vote immediately
@@ -3169,7 +3238,6 @@ voteCard.addEventListener('drop', (e) => {
       const avatar = avatarContainer.querySelector('.avatar-circle');
       if (avatar) {
         avatar.style.backgroundColor = '#c1e1c1';
-        avatar.style.borderColor = '#4CAF50';
       }
     }
     
@@ -3178,19 +3246,12 @@ voteCard.addEventListener('drop', (e) => {
       votesPerStory[storyId] = {};
     }
     votesPerStory[storyId][user.id] = vote;
-    updateVoteVisuals(user.id, votesRevealed[storyId] ? vote : '👍', true);
+    
     // Update vote count immediately
     updateVoteCountUI(storyId);
     
-    // THEN emit to server (this will sync with other users)
+    // Then emit to server (this will sync with other users)
     socket.emit('castVote', { vote, targetUserId: user.id, storyId });
-    
-    // ALSO use the new restoreUserVoteByUsername for better persistence
-    socket.emit('restoreUserVoteByUsername', {
-      storyId,
-      vote,
-      userName: sessionStorage.getItem('userName') || user.name
-    });
   }
 });
   } else {
@@ -3606,7 +3667,6 @@ async function handleSocketMessage(message) {
 case 'storyPointsUpdate':
   if (message.storyId && message.points !== undefined) {
     console.log(`[POINTS] Received story points update: ${message.storyId} = ${message.points}`);
-    
     const storyPointsEl = document.getElementById(`story-points-${message.storyId}`);
     if (storyPointsEl && !storyPointsEl.classList.contains('editing')) {
       storyPointsEl.textContent = message.points;
@@ -3615,16 +3675,8 @@ case 'storyPointsUpdate':
         storyCard.dataset.storyPoints = message.points;
       }
     }
-    
-    // FIXED: Don't update vote count bubble with story points
-    // The vote count should remain as vote count, not story points
-    const voteCountEl = document.getElementById(`vote-count-${message.storyId}`);
-    if (voteCountEl) {
-      // Keep the existing vote count text, don't replace with story points
-      // voteCountEl.textContent should remain as "X votes" not story points
-    }
   }
-  break;
+  break; 
 
     case 'resyncState':
       if (Array.isArray(message.deletedStoryIds)) {
@@ -4131,162 +4183,19 @@ window.addEventListener('beforeunload', () => {
   function updateVoteCountBubble(storyId) {
     if (!storyId) return;
     const bubble = document.getElementById(`vote-bubble-${storyId}`);
-    if (!bubble) {
-      // try to find corresponding card and ensure bubble exists
-      const card = document.getElementById(storyId);
-      if (card) ensureVoteBubbleForCard(card);
+    if (!bubble) return;
+    let count = 0;
+    if (window.currentVotesPerStory && window.currentVotesPerStory[storyId]) {
+        count = Object.keys(window.currentVotesPerStory[storyId]).length;
     }
-    const finalBubble = document.getElementById(`vote-bubble-${storyId}`);
-    if (!finalBubble) return;
-
-    // Determine whether this story is revealed: check global votesRevealed or a body class
-    const revealed = (typeof window.votesRevealed === 'object' && window.votesRevealed[storyId]) || document.body.classList.contains('votes-revealed');
-
-    const count = getVoteCountForStory(storyId);
-    if (revealed) {
-      finalBubble.textContent = String(count);
-    } else {
-      // If there are zero votes, still show '?', otherwise show current count but as '?' as requested
-      finalBubble.textContent = count > 0 ? '?' : '?';
-    }
-  }
-
-  // Update all bubbles (useful after a bulk votesUpdate)
-  function updateAllBubbles() {
-    Object.keys(window.currentVotesPerStory || {}).forEach(storyId => updateVoteCountBubble(storyId));
-    // Also ensure bubbles exist for story cards without votes present yet
-    document.querySelectorAll('.story-card').forEach(card => {
-      const sid = card.id || card.dataset.id;
-      if (sid) updateVoteCountBubble(sid);
-    });
-  }
-
-  // Socket integration: listen for vote updates and reflect them in the bubble
-  function bindSocketUpdateHandlers() {
-    if (typeof socket === 'undefined' || !socket) return;
-
-   socket.off && socket.off('voteUpdate');
-  socket.on && socket.on('voteUpdate', ({ storyId, userId, userName, vote }) => {
-  try {
-    const name = userName || userId;
-
-    // Update local cache
-    if (!window.currentVotesPerStory) window.currentVotesPerStory = {};
-    if (!window.currentVotesPerStory[storyId]) window.currentVotesPerStory[storyId] = {};
-    window.currentVotesPerStory[storyId][userId] = vote;
-
-    // Update vote count bubble
-    updateVoteCountBubble(storyId);
-
-    // ✅ Instant UI update if current story
-    const currentId = getCurrentStoryId();
-    if (storyId === currentId) {
-      updateVoteVisuals(name, votesRevealed[storyId] ? vote : '👍', true);
-       refreshVoteDisplay();
-    }
-
-   
-  } catch (e) {
-    console.warn('voteUpdate handler error', e);
-  }
-});
+    bubble.textContent = count;
+})(); 
 
 
-    // When server broadcasts full votes snapshot
-    socket.off && socket.off('votesUpdate');
-    socket.on && socket.on('votesUpdate', (votesSnapshot) => {
-      try {
-        // Expected shape: { storyId: { socketId: vote }, ... }
-        window.currentVotesPerStory = votesSnapshot || {};
-        updateAllBubbles();
-      } catch (e) {
-        console.warn('votesUpdate handler error', e);
-      }
-    });
 
-    // Some servers emit 'restoreUserVote' for a client to restore; keep bubble in sync
-    socket.off && socket.off('restoreUserVote');
-    socket.on && socket.on('restoreUserVote', ({ storyId, vote }) => {
-      try {
-        if (!window.currentVotesPerStory) window.currentVotesPerStory = {};
-        if (!window.currentVotesPerStory[storyId]) window.currentVotesPerStory[storyId] = {};
-        // We can't know socket id here, but refresh all bubbles
-        updateVoteCountBubble(storyId);
-      } catch (e) {}
-    });
-
-    // Listen for common reveal events (server may name these differently)
-    const revealEvents = ['revealVotes', 'votesRevealed', 'reveal', 'votesReveal'];
-    revealEvents.forEach(evt => {
-      socket.off && socket.off(evt);
-      socket.on && socket.on(evt, (data) => {
-        try {
-          // server may send storyId or full object; if full object, merge into votesRevealed
-          if (!window.votesRevealed) window.votesRevealed = {};
-          if (data && typeof data === 'object' && data.storyId) {
-            window.votesRevealed[data.storyId] = true;
-            document.body.classList.add('votes-revealed');
-            updateVoteCountBubble(data.storyId);
-          } else if (typeof data === 'string') {
-            window.votesRevealed[data] = true;
-            document.body.classList.add('votes-revealed');
-            updateVoteCountBubble(data);
-          } else {
-            // generic reveal -> set body class and refresh all
-            document.body.classList.add('votes-revealed');
-            if (data && data.votesRevealed) {
-              Object.assign(window.votesRevealed, data.votesRevealed);
-            }
-            updateAllBubbles();
-          }
-        } catch (e) {
-          console.warn('reveal handler error', e);
-        }
-      });
-    });
-
-    // Listen for unreveal / reset events (common names)
-    const resetEvents = ['resetVotes', 'hideVotes', 'votesHidden', 'reset'];
-    resetEvents.forEach(evt => {
-      socket.off && socket.off(evt);
-      socket.on && socket.on(evt, (data) => {
-        try {
-          if (data && data.storyId) {
-            if (window.votesRevealed) window.votesRevealed[data.storyId] = false;
-            updateVoteCountBubble(data.storyId);
-          } else {
-            document.body.classList.remove('votes-revealed');
-            window.votesRevealed = {};
-            updateAllBubbles();
-          }
-        } catch (e) {}
-      });
-    });
-  }
-
-  // Wait for DOM ready and for the app's socket to be available then initialize
-  function waitForAppInit() {
-    // ensure existing functions are preserved; run init after slight delay so original code sets up
-    setTimeout(() => {
-      initAllBubbles();
-      bindSocketUpdateHandlers();
-      // try updating after a short delay (in case votes already loaded)
-      setTimeout(updateAllBubbles, 400);
-    }, 400);
-  }
-
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    waitForAppInit();
-  } else {
-    document.addEventListener('DOMContentLoaded', waitForAppInit);
-  }
-
-  // **FIXED: Expose helper functions globally**
-  window.ensureVoteBubbleForCard = ensureVoteBubbleForCard;
-  window.updateVoteCountBubble = updateVoteCountBubble;
-
-})();
-
-
-      
-
+function updateStoryPointsBubble(storyId, points) {
+    if (!storyId) return;
+    const bubble = document.getElementById(`points-bubble-${storyId}`);
+    if (!bubble) return;
+    bubble.textContent = points !== undefined && points !== null ? points : '';
+}
