@@ -506,6 +506,12 @@ socket.on('connect_error', (error) => {
     handleMessage({ type: 'storyNavigation', index });
   });
 
+  // Add this near other socket event handlers
+socket.on('storyPointsUpdate', (data) => {
+  console.log('[SOCKET DEBUG] storyPointsUpdate received:', data);
+  // The message will be handled by handleSocketMessage, this is just for debugging
+});
+
   socket.on('exportData', (data) => {
     console.log('[SOCKET] Received export data with', 
       data.stories ? data.stories.length : 0, 'stories and',
@@ -1047,3 +1053,4 @@ export function cleanup() {
     }
   }
 }
+
