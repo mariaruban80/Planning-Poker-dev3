@@ -295,35 +295,25 @@ socket.on('updateTicket', (ticketData) => {
   }
 });
 // Handle updating story points directly from the story card
-socket.on('updateStoryPoints', ({ storyId, points, broadcast }) => {
+socket.on('updateStoryPoints', ({ storyId, points }) => {
   const roomId = socket.data.roomId;
 
-  if (!storyId) {
-    console.warn(`[SERVER] updateStoryPoints ignored: no storyId provided`);
+  if (!roomId) {
+    console.warn(`[SERVER] updateStoryPoints: No roomId for socket ${socket.id}, cannot broadcast`);
     return;
   }
 
-  // If we have a valid room and tickets list, update server state
-  if (roomId && rooms[roomId]) {
-    const ticketIndex = rooms[roomId].tickets.findIndex(t => t.id === storyId);
-    if (ticketIndex !== -1) {
-      rooms[roomId].tickets[ticketIndex].points = points;
-      console.log(`[SERVER] Story points updated for ${storyId} in room ${roomId}: ${points}`);
-    } else {
-      console.warn(`[SERVER] Story ${storyId} not found in room ${roomId}, broadcasting anyway`);
-    }
-
-    // Always broadcast to the whole room unless explicitly disabled
-    if (broadcast !== false) {
-      io.to(roomId).emit('storyPointsUpdate', { storyId, points });
-    } else {
-      socket.broadcast.to(roomId).emit('storyPointsUpdate', { storyId, points });
-    }
-  } else {
-    console.warn(`[SERVER] No valid room found for storyPointsUpdate, broadcasting to sender only`);
-    socket.emit('storyPointsUpdate', { storyId, points });
+  if (!storyId) {
+    console.warn(`[SERVER] updateStoryPoints: No storyId provided, ignoring`);
+    return;
   }
+
+  console.log(`[SERVER] Broadcasting storyPointsUpdate for ${storyId} in room ${roomId}: ${points}`);
+
+  // Broadcast to all users in the room (including sender)
+  io.to(roomId).emit('storyPointsUpdate', { storyId, points });
 });
+
 
 
   
