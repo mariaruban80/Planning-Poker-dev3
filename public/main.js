@@ -4104,7 +4104,7 @@ window.addEventListener('beforeunload', () => {
 // Updates bubble count in real-time from vote events
 // Listens for reveal events and updates bubble accordingly
 
-(function() {
+function() {
   // **FIXED: ensureVoteBubbleForCard function**
   function ensureVoteBubbleForCard(storyCard) {
     if (!storyCard) return null;
@@ -4189,7 +4189,7 @@ window.addEventListener('beforeunload', () => {
         count = Object.keys(window.currentVotesPerStory[storyId]).length;
     }
     bubble.textContent = count;
-})(); 
+}(); 
 
 
 
