@@ -3696,46 +3696,38 @@ async function handleSocketMessage(message) {
       setupPlanningCards();
       break;
 
-
 case 'storyPointsUpdate':
-  console.log('[SOCKET] Received storyPointsUpdate event:', message);
-  if (message.storyId && message.points !== undefined) {
-    console.log(`[POINTS] Received story points update from server: ${message.storyId} = ${message.points}`);
-    
-    // Update the story points display element
+
+    console.log('[SOCKET] Processing storyPointsUpdate message:', message);
+
     const storyPointsEl = document.getElementById(`story-points-${message.storyId}`);
     if (storyPointsEl) {
-      console.log(`[POINTS] Found story points element for ${message.storyId}`);
-      // Only update if this element is not currently being edited by the current user
-      const isCurrentlyEditing = storyPointsEl.classList.contains('editing');
-      if (!isCurrentlyEditing) {
-        const oldValue = storyPointsEl.textContent;
-        storyPointsEl.textContent = message.points;
-        console.log(`[POINTS] Updated story points display for ${message.storyId}: ${oldValue} -> ${message.points}`);
-      } else {
-        console.log(`[POINTS] Skipping update - element is being edited by current user`);
-      }
+        const isCurrentlyEditing = storyPointsEl.classList.contains('editing');
+        if (!isCurrentlyEditing) {
+            const oldValue = storyPointsEl.textContent;
+            storyPointsEl.textContent = message.points;
+            console.log(`[SOCKET] Updated story points display: ${message.storyId} from "${oldValue}" to "${message.points}"`);
+        } else {
+            console.log(`[SOCKET] Skipping update - element is being edited by current user`);
+        }
     } else {
-      console.warn(`[POINTS] Could not find story points element: story-points-${message.storyId}`);
-      // Try to find it with alternative selectors
-      const altElement = document.querySelector(`[id*="${message.storyId}"] .story-points`);
-      if (altElement) {
-        console.log(`[POINTS] Found alternative story points element`);
-        altElement.textContent = message.points;
-      }
+        console.warn(`[SOCKET] Could not find story points element: story-points-${message.storyId}`);
+
+        const allPointsElements = document.querySelectorAll('[id^="story-points-"]');
+        console.log(`[SOCKET] Available story-points elements:`, Array.from(allPointsElements).map(el => el.id));
     }
 
-    // Update the story card dataset
-    const storyCard = document.getElementById(message.storyId);
-    if (storyCard) {
-      storyCard.dataset.storyPoints = message.points;
-      console.log(`[POINTS] Updated story card dataset for ${message.storyId}`);
-    } else {
-      console.warn(`[POINTS] Could not find story card: ${message.storyId}`);
-    }
-  } else {
-    console.warn('[POINTS] Invalid storyPointsUpdate message:', message);
+
+  const storyCard = document.getElementById(message.storyId);
+  if (storyCard) {
+    storyCard.dataset.storyPoints = message.points;
+  }  
+
+  // Send acknowledgement to server
+  if (socket) {
+    socket.emit('ack', {type: 'storyPointsUpdate', storyId: message.storyId});
   }
+
   break;
 
     case 'resyncState':
