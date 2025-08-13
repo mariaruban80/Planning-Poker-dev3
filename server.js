@@ -293,7 +293,6 @@ socket.on('updateTicket', (ticketData) => {
     socket.broadcast.to(roomId).emit('updateTicket', { ticketData });
   }
 });
-// Handle updating story points directly from the story card
 socket.on('updateStoryPoints', ({ storyId, points }) => {
   const roomId = socket.data.roomId;
   console.log(`[SERVER DEBUG] updateStoryPoints from ${socket.data.userName} in ${roomId}: ${storyId} = ${points}`);
@@ -301,10 +300,16 @@ socket.on('updateStoryPoints', ({ storyId, points }) => {
   if (!roomId) return console.warn(`[SERVER] No roomId on socket ${socket.id}`);
   if (!storyId) return console.warn(`[SERVER] No storyId provided`);
 
-  // Broadcast to everyone including sender
-  io.to(roomId).emit('storyPointsUpdate', { storyId, points });
-});
+  // Update room activity
+  if (rooms[roomId]) {
+    rooms[roomId].lastActivity = Date.now();
+  }
 
+  // Broadcast to everyone EXCEPT the sender (to avoid double updates)
+  socket.broadcast.to(roomId).emit('storyPointsUpdate', { storyId, points });
+  
+  console.log(`[SERVER] Broadcasting story points update to room ${roomId}: ${storyId} = ${points}`);
+});
 
 
 
