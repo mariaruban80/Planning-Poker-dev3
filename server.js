@@ -295,21 +295,28 @@ socket.on('updateTicket', (ticketData) => {
 });
 socket.on('updateStoryPoints', ({ storyId, points }) => {
   const roomId = socket.data.roomId;
-  console.log(`[SERVER] updateStoryPoints from ${socket.data.userName} in ${roomId}: ${storyId} = ${points}`);
+  const senderSocketId = socket.id; // Capture the sender's socket ID
+  console.log(`[SERVER] updateStoryPoints received from ${socket.data.userName || senderSocketId} in room ${roomId}: ${storyId} = ${points}`);
 
-  if (!roomId || !storyId) return;
-
-  if (rooms[roomId]) {
-    rooms[roomId].lastActivity = Date.now();
+  if (!roomId || !storyId) {
+      console.warn(`[SERVER] Invalid data received for updateStoryPoints`);
+      return;
   }
 
-  // Try both broadcast methods
-  io.to(roomId).emit('storyPointsUpdate', { storyId, points });
-  socket.broadcast.to(roomId).emit('storyPointsUpdate', { storyId, points });
-  
-  console.log(`[SERVER] Double broadcast completed for ${roomId}`);
-});
+  if (rooms[roomId]) {
+      rooms[roomId].lastActivity = Date.now();
+  }
 
+  // Iterate through connected sockets in the room and emit to everyone EXCEPT the sender
+  io.in(roomId).fetchSockets().then(sockets => {
+      sockets.forEach(s => {
+          if (s.id !== senderSocketId) { // Exclude the sender
+              s.emit('storyPointsUpdate', { storyId, points }); // Emit the update
+              console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}`);
+          }
+      });
+  });
+});
 
   
   // Handler for requesting votes by username
