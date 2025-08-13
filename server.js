@@ -297,26 +297,34 @@ socket.on('updateTicket', (ticketData) => {
 // Handle updating story points directly from the story card
 socket.on('updateStoryPoints', ({ storyId, points, broadcast }) => {
   const roomId = socket.data.roomId;
-  if (!roomId || !rooms[roomId] || !storyId) return;
 
-  // Update room activity timestamp
-  rooms[roomId].lastActivity = Date.now();
-
-  // Find the ticket and update its points
-  const ticketIndex = rooms[roomId].tickets.findIndex(t => t.id === storyId);
-  if (ticketIndex !== -1) {
-    rooms[roomId].tickets[ticketIndex].points = points;
-    console.log(`[SERVER] Story points updated for ${storyId} in room ${roomId}: ${points}`);
+  if (!storyId) {
+    console.warn(`[SERVER] updateStoryPoints ignored: no storyId provided`);
+    return;
   }
 
-  // FIXED: Broadcast to ALL users in the room (including sender for confirmation)
-  if (broadcast !== false) {  // Default to true unless explicitly set to false
-    io.to(roomId).emit('storyPointsUpdate', { storyId, points });
+  // If we have a valid room and tickets list, update server state
+  if (roomId && rooms[roomId]) {
+    const ticketIndex = rooms[roomId].tickets.findIndex(t => t.id === storyId);
+    if (ticketIndex !== -1) {
+      rooms[roomId].tickets[ticketIndex].points = points;
+      console.log(`[SERVER] Story points updated for ${storyId} in room ${roomId}: ${points}`);
+    } else {
+      console.warn(`[SERVER] Story ${storyId} not found in room ${roomId}, broadcasting anyway`);
+    }
+
+    // Always broadcast to the whole room unless explicitly disabled
+    if (broadcast !== false) {
+      io.to(roomId).emit('storyPointsUpdate', { storyId, points });
+    } else {
+      socket.broadcast.to(roomId).emit('storyPointsUpdate', { storyId, points });
+    }
   } else {
-    // Only broadcast to others, not the sender
-    socket.broadcast.to(roomId).emit('storyPointsUpdate', { storyId, points });
+    console.warn(`[SERVER] No valid room found for storyPointsUpdate, broadcasting to sender only`);
+    socket.emit('storyPointsUpdate', { storyId, points });
   }
 });
+
 
   
   // Handler for requesting votes by username
