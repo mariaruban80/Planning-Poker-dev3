@@ -1974,22 +1974,17 @@ storyPointsEl.addEventListener('click', (e) => {
   input.focus();
   input.select();
 
-  function commit() {
-    const newVal = input.value.trim() || '?';
-    storyPointsEl.classList.remove('editing');
-    storyPointsEl.textContent = newVal;
-    storyCard.dataset.storyPoints = newVal;
-    
-    // Broadcast to all users including guests
-    if (socket && socket.connected) {
-      console.log(`[POINTS] Broadcasting story points update: ${storyId} = ${newVal}`);
-      socket.emit('updateStoryPoints', { 
-        storyId: storyCard.id, 
-        points: newVal,
-        broadcast: true // Add this flag to ensure server broadcasts to all users
-      });
-    }
+function commit() {
+  const newVal = input.value.trim() || '?';
+  storyPointsEl.classList.remove('editing');
+  storyPointsEl.textContent = newVal;
+  storyItem.dataset.storyPoints = newVal;
+
+  if (socket && socket.connected) {
+    console.log(`[POINTS] Broadcasting story points update: ${csvStoryId} = ${newVal}`);
+    socket.emit('updateStoryPoints', { storyId: csvStoryId, points: newVal });
   }
+}
 
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', (e) => {
@@ -2463,15 +2458,18 @@ function displayCSVData(data) {
         input.focus();
         input.select();
 
-        function commit() {
-          const newVal = input.value.trim() || '?';
-          storyPointsEl.classList.remove('editing');
-          storyPointsEl.textContent = newVal;
-          storyItem.dataset.storyPoints = newVal;
-          if (typeof socket !== 'undefined' && socket && socket.connected) {
-            socket.emit('updateStoryPoints', { storyId: story.id, points: newVal });
-          }
-        }
+      function commit() {
+  const newVal = input.value.trim() || '?';
+  storyPointsEl.classList.remove('editing');
+  storyPointsEl.textContent = newVal;
+  storyCard.dataset.storyPoints = newVal;
+
+  if (socket && socket.connected) {
+    const id = storyCard.dataset.storyId || storyCard.id;
+    console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
+    socket.emit('updateStoryPoints', { storyId: id, points: newVal, broadcast: true });
+  }
+}
 
         input.addEventListener('blur', commit);
         input.addEventListener('keydown', (e) => {
@@ -2621,16 +2619,18 @@ function displayCSVData(data) {
         input.focus();
         input.select();
 
-        function commit() {
-          const newVal = input.value.trim() || '?';            
-          storyPointsEl.classList.remove('editing');
-          storyPointsEl.textContent = newVal;
-          storyItem.dataset.storyPoints = newVal;
-          if (typeof socket !== 'undefined' && socket && socket.connected) {
-            socket.emit('updateStoryPoints', { storyId: csvStoryId, points: newVal });
-          }
-        }
+       function commit() {
+  const newVal = input.value.trim() || '?';
+  storyPointsEl.classList.remove('editing');
+  storyPointsEl.textContent = newVal;
+  storyItem.dataset.storyPoints = newVal;
 
+  if (socket && socket.connected) {
+    const id = story.id || story.dataset.storyId || story.getAttribute('id');
+    console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
+    socket.emit('updateStoryPoints', { storyId: id, points: newVal });
+  }
+}
         input.addEventListener('blur', commit);
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
