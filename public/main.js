@@ -2280,18 +2280,20 @@ function setupCSVUploader() {
 }
 function commit(storyEl, input) {
   const newVal = input.value.trim() || '?';
-  const storyPointsEl = storyEl.querySelector('.story-points'); // adjust selector if needed
-  storyPointsEl.classList.remove('editing');
-  storyPointsEl.textContent = newVal;
-  storyEl.dataset.storyPoints = newVal;
+  const storyPointsEl = storyEl.querySelector('.story-points');
+  
+  if (storyPointsEl) {
+    storyPointsEl.classList.remove('editing'); // Remove editing state first
+    storyPointsEl.textContent = newVal;
+    storyEl.dataset.storyPoints = newVal;
 
-  if (socket && socket.connected) {
-    const id = storyEl.dataset.storyId || storyEl.id;
-    console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
-    socket.emit('updateStoryPoints', { storyId: id, points: newVal });
+    if (socket && socket.connected) {
+      const id = storyEl.dataset.storyId || storyEl.id;
+      console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
+      socket.emit('updateStoryPoints', { storyId: id, points: newVal });
+    }
   }
 }
-
 
 /**
  * Parse CSV text into array structure
@@ -3650,17 +3652,28 @@ async function handleSocketMessage(message) {
 
 case 'storyPointsUpdate':
   if (message.storyId && message.points !== undefined) {
-    console.log(`[POINTS] Received story points update: ${message.storyId} = ${message.points}`);
+    console.log(`[POINTS] Received story points update from server: ${message.storyId} = ${message.points}`);
+    
+    // Update the story points display element
     const storyPointsEl = document.getElementById(`story-points-${message.storyId}`);
-    if (storyPointsEl && !storyPointsEl.classList.contains('editing')) {
-      storyPointsEl.textContent = message.points;
-      const storyCard = document.getElementById(message.storyId);
-      if (storyCard) {
-        storyCard.dataset.storyPoints = message.points;
+    if (storyPointsEl) {
+      // Only update if this element is not currently being edited by the current user
+      const isCurrentlyEditing = storyPointsEl.classList.contains('editing');
+      if (!isCurrentlyEditing) {
+        storyPointsEl.textContent = message.points;
+        console.log(`[POINTS] Updated story points display for ${message.storyId} to ${message.points}`);
+      } else {
+        console.log(`[POINTS] Skipping update - element is being edited by current user`);
       }
     }
+
+    // Update the story card dataset
+    const storyCard = document.getElementById(message.storyId);
+    if (storyCard) {
+      storyCard.dataset.storyPoints = message.points;
+    }
   }
-  break; 
+  break;
 
     case 'resyncState':
       if (Array.isArray(message.deletedStoryIds)) {
