@@ -938,14 +938,33 @@ function initializeApp(roomId) {
   });
 
 socket.on('storyPointsUpdate', ({ storyId, points }) => {
-  console.log(`[SOCKET] Story points updated for ${storyId}: ${points}`);
+  console.log(`[SOCKET] Story points update received from server: ${storyId} = ${points}`);
 
-  // Match actual element ID used in creation
+  // Find the story points element
   const pointsEl = document.getElementById(`story-points-${storyId}`);
   if (pointsEl) {
-    pointsEl.textContent = points;
+    // Only update if this element is not currently being edited by the current user
+    const isCurrentlyEditing = pointsEl.classList.contains('editing');
+    if (!isCurrentlyEditing) {
+      const oldValue = pointsEl.textContent;
+      pointsEl.textContent = points;
+      console.log(`[SOCKET] Updated story points display: ${storyId} from "${oldValue}" to "${points}"`);
+    } else {
+      console.log(`[SOCKET] Skipping update - element is being edited by current user`);
+    }
   } else {
-    console.warn(`[SOCKET] Could not find element story-points-${storyId}`);
+    console.warn(`[SOCKET] Could not find story points element: story-points-${storyId}`);
+    
+    // Debug: List all story-points elements to help diagnose
+    const allPointsElements = document.querySelectorAll('[id^="story-points-"]');
+    console.log(`[SOCKET] Available story-points elements:`, Array.from(allPointsElements).map(el => el.id));
+  }
+
+  // Also update the story card dataset for consistency
+  const storyCard = document.getElementById(storyId);
+  if (storyCard) {
+    storyCard.dataset.storyPoints = points;
+    console.log(`[SOCKET] Updated story card dataset for ${storyId}`);
   }
 });
 
@@ -2283,22 +2302,25 @@ function commit(storyEl, input) {
   const storyPointsEl = storyEl.querySelector('.story-points');
   
   if (storyPointsEl) {
-    // Remove editing state first
+    // Remove editing state FIRST
     storyPointsEl.classList.remove('editing');
+    
+    // Update the display
     storyPointsEl.textContent = newVal;
     
     // Update the dataset
     storyEl.dataset.storyPoints = newVal;
 
+    // Broadcast to server (which will broadcast to all other clients)
     if (socket && socket.connected) {
-      const storyId = storyEl.id; // Use the element's ID directly
-      console.log(`[POINTS] Broadcasting story points update: ${storyId} = ${newVal}`);
+      const storyId = storyEl.id;
+      console.log(`[POINTS] Broadcasting story points update to server: ${storyId} = ${newVal}`);
       socket.emit('updateStoryPoints', { storyId: storyId, points: newVal });
     } else {
       console.warn('[POINTS] Cannot broadcast - socket not connected');
     }
   } else {
-    console.warn('[POINTS] Could not find story-points element in', storyEl);
+    console.warn('[POINTS] Could not find .story-points element in commit function');
   }
 }
 
