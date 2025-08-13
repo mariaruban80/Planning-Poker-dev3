@@ -1965,6 +1965,8 @@ storyPointsEl.addEventListener('click', (e) => {
   e.stopPropagation();
   const current = storyPointsEl.textContent.trim();
   storyPointsEl.classList.add('editing');
+  const storyItem = storyPointsEl.closest('.story-card');
+  storyPointsEl.classList.add('editing');
   const input = document.createElement('input');
   input.type = 'text';
   input.value = current === '?' ? '' : current;
@@ -1974,12 +1976,12 @@ storyPointsEl.addEventListener('click', (e) => {
   input.focus();
   input.select();
 
-  commit(storyItem);
+  commit(storyItem, input);
 
-  input.addEventListener('blur', commit);
+  input.addEventListener('blur', () => commit(storyItem, input));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-      commit();
+      commit(storyItem, input);
     } else if (e.key === 'Escape') {
       storyPointsEl.classList.remove('editing');
       storyPointsEl.textContent = current;
@@ -2285,7 +2287,7 @@ function setupCSVUploader() {
   
   return;
 }
-function commit(storyEl) {
+function commit(storyEl, input) {
   const newVal = input.value.trim() || '?';
   const storyPointsEl = storyEl.querySelector('.story-points'); // adjust selector if needed
   storyPointsEl.classList.remove('editing');
@@ -2453,6 +2455,8 @@ function displayCSVData(data) {
         e.stopPropagation();
         const current = storyPointsEl.textContent.trim();
         storyPointsEl.classList.add('editing');
+  const storyItem = storyPointsEl.closest('.story-card');
+  storyPointsEl.classList.add('editing');
         const input = document.createElement('input');
         input.type = 'text';
         input.value = current === '?' ? '' : current;
@@ -2464,10 +2468,10 @@ function displayCSVData(data) {
 
         commit(storyCard);
 
-        input.addEventListener('blur', commit);
+        input.addEventListener('blur', () => commit(storyItem, input));
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
-            commit();
+            commit(storyItem, input);
           } else if (e.key === 'Escape') {
             storyPointsEl.classList.remove('editing');
             storyPointsEl.textContent = current;
@@ -2603,6 +2607,8 @@ function displayCSVData(data) {
         e.stopPropagation();
         const current = storyPointsEl.textContent.trim();
         storyPointsEl.classList.add('editing');
+  const storyItem = storyPointsEl.closest('.story-card');
+  storyPointsEl.classList.add('editing');
         const input = document.createElement('input');
         input.type = 'text';
         input.value = current === '?' ? '' : current;
@@ -2612,11 +2618,11 @@ function displayCSVData(data) {
         input.focus();
         input.select();
 
-        commit(storyItem);
-        input.addEventListener('blur', commit);
+        commit(storyItem, input);
+        input.addEventListener('blur', () => commit(storyItem, input));
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
-            commit();
+            commit(storyItem, input);
           } else if (e.key === 'Escape') {
             storyPointsEl.classList.remove('editing');
             storyPointsEl.textContent = current;
