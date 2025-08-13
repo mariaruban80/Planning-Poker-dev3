@@ -940,22 +940,13 @@ function initializeApp(roomId) {
 socket.on('storyPointsUpdate', ({ storyId, points }) => {
   console.log(`[SOCKET] Story points updated for ${storyId}: ${points}`);
 
-  // Update points in bubble (for revealed stories)
-  const bubbleEl = document.getElementById(`vote-bubble-${storyId}`);
-  if (bubbleEl) {
-    bubbleEl.textContent = points;
+  // Match actual element ID used in creation
+  const pointsEl = document.getElementById(`story-points-${storyId}`);
+  if (pointsEl) {
+    pointsEl.textContent = points;
+  } else {
+    console.warn(`[SOCKET] Could not find element story-points-${storyId}`);
   }
-
-  // New: show points in a dedicated element
-  let pointsEl = document.getElementById(`points-display-${storyId}`);
-  if (!pointsEl) {
-    pointsEl = document.createElement('div');
-    pointsEl.id = `points-display-${storyId}`;
-    pointsEl.className = 'story-points-display';
-    const storyMeta = document.getElementById(`story-meta-${storyId}`);
-    if (storyMeta) storyMeta.appendChild(pointsEl);
-  }
-  pointsEl.textContent = `${points} point${points !== 1 ? 's' : ''}`;
 });
 
 
