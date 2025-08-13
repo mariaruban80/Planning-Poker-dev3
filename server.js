@@ -508,6 +508,11 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   rooms[roomId].users.push({ id: socket.id, name: userName });
   socket.join(roomId);
 
+  // Send all current tickets to the newly joined user
+const activeTickets = rooms[roomId].tickets.filter(t => !rooms[roomId].deletedStoryIds.has(t.id));
+socket.emit('allTickets', { tickets: activeTickets });
+
+
   // STEP 3: RESTORE USER VOTES FROM USERNAME-BASED STORAGE
   // This approach centralizes vote handling in one place
   if (rooms[roomId].userNameVotes && rooms[roomId].userNameVotes[userName]) {
