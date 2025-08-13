@@ -3134,6 +3134,7 @@ function createVoteCardSpace(user, isCurrentUser) {
   if (isCurrentUser) {
     voteCard.addEventListener('dragover', (e) => e.preventDefault());
 
+// FIXED: Immediate vote feedback for drag-and-drop
 voteCard.addEventListener('drop', (e) => {
   e.preventDefault();
   const vote = e.dataTransfer.getData('text/plain');
@@ -3145,20 +3146,30 @@ voteCard.addEventListener('drop', (e) => {
   }
   
   if (socket && vote && storyId) {
+    console.log(`[VOTE] IMMEDIATE UI update for vote: ${vote}`);
+    
     // IMMEDIATE UI UPDATE - don't wait for server response
     const voteBadge = voteCard.querySelector('.vote-badge');
     if (voteBadge) {
+      // Show immediate feedback based on reveal state
       voteBadge.textContent = votesRevealed[storyId] ? vote : '👍';
       voteBadge.style.color = '#673ab7';
       voteBadge.style.opacity = '1';
+      voteBadge.style.visibility = 'visible';
     }
     
+    // Mark as having a vote immediately
     voteCard.classList.add('has-vote');
     
     // Update avatar visual feedback immediately
     const avatarContainer = document.querySelector(`#user-circle-${user.id}`);
     if (avatarContainer) {
       avatarContainer.classList.add('has-voted');
+      const avatar = avatarContainer.querySelector('.avatar-circle');
+      if (avatar) {
+        avatar.style.backgroundColor = '#c1e1c1';
+        avatar.style.borderColor = '#4CAF50';
+      }
     }
     
     // Update local vote storage immediately
@@ -3170,8 +3181,15 @@ voteCard.addEventListener('drop', (e) => {
     // Update vote count immediately
     updateVoteCountUI(storyId);
     
-    // Then emit to server (this will sync with other users)
+    // THEN emit to server (this will sync with other users)
     socket.emit('castVote', { vote, targetUserId: user.id, storyId });
+    
+    // ALSO use the new restoreUserVoteByUsername for better persistence
+    socket.emit('restoreUserVoteByUsername', {
+      storyId,
+      vote,
+      userName: sessionStorage.getItem('userName') || user.name
+    });
   }
 });
   } else {
