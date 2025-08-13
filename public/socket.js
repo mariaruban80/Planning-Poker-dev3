@@ -506,10 +506,31 @@ socket.on('connect_error', (error) => {
     handleMessage({ type: 'storyNavigation', index });
   });
 
-  // Add this near other socket event handlers
-socket.on('storyPointsUpdate', (data) => {
-  console.log('[SOCKET DEBUG] storyPointsUpdate received:', data);
-  // The message will be handled by handleSocketMessage, this is just for debugging
+ socket.on('storyPointsUpdate', ({ storyId, points }) => {
+  console.log('[SOCKET] Received storyPointsUpdate directly:', { storyId, points });
+  
+  if (storyId && points !== undefined) {
+    // Update the story points display element directly
+    const storyPointsEl = document.getElementById(`story-points-${storyId}`);
+    if (storyPointsEl) {
+      const isCurrentlyEditing = storyPointsEl.classList.contains('editing');
+      if (!isCurrentlyEditing) {
+        const oldValue = storyPointsEl.textContent;
+        storyPointsEl.textContent = points;
+        console.log(`[SOCKET] Updated story points: ${storyId} from ${oldValue} to ${points}`);
+      } else {
+        console.log(`[SOCKET] Skipping update - element being edited`);
+      }
+    } else {
+      console.warn(`[SOCKET] Story points element not found: story-points-${storyId}`);
+    }
+
+    // Update the story card dataset
+    const storyCard = document.getElementById(storyId);
+    if (storyCard) {
+      storyCard.dataset.storyPoints = points;
+    }
+  }
 });
 
   socket.on('exportData', (data) => {
@@ -1053,4 +1074,5 @@ export function cleanup() {
     }
   }
 }
+
 
