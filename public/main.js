@@ -1974,17 +1974,7 @@ storyPointsEl.addEventListener('click', (e) => {
   input.focus();
   input.select();
 
-function commit() {
-  const newVal = input.value.trim() || '?';
-  storyPointsEl.classList.remove('editing');
-  storyPointsEl.textContent = newVal;
-  storyItem.dataset.storyPoints = newVal;
-
-  if (socket && socket.connected) {
-    console.log(`[POINTS] Broadcasting story points update: ${csvStoryId} = ${newVal}`);
-    socket.emit('updateStoryPoints', { storyId: csvStoryId, points: newVal });
-  }
-}
+  commit(storyItem);
 
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', (e) => {
@@ -2295,6 +2285,20 @@ function setupCSVUploader() {
   
   return;
 }
+function commit(storyEl) {
+  const newVal = input.value.trim() || '?';
+  const storyPointsEl = storyEl.querySelector('.story-points'); // adjust selector if needed
+  storyPointsEl.classList.remove('editing');
+  storyPointsEl.textContent = newVal;
+  storyEl.dataset.storyPoints = newVal;
+
+  if (socket && socket.connected) {
+    const id = storyEl.dataset.storyId || storyEl.id;
+    console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
+    socket.emit('updateStoryPoints', { storyId: id, points: newVal });
+  }
+}
+
 
 /**
  * Parse CSV text into array structure
@@ -2458,18 +2462,7 @@ function displayCSVData(data) {
         input.focus();
         input.select();
 
-      function commit() {
-  const newVal = input.value.trim() || '?';
-  storyPointsEl.classList.remove('editing');
-  storyPointsEl.textContent = newVal;
-  storyCard.dataset.storyPoints = newVal;
-
-  if (socket && socket.connected) {
-    const id = storyCard.dataset.storyId || storyCard.id;
-    console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
-    socket.emit('updateStoryPoints', { storyId: id, points: newVal, broadcast: true });
-  }
-}
+        commit(storyCard);
 
         input.addEventListener('blur', commit);
         input.addEventListener('keydown', (e) => {
@@ -2619,18 +2612,7 @@ function displayCSVData(data) {
         input.focus();
         input.select();
 
-       function commit() {
-  const newVal = input.value.trim() || '?';
-  storyPointsEl.classList.remove('editing');
-  storyPointsEl.textContent = newVal;
-  storyItem.dataset.storyPoints = newVal;
-
-  if (socket && socket.connected) {
-    const id = story.id || story.dataset.storyId || story.getAttribute('id');
-    console.log(`[POINTS] Broadcasting story points update: ${id} = ${newVal}`);
-    socket.emit('updateStoryPoints', { storyId: id, points: newVal });
-  }
-}
+        commit(storyItem);
         input.addEventListener('blur', commit);
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
