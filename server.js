@@ -297,7 +297,7 @@ socket.on('updateTicket', (ticketData) => {
   }
 });
 // Handle updating story points directly from the story card
-socket.on('updateStoryPoints', ({ storyId, points }) => {
+socket.on('updateStoryPoints', ({ storyId, points, broadcast }) => {
   const roomId = socket.data.roomId;
   if (!roomId || !rooms[roomId] || !storyId) return;
 
@@ -311,8 +311,13 @@ socket.on('updateStoryPoints', ({ storyId, points }) => {
     console.log(`[SERVER] Story points updated for ${storyId} in room ${roomId}: ${points}`);
   }
 
-  // Broadcast to ALL users in the room (including sender for confirmation)
-  io.to(roomId).emit('storyPointsUpdate', { storyId, points });
+  // FIXED: Broadcast to ALL users in the room (including sender for confirmation)
+  if (broadcast !== false) {  // Default to true unless explicitly set to false
+    io.to(roomId).emit('storyPointsUpdate', { storyId, points });
+  } else {
+    // Only broadcast to others, not the sender
+    socket.broadcast.to(roomId).emit('storyPointsUpdate', { storyId, points });
+  }
 });
 
   
