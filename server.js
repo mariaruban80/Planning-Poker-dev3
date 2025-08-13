@@ -268,6 +268,9 @@ socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   }
 });
 
+  socket.on('ack', (data) => {
+    console.log(`[SERVER] Received acknowledgement for ${data.type} event from socket: ${socket.id}`, data);
+});
 
 // Handle ticket updates
 socket.on('updateTicket', (ticketData) => {
