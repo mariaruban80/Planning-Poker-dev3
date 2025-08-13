@@ -4189,7 +4189,7 @@ window.addEventListener('beforeunload', () => {
         count = Object.keys(window.currentVotesPerStory[storyId]).length;
     }
     bubble.textContent = count;
-}(); 
+}; 
 
 
 
