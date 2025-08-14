@@ -316,24 +316,12 @@ socket.on('updateStoryPoints', ({ storyId, points }) => {
 
     io.in(roomId).fetchSockets()
         .then(sockets => {
-            sockets.forEach(s => {
-                if (s.id !== senderSocketId) {
-                    clientsInRoom++;
+          sockets.forEach(s => {
+  s.emit('storyPointsUpdate', { storyId, points });
+  console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
+});
 
-                    s.emit('storyPointsUpdate', { storyId, points }, (ack) => { // Acknowledgement callback
-
-                        if (ack) {
-                            successfulBroadcasts++;
-                            console.log(`[SERVER] storyPointsUpdate acknowledged by: ${s.id}`);
-                        } else {
-                            console.error(`[SERVER] storyPointsUpdate not acknowledged by: ${s.id}`);
-                        }
-                    });
-
-                    console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
-
-                }
-            });
+      
             console.log(`[SERVER] Attempted to broadcast to ${clientsInRoom} client(s)`);
 
             // Check after a short delay and log the results
