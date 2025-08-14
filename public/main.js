@@ -1960,6 +1960,7 @@ function addTicketToUI(ticketData, selectAfterAdd = false) {
   // Store metadata
   storyCard.dataset.id = idForDisplay;
   storyCard.dataset.description = descriptionForDisplay;
+  storyCard.dataset.storyId = ticketData.id;
 
   // Create story ID element (purple, bold, at top)
   const storyId = document.createElement('div');
