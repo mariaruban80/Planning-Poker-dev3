@@ -268,6 +268,9 @@ socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   }
 });
 
+  socket.on('ack', (data) => {
+    console.log(`[SERVER] Received acknowledgement for ${data.type} event from socket: ${socket.id}`, data);
+});
 
 // Handle ticket updates
 socket.on('updateTicket', (ticketData) => {
@@ -293,20 +296,44 @@ socket.on('updateTicket', (ticketData) => {
     socket.broadcast.to(roomId).emit('updateTicket', { ticketData });
   }
 });
-// Handle updating story points directly from the story card
 socket.on('updateStoryPoints', ({ storyId, points }) => {
-  const roomId = socket.data.roomId;
-  console.log(`[SERVER DEBUG] updateStoryPoints from ${socket.data.userName} in ${roomId}: ${storyId} = ${points}`);
+    const roomId = socket.data.roomId;
+    const senderSocketId = socket.id;
+    console.log(`[SERVER] updateStoryPoints received from ${socket.data.userName || senderSocketId} in room ${roomId}: ${storyId} = ${points}`);
 
-  if (!roomId) return console.warn(`[SERVER] No roomId on socket ${socket.id}`);
-  if (!storyId) return console.warn(`[SERVER] No storyId provided`);
+    if (!roomId || !storyId) return;
 
-  // Broadcast to everyone including sender
-  io.to(roomId).emit('storyPointsUpdate', { storyId, points });
+
+    if (rooms[roomId]) {
+        rooms[roomId].lastActivity = Date.now();
+    }
+
+
+
+    // More robust approach: Iterate and emit individually + track successful broadcasts
+    let clientsInRoom = 0;          // Counts the clients in the room excluding sender
+    let successfulBroadcasts = 0; // Counts successful broadcasts
+
+    io.in(roomId).fetchSockets()
+        .then(sockets => {
+          sockets.forEach(s => {
+  s.emit('storyPointsUpdate', { storyId, points });
+  console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
 });
 
+      
+            console.log(`[SERVER] Attempted to broadcast to ${clientsInRoom} client(s)`);
 
+            // Check after a short delay and log the results
+            setTimeout(() => {
+                console.log(`[SERVER] storyPointsUpdate successful broadcasts: ${successfulBroadcasts}/${clientsInRoom}`)
+            }, 1000); // Adjust timeout as needed
+        })
+        .catch(err => {
 
+            console.error('[SERVER] Error fetching sockets or broadcasting:', err);
+        });
+});
 
   
   // Handler for requesting votes by username
@@ -506,11 +533,15 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   // Add the current user
   rooms[roomId].users.push({ id: socket.id, name: userName });
   socket.join(roomId);
-      // Send all current tickets to the newly joined user without redeclaring variables
-      if (rooms[roomId] && rooms[roomId].tickets) {
-        const ticketsForGuest = rooms[roomId].tickets.filter(t => !rooms[roomId].deletedStoryIds.has(t.id));
-        socket.emit('allTickets', { tickets: ticketsForGuest });
-      }
+    // Ensure guest receives all current tickets from the room
+    if (rooms[roomId] && rooms[roomId].tickets) {
+      const ticketsForGuest = rooms[roomId].tickets.filter(
+        t => !rooms[roomId].deletedStoryIds?.has(t.id)
+      );
+      console.log(`[SERVER] Sending ${ticketsForGuest.length} tickets to guest ${socket.id}`);
+      socket.emit('allTickets', { tickets: ticketsForGuest });
+    }
+
 
   // STEP 3: RESTORE USER VOTES FROM USERNAME-BASED STORAGE
   // This approach centralizes vote handling in one place
