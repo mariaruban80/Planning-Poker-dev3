@@ -2556,10 +2556,9 @@ font-size: 15px;
   justify-content: center;
   cursor: pointer;
   box-shadow: none;
-  flex-shrink: 0;
-  margin-left: auto; 
-  order: 2;
-  right: 1px;
+  position: absolute;  /* ADD THIS - Required for absolute positioning */
+  top: 6px;           /* ADD THIS - Same vertical position as 3-dot menu */
+  right: 32px; 
 }
 
 .story-meta .story-points:hover {
