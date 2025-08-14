@@ -268,9 +268,6 @@ socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   }
 });
 
-  socket.on('ack', (data) => {
-    console.log(`[SERVER] Received acknowledgement for ${data.type} event from socket: ${socket.id}`, data);
-});
 
 // Handle ticket updates
 socket.on('updateTicket', (ticketData) => {
@@ -296,32 +293,19 @@ socket.on('updateTicket', (ticketData) => {
     socket.broadcast.to(roomId).emit('updateTicket', { ticketData });
   }
 });
+// Handle updating story points directly from the story card
 socket.on('updateStoryPoints', ({ storyId, points }) => {
-    const roomId = socket.data.roomId;
-    const senderSocketId = socket.id;
-    console.log(`[SERVER] updateStoryPoints received from ${socket.data.userName || senderSocketId} in room ${roomId}: ${storyId} = ${points}`);
+  const roomId = socket.data.roomId;
+  console.log(`[SERVER DEBUG] updateStoryPoints from ${socket.data.userName} in ${roomId}: ${storyId} = ${points}`);
 
-    if (!roomId || !storyId) return;
+  if (!roomId) return console.warn(`[SERVER] No roomId on socket ${socket.id}`);
+  if (!storyId) return console.warn(`[SERVER] No storyId provided`);
 
-    if (rooms[roomId]) {
-        rooms[roomId].lastActivity = Date.now();
-        
-        // ✅ Store the story points persistently in room state
-        if (!rooms[roomId].storyPoints) {
-            rooms[roomId].storyPoints = {};
-        }
-        rooms[roomId].storyPoints[storyId] = points;
-    }
-
-    io.in(roomId).fetchSockets().then(sockets => {
-        sockets.forEach(s => {
-            s.emit('storyPointsUpdate', { storyId, points });
-            console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
-        });
-    }).catch(err => {
-        console.error('[SERVER] Error fetching sockets or broadcasting:', err);
-    });
+  // Broadcast to everyone including sender
+  io.to(roomId).emit('storyPointsUpdate', { storyId, points });
 });
+
+
 
 
   
@@ -522,20 +506,11 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   // Add the current user
   rooms[roomId].users.push({ id: socket.id, name: userName });
   socket.join(roomId);
-    // Ensure guest receives all current tickets from the room
-    if (rooms[roomId] && rooms[roomId].tickets) {
-      const ticketsForGuest = rooms[roomId].tickets.filter(
-        t => !rooms[roomId].deletedStoryIds?.has(t.id)
-      );
-      console.log(`[SERVER] Sending ${ticketsForGuest.length} tickets to guest ${socket.id}`);
-      socket.emit('allTickets', { tickets: ticketsForGuest });
-       if (rooms[roomId].storyPoints) {
-        Object.entries(rooms[roomId].storyPoints).forEach(([storyId, points]) => {
-            socket.emit('storyPointsUpdate', { storyId, points });
-        });
-    }
-    }
-
+      // Send all current tickets to the newly joined user without redeclaring variables
+      if (rooms[roomId] && rooms[roomId].tickets) {
+        const ticketsForGuest = rooms[roomId].tickets.filter(t => !rooms[roomId].deletedStoryIds.has(t.id));
+        socket.emit('allTickets', { tickets: ticketsForGuest });
+      }
 
   // STEP 3: RESTORE USER VOTES FROM USERNAME-BASED STORAGE
   // This approach centralizes vote handling in one place
