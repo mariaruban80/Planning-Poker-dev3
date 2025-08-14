@@ -474,6 +474,12 @@ socket.on('connect_error', (error) => {
     
     lastKnownRoomState.votesPerStory[storyId] = {};
     lastKnownRoomState.votesRevealed[storyId] = false;
+
+    const pointsEl = document.getElementById(`story-points-${storyId}`);
+    if (pointsEl) {
+    pointsEl.textContent = '?';
+    pointsEl.classList.remove('revealed');
+    }
     
     // Also clear from user's personal votes
     if (lastKnownRoomState.userVotes && lastKnownRoomState.userVotes[storyId]) {
@@ -1047,6 +1053,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
