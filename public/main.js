@@ -3052,6 +3052,7 @@ function resetAllVoteVisuals() {
     pointsEl.textContent = '?';
     pointsEl.classList.remove('revealed');
 }
+  }                                                       
 
 /**
  * Render the current story
