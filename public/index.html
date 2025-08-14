@@ -1548,22 +1548,22 @@ white-space: nowrap;
 
 /* Story points styling - matches the green "21" in the image */
 .story-meta .story-points {
-  background: #10b981; /* Green matching host1 image */
+  position: absolute;
+  bottom: 8px;   /* Distance from bottom edge */
+  right: 12px;   /* Distance from right edge */
+  background: #10b981; /* Green color */
   color: white;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 6px;
-  min-width: 32px;
-  height: 32px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  min-width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: none;
-  flex-shrink: 0;
-  margin-left: auto; /* This pushes it to the right */
-  order: 2; /* Ensures it comes after vote count */
+  z-index: 5; /* Ensures it appears above other content */
 }
 
 .story-meta .story-points:hover {
@@ -2600,15 +2600,6 @@ position: relative;
   opacity: 1 !important;
 }
 
-/* Story points - positioned at bottom right, green like in host1 */
-.story-meta .story-points {
-   bottom: 6px;
-    right: 8px;
-    font-size: 12px;
-    height: 20px;
-    min-width: 20px;
-    padding: 2px 6px;
-}
 
 .story-meta .story-points:hover {
   background: #059669;
