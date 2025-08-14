@@ -298,41 +298,16 @@ socket.on('updateTicket', (ticketData) => {
 });
 socket.on('updateStoryPoints', ({ storyId, points }) => {
     const roomId = socket.data.roomId;
-    const senderSocketId = socket.id;
-    console.log(`[SERVER] updateStoryPoints received from ${socket.data.userName || senderSocketId} in room ${roomId}: ${storyId} = ${points}`);
 
-    if (!roomId || !storyId) return;
+    if (!roomId || !rooms[roomId] || !storyId) return;  // Validate data
 
+    // Log for debugging (optional)   
+    console.log(`[SERVER] updateStoryPoints: Room ${roomId}, Story ${storyId}, Points ${points}`);
 
-    if (rooms[roomId]) {
-        rooms[roomId].lastActivity = Date.now();
-    }
+    rooms[roomId].lastActivity = Date.now(); // Update last activity
 
-
-
-    // More robust approach: Iterate and emit individually + track successful broadcasts
-    let clientsInRoom = 0;          // Counts the clients in the room excluding sender
-    let successfulBroadcasts = 0; // Counts successful broadcasts
-
-    io.in(roomId).fetchSockets()
-        .then(sockets => {
-          sockets.forEach(s => {
-  s.emit('storyPointsUpdate', { storyId, points });
-  console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
-});
-
-      
-            console.log(`[SERVER] Attempted to broadcast to ${clientsInRoom} client(s)`);
-
-            // Check after a short delay and log the results
-            setTimeout(() => {
-                console.log(`[SERVER] storyPointsUpdate successful broadcasts: ${successfulBroadcasts}/${clientsInRoom}`)
-            }, 1000); // Adjust timeout as needed
-        })
-        .catch(err => {
-
-            console.error('[SERVER] Error fetching sockets or broadcasting:', err);
-        });
+    // ***KEY CHANGE: Broadcast to all clients in the room***
+    io.to(roomId).emit('storyPointsUpdate', { storyId, points });
 });
 
   
