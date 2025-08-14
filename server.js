@@ -1517,6 +1517,11 @@ socket.on('castVote', ({ vote, targetUserId, storyId, userName }) => {
         if (rooms[roomId].votesRevealed) {
           rooms[roomId].votesRevealed[storyId] = false;
         }
+       if (rooms[roomId].storyPoints && rooms[roomId].storyPoints[storyId]) {
+        delete rooms[roomId].storyPoints[storyId];
+        // Broadcast story points reset to all clients
+        io.to(roomId).emit('storyPointsUpdate', { storyId, points: '?' });
+      }
         
         // Also clear votes in username-based storage
         if (rooms[roomId].userNameVotes) {
