@@ -2499,6 +2499,19 @@ font-size: 15px;
   -webkit-box-orient: vertical;
   padding-right: 40px; /* Space for 3-dot menu */
 }
+     /* Add a small dropdown arrow next to the username */
+.current-user-display::after {
+  content: "▼";
+  margin-left: 6px;
+  font-size: 10px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+
+.current-user-display:hover::after {
+  color: #374151;
+  transform: rotate(180deg);
+}
 
 /* Story meta container - positioned at bottom */
 .story-meta {
