@@ -303,37 +303,26 @@ socket.on('updateStoryPoints', ({ storyId, points }) => {
 
     if (!roomId || !storyId) return;
 
-
     if (rooms[roomId]) {
         rooms[roomId].lastActivity = Date.now();
+        
+        // ✅ Store the story points persistently in room state
+        if (!rooms[roomId].storyPoints) {
+            rooms[roomId].storyPoints = {};
+        }
+        rooms[roomId].storyPoints[storyId] = points;
     }
 
-
-
-    // More robust approach: Iterate and emit individually + track successful broadcasts
-    let clientsInRoom = 0;          // Counts the clients in the room excluding sender
-    let successfulBroadcasts = 0; // Counts successful broadcasts
-
-    io.in(roomId).fetchSockets()
-        .then(sockets => {
-          sockets.forEach(s => {
-  s.emit('storyPointsUpdate', { storyId, points });
-  console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
-});
-
-      
-            console.log(`[SERVER] Attempted to broadcast to ${clientsInRoom} client(s)`);
-
-            // Check after a short delay and log the results
-            setTimeout(() => {
-                console.log(`[SERVER] storyPointsUpdate successful broadcasts: ${successfulBroadcasts}/${clientsInRoom}`)
-            }, 1000); // Adjust timeout as needed
-        })
-        .catch(err => {
-
-            console.error('[SERVER] Error fetching sockets or broadcasting:', err);
+    io.in(roomId).fetchSockets().then(sockets => {
+        sockets.forEach(s => {
+            s.emit('storyPointsUpdate', { storyId, points });
+            console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
         });
+    }).catch(err => {
+        console.error('[SERVER] Error fetching sockets or broadcasting:', err);
+    });
 });
+
 
   
   // Handler for requesting votes by username
@@ -540,6 +529,11 @@ socket.on('joinRoom', ({ roomId, userName }) => {
       );
       console.log(`[SERVER] Sending ${ticketsForGuest.length} tickets to guest ${socket.id}`);
       socket.emit('allTickets', { tickets: ticketsForGuest });
+       if (rooms[roomId].storyPoints) {
+        Object.entries(rooms[roomId].storyPoints).forEach(([storyId, points]) => {
+            socket.emit('storyPointsUpdate', { storyId, points });
+        });
+    }
     }
 
 
