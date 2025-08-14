@@ -939,57 +939,37 @@ function initializeApp(roomId) {
   });
 
 socket.on('storyPointsUpdate', ({ storyId, points }) => {
-    console.log(`[SOCKET] Story points update received from server: ${storyId} = ${points}`);
+    console.log(`[SOCKET] Story points update received: ${storyId} = ${points}`);
+
+    // Find bubble and update (ensure bubble exists)
+    const bubbleEl = document.getElementById(`vote-bubble-${storyId}`);
+    if(bubbleEl) {
+        updateVoteCountBubble(storyId); // Or directly bubbleEl.textContent = points;
+    } else {
+        console.warn(`[CLIENT] storyPointsUpdate: Could not find bubble element: vote-bubble-${storyId}`);
+    }
+
+
+    //Update the story card's meta section:
+    const pointsEl = document.getElementById(`story-points-${storyId}`);  // FIX: Use correct format for ID
+    if (pointsEl) {
+        pointsEl.textContent = points;  // Update the text content
+        const storyCard = document.getElementById(storyId);
+        if (storyCard) {
+            storyCard.dataset.storyPoints = points; // Update the story card's dataset
+        }
+    } else {
+        console.error('[CLIENT] storyPointsUpdate: Could not find story points meta');
+        //Consider re-adding element(s)?
+    }
+
+
 
     if (!storyId) {
-        console.error('[SOCKET] storyPointsUpdate: Missing storyId');
-        return; // Stop processing if storyId is missing
+        console.error('[CLIENT] storyPointsUpdate: Missing storyId');
+        return; // Do not proceed if storyId is missing
     }
 
-    const pointsEl = document.getElementById(`story-points-${storyId}`);
-    if (pointsEl) {
-        // Remove this check to always process updates from the server
-        // const isCurrentlyEditing = pointsEl.classList.contains('editing');
-        // if (!isCurrentlyEditing) {
-
-        const oldValue = pointsEl.textContent;
-        pointsEl.textContent = points;
-        console.log(`[SOCKET] Updated story points display: ${storyId} from "${oldValue}" to "${points}"`);
-        // } else {
-        //  console.log(`[SOCKET] Skipping update - element is being edited by current user`);
-        //}
-    } else {
-        console.warn(`[SOCKET] Could not find story points element: story-points-${storyId}`);
-
-        // Debug: List all story-points elements to help diagnose.  Wrap in try/catch
-        try {
-            const allPointsElements = document.querySelectorAll('[id^="story-points-"]');
-            console.log(`[SOCKET] Available story-points elements:`, Array.from(allPointsElements).map(el => el.id));
-        } catch (err) {
-            console.error('[SOCKET] Error during element query:', err);
-        }
-    }
-
-    const storyCard = document.getElementById(storyId);
-    if (storyCard) {
-        storyCard.dataset.storyPoints = points;
-        console.log(`[SOCKET] Updated story card dataset for ${storyId}`);
-    } else {
-        console.error('[SOCKET] storyPointsUpdate: Could not find story card for:', storyId);
-    }
-
-    // Send acknowledgement to server, including error handling in the callback
-    if (socket && socket.connected) {
-        socket.emit('ack', { type: 'storyPointsUpdate', storyId: storyId }, (ackError) => {
-            if (ackError) {
-                console.error('[SOCKET] Error sending acknowledgement:', ackError);
-            } else {
-                console.log('[SOCKET] Acknowledgement sent successfully for storyId:', storyId);
-            }
-        });
-    } else {
-        console.warn('[SOCKET] Cannot send acknowledgement - no socket connection');
-    }
 
 });
 
