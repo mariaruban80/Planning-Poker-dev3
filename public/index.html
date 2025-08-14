@@ -1548,22 +1548,22 @@ white-space: nowrap;
 
 /* Story points styling - matches the green "21" in the image */
 .story-meta .story-points {
-  position: absolute;
-  bottom: 8px;   /* Distance from bottom edge */
-  right: 12px;   /* Distance from right edge */
-  background: #10b981; /* Green color */
+  background: #10b981; /* Green matching host1 image */
   color: white;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 4px;
-  min-width: 24px;
-  height: 24px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  min-width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 5; /* Ensures it appears above other content */
+  box-shadow: none;
+  flex-shrink: 0;
+  margin-left: auto; /* This pushes it to the right */
+  order: 2; /* Ensures it comes after vote count */
 }
 
 .story-meta .story-points:hover {
@@ -1591,11 +1591,7 @@ white-space: nowrap;
 }
 
 .story-card { display:flex; align-items:flex-start; gap:12px; }
-.story-card .story-left {  flex: 1;
-  min-width: 0;
-  padding-bottom: 32px; /* Space for the story points bubble */
-  box-sizing: border-box;
-                        }
+.story-card .story-left { flex:1; min-width:0; }
 
 
 .vote-bubble {
@@ -2498,15 +2494,15 @@ font-size: 15px;
 <style>
 /* CORRECTED: Story card layout to exactly match host1 image */
 .story-card {
-position: relative;
+  position: relative;
   display: flex;
   flex-direction: column;
-  padding: 12px 16px 12px 16px; /* Consistent padding */
+  padding: 12px 16px;
   border: 1px solid #e5e7eb;
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid #3b82f6; /* Blue left border like in host1 image */
   border-radius: 8px;
   min-height: 90px;
-  max-width: 380px;
+  max-width: 380px; /* Much smaller width to match host1 */
   width: 100%;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -2514,7 +2510,6 @@ position: relative;
   color: #333;
   margin-bottom: 8px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  box-sizing: border-box;
 }
 
 .story-card:hover {
@@ -2533,12 +2528,11 @@ position: relative;
 
 /* Story ID at the top - purple and bold like PROJ-141 */
 .story-id {
- font-size: 15px;
+  font-size: 15px;
   font-weight: 700;
-  color: #8b5cf6;
+  color: #8b5cf6; /* Purple color matching host1 image */
   margin-bottom: 6px;
   line-height: 1.2;
-  padding-right: 60px;
 }
 
 /* Story description/title */
@@ -2555,24 +2549,21 @@ position: relative;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   padding-right: 40px; /* Space for 3-dot menu */
-  text-align: left; /* Ensure left alignment */
-  white-space: normal; /* Allow text wrapping */
 }
 
 /* Story meta container - positioned at bottom */
 .story-meta {
- display: flex;
-  justify-content: space-between;
+  display: flex;
+  justify-content: space-between; /* This is key - spreads items apart */
   align-items: center;
-  margin-top: auto; /* This pushes it to the bottom */
-  width: 100%;
-  padding-top: 8px; /* Add some spacing from content above */
-  position: relative;
+  margin-top: auto;
+  width: 100%; /* Use full width */
+  gap: 10px; /* Space between vote count and points */
 }
 
 /* Vote count - positioned at bottom left with people icon */
 .story-meta .vote-count {
- display: flex !important;
+  display: flex !important;
   align-items: center;
   font-size: 14px;
   color: #6b7280;
@@ -2580,12 +2571,13 @@ position: relative;
   padding: 0;
   margin: 0;
   border: none;
+  min-width: auto;
   text-align: left;
   flex-shrink: 0;
   font-weight: 500;
   opacity: 1 !important;
   visibility: visible !important;
-  order: 1;
+  order: 1; /* Ensures it comes first */
 }
 
 .story-meta .vote-count::before {
@@ -2600,6 +2592,24 @@ position: relative;
   opacity: 1 !important;
 }
 
+/* Story points - positioned at bottom right, green like in host1 */
+.story-meta .story-points {
+  background: #10b981; /* Green matching host1 image */
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none;
+  flex-shrink: 0;
+  right: 6px;
+}
 
 .story-meta .story-points:hover {
   background: #059669;
@@ -2607,9 +2617,9 @@ position: relative;
 
 /* Feature tag - positioned at top right like in host1 image */
 .story-feature-tag {
- position: absolute;
+  position: absolute;
   top: 8px;
-  right: 40px; /* Move left to avoid 3-dot menu */
+  right: 32px; /* Space for 3-dot menu */
   background: #dbeafe;
   color: #3b82f6;
   font-size: 10px;
@@ -2621,9 +2631,9 @@ position: relative;
 
 /* 3-dot menu positioning - top right corner */
 .story-actions {
-position: absolute;
-  right: 8px;
-  top: 8px;
+  position: absolute;
+  right: 6px;
+  top: 6px;
   z-index: 10;
 }
 
@@ -2664,7 +2674,7 @@ position: absolute;
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
- .story-card {
+  .story-card {
     padding: 10px 12px;
     min-height: 80px;
     max-width: 100%;
