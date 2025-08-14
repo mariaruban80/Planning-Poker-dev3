@@ -3048,10 +3048,10 @@ function resetAllVoteVisuals() {
   document.querySelectorAll('.has-voted').forEach(el => {
     el.classList.remove('has-voted');
   });
-    document.querySelectorAll('.story-points').forEach(pointsEl => {
+ document.querySelectorAll('.story-points').forEach(pointsEl => {
     pointsEl.textContent = '?';
     pointsEl.classList.remove('revealed');
-}
+  });
   }                                                       
 
 /**
