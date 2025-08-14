@@ -2300,6 +2300,12 @@ function setupRevealResetButtons() {
         votesRevealed[storyId] = false;
         
         resetAllVoteVisuals();
+
+      const pointsEl = document.getElementById(`story-points-${storyId}`);
+      if (pointsEl) {
+        pointsEl.textContent = '?';
+        pointsEl.classList.remove('revealed');
+      }
         
         const planningCardsSection = document.querySelector('.planning-cards-section');
         if (planningCardsSection) {
@@ -3042,6 +3048,9 @@ function resetAllVoteVisuals() {
   document.querySelectorAll('.has-voted').forEach(el => {
     el.classList.remove('has-voted');
   });
+    document.querySelectorAll('.story-points').forEach(pointsEl => {
+    pointsEl.textContent = '?';
+    pointsEl.classList.remove('revealed');
 }
 
 /**
