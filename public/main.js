@@ -4285,27 +4285,35 @@ function updateStoryPointsBubble(storyId, points) {
     if (!bubble) return;
     bubble.textContent = points !== undefined && points !== null ? points : '';
 }
-// for search functionaity 
-document.addEventListener("DOMContentLoaded", function () {
+function setupTicketSearch() {
   const searchInput = document.getElementById("ticketSearch");
+  if (!searchInput) return;
 
-  if (searchInput) {
-    searchInput.addEventListener("input", function () {
-      const query = searchInput.value.trim().toLowerCase();
-      const tickets = document.querySelectorAll(".story-card");
+  searchInput.addEventListener("input", function () {
+    const query = searchInput.value.trim().toLowerCase();
+    const tickets = document.querySelectorAll(".story-card");
 
-      tickets.forEach(ticket => {
-        const titleEl = ticket.querySelector(".story-title");
-        const titleText = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
+    tickets.forEach(ticket => {
+      const titleEl = ticket.querySelector(".story-title");
+      const titleText = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
 
-        // Show ticket if query matches anywhere in the title
-        if (titleText.includes(query)) {
-          ticket.style.display = "";
-        } else {
-          ticket.style.display = "none";
-        }
-      });
+      // Match partial ID or text
+      if (titleText.includes(query)) {
+        ticket.style.display = "";
+      } else {
+        ticket.style.display = "none";
+      }
     });
-  }
-});
+  });
+}
+
+// call it when DOM is ready
+document.addEventListener("DOMContentLoaded", setupTicketSearch);
+
+// also call it whenever stories are updated (main.js already has notifyStoriesUpdated)
+window.notifyStoriesUpdated = function() {
+  // existing code...
+  console.log("Stories updated, search still active.");
+  setupTicketSearch(); // ensure search is wired up
+};
 
