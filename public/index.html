@@ -2871,7 +2871,43 @@ body::-webkit-scrollbar {
   
 }
 </style>
+<style>
+     .search-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
 
+#ticketSearch {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 25px 0 0 25px;
+  font-size: 14px;
+  outline: none;
+}
+
+#ticketSearch:focus {
+  border-color: #673ab7;
+  box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
+}
+
+#filterBtn {
+  background: white;
+  border: 1px solid #ddd;
+  border-left: none;
+  border-radius: 0 25px 25px 0;
+  padding: 0 12px;
+  cursor: pointer;
+  height: 100%;
+}
+
+#filterBtn i {
+  color: #666;
+  font-size: 16px;
+}
+
+</style>
 </head>
 <body>
 
@@ -3126,6 +3162,12 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
 </div>
 </div>
 <div class="rightbar" id="storyListContainer">
+<!-- Search box -->
+<div class="search-container">
+  <input type="text" id="ticketSearch" placeholder="Search and filter tickets...">
+  <button id="filterBtn"><i class="fa fa-filter"></i></button>
+</div>
+
 <!-- Added ID to the ADD TICKET button -->
 <button class="add-ticket-btn" id="addTicketBtn"><span>+</span>ADD TICKET</button>
 <!-- The story list CONTAINER with no hardcoded stories -->
