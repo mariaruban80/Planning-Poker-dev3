@@ -2476,7 +2476,7 @@ font-size: 15px;
   border-left: 4px solid #3b82f6; /* Blue left border like in host1 image */
   border-radius: 8px;
   min-height: 90px;
-  max-width: 380px; /* Much smaller width to match host1 */
+  max-width: 480px; /* Much smaller width to match host1 */
   width: 100%;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -2709,6 +2709,8 @@ body::-webkit-scrollbar {
   min-height: 120px;
   display: flex;
   flex-direction: column;
+    width: 100% !important;      
+  max-width: 100% !important;  /* match add ticket button width */
 }
 
 .story-card:hover {
