@@ -2,6 +2,7 @@
 let userName = sessionStorage.getItem('userName');
 let processingCSVData = false;
 let isCurrentlyEditingStoryPoints = false;
+let revealedStoryPoints = {}; 
 const isPremiumUser = false;
 
 // Import socket functionality
@@ -378,6 +379,14 @@ window.updateTicketFromModal = function(ticketData) {
     socket.emit('updateTicket', ticketData);
   }
 };
+
+function updateStoryCardPoint(storyId, value) {
+    const card = document.querySelector(`.story-card[data-story-id="${storyId}"] .story-points`);
+    if (card) {
+        card.textContent = value;
+    }
+}
+
 
 /**
  * Update ticket in the UI
@@ -2303,7 +2312,9 @@ function setupRevealResetButtons() {
 
       const pointsEl = document.getElementById(`story-points-${storyId}`);
       if (pointsEl) {
-        pointsEl.textContent = '?';
+       // pointsEl.textContent = '?';
+       pointsEl.textContent = revealedStoryPoints[story.id] || '?';
+
         pointsEl.classList.remove('revealed');
       }
         
@@ -3031,6 +3042,15 @@ function applyVotesToUI(votes, hideValues) {
   Object.entries(votes).forEach(([userId, vote]) => {
     updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
   });
+
+    if (!hideValues) {
+        const finalPointValue = findMostCommonVote(votes);  
+        const currentStoryId = getCurrentStoryId(); 
+        if (currentStoryId) {
+            revealedStoryPoints[currentStoryId] = finalPointValue;
+            updateStoryCardPoint(currentStoryId, finalPointValue);
+        }
+    }
 }
 
 /**
