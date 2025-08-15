@@ -4288,15 +4288,18 @@ function updateStoryPointsBubble(storyId, points) {
 // for search functionaity 
 document.addEventListener("DOMContentLoaded", function () {
   const searchInput = document.getElementById("ticketSearch");
-  
+
   if (searchInput) {
     searchInput.addEventListener("input", function () {
-      const query = searchInput.value.toLowerCase();
+      const query = searchInput.value.trim().toLowerCase();
       const tickets = document.querySelectorAll(".story-card");
 
       tickets.forEach(ticket => {
-        const title = ticket.querySelector(".story-title")?.textContent.toLowerCase() || "";
-        if (title.includes(query)) {
+        const titleEl = ticket.querySelector(".story-title");
+        const titleText = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
+
+        // Show ticket if query matches anywhere in the title
+        if (titleText.includes(query)) {
           ticket.style.display = "";
         } else {
           ticket.style.display = "none";
@@ -4305,3 +4308,4 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
