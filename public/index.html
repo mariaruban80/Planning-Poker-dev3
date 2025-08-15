@@ -1548,6 +1548,23 @@ white-space: nowrap;
 }
 
 
+
+.story-id {
+  display: inline-block;
+  background: linear-gradient(135deg, #673ab7, #8b5cf6);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(103, 58, 183, 0.2);
+  line-height: 1.2;
+  width: auto;
+  max-width: max-content;
+}
+
 </style>
 
 
@@ -2478,6 +2495,9 @@ font-size: 15px;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
 }
 
+/* Story ID at the top - purple and bold like PROJ-141 */
+
+
 /* Story description/title */
 .story-title {
   flex-grow: 1;
@@ -2672,7 +2692,7 @@ body::-webkit-scrollbar {
 }
 
 </style>
-
+/* style to over right story card */     
 <style>
      .story-card {
   position: relative;
@@ -2702,20 +2722,7 @@ body::-webkit-scrollbar {
 }
 
 /* Story ID Badge */
-.story-id {
-  display: inline-block;
-  background: linear-gradient(135deg, #673ab7, #8b5cf6);
-  color: white;
-  font-size: 11px;        /* final size */
-  font-weight: 700;
-  padding: 3px 6px;       /* final padding */
-  border-radius: 6px;
-  margin-bottom: 8px;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(103, 58, 183, 0.2);
-  line-height: 1.2;
-}
-}
+
 
 /* Story Title */
 .story-title {
@@ -2861,10 +2868,7 @@ body::-webkit-scrollbar {
     font-size: 13px;
   }
   
-  .story-id {
-    font-size: 11px;
-    padding: 3px 6px;
-  }
+  
 }
 </style>
 
