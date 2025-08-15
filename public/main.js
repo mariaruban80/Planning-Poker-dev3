@@ -3069,7 +3069,7 @@ function resetAllVoteVisuals() {
     el.classList.remove('has-voted');
   });
  document.querySelectorAll('.story-points').forEach(pointsEl => {
-    pointsEl.textContent = revealedStoryPoints[story.id] || '?';
+    pointsEl.textContent = '?';
     pointsEl.classList.remove('revealed');
   });
   }                                                       
