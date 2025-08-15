@@ -2312,8 +2312,8 @@ function setupRevealResetButtons() {
 
       const pointsEl = document.getElementById(`story-points-${storyId}`);
       if (pointsEl) {
-        pointsEl.textContent = '?';
-      // pointsEl.textContent = revealedStoryPoints[story.id] || '?';
+     //   pointsEl.textContent = '?';
+      pointsEl.textContent = revealedStoryPoints[story.id] || '?';
 
         pointsEl.classList.remove('revealed');
       }
