@@ -2476,8 +2476,8 @@ font-size: 15px;
   border-left: 4px solid #3b82f6; /* Blue left border like in host1 image */
   border-radius: 8px;
   min-height: 90px;
-  max-width: 480px; /* Much smaller width to match host1 */
-  width: 100%;
+    width: 100% !important;      /* fills parent width */
+  max-width: 100% !important; 
   cursor: pointer;
   transition: all 0.2s ease;
   background-color: white;
@@ -2641,7 +2641,7 @@ font-size: 15px;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 360px; /* Reduce container width significantly */
+  max-width: 380px; /* Reduce container width significantly */
 }
 
 
@@ -2661,7 +2661,7 @@ font-size: 15px;
   
 
   .story-container {
-    max-width: 100%;
+   max-width: 380px;  
   }
 }
 .menu-icon {
@@ -5174,7 +5174,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         /* Story list scrolling */
         .story-container {
-          max-height: 400px;
+          max-height: 380px;
           overflow-y: auto;
         }
         
