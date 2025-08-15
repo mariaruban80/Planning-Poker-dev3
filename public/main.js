@@ -4285,6 +4285,7 @@ function updateStoryPointsBubble(storyId, points) {
     if (!bubble) return;
     bubble.textContent = points !== undefined && points !== null ? points : '';
 }
+
 function setupTicketSearch() {
   const searchInput = document.getElementById("ticketSearch");
   if (!searchInput) return;
@@ -4295,18 +4296,22 @@ function setupTicketSearch() {
 
     tickets.forEach(ticket => {
       const titleEl = ticket.querySelector(".story-title");
-      const descEl = ticket.querySelector(".story-description"); 
-      const keyEl = ticket.querySelector(".story-key"); 
+      const descEl  = ticket.querySelector(".story-description"); 
+      const keyEl   = ticket.querySelector(".story-key"); 
 
       const titleText = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
       const descText  = descEl ? descEl.textContent.trim().toLowerCase() : "";
       const keyText   = keyEl ? keyEl.textContent.trim().toLowerCase() : "";
+      const idText    = ticket.getAttribute("data-id") 
+                        ? ticket.getAttribute("data-id").trim().toLowerCase() 
+                        : "";
 
-      // Show if query matches ANY field
+      // Show if query matches ANY field (including ID)
       if (
         titleText.includes(query) ||
         descText.includes(query) ||
-        keyText.includes(query)
+        keyText.includes(query) ||
+        idText.includes(query)     // ✅ search by ID
       ) {
         ticket.style.display = "";
       } else {
@@ -4315,6 +4320,15 @@ function setupTicketSearch() {
     });
   });
 }
+
+// call it when DOM is ready
+document.addEventListener("DOMContentLoaded", setupTicketSearch);
+
+// also call it whenever stories are updated (main.js already has notifyStoriesUpdated)
+window.notifyStoriesUpdated = function() {
+  console.log("Stories updated, search still active.");
+  setupTicketSearch();
+};
 
 
 // call it when DOM is ready
