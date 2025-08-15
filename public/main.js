@@ -3069,8 +3069,8 @@ function resetAllVoteVisuals() {
     el.classList.remove('has-voted');
   });
  document.querySelectorAll('.story-points').forEach(pointsEl => {
-    pointsEl.textContent = '?';
-//  pointsEl.textContent = revealedStoryPoints[story.id] || '?';
+//    pointsEl.textContent = '?';
+  pointsEl.textContent = revealedStoryPoints[story.id] || '?';
     pointsEl.classList.remove('revealed');
   });
   }                                                       
