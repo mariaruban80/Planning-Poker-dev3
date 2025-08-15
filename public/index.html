@@ -1580,35 +1580,33 @@ white-space: nowrap;
 }
 .profile-menu-name { font-weight: bold; font-size: 18px; }
 .profile-menu-divider { border-bottom: 1px solid #eee; margin:8px 0; }
-
- /* All menu icons have same size and spacing */
-.profile-menu-item svg,
-.profile-menu-item i,
-.profile-menu-item img {
-  margin-right: 8px;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  vertical-align: middle;
-}      
 .profile-menu-item {
-  color: #673ab7;
+ display: block;
+  width: 100%;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 14px;
   font-weight: 600;
-}
-
-.profile-menu-item:hover {
-  background-color: #f0e6ff;
-  color: #501ca3;
-}
-
-/* Ensure icons also change color on hover */
-.profile-menu-item svg {
   color: #673ab7;
+  font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
-
-.profile-menu-item:hover svg {
+.profile-menu-item:hover {  
+  background: #f0e6ff;
   color: #501ca3;
 }
+.profile-menu-item.logout { 
+  color: #e53935;
+  font-weight: 700;
+}
+  .profile-menu-item.logout:hover {
+  background-color: #fee;
+  color: #c62828;
+}
+
 .flag-icon {
   width: 24px; /* Size of the flag */
   height: 18px; /* Keep aspect ratio correct */
@@ -2663,7 +2661,7 @@ font-size: 15px;
   color: #501ca3;
 }
 .profile-menu-item.logout .menu-icon {
-  color: #673ab7; /* Match your logout red */
+  color:  #673ab7; 
 }
 
 .profile-menu-item.logout:hover .menu-icon {
@@ -2701,25 +2699,18 @@ font-size: 15px;
     </div>
   </div>
 <!-- Change Language -->
-<button class="profile-menu-item" id="changeLanguageBtn">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
-       width="20" height="20" fill="currentColor" class="menu-icon">
-    <path d="M320 0C143.6 0 0 143.6 0 320S143.6 640 320 640 640 496.4 640 320 496.4 0 320 0zm0 64c70.7 0 134.8 28.3 181.4 74.6L394 246.8c-7.6-17.6-16.6-34.6-27-50.6-11.8-18.3-27.3-35.8-45.6-50.4V64zM128 320c0-70.7 28.3-134.8 74.6-181.4L246.8 246c-17.6 7.6-34.6 16.6-50.6 27-18.3 11.8-35.8 27.3-50.4 45.6H128zm192 256c-70.7 0-134.8-28.3-181.4-74.6L246 394c7.6 17.6 16.6 34.6 27 50.6 11.8 18.3 27.3 35.8 45.6 50.4V576zm0-192c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64z"/>
-  </svg>
-  Change Language
-</button>
+<button class="profile-menu-item" onclick="showLanguageModal()">
+              <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" /> Change Language
+            </button>   
 
 <!-- Import from CSV -->
-<button class="profile-menu-item" id="importCsvBtn">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
-       width="20" height="20" fill="currentColor" class="menu-icon">
-    <path d="M192 64C156.7 64 128 92.7 128 128L128 368L310.1 368L279.1 337C269.7 327.6 269.7 312.4 279.1 303.1C288.5 293.8 303.7 293.7 313 303.1L385 375.1C394.4 384.5 394.4 399.7 385 409L313 481C303.6 490.4 288.4 490.4 279.1 481C269.8 471.6 269.7 456.4 279.1 447.1L310.1 416.1L128 416.1L128 512.1C128 547.4 156.7 576.1 192 576.1L448 576.1C483.3 576.1 512 547.4 512 512.1L512 234.6C512 217.6 505.3 201.3 493.3 189.3L386.7 82.7C374.7 70.7 358.5 64 341.5 64L192 64zM453.5 240L360 240C346.7 240 336 229.3 336 216L336 122.5L453.5 240z"/>
-  </svg>
-  Import from CSV
-</button>
+<button class="profile-menu-item" id="uploadTicketMenuBtn"> <svg xmlns="http://www.w3.org/2000/svg" 
+viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-icon">
+<path d="M192 64C156.7 64 128 92.7 128 128L128 368L310.1 368L279.1 337C269.7 327.6 269.7 312.4 279.1 303.1C288.5 293.8 303.7 293.7 313 303.1L385 375.1C394.4 384.5 394.4 399.7 385 409L313 481C303.6 490.4 288.4 490.4 279.1 481C269.8 471.6 269.7 456.4 279.1 447.1L310.1 416.1L128 416.1L128 512.1C128 547.4 156.7 576.1 192 576.1L448 576.1C483.3 576.1 512 547.4 512 512.1L512 234.6C512 217.6 505.3 201.3 493.3 189.3L386.7 82.7C374.7 70.7 358.5 64 341.5 64L192 64zM453.5 240L360 240C346.7 240 336 229.3 336 216L336 122.5L453.5 240z"/> </svg> Import from CSV </button>
+
 
 <!-- Logout -->
-<button class="profile-menu-item" id="logOffBtn">
+  <button class="profile-menu-item logout" id="logoutMenuBtn">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
        width="20" height="20" fill="currentColor" class="menu-icon">
     <path d="M224 160C241.7 160 256 145.7 256 128C256 110.3 241.7 96 224 96L160 96C107 96 64 139 64 192L64 448C64 501 107 544 160 544L224 544C241.7 544 256 529.7 256 512C256 494.3 241.7 480 224 480L160 480C142.3 480 128 465.7 128 448L128 192C128 174.3 142.3 160 160 160L224 160zM566.6 342.6C579.1 330.1 579.1 309.8 566.6 297.3L438.6 169.3C426.1 156.8 405.8 156.8 393.3 169.3C380.8 181.8 380.8 202.1 393.3 214.6L466.7 288L256 288C238.3 288 224 302.3 224 320C224 337.7 238.3 352 256 352L466.7 352L393.3 425.4C380.8 437.9 380.8 458.2 393.3 470.7C405.8 483.2 426.1 483.2 438.6 470.7L566.6 342.7z"/>
