@@ -1580,31 +1580,34 @@ white-space: nowrap;
 }
 .profile-menu-name { font-weight: bold; font-size: 18px; }
 .profile-menu-divider { border-bottom: 1px solid #eee; margin:8px 0; }
+
+ /* All menu icons have same size and spacing */
+.profile-menu-item svg,
+.profile-menu-item i,
+.profile-menu-item img {
+  margin-right: 8px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}      
 .profile-menu-item {
- display: block;
-  width: 100%;
-  padding: 12px 20px;
-  background: none;
-  border: none;
-  text-align: left;
-  font-size: 14px;
-  font-weight: 600;
   color: #673ab7;
-  font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  cursor: pointer;
-  transition: background 0.2s ease;
+  font-weight: 600;
 }
-.profile-menu-item:hover {  
-  background: #f0e6ff;
+
+.profile-menu-item:hover {
+  background-color: #f0e6ff;
   color: #501ca3;
 }
-.profile-menu-item.logout { 
-  color: #e53935;
-  font-weight: 700;
+
+/* Ensure icons also change color on hover */
+.profile-menu-item svg {
+  color: #673ab7;
 }
-  .profile-menu-item.logout:hover {
-  background-color: #fee;
-  color: #c62828;
+
+.profile-menu-item:hover svg {
+  color: #501ca3;
 }
 .flag-icon {
   width: 24px; /* Size of the flag */
@@ -2699,8 +2702,7 @@ font-size: 15px;
   </div>
   <div class="profile-menu-divider"></div>
   <button class="profile-menu-item" onclick="showLanguageModal()">
-              <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />
-              Change Language
+              <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" /> Change Language
             </button>   
 <button class="profile-menu-item" id="uploadTicketMenuBtn"> <svg xmlns="http://www.w3.org/2000/svg" 
 viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-icon">
