@@ -1615,11 +1615,18 @@ white-space: nowrap;
   vertical-align: middle; /* Fix vertical alignment (if necessary) */
 }
     .profile-menu-item i {
-  margin-right: 8px;
-  width: 16px;
-  text-align: center;
-  color: #673ab7;
-  font-size: 14px;
+    /* Ensure Font Awesome styles are applied */
+       font-style: normal !important;
+       font-variant: normal !important;
+       text-rendering: auto !important;
+       -webkit-font-smoothing: antialiased !important;
+       /* Set a specific color to test */
+       color: #673ab7 !important;
+       /* Add sizing and spacing */
+       display: inline-block;
+       width: 1.28571429em;
+       text-align: center;
+       margin-right: 0.5em;
 }
 
 .profile-menu-item:hover i {
