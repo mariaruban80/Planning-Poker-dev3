@@ -112,14 +112,10 @@
   color: #666;
   font-size: 16px;
   transition: all 0.2s;
-  opacity: 0.7;
+  opacity: 1;
 }
 
-.story-menu-btn:hover {
-  background-color: #f5f5f5;
-  opacity: 1;
-  transform: scale(1.1);
-}
+.story-menu-btn:hover { transform: scale(1.1); }
 
 .story-menu-dropdown {
   position: absolute;
@@ -1565,6 +1561,15 @@ white-space: nowrap;
   max-width: max-content;
 }
 
+
+.story-card {
+  width: 100% !important;      /* fills parent width */
+  max-width: 100% !important;  /* match Add Ticket button width */
+}
+.story-container {
+  max-width: 380px;            /* keeps consistent column width */
+}
+
 </style>
 
 
@@ -2629,10 +2634,7 @@ font-size: 15px;
   transition: all 0.2s;
 }
 
-.story-menu-btn:hover {
-  background-color: #f3f4f6;
-  color: #374151;
-}
+.story-menu-btn:hover { transform: scale(1.1); }
 
 /* Story list container adjustments */
 .story-container {
@@ -2812,11 +2814,7 @@ body::-webkit-scrollbar {
   backdrop-filter: blur(4px);
 }
 
-.story-menu-btn:hover {
-  background: white;
-  color: #673ab7;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
+.story-menu-btn:hover { transform: scale(1.1); }
 
 /* Feature Tag (optional) */
 .story-feature-tag {
