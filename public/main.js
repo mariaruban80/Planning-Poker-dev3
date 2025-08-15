@@ -4285,3 +4285,23 @@ function updateStoryPointsBubble(storyId, points) {
     if (!bubble) return;
     bubble.textContent = points !== undefined && points !== null ? points : '';
 }
+// for search functionaity 
+document.addEventListener("DOMContentLoaded", function () {
+  const searchInput = document.getElementById("ticketSearch");
+  
+  if (searchInput) {
+    searchInput.addEventListener("input", function () {
+      const query = searchInput.value.toLowerCase();
+      const tickets = document.querySelectorAll(".story-card");
+
+      tickets.forEach(ticket => {
+        const title = ticket.querySelector(".story-title")?.textContent.toLowerCase() || "";
+        if (title.includes(query)) {
+          ticket.style.display = "";
+        } else {
+          ticket.style.display = "none";
+        }
+      });
+    });
+  }
+});
