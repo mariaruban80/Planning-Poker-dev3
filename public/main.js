@@ -4295,10 +4295,19 @@ function setupTicketSearch() {
 
     tickets.forEach(ticket => {
       const titleEl = ticket.querySelector(".story-title");
-      const titleText = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
+      const descEl = ticket.querySelector(".story-description"); 
+      const keyEl = ticket.querySelector(".story-key"); 
 
-      // Match partial ID or text
-      if (titleText.includes(query)) {
+      const titleText = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
+      const descText  = descEl ? descEl.textContent.trim().toLowerCase() : "";
+      const keyText   = keyEl ? keyEl.textContent.trim().toLowerCase() : "";
+
+      // Show if query matches ANY field
+      if (
+        titleText.includes(query) ||
+        descText.includes(query) ||
+        keyText.includes(query)
+      ) {
         ticket.style.display = "";
       } else {
         ticket.style.display = "none";
@@ -4306,6 +4315,7 @@ function setupTicketSearch() {
     });
   });
 }
+
 
 // call it when DOM is ready
 document.addEventListener("DOMContentLoaded", setupTicketSearch);
@@ -4316,4 +4326,21 @@ window.notifyStoriesUpdated = function() {
   console.log("Stories updated, search still active.");
   setupTicketSearch(); // ensure search is wired up
 };
+
+function setupFilterButton() {
+  const filterBtn = document.getElementById("filterBtn");
+  const searchInput = document.getElementById("ticketSearch");
+  if (!filterBtn || !searchInput) return;
+
+  filterBtn.addEventListener("click", function () {
+    searchInput.value = "";
+    const tickets = document.querySelectorAll(".story-card");
+    tickets.forEach(ticket => ticket.style.display = "");
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupTicketSearch();
+  setupFilterButton();
+});
 
