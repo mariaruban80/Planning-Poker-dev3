@@ -1535,7 +1535,9 @@ socket.on('resetVotes', ({ storyId }) => {
       }
 
       // ✅ Broadcast reset to all clients with consistent event name
-      io.to(roomId).emit('resetVotes', { storyId });
+   
+        io.to(roomId).emit('votesReset', { storyId });
+
     }
   }
 });
