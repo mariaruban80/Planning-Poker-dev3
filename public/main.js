@@ -1036,53 +1036,55 @@ socket.on('storyPointsUpdate', ({ storyId, points }) => {
     updateVoteCountUI(storyId);
   });
   
-  socket.on('resyncState', ({ tickets, votesPerStory: serverVotes, votesRevealed: serverRevealed, deletedStoryIds: serverDeletedIds }) => {
-    console.log('[SOCKET] Received resyncState from server');
+socket.on('resyncState', ({ tickets, votesPerStory: serverVotes, votesRevealed: serverRevealed, deletedStoryIds: serverDeletedIds }) => {
+  console.log('[SOCKET] Received resyncState from server');
 
-    if (Array.isArray(serverDeletedIds)) {
-      serverDeletedIds.forEach(id => deletedStoryIds.add(id));
-      saveDeletedStoriesToStorage(roomId);
-    }
+  if (Array.isArray(serverDeletedIds)) {
+    serverDeletedIds.forEach(id => deletedStoryIds.add(id));
+    saveDeletedStoriesToStorage(roomId);
+  }
 
-    const filteredTickets = (tickets || []).filter(ticket => !deletedStoryIds.has(ticket.id));
-    if (Array.isArray(filteredTickets)) {
-      processAllTickets(filteredTickets);
-    }
+  const filteredTickets = (tickets || []).filter(ticket => !deletedStoryIds.has(ticket.id));
+  if (Array.isArray(filteredTickets)) {
+    processAllTickets(filteredTickets);
+  }
 
-    if (serverVotes) {
-      for (const [storyId, votes] of Object.entries(serverVotes)) {
-        if (deletedStoryIds.has(storyId)) continue;
+  if (serverVotes) {
+    for (const [storyId, votes] of Object.entries(serverVotes)) {
+      if (deletedStoryIds.has(storyId)) continue;
 
-        if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
+      if (!votesPerStory[storyId]) votesPerStory[storyId] = {};
 
-        for (const [userId, vote] of Object.entries(votes)) {
-          mergeVote(storyId, userId, vote);
-        }
+      for (const [userId, vote] of Object.entries(votes)) {
+        mergeVote(storyId, userId, vote);
+      }
 
-        const isRevealed = serverRevealed && serverRevealed[storyId];
-        votesRevealed[storyId] = isRevealed;
+      const isRevealed = serverRevealed && serverRevealed[storyId];
+      votesRevealed[storyId] = isRevealed;
 
-        const currentId = getCurrentStoryId();
-        if (storyId === currentId) {
-          if (isRevealed) {
-            applyVotesToUI(votes, false);
-            handleVotesRevealed(storyId, votes);
-            updateVoteCountUI(storyId);
-          } else {
-            applyVotesToUI(votes, true);
-            updateVoteCountUI(storyId);
-          }
-        } else if (isRevealed) {
+      const currentId = getCurrentStoryId();
+      if (storyId === currentId) {
+        if (isRevealed) {
+          applyVotesToUI(votes, false);
           handleVotesRevealed(storyId, votes);
-          updateVoteCountUI(storyId);
+        } else {
+          applyVotesToUI(votes, true);
         }
+        updateVoteCountUI(storyId);   // ✅ always refresh bubble for current story
+      } else {
+        if (isRevealed) {
+          handleVotesRevealed(storyId, votes);
+        }
+        updateVoteCountUI(storyId);   // ✅ always refresh bubble for *non-current* stories too
       }
     }
+  }
 
-    console.log('[RESTORE] Skipped manual session restoration — server handles vote recovery');
-    window.currentVotesPerStory = votesPerStory;
-    refreshVoteDisplay();
-  });
+  console.log('[RESTORE] Skipped manual session restoration — server handles vote recovery');
+  window.currentVotesPerStory = votesPerStory;
+  refreshVoteDisplay();
+});
+
   
   socket.on('deleteStory', ({ storyId }) => {
     console.log('[SOCKET] Story deletion event received:', storyId);
