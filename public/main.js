@@ -1823,6 +1823,9 @@ function handleVotesRevealed(storyId, votes) {
     });
   }
 
+  // ✅ STORE THE REVEALED STORY POINTS
+  revealedStoryPoints[storyId] = mostCommonVote;
+
   // Calculate numeric average
   const numericVotes = uniqueVotes
     .map(v => v === '½' ? 0.5 : (isNaN(Number(v)) ? null : Number(v)))
@@ -1876,7 +1879,6 @@ function handleVotesRevealed(storyId, votes) {
   // Update vote count display in the card's meta section
   updateVoteCountUI(storyId);
 }
-
 /**
  * Setup Add Ticket button
  */
@@ -3045,14 +3047,15 @@ function applyVotesToUI(votes, hideValues) {
     updateVoteVisuals(userId, hideValues ? '👍' : vote, true);
   });
 
-    if (!hideValues) {
-        const finalPointValue = findMostCommonVote(votes);  
-        const currentStoryId = getCurrentStoryId(); 
-        if (currentStoryId) {
-            revealedStoryPoints[currentStoryId] = finalPointValue;
-            updateStoryCardPoint(currentStoryId, finalPointValue);
-        }
+  // ✅ STORE AND UPDATE STORY POINTS WHEN VOTES ARE REVEALED
+  if (!hideValues) {
+    const finalPointValue = findMostCommonVote(votes);  
+    const currentStoryId = getCurrentStoryId(); 
+    if (currentStoryId) {
+      revealedStoryPoints[currentStoryId] = finalPointValue;
+      updateStoryCardPoint(currentStoryId, finalPointValue);
     }
+  }
 }
 
 /**
@@ -3070,12 +3073,21 @@ function resetAllVoteVisuals() {
   document.querySelectorAll('.has-voted').forEach(el => {
     el.classList.remove('has-voted');
   });
- document.querySelectorAll('.story-points').forEach(pointsEl => {
- pointsEl.textContent = '?';
-//  pointsEl.textContent = revealedStoryPoints[story.id] || '?';
-    pointsEl.classList.remove('revealed');
+
+  // ✅ PRESERVE REVEALED STORY POINTS - don't reset if already revealed
+  document.querySelectorAll('.story-points').forEach(pointsEl => {
+    const storyId = pointsEl.id.replace('story-points-', '');
+    if (revealedStoryPoints[storyId]) {
+      // Keep the revealed value and styling
+      pointsEl.textContent = revealedStoryPoints[storyId];
+      pointsEl.classList.add('revealed');
+    } else {
+      // Only reset unrevealed story points
+      pointsEl.textContent = '?';
+      pointsEl.classList.remove('revealed');
+    }
   });
-  }                                                       
+}                                               
 
 /**
  * Render the current story
@@ -3994,41 +4006,45 @@ case 'storyPointsUpdate':
       }
       break;
       
-    case 'votesReset':
-      if (message.storyId && deletedStoryIds.has(message.storyId)) {
-        console.log(`[VOTE] Ignoring vote reset for deleted story: ${message.storyId}`);
-        return;
-      }
-      
-      if (message.storyId) {
-        if (votesPerStory[message.storyId]) {
-          votesPerStory[message.storyId] = {};
-        }
-        
-        votesRevealed[message.storyId] = false;
-        
-        const planningCardsSection = document.querySelector('.planning-cards-section');
-        if (planningCardsSection) {
-          planningCardsSection.classList.remove('hidden-until-init');
-          planningCardsSection.style.display = 'block';
-        }
-        
-        const statsContainers = document.querySelectorAll(`.vote-statistics-container[data-story-id="${message.storyId}"]`);
-        statsContainers.forEach(container => {
-          container.style.display = 'none';
-        });
-        
-        const currentId = getCurrentStoryId();
-        if (message.storyId === currentId) {
-          resetAllVoteVisuals();
-        }
-        
-        // **FIXED: Update vote count bubble after reset**
-        updateVoteCountUI(message.storyId);
-        
-        console.log(`[VOTE] Votes reset for story: ${message.storyId}, planning cards should now be visible`);
-      }
-      break;
+case 'votesReset':
+  if (message.storyId && deletedStoryIds.has(message.storyId)) {
+    console.log(`[VOTE] Ignoring vote reset for deleted story: ${message.storyId}`);
+    return;
+  }
+  
+  if (message.storyId) {
+    if (votesPerStory[message.storyId]) {
+      votesPerStory[message.storyId] = {};
+    }
+    
+    votesRevealed[message.storyId] = false;
+    
+    // ✅ CLEAR THE REVEALED STORY POINTS
+    if (revealedStoryPoints[message.storyId]) {
+      delete revealedStoryPoints[message.storyId];
+    }
+    
+    const planningCardsSection = document.querySelector('.planning-cards-section');
+    if (planningCardsSection) {
+      planningCardsSection.classList.remove('hidden-until-init');
+      planningCardsSection.style.display = 'block';
+    }
+    
+    const statsContainers = document.querySelectorAll(`.vote-statistics-container[data-story-id="${message.storyId}"]`);
+    statsContainers.forEach(container => {
+      container.style.display = 'none';
+    });
+    
+    const currentId = getCurrentStoryId();
+    if (message.storyId === currentId) {
+      resetAllVoteVisuals();
+    }
+    
+    updateVoteCountUI(message.storyId);
+    
+    console.log(`[VOTE] Votes reset for story: ${message.storyId}, planning cards should now be visible`);
+  }
+  break;
       
     case 'storySelected':
       if (typeof message.storyIndex === 'number') {
