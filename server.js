@@ -1503,40 +1503,43 @@ socket.on('castVote', ({ vote, targetUserId, storyId, userName }) => {
   });
 
   // Handle vote reset for current story
-  socket.on('resetVotes', ({ storyId }) => {
-    const roomId = socket.data.roomId;
-    if (roomId && rooms[roomId]) {
-      // Update room activity timestamp
-      rooms[roomId].lastActivity = Date.now();
-      
-      // Reset votes for this story
-      if (rooms[roomId].votesPerStory?.[storyId]) {
-        rooms[roomId].votesPerStory[storyId] = {};
-        
-        // Also reset revealed state
-        if (rooms[roomId].votesRevealed) {
-          rooms[roomId].votesRevealed[storyId] = false;
-        }
-       if (rooms[roomId].storyPoints && rooms[roomId].storyPoints[storyId]) {
+socket.on('resetVotes', ({ storyId }) => {
+  const roomId = socket.data.roomId;
+  if (roomId && rooms[roomId]) {
+    // Update room activity timestamp
+    rooms[roomId].lastActivity = Date.now();
+
+    // Reset votes for this story
+    if (rooms[roomId].votesPerStory?.[storyId]) {
+      rooms[roomId].votesPerStory[storyId] = {};
+
+      // Reset revealed state
+      if (rooms[roomId].votesRevealed) {
+        rooms[roomId].votesRevealed[storyId] = false;
+      }
+
+      // Reset story points if tracked
+      if (rooms[roomId].storyPoints && rooms[roomId].storyPoints[storyId]) {
         delete rooms[roomId].storyPoints[storyId];
         // Broadcast story points reset to all clients
         io.to(roomId).emit('storyPointsUpdate', { storyId, points: '?' });
       }
-        
-        // Also clear votes in username-based storage
-        if (rooms[roomId].userNameVotes) {
-          for (const userName in rooms[roomId].userNameVotes) {
-            if (rooms[roomId].userNameVotes[userName][storyId]) {
-              delete rooms[roomId].userNameVotes[userName][storyId];
-            }
+
+      // Clear votes in username-based storage
+      if (rooms[roomId].userNameVotes) {
+        for (const userName in rooms[roomId].userNameVotes) {
+          if (rooms[roomId].userNameVotes[userName][storyId]) {
+            delete rooms[roomId].userNameVotes[userName][storyId];
           }
         }
-        
-        // Broadcast reset to all clients
-        io.to(roomId).emit('votesReset', { storyId });
       }
+
+      // ✅ Broadcast reset to all clients with consistent event name
+      io.to(roomId).emit('resetVotes', { storyId });
     }
-  });
+  }
+});
+
 
   // Handle story changes
   socket.on('storyChange', ({ story }) => {
