@@ -414,27 +414,26 @@ socket.on('connect_error', (error) => {
     handleMessage({ type: 'restoreUserVote', storyId, vote });
   });
 
-  socket.on('votesRevealed', ({ storyId }) => {
-    // Check if we should ignore this because the story is deleted
-    if (lastKnownRoomState.deletedStoryIds.includes(storyId)) {
-      console.log(`[SOCKET] Ignoring vote reveal for deleted story: ${storyId}`);
-      return;
-    }
-    
-    // Store in last known state - ensure initialization
-    if (!lastKnownRoomState.votesRevealed) lastKnownRoomState.votesRevealed = {};
-    lastKnownRoomState.votesRevealed[storyId] = true;
-    
-    // Save revealed state to session storage
-    try {
-      const revealedData = JSON.stringify(lastKnownRoomState.votesRevealed);
-      sessionStorage.setItem(`revealed_${roomIdentifier}`, revealedData);
-    } catch (err) {
-      console.warn('[SOCKET] Could not save revealed state to sessionStorage:', err);
-    }
-    
-    handleMessage({ type: 'votesRevealed', storyId });
-  });
+ socket.on('votesRevealed', ({ storyId }) => {
+  if (!lastKnownRoomState.votesRevealed) lastKnownRoomState.votesRevealed = {};
+  lastKnownRoomState.votesRevealed[storyId] = true;
+
+  // ✅ Make sure main.js sees it too
+  if (!window.votesRevealed) window.votesRevealed = {};
+  window.votesRevealed[storyId] = true;
+
+  // Persist locally
+  try {
+    sessionStorage.setItem(
+      `revealed_${roomId}`,
+      JSON.stringify(lastKnownRoomState.votesRevealed)
+    );
+  } catch (err) {
+    console.warn('[SOCKET] Could not save revealed state:', err);
+  }
+
+  handleMessage({ type: 'votesRevealed', storyId });
+});
 
   socket.on('deleteStory', ({ storyId }) => {
     console.log('[SOCKET] Story deletion event received:', storyId);
@@ -1053,6 +1052,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
