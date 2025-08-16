@@ -181,6 +181,16 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('profileMenuAvatar').src = document.querySelector('#headerUserAvatar img')?.src || '';
       document.getElementById('profileMenuName').textContent = sessionStorage.getItem('userName') || "User";
       document.getElementById('profileMenuEmail').textContent = sessionStorage.getItem('userEmail') || "";
+      const isHost = isCurrentUserHost();
+    const uploadBtn = document.getElementById('uploadTicketMenuBtn');
+  const exportBtn = document.getElementById('exportToCsvMenuBtn');
+
+  if (uploadBtn) {
+    uploadBtn.style.display = isHost ? 'flex' : 'none';
+  }
+  if (exportBtn) {
+    exportBtn.style.display = isHost ? 'flex' : 'none';
+  }
     });
 
     // Hide menu if clicking outside
@@ -294,6 +304,59 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     reader.readAsText(file);
   }
+
+/** ---------- EXPORT TO CSV MENU OPTION ---------- **/
+const exportToCsvBtn = document.getElementById('exportToCsvMenuBtn');
+if (exportToCsvBtn) {
+  exportToCsvBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const exportModal = document.getElementById('exportCsvModal');
+    if (exportModal) {
+      exportModal.style.display = 'flex';
+      generateExportPreview(); // Generate initial preview
+    }
+    const menu = document.getElementById('profileMenu');
+    if (menu) menu.classList.remove('show');
+  });
+}
+
+/** ---------- EXPORT MODAL HANDLERS ---------- **/
+const closeExportModal = document.getElementById('closeExportCsvModal');
+if (closeExportModal) {
+  closeExportModal.addEventListener('click', function () {
+    const exportModal = document.getElementById('exportCsvModal');
+    if (exportModal) {
+      exportModal.style.display = 'none';
+    }
+  });
+}
+
+const cancelExportBtn = document.getElementById('cancelExportBtn');
+if (cancelExportBtn) {
+  cancelExportBtn.addEventListener('click', function () {
+    const exportModal = document.getElementById('exportCsvModal');
+    if (exportModal) {
+      exportModal.style.display = 'none';
+    }
+  });
+}
+
+const generatePreviewBtn = document.getElementById('generatePreviewBtn');
+if (generatePreviewBtn) {
+  generatePreviewBtn.addEventListener('click', generateExportPreview);
+}
+
+const exportCsvBtn = document.getElementById('exportCsvBtn');
+if (exportCsvBtn) {
+  exportCsvBtn.addEventListener('click', exportToCsv);
+}
+
+// Update preview when mapping changes
+const mappingSelects = document.querySelectorAll('.mapping-select, #includeHeader, #onlyRevealedStories, #includeVoteDetails');
+mappingSelects.forEach(select => {
+  select.addEventListener('change', generateExportPreview);
+});
 
   /** ---------- LOGOUT ---------- **/
   const logoutMenuBtn = document.getElementById('logoutMenuBtn');
@@ -597,6 +660,264 @@ function updateVoteCountUI(storyId) {
   } catch (err) {
     console.warn('[VOTE COUNT] update failed', err);
   }
+}
+
+/**
+ * Generate export preview
+ */
+function generateExportPreview() {
+  const stories = collectStoriesForExport();
+  const mappedData = mapStoriesForExport(stories);
+  const csvContent = generateCsvContent(mappedData);
+  
+  const previewEl = document.getElementById('exportPreview');
+  if (previewEl) {
+    // Show first 10 lines of the CSV
+    const lines = csvContent.split('\n').slice(0, 10);
+    const preview = lines.join('\n');
+    const totalLines = csvContent.split('\n').length - 1; // -1 for empty last line
+    
+    previewEl.textContent = preview + (totalLines > 10 ? `\n... (${totalLines - 10} more rows)` : '');
+  }
+}
+
+/**
+ * Collect all stories for export
+ */
+function collectStoriesForExport() {
+  const stories = [];
+  const storyCards = document.querySelectorAll('.story-card');
+  const onlyRevealed = document.getElementById('onlyRevealedStories')?.checked || false;
+  
+  storyCards.forEach(card => {
+    const storyId = card.id;
+    const storyIdDisplay = card.dataset.id || card.querySelector('.story-id')?.textContent || storyId;
+    const titleEl = card.querySelector('.story-title');
+    const pointsEl = card.querySelector('.story-points');
+    const voteCountEl = card.querySelector('.vote-count');
+    
+    const title = titleEl ? titleEl.textContent : '';
+    const description = card.dataset.description || '';
+    const storyPoints = pointsEl ? pointsEl.textContent : '?';
+    const isRevealed = votesRevealed[storyId] === true;
+    const hasRevealedPoints = revealedStoryPoints[storyId] !== undefined;
+    
+    // Skip if only revealed stories requested and this story isn't revealed
+    if (onlyRevealed && !isRevealed && !hasRevealedPoints) {
+      return;
+    }
+    
+    // Get vote statistics
+    const votes = votesPerStory[storyId] || {};
+    const userMap = window.userMap || {};
+    const userVotes = [];
+    
+    Object.entries(votes).forEach(([socketId, vote]) => {
+      const userName = userMap[socketId] || socketId;
+      userVotes.push({ userName, vote });
+    });
+    
+    const voteCount = userVotes.length;
+    const numericVotes = userVotes
+      .map(v => v.vote === '½' ? 0.5 : (isNaN(Number(v.vote)) ? null : Number(v.vote)))
+      .filter(v => v !== null);
+    
+    const averageVote = numericVotes.length > 0 
+      ? (numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length).toFixed(1)
+      : '';
+    
+    stories.push({
+      storyId: storyIdDisplay,
+      title: title,
+      description: description,
+      fullText: title && description ? `${title}: ${description}` : (title || description),
+      storyPoints: storyPoints,
+      voteCount: voteCount,
+      averageVote: averageVote,
+      isRevealed: isRevealed,
+      userVotes: userVotes
+    });
+  });
+  
+  return stories;
+}
+
+/**
+ * Map stories according to user's field mapping selection
+ */
+function mapStoriesForExport(stories) {
+  const storyIdMapping = document.getElementById('storyIdMapping')?.value;
+  const descriptionMapping = document.getElementById('descriptionMapping')?.value;
+  const storyPointsMapping = document.getElementById('storyPointsMapping')?.value;
+  const voteCountMapping = document.getElementById('voteCountMapping')?.value;
+  const averageVoteMapping = document.getElementById('averageVoteMapping')?.value;
+  const includeVoteDetails = document.getElementById('includeVoteDetails')?.checked || false;
+  
+  // Determine the maximum number of columns needed
+  const mappings = [storyIdMapping, descriptionMapping, storyPointsMapping, voteCountMapping, averageVoteMapping];
+  const maxColumns = Math.max(...mappings.map(mapping => {
+    if (mapping === 'skip') return 0;
+    return parseInt(mapping.match(/Column ([A-Z])/)?.[1]?.charCodeAt(0) - 'A'.charCodeAt(0) + 1) || 0;
+  })) || 5;
+  
+  const mappedStories = stories.map(story => {
+    const row = new Array(maxColumns).fill('');
+    
+    // Map fields to columns
+    if (storyIdMapping !== 'skip') {
+      const colIndex = getColumnIndex(storyIdMapping);
+      if (colIndex >= 0) row[colIndex] = story.storyId;
+    }
+    
+    if (descriptionMapping !== 'skip') {
+      const colIndex = getColumnIndex(descriptionMapping);
+      if (colIndex >= 0) {
+        let value = story.fullText;
+        if (descriptionMapping === 'title') value = story.title;
+        else if (descriptionMapping === 'description') value = story.description;
+        row[colIndex] = value;
+      }
+    }
+    
+    if (storyPointsMapping !== 'skip') {
+      const colIndex = getColumnIndex(storyPointsMapping);
+      if (colIndex >= 0) row[colIndex] = story.storyPoints;
+    }
+    
+    if (voteCountMapping !== 'skip') {
+      const colIndex = getColumnIndex(voteCountMapping);
+      if (colIndex >= 0) row[colIndex] = story.voteCount.toString();
+    }
+    
+    if (averageVoteMapping !== 'skip') {
+      const colIndex = getColumnIndex(averageVoteMapping);
+      if (colIndex >= 0) row[colIndex] = story.averageVote;
+    }
+    
+    // Add vote details if requested
+    if (includeVoteDetails && story.userVotes.length > 0) {
+      const voteDetails = story.userVotes.map(v => `${v.userName}:${v.vote}`).join(';');
+      row.push(voteDetails);
+    }
+    
+    return row;
+  });
+  
+  return { stories: mappedStories, maxColumns, includeVoteDetails };
+}
+
+/**
+ * Get column index from mapping value
+ */
+function getColumnIndex(mapping) {
+  if (mapping === 'id') return 0;
+  if (mapping === 'title') return 1;
+  if (mapping === 'description') return 2;
+  if (mapping === 'storyPoints') return 3;
+  if (mapping === 'voteCount') return 4;
+  if (mapping === 'averageVote') return 5;
+  return -1;
+}
+
+/**
+ * Generate CSV content from mapped data
+ */
+function generateCsvContent(mappedData) {
+  const { stories, maxColumns, includeVoteDetails } = mappedData;
+  const includeHeader = document.getElementById('includeHeader')?.checked || false;
+  
+  let csvContent = '';
+  
+  // Add header if requested
+  if (includeHeader) {
+    const headers = [];
+    
+    // Create headers based on mapping
+    const storyIdMapping = document.getElementById('storyIdMapping')?.value;
+    const descriptionMapping = document.getElementById('descriptionMapping')?.value;
+    const storyPointsMapping = document.getElementById('storyPointsMapping')?.value;
+    const voteCountMapping = document.getElementById('voteCountMapping')?.value;
+    const averageVoteMapping = document.getElementById('averageVoteMapping')?.value;
+    
+    for (let i = 0; i < maxColumns; i++) {
+      let headerName = `Column ${String.fromCharCode(65 + i)}`;
+      
+      if (storyIdMapping !== 'skip' && getColumnIndex(storyIdMapping) === i) {
+        headerName = 'Story ID';
+      } else if (descriptionMapping !== 'skip' && getColumnIndex(descriptionMapping) === i) {
+        headerName = descriptionMapping === 'title' ? 'Title' : 
+                    descriptionMapping === 'description' ? 'Description' : 'Title/Description';
+      } else if (storyPointsMapping !== 'skip' && getColumnIndex(storyPointsMapping) === i) {
+        headerName = 'Story Points';
+      } else if (voteCountMapping !== 'skip' && getColumnIndex(voteCountMapping) === i) {
+        headerName = 'Vote Count';
+      } else if (averageVoteMapping !== 'skip' && getColumnIndex(averageVoteMapping) === i) {
+        headerName = 'Average Vote';
+      }
+      
+      headers.push(headerName);
+    }
+    
+    if (includeVoteDetails) {
+      headers.push('Vote Details');
+    }
+    
+    csvContent += headers.map(escapeCSVField).join(',') + '\n';
+  }
+  
+  // Add data rows
+  stories.forEach(row => {
+    const csvRow = row.map(field => escapeCSVField(field.toString())).join(',');
+    csvContent += csvRow + '\n';
+  });
+  
+  return csvContent;
+}
+
+/**
+ * Escape CSV field (handle commas, quotes, newlines)
+ */
+function escapeCSVField(field) {
+  if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+    return '"' + field.replace(/"/g, '""') + '"';
+  }
+  return field;
+}
+
+/**
+ * Export to CSV file
+ */
+function exportToCsv() {
+  const stories = collectStoriesForExport();
+  
+  if (stories.length === 0) {
+    alert('No stories to export. Please add some stories first.');
+    return;
+  }
+  
+  const mappedData = mapStoriesForExport(stories);
+  const csvContent = generateCsvContent(mappedData);
+  
+  // Create and download file
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', `planning_poker_export_${new Date().toISOString().slice(0, 10)}.csv`);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Close modal
+  const exportModal = document.getElementById('exportCsvModal');
+  if (exportModal) {
+    exportModal.style.display = 'none';
+  }
+  
+  console.log(`[EXPORT] Successfully exported ${stories.length} stories to CSV`);
 }
 
 
