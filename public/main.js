@@ -53,6 +53,17 @@ function showPremiumUpgradePopup() {
     modal.style.display = 'flex';
   }
 }
+function ensureSingleStatsContainer(storyId) {
+  // Remove any existing stats containers for this story
+  const existingContainers = document.querySelectorAll(`.vote-statistics-container[data-story-id="${storyId}"]`);
+  if (existingContainers.length > 1) {
+    // Keep only the first one, remove the rest
+    for (let i = 1; i < existingContainers.length; i++) {
+      existingContainers[i].remove();
+    }
+    console.log(`[CLEANUP] Removed ${existingContainers.length - 1} duplicate stats containers for story ${storyId}`);
+  }
+}
 
 window.closePremiumModal = function () {
   const modal = document.getElementById('premiumModal');
@@ -1823,7 +1834,7 @@ function handleVotesRevealed(storyId, votes) {
     });
   }
 
-  // ✅ STORE THE REVEALED STORY POINTS
+  // Store the revealed story points
   revealedStoryPoints[storyId] = mostCommonVote;
 
   // Calculate numeric average
@@ -1835,39 +1846,49 @@ function handleVotesRevealed(storyId, votes) {
     averageValue = (numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length).toFixed(1);
   }
 
-  // Remove any existing stats containers
+  // ✅ ENSURE PLANNING CARDS ARE HIDDEN FIRST
+  const planningCardsSection = document.querySelector('.planning-cards-section');
+  if (planningCardsSection) {
+    planningCardsSection.classList.add('hidden-until-init');
+    planningCardsSection.style.display = 'none';
+  }
+
+  // Remove any existing stats containers for this story
   document.querySelectorAll(`.vote-statistics-container[data-story-id="${storyId}"]`).forEach(el => el.remove());
 
-  // Create stats panel
-  const statsContainer = document.createElement('div');
-  statsContainer.className = 'vote-statistics-container';
-  statsContainer.setAttribute('data-story-id', storyId);
-  statsContainer.innerHTML = `
-    <div class="fixed-vote-display">
-      <div class="fixed-vote-card">
-        ${mostCommonVote}
-        <div class="fixed-vote-count">${uniqueVotes.length} Vote${uniqueVotes.length !== 1 ? 's' : ''}</div>
-      </div>
-      <div class="fixed-vote-stats">
-        <div class="fixed-stat-group">
-          <div class="fixed-stat-label">Average:</div>
-          <div class="fixed-stat-value">${averageValue || '-'}</div>
+  // ✅ ONLY CREATE STATS FOR THE CURRENT STORY
+  const currentStoryId = getCurrentStoryId();
+  if (storyId === currentStoryId) {
+    // Create stats panel
+    const statsContainer = document.createElement('div');
+    statsContainer.className = 'vote-statistics-container';
+    statsContainer.setAttribute('data-story-id', storyId);
+    statsContainer.innerHTML = `
+      <div class="fixed-vote-display">
+        <div class="fixed-vote-card">
+          ${mostCommonVote}
+          <div class="fixed-vote-count">${uniqueVotes.length} Vote${uniqueVotes.length !== 1 ? 's' : ''}</div>
         </div>
-        <div class="fixed-stat-group">
-          <div class="fixed-stat-label">Agreement:</div>
-          <div class="fixed-agreement-circle"><div class="agreement-icon">👍</div></div>
+        <div class="fixed-vote-stats">
+          <div class="fixed-stat-group">
+            <div class="fixed-stat-label">Average:</div>
+            <div class="fixed-stat-value">${averageValue || '-'}</div>
+          </div>
+          <div class="fixed-stat-group">
+            <div class="fixed-stat-label">Agreement:</div>
+            <div class="fixed-agreement-circle"><div class="agreement-icon">👍</div></div>
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
 
-  const planningCardsSection = document.querySelector('.planning-cards-section');
-  if (planningCardsSection && planningCardsSection.parentNode) {
-    planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
-  } else {
-    document.body.appendChild(statsContainer);
+    if (planningCardsSection && planningCardsSection.parentNode) {
+      planningCardsSection.parentNode.insertBefore(statsContainer, planningCardsSection.nextSibling);
+    } else {
+      document.body.appendChild(statsContainer);
+    }
+    statsContainer.style.display = 'block';
   }
-  statsContainer.style.display = 'block';
 
   // Update story points display in the card's meta section
   const pointsEl = document.getElementById(`story-points-${storyId}`);
@@ -1878,7 +1899,10 @@ function handleVotesRevealed(storyId, votes) {
   
   // Update vote count display in the card's meta section
   updateVoteCountUI(storyId);
+  ensureSingleStatsContainer(storyId);
 }
+
+
 /**
  * Setup Add Ticket button
  */
@@ -2914,23 +2938,28 @@ function selectStory(index, emitToServer = true, forceSelection = false) {
 
     const areVotesRevealed = storyId && votesRevealed[storyId] === true;
     
+    // ✅ IMPROVED REVEALED STATE HANDLING
     if (areVotesRevealed) {
+      console.log(`[UI] Story ${storyId} votes are revealed, hiding planning cards`);
       const planningCardsSection = document.querySelector('.planning-cards-section');
       if (planningCardsSection) {
         planningCardsSection.classList.add('hidden-until-init');
         planningCardsSection.style.display = 'none';
       }
       
+      // ✅ ENSURE STATS ARE SHOWN FOR REVEALED STORIES
       setTimeout(() => {
         handleVotesRevealed(storyId, votesPerStory[storyId] || {});
       }, 100);
     } else {
+      console.log(`[UI] Story ${storyId} votes are not revealed, showing planning cards`);
       const planningCardsSection = document.querySelector('.planning-cards-section');
       if (planningCardsSection) {
         planningCardsSection.classList.remove('hidden-until-init');
         planningCardsSection.style.display = 'block';
       }
       
+      // ✅ HIDE ALL STATS CONTAINERS WHEN NOT REVEALED
       const allStatsContainers = document.querySelectorAll('.vote-statistics-container');
       allStatsContainers.forEach(container => {
         container.style.display = 'none';
@@ -2961,6 +2990,7 @@ function selectStory(index, emitToServer = true, forceSelection = false) {
       }
     }
   } else if (forceSelection) {
+    // ... rest of forceSelection logic remains the same
     console.log(`[UI] Story card with index ${index} not found yet, retrying selection soon...`);
     setTimeout(() => {
       const retryCard = document.querySelector(`.story-card[data-index="${index}"]`);
@@ -4046,14 +4076,37 @@ case 'votesReset':
   }
   break;
       
-    case 'storySelected':
-      if (typeof message.storyIndex === 'number') {
-        console.log('[SOCKET] Story selected from server:', message.storyIndex);
+case 'storySelected':
+  if (typeof message.storyIndex === 'number') {
+    console.log('[SOCKET] Story selected from server:', message.storyIndex);
+    
+    const forceSelection = message.forceSelection === true;
+    
+    selectStory(message.storyIndex, false, forceSelection);
+    
+    // ✅ IMPROVED STATE HANDLING AFTER STORY SELECTION
+    const currentStoryId = getCurrentStoryId();
+    if (currentStoryId) {
+      const isRevealed = votesRevealed[currentStoryId];
+      
+      if (isRevealed) {
+        console.log(`[SOCKET] Selected story ${currentStoryId} is revealed, ensuring proper state`);
+        // Hide planning cards and show stats
+        const planningCardsSection = document.querySelector('.planning-cards-section');
+        if (planningCardsSection) {
+          planningCardsSection.classList.add('hidden-until-init');
+          planningCardsSection.style.display = 'none';
+        }
         
-        const forceSelection = message.forceSelection === true;
-        
-        selectStory(message.storyIndex, false, forceSelection);
-        
+        // Show stats after a small delay to ensure DOM is ready
+        setTimeout(() => {
+          if (votesPerStory[currentStoryId]) {
+            handleVotesRevealed(currentStoryId, votesPerStory[currentStoryId]);
+          }
+        }, 100);
+      } else {
+        console.log(`[SOCKET] Selected story ${currentStoryId} is not revealed, showing planning cards`);
+        // Show planning cards and hide stats
         const planningCardsSection = document.querySelector('.planning-cards-section');
         if (planningCardsSection) {
           planningCardsSection.classList.remove('hidden-until-init');
@@ -4064,21 +4117,18 @@ case 'votesReset':
         allStatsContainers.forEach(container => {
           container.style.display = 'none';
         });
-        
-        const currentStoryId = getCurrentStoryId();
-        if (currentStoryId && socket && socket.connected && !deletedStoryIds.has(currentStoryId)) {
-          setTimeout(() => {
-            socket.emit('requestStoryVotes', { storyId: currentStoryId });
-            
-            if (votesRevealed[currentStoryId] && votesPerStory[currentStoryId]) {
-              setTimeout(() => {
-                handleVotesRevealed(currentStoryId, votesPerStory[currentStoryId]);
-              }, 200);
-            }
-          }, 100);
-        }
       }
-      break;
+      
+      // Request votes for the newly selected story
+      if (socket && socket.connected && !deletedStoryIds.has(currentStoryId)) {
+        setTimeout(() => {
+          socket.emit('requestStoryVotes', { storyId: currentStoryId });
+        }, 100);
+      }
+    }
+  }
+  break;
+      
       
     case 'storyVotes':
       if (message.storyId && deletedStoryIds.has(message.storyId)) {
