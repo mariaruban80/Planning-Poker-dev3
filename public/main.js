@@ -4768,3 +4768,88 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFilterButton();
 });
 
+
+// ===================== Export CSV Modal Handling ===================== //
+const exportCsvModal = document.getElementById("exportCsvModal");
+const exportCsvBtn = document.getElementById("exportCsvBtn"); // Assuming button exists
+const exportCsvCancelBtn = exportCsvModal.querySelector(".cancel-btn");
+const exportCsvConfirmBtn = exportCsvModal.querySelector(".confirm-btn");
+const csvPreview = document.getElementById("csvPreview");
+
+if (exportCsvBtn) {
+  exportCsvBtn.addEventListener("click", () => {
+    exportCsvModal.style.display = "flex";
+    generateCsvPreview();
+  });
+}
+
+if (exportCsvCancelBtn) {
+  exportCsvCancelBtn.addEventListener("click", () => {
+    exportCsvModal.style.display = "none";
+  });
+}
+
+// Close modal if clicking outside content
+exportCsvModal.addEventListener("click", (e) => {
+  if (e.target === exportCsvModal) {
+    exportCsvModal.style.display = "none";
+  }
+});
+
+// Function to generate preview
+function generateCsvPreview() {
+  let stories = getAllStories(); // Assuming you have a function that returns stories
+  if (!stories || stories.length === 0) {
+    csvPreview.textContent = "No stories available to export.";
+    return;
+  }
+
+  const includeHeader = document.getElementById("csvHeaderRow").checked;
+  const onlyRevealed = document.getElementById("csvOnlyRevealed").checked;
+  const detailedVotes = document.getElementById("csvDetailedVotes").checked;
+
+  let rows = [];
+
+  if (includeHeader) {
+    rows.push(["Story ID", "Title", "Points", "Vote Count", "Average"].join(","));
+  }
+
+  stories.forEach(story => {
+    if (onlyRevealed && !story.revealed) return;
+    let row = [
+      story.id || "",
+      story.title || "",
+      story.points || "",
+      story.votes ? story.votes.length : 0,
+      story.average || ""
+    ];
+    rows.push(row.join(","));
+
+    if (detailedVotes && story.votes) {
+      story.votes.forEach(v => {
+        rows.push([story.id, story.title, "Vote", v].join(","));
+      });
+    }
+  });
+
+  csvPreview.textContent = rows.join("\n");
+}
+
+// Confirm export
+if (exportCsvConfirmBtn) {
+  exportCsvConfirmBtn.addEventListener("click", () => {
+    let csvContent = csvPreview.textContent;
+    if (!csvContent.trim()) {
+      alert("No CSV data to export.");
+      return;
+    }
+
+    let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    let link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "stories_export.csv";
+    link.click();
+
+    exportCsvModal.style.display = "none";
+  });
+}
