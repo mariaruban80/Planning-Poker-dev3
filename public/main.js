@@ -314,6 +314,7 @@ if (exportToCsvBtn) {
     const exportModal = document.getElementById('exportCsvModal');
     if (exportModal) {
       exportModal.style.display = 'flex';
+      populateExportDropdowns();
       generateExportPreview(); // Generate initial preview
     }
     const menu = document.getElementById('profileMenu');
@@ -665,6 +666,32 @@ function updateVoteCountUI(storyId) {
 /**
  * Generate export preview
  */
+
+function populateExportDropdowns() {
+  const stories = collectStoriesForExport();
+  if (stories.length === 0) return;
+
+  const fieldMappings = [
+    { id: 'storyIdMapping', label: 'Story ID', options: ['skip', 'id'] },
+    { id: 'descriptionMapping', label: 'Title/Description', options: ['skip', 'title', 'description'] },
+    { id: 'storyPointsMapping', label: 'Story Points', options: ['skip', 'storyPoints'] },
+    { id: 'voteCountMapping', label: 'Vote Count', options: ['skip', 'voteCount'] },
+    { id: 'averageVoteMapping', label: 'Average Vote', options: ['skip', 'averageVote'] }
+  ];
+
+  fieldMappings.forEach(field => {
+    const selectEl = document.getElementById(field.id);
+    if (!selectEl) return;
+    selectEl.innerHTML = '';
+    field.options.forEach(opt => {
+      const optionEl = document.createElement('option');
+      optionEl.value = opt;
+      optionEl.textContent = opt === 'skip' ? 'Skip this field' : opt;
+      selectEl.appendChild(optionEl);
+    });
+  });
+}
+
 function generateExportPreview() {
   const stories = collectStoriesForExport();
   const mappedData = mapStoriesForExport(stories);
