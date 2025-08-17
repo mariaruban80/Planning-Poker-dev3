@@ -3037,6 +3037,121 @@ body::-webkit-scrollbar {
 }    
 }
 
+
+/* Export CSV Modal */
+#exportCsvModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: none; /* hidden by default */
+  align-items: center;
+  justify-content: center;
+  z-index: 10003; /* higher than other modals */
+}
+
+#exportCsvModal .modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px 40px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Field mapping layout */
+.field-mapping {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px 20px;
+}
+
+.field-mapping label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.field-mapping select {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+}
+
+/* Export options checkboxes */
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.export-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.export-options input[type="checkbox"] {
+  accent-color: #673ab7;
+}
+
+/* Preview box */
+.csv-preview {
+  font-family: monospace;
+  background: #f9fafb;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 13px;
+}
+
+/* Buttons */
+#exportCsvModal .button-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+#exportCsvModal .button-group button {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#exportCsvModal .cancel-btn {
+  background: white;
+  border: 1px solid #ccc;
+  color: #666;
+}
+
+#exportCsvModal .cancel-btn:hover {
+  background: #f5f5f5;
+}
+
+#exportCsvModal .confirm-btn {
+  background: #673ab7;
+  color: white;
+  border: none;
+}
+
+#exportCsvModal .confirm-btn:hover {
+  background: #5c33a4;
+}
+
 </style>
 </head>
 <body>
@@ -4660,7 +4775,50 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
- <!-- Add this before the closing </body> tag 
+ <!-- Add this before the closing 
+<div id="exportCsvModal">
+  <div class="modal-content">
+    <h3>Export Stories to CSV</h3>
+    
+    <div class="field-mapping">
+      <div>
+        <label for="csvStoryId">Story ID:</label>
+        <select id="csvStoryId"></select>
+      </div>
+      <div>
+        <label for="csvTitle">Title/Description:</label>
+        <select id="csvTitle"></select>
+      </div>
+      <div>
+        <label for="csvPoints">Story Points:</label>
+        <select id="csvPoints"></select>
+      </div>
+      <div>
+        <label for="csvVotes">Vote Count:</label>
+        <select id="csvVotes"></select>
+      </div>
+      <div>
+        <label for="csvAverage">Average Vote:</label>
+        <select id="csvAverage"></select>
+      </div>
+    </div>
+    
+    <div class="export-options">
+      <label><input type="checkbox" id="csvHeaderRow" checked> Include header row</label>
+      <label><input type="checkbox" id="csvOnlyRevealed"> Only export stories with revealed votes</label>
+      <label><input type="checkbox" id="csvDetailedVotes"> Include detailed vote information</label>
+    </div>
+    
+    <div class="csv-preview" id="csvPreview">Preview will appear here...</div>
+    
+    <div class="button-group">
+      <button class="cancel-btn">Cancel</button>
+      <button class="confirm-btn">Export CSV</button>
+    </div>
+  </div>
+</div>
+
+</body> tag 
 <script src="userlist-fix.js"></script> -->
 <script>
   // Force user list fix on page interaction
@@ -5408,7 +5566,50 @@ function handleCsvImport() {
 
 </script>
 
-<!-- Add this just before the closing </body> tag in index.html -->
+<!-- Add this just before the closing 
+<div id="exportCsvModal">
+  <div class="modal-content">
+    <h3>Export Stories to CSV</h3>
+    
+    <div class="field-mapping">
+      <div>
+        <label for="csvStoryId">Story ID:</label>
+        <select id="csvStoryId"></select>
+      </div>
+      <div>
+        <label for="csvTitle">Title/Description:</label>
+        <select id="csvTitle"></select>
+      </div>
+      <div>
+        <label for="csvPoints">Story Points:</label>
+        <select id="csvPoints"></select>
+      </div>
+      <div>
+        <label for="csvVotes">Vote Count:</label>
+        <select id="csvVotes"></select>
+      </div>
+      <div>
+        <label for="csvAverage">Average Vote:</label>
+        <select id="csvAverage"></select>
+      </div>
+    </div>
+    
+    <div class="export-options">
+      <label><input type="checkbox" id="csvHeaderRow" checked> Include header row</label>
+      <label><input type="checkbox" id="csvOnlyRevealed"> Only export stories with revealed votes</label>
+      <label><input type="checkbox" id="csvDetailedVotes"> Include detailed vote information</label>
+    </div>
+    
+    <div class="csv-preview" id="csvPreview">Preview will appear here...</div>
+    
+    <div class="button-group">
+      <button class="cancel-btn">Cancel</button>
+      <button class="confirm-btn">Export CSV</button>
+    </div>
+  </div>
+</div>
+
+</body> tag in index.html -->
 <script>
 // Mobile layout to match desktop view
 document.addEventListener('DOMContentLoaded', function() {
@@ -5573,6 +5774,49 @@ document.addEventListener('DOMContentLoaded', function() {
     <h2 style="margin-bottom:12px;">🔒 Premium Feature</h2>
     <p style="margin-bottom:20px;">This feature is only available in the Premium version.</p>
     <button onclick="closePremiumModal()" style="padding:8px 16px; background:#753acb; color:white; border:none; border-radius:5px; cursor:pointer;">Got it</button>
+  </div>
+</div>
+
+
+<div id="exportCsvModal">
+  <div class="modal-content">
+    <h3>Export Stories to CSV</h3>
+    
+    <div class="field-mapping">
+      <div>
+        <label for="csvStoryId">Story ID:</label>
+        <select id="csvStoryId"></select>
+      </div>
+      <div>
+        <label for="csvTitle">Title/Description:</label>
+        <select id="csvTitle"></select>
+      </div>
+      <div>
+        <label for="csvPoints">Story Points:</label>
+        <select id="csvPoints"></select>
+      </div>
+      <div>
+        <label for="csvVotes">Vote Count:</label>
+        <select id="csvVotes"></select>
+      </div>
+      <div>
+        <label for="csvAverage">Average Vote:</label>
+        <select id="csvAverage"></select>
+      </div>
+    </div>
+    
+    <div class="export-options">
+      <label><input type="checkbox" id="csvHeaderRow" checked> Include header row</label>
+      <label><input type="checkbox" id="csvOnlyRevealed"> Only export stories with revealed votes</label>
+      <label><input type="checkbox" id="csvDetailedVotes"> Include detailed vote information</label>
+    </div>
+    
+    <div class="csv-preview" id="csvPreview">Preview will appear here...</div>
+    
+    <div class="button-group">
+      <button class="cancel-btn">Cancel</button>
+      <button class="confirm-btn">Export CSV</button>
+    </div>
   </div>
 </div>
 
