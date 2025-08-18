@@ -273,43 +273,60 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   /** ---------- CSV FILE PROCESSING ---------- **/
-  function handleCSVFile(file) {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const csvText = e.target.result;
-      const rows = csvText.split(/\r?\n/).filter(r => r.trim() !== "");
+function handleCSVFile(file) {
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const csvText = e.target.result;
+    const rows = csvText.split(/\r?\n/).filter(r => r.trim() !== "");
 
-      const tickets = [];
+    if (rows.length === 0) {
+      alert("CSV file is empty.");
+      return;
+    }
 
-      rows.forEach((row, idx) => {
-        const cols = row.split(",");
-        if (cols.length > 0) {
-          const id = `story_csv_${Date.now()}_${idx}`;
-          const text = cols.join(" ").trim();
-          if (text) {
-            tickets.push({ id, text, idDisplay: cols[0].trim(), descriptionDisplay: cols.slice(1).join(" ").trim() });
-          }
+    // First line = headers
+    const headers = rows[0].split(",");
+    const dataRows = rows.slice(1).map(r => r.split(","));
+
+    // 🔹 Show preview of first 5 rows in the modal
+    if (typeof generateImportPreview === "function") {
+      generateImportPreview(headers, dataRows);
+    }
+
+    // 🔹 Build tickets from CSV
+    const tickets = [];
+    dataRows.forEach((cols, idx) => {
+      if (cols.length > 0) {
+        const id = `story_csv_${Date.now()}_${idx}`;
+        const text = cols.join(" ").trim();
+        if (text) {
+          tickets.push({
+            id,
+            text,
+            idDisplay: cols[0].trim(),
+            descriptionDisplay: cols.slice(1).join(" ").trim()
+          });
         }
-      });
+      }
+    });
 
-      if (tickets.length > 0) {
-        tickets.forEach(ticket => {
-          if (typeof emitAddTicket === 'function') {
-            emitAddTicket(ticket);
-          } else if (socket) {
-            socket.emit('addTicket', ticket);
-          }
-          addTicketToUI(ticket, true);
-        });
-      } else {
-      if (typeof generateExportPreview === 'function') {
-        generateExportPreview();
-      }
-        alert('No valid tickets found in the CSV.');
-      }
-    };
-    reader.readAsText(file);
-  }
+    // 🔹 Import tickets into the app
+    if (tickets.length > 0) {
+      tickets.forEach(ticket => {
+        if (typeof emitAddTicket === "function") {
+          emitAddTicket(ticket);
+        } else if (socket) {
+          socket.emit("addTicket", ticket);
+        }
+        addTicketToUI(ticket, true);
+      });
+    } else {
+      alert("No valid tickets found in the CSV.");
+    }
+  };
+  reader.readAsText(file);
+}
+
 
 /** ---------- EXPORT TO CSV MENU OPTION ---------- **/
 const exportToCsvBtn = document.getElementById('exportToCsvMenuBtn');
