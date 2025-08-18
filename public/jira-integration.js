@@ -478,3 +478,7 @@ if (document.readyState === 'loading') {
 } else {
   initializeJiraIntegration();
 }
+
+window.showJiraImportModal = showJiraImportModal;
+window.hideJiraImportModal = hideJiraImportModal;
+window.backToJiraConnection = backToJiraConnection;
