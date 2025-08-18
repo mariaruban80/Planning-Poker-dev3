@@ -3518,13 +3518,11 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
   </div>
 </div>
 
-
 <!-- Export CSV Modal -->
 <div id="exportCsvModal" class="modal" style="display: none;">
   <div class="modal-content">
     <div class="modal-header">
       <h2>Export Stories to CSV</h2>
-     
     </div>
     <div class="modal-body">
       <div class="export-section">
@@ -3536,21 +3534,23 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
             <label>Story ID:</label>
             <select id="storyIdMapping" class="mapping-select">
               <option value="id">Column A (ID)</option>
-              <option value="title">Column B (Title)</option>
-              <option value="description">Column C (Description)</option>
-              <option value="storyPoints">Column D (Story Points)</option>
               <option value="skip">Skip this field</option>
             </select>
           </div>
           
           <div class="mapping-row">
-            <label>Title/Description:</label>
-            <select id="descriptionMapping" class="mapping-select">
+            <label>Title:</label>
+            <select id="titleMapping" class="mapping-select">
               <option value="title" selected>Column B (Title)</option>
-              <option value="id">Column A (ID)</option>
-              <option value="description">Column C (Description)</option>
-              <option value="storyPoints">Column D (Story Points)</option>
               <option value="skip">Skip this field</option>
+            </select>
+          </div>
+          
+          <div class="mapping-row">
+            <label>Description:</label>
+            <select id="descriptionMapping" class="mapping-select">
+              <option value="description">Column C (Description)</option>
+              <option value="skip" selected>Skip this field</option>
             </select>
           </div>
           
@@ -3558,9 +3558,6 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
             <label>Story Points:</label>
             <select id="storyPointsMapping" class="mapping-select">
               <option value="storyPoints" selected>Column D (Story Points)</option>
-              <option value="id">Column A (ID)</option>
-              <option value="title">Column B (Title)</option>
-              <option value="description">Column C (Description)</option>
               <option value="skip">Skip this field</option>
             </select>
           </div>
@@ -3569,10 +3566,6 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
             <label>Vote Count:</label>
             <select id="voteCountMapping" class="mapping-select">
               <option value="voteCount">Column E (Vote Count)</option>
-              <option value="id">Column A (ID)</option>
-              <option value="title">Column B (Title)</option>
-              <option value="description">Column C (Description)</option>
-              <option value="storyPoints">Column D (Story Points)</option>
               <option value="skip" selected>Skip this field</option>
             </select>
           </div>
@@ -3581,11 +3574,6 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
             <label>Average Vote:</label>
             <select id="averageVoteMapping" class="mapping-select">
               <option value="averageVote">Column F (Average Vote)</option>
-              <option value="id">Column A (ID)</option>
-              <option value="title">Column B (Title)</option>
-              <option value="description">Column C (Description)</option>
-              <option value="storyPoints">Column D (Story Points)</option>
-              <option value="voteCount">Column E (Vote Count)</option>
               <option value="skip" selected>Skip this field</option>
             </select>
           </div>
@@ -3593,24 +3581,17 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
         
         <div class="export-options">
           <h3>Export Options</h3>
-          <div class="option-row">
-            <input type="checkbox" id="includeHeader" checked>
-            <label for="includeHeader">Include header row</label>
-          </div>
-          <div class="option-row">
-            <input type="checkbox" id="onlyRevealedStories" checked>
-            <label for="onlyRevealedStories">Only export stories with revealed votes</label>
-          </div>
-          <div class="option-row">
-            <input type="checkbox" id="includeVoteDetails">
-            <label for="includeVoteDetails">Include detailed vote information</label>
+          <div class="export-options-inline">
+            <label><input type="checkbox" id="includeHeader" checked> Include header row</label>
+            <label><input type="checkbox" id="onlyRevealedStories"> Only export stories with revealed votes</label>
+            <label><input type="checkbox" id="includeVoteDetails"> Include detailed vote information</label>
           </div>
         </div>
         
         <div class="preview-section">
           <h3>Preview</h3>
-          <div id="exportPreview" class="export-preview">
-            <!-- Preview will be generated here -->
+          <div id="exportPreviewTable" class="export-preview-table-container" style="max-height: 300px; overflow: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <!-- Table preview will be generated here -->
           </div>
         </div>
       </div>
@@ -3621,7 +3602,8 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
       <button id="cancelExportBtn" class="btn btn-cancel">Cancel</button>
     </div>
   </div>
-</div>     
+</div>
+
 
      
      
