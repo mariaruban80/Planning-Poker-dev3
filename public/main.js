@@ -764,7 +764,7 @@ function generateExportPreview() {
 }
 
 /**
- * Collect all stories for export
+ * Collect all stories for export with proper field separation - FIXED VERSION
  */
 function collectStoriesForExport() {
   const stories = [];
@@ -773,15 +773,23 @@ function collectStoriesForExport() {
   
   storyCards.forEach(card => {
     const storyId = card.id;
-    const storyIdDisplay = card.dataset.id || card.querySelector('.story-id')?.textContent || storyId;
-    const titleEl = card.querySelector('.story-title');
-    const pointsEl = card.querySelector('.story-points');
     
-    // Separate title and description properly
-    const title = titleEl ? titleEl.textContent.trim() : '';
+    // Get display ID (the purple ID shown at top of card)
+    const storyIdElement = card.querySelector('.story-id');
+    const storyIdDisplay = storyIdElement ? storyIdElement.textContent.trim() : 
+                          (card.dataset.id || storyId);
+    
+    // Get title/description separately
+    const titleElement = card.querySelector('.story-title');
+    const title = titleElement ? titleElement.textContent.trim() : '';
+    
+    // Get description from data attribute (this is the actual description/comment)
     const description = card.dataset.description || '';
     
-    const storyPoints = pointsEl ? pointsEl.textContent : '?';
+    // Get story points
+    const pointsElement = card.querySelector('.story-points');
+    const storyPoints = pointsElement ? pointsElement.textContent.trim() : '?';
+    
     const isRevealed = votesRevealed[storyId] === true;
     const hasRevealedPoints = revealedStoryPoints[storyId] !== undefined;
     
@@ -810,10 +818,10 @@ function collectStoriesForExport() {
       : '';
     
     stories.push({
-      storyId: storyIdDisplay,
-      title: title,
-      description: description, // Keep separate
-      storyPoints: storyPoints,
+      storyId: storyIdDisplay,        // The purple ID (e.g., "RIN-2270")
+      title: title,                   // The title/summary text
+      description: description,       // The actual description/comment
+      storyPoints: storyPoints,       // Story points value
       voteCount: voteCount,
       averageVote: averageVote,
       isRevealed: isRevealed,
@@ -825,7 +833,7 @@ function collectStoriesForExport() {
 }
 
 /**
- * Map stories according to user's field mapping selection
+ * Map stories according to user's field mapping selection - FIXED VERSION
  */
 function mapStoriesForExport(stories) {
   const storyIdMapping = document.getElementById('storyIdMapping')?.value;
@@ -836,71 +844,82 @@ function mapStoriesForExport(stories) {
   const averageVoteMapping = document.getElementById('averageVoteMapping')?.value;
   const includeVoteDetails = document.getElementById('includeVoteDetails')?.checked || false;
   
-  // Build headers array
+  // Build headers array based on what's selected
   const headers = [];
-  const columnMap = {};
+  const fieldOrder = [];
   
   if (storyIdMapping !== 'skip') {
     headers.push('Story ID');
-    columnMap['storyId'] = headers.length - 1;
+    fieldOrder.push('storyId');
   }
   if (titleMapping !== 'skip') {
     headers.push('Title');
-    columnMap['title'] = headers.length - 1;
+    fieldOrder.push('title');
   }
   if (descriptionMapping !== 'skip') {
     headers.push('Description');
-    columnMap['description'] = headers.length - 1;
+    fieldOrder.push('description');
   }
   if (storyPointsMapping !== 'skip') {
     headers.push('Story Points');
-    columnMap['storyPoints'] = headers.length - 1;
+    fieldOrder.push('storyPoints');
   }
   if (voteCountMapping !== 'skip') {
     headers.push('Vote Count');
-    columnMap['voteCount'] = headers.length - 1;
+    fieldOrder.push('voteCount');
   }
   if (averageVoteMapping !== 'skip') {
     headers.push('Average Vote');
-    columnMap['averageVote'] = headers.length - 1;
+    fieldOrder.push('averageVote');
   }
   if (includeVoteDetails) {
     headers.push('Vote Details');
-    columnMap['voteDetails'] = headers.length - 1;
+    fieldOrder.push('voteDetails');
   }
   
-  // Map stories to rows
+  // Map stories to rows in the correct field order
   const mappedStories = stories.map(story => {
-    const row = new Array(headers.length).fill('');
+    const row = [];
     
-    if (columnMap['storyId'] !== undefined) {
-      row[columnMap['storyId']] = story.storyId;
-    }
-    if (columnMap['title'] !== undefined) {
-      row[columnMap['title']] = story.title;
-    }
-    if (columnMap['description'] !== undefined) {
-      row[columnMap['description']] = story.description;
-    }
-    if (columnMap['storyPoints'] !== undefined) {
-      row[columnMap['storyPoints']] = story.storyPoints;
-    }
-    if (columnMap['voteCount'] !== undefined) {
-      row[columnMap['voteCount']] = story.voteCount.toString();
-    }
-    if (columnMap['averageVote'] !== undefined) {
-      row[columnMap['averageVote']] = story.averageVote;
-    }
-    if (columnMap['voteDetails'] !== undefined && story.userVotes.length > 0) {
-      const voteDetails = story.userVotes.map(v => `${v.userName}:${v.vote}`).join(';');
-      row[columnMap['voteDetails']] = voteDetails;
-    }
+    fieldOrder.forEach(fieldName => {
+      switch(fieldName) {
+        case 'storyId':
+          row.push(story.storyId || '');
+          break;
+        case 'title':
+          row.push(story.title || '');
+          break;
+        case 'description':
+          row.push(story.description || '');
+          break;
+        case 'storyPoints':
+          row.push(story.storyPoints || '?');
+          break;
+        case 'voteCount':
+          row.push(story.voteCount.toString());
+          break;
+        case 'averageVote':
+          row.push(story.averageVote || '');
+          break;
+        case 'voteDetails':
+          if (story.userVotes && story.userVotes.length > 0) {
+            const voteDetails = story.userVotes.map(v => `${v.userName}:${v.vote}`).join(';');
+            row.push(voteDetails);
+          } else {
+            row.push('');
+          }
+          break;
+        default:
+          row.push('');
+      }
+    });
     
     return row;
   });
   
-  return { mappedStories, headers };
+  return { mappedStories, headers, fieldOrder };
 }
+
 
 /**
  * Get column index from mapping value
@@ -914,71 +933,49 @@ function getColumnIndex(mapping) {
   if (mapping === 'averageVote') return 5;
   return -1;
 }
-
 /**
- * Generate CSV content from mapped data
+ * Generate CSV content from mapped data - FIXED VERSION
  */
 function generateCsvContent(mappedData) {
-  const { stories, maxColumns, includeVoteDetails } = mappedData;
+  const { mappedStories, headers } = mappedData;
   const includeHeader = document.getElementById('includeHeader')?.checked || false;
   
   let csvContent = '';
   
   // Add header if requested
-  if (includeHeader) {
-    const headers = [];
-    
-    // Create headers based on mapping
-    const storyIdMapping = document.getElementById('storyIdMapping')?.value;
-    const descriptionMapping = document.getElementById('descriptionMapping')?.value;
-    const storyPointsMapping = document.getElementById('storyPointsMapping')?.value;
-    const voteCountMapping = document.getElementById('voteCountMapping')?.value;
-    const averageVoteMapping = document.getElementById('averageVoteMapping')?.value;
-    
-    for (let i = 0; i < maxColumns; i++) {
-      let headerName = `Column ${String.fromCharCode(65 + i)}`;
-      
-      if (storyIdMapping !== 'skip' && getColumnIndex(storyIdMapping) === i) {
-        headerName = 'Story ID';
-      } else if (descriptionMapping !== 'skip' && getColumnIndex(descriptionMapping) === i) {
-        headerName = descriptionMapping === 'title' ? 'Title' : 
-                    descriptionMapping === 'description' ? 'Description' : 'Title/Description';
-      } else if (storyPointsMapping !== 'skip' && getColumnIndex(storyPointsMapping) === i) {
-        headerName = 'Story Points';
-      } else if (voteCountMapping !== 'skip' && getColumnIndex(voteCountMapping) === i) {
-        headerName = 'Vote Count';
-      } else if (averageVoteMapping !== 'skip' && getColumnIndex(averageVoteMapping) === i) {
-        headerName = 'Average Vote';
-      }
-      
-      headers.push(headerName);
-    }
-    
-    if (includeVoteDetails) {
-      headers.push('Vote Details');
-    }
-    
-    csvContent += headers.map(escapeCSVField).join(',') + '\n';
+  if (includeHeader && headers && headers.length > 0) {
+    const headerRow = headers.map(header => escapeCSVField(header)).join(',');
+    csvContent += headerRow + '\n';
   }
   
   // Add data rows
-  stories.forEach(row => {
-    const csvRow = row.map(field => escapeCSVField(field.toString())).join(',');
-    csvContent += csvRow + '\n';
-  });
+  if (mappedStories && mappedStories.length > 0) {
+    mappedStories.forEach(row => {
+      const csvRow = row.map(field => escapeCSVField(String(field || ''))).join(',');
+      csvContent += csvRow + '\n';
+    });
+  }
   
   return csvContent;
 }
-
 /**
- * Escape CSV field (handle commas, quotes, newlines)
+ * Properly escape CSV field (handle commas, quotes, newlines) - FIXED VERSION
  */
 function escapeCSVField(field) {
-  if (field.includes(',') || field.includes('"') || field.includes('\n')) {
-    return '"' + field.replace(/"/g, '""') + '"';
+  if (!field) return '';
+  
+  const fieldStr = String(field);
+  
+  // If field contains comma, quote, newline, or starts/ends with whitespace, wrap in quotes
+  if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n') || fieldStr.includes('\r') || fieldStr.trim() !== fieldStr) {
+    // Escape internal quotes by doubling them, then wrap the whole field in quotes
+    return '"' + fieldStr.replace(/"/g, '""') + '"';
   }
-  return field;
+  
+  return fieldStr;
 }
+
+
 
 /**
  * Export to CSV file
