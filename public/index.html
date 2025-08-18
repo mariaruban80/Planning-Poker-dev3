@@ -3348,6 +3348,296 @@ body::-webkit-scrollbar {
 }
 
 </style>
+<style>
+     /* JIRA Import Modal Styles */
+.jira-modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+.jira-step {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+}
+
+.jira-step.active {
+  display: flex;
+}
+
+.jira-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.jira-modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+  flex: 1;
+  text-align: center;
+}
+
+.jira-back-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 5px 10px;
+  margin-right: 10px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.jira-back-btn:hover {
+  background-color: #e9ecef;
+}
+
+.jira-connection-section {
+  padding: 25px;
+  flex: 1;
+}
+
+.jira-form-group {
+  margin-bottom: 20px;
+}
+
+.jira-form-group label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.jira-input, .jira-select {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.jira-input:focus, .jira-select:focus {
+  outline: none;
+  border-color: #673ab7;
+  box-shadow: 0 0 0 3px rgba(103, 58, 183, 0.1);
+}
+
+.jira-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px 25px;
+  border-top: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.jira-btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid;
+}
+
+.jira-btn-primary {
+  background: #673ab7;
+  color: white;
+  border-color: #673ab7;
+}
+
+.jira-btn-primary:hover:not(:disabled) {
+  background: #5e35b1;
+  border-color: #5e35b1;
+}
+
+.jira-btn-primary:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.jira-btn-secondary {
+  background: white;
+  color: #673ab7;
+  border-color: #673ab7;
+}
+
+.jira-btn-secondary:hover {
+  background: #f3e8ff;
+}
+
+.jira-btn-cancel {
+  background: white;
+  color: #666;
+  border-color: #d1d5db;
+}
+
+.jira-btn-cancel:hover {
+  background: #f5f5f5;
+}
+
+.connection-status-indicator {
+  padding: 10px;
+  border-radius: 6px;
+  margin: 15px 0;
+}
+
+.connection-status-indicator.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.connection-status-indicator.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.connection-status-indicator.loading {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fed7aa;
+}
+
+/* Selection step styles */
+.jira-selection-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 70vh;
+}
+
+.jira-filters {
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.jira-selection-controls {
+  padding: 15px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.jira-stories-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Story item styles */
+.jira-story-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.jira-story-item:hover {
+  border-color: #673ab7;
+  box-shadow: 0 2px 8px rgba(103, 58, 183, 0.1);
+}
+
+.jira-story-item.selected {
+  border-color: #673ab7;
+  background: #f8f5ff;
+}
+
+.jira-story-checkbox {
+  margin-right: 15px;
+  width: 18px;
+  height: 18px;
+  accent-color: #673ab7;
+}
+
+.jira-story-content {
+  flex: 1;
+}
+
+.jira-story-key {
+  font-weight: 700;
+  color: #673ab7;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.jira-story-summary {
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.jira-story-meta {
+  display: flex;
+  gap: 15px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.jira-story-type, .jira-story-status, .jira-story-priority {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jira-type-icon, .jira-status-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+@media (max-width: 768px) {
+  .jira-modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .jira-filters > div {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+</style>
+     
 </head>
 <body>
 
@@ -3642,8 +3932,126 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
   </div>
 </div>
 
-
-     
+<!-- JIRA Import Modal - Add this before </body> -->
+<div id="jiraImportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10004; align-items: center; justify-content: center;">
+  <div class="jira-modal-content">
+    
+    <!-- Step 1: Connection Setup -->
+    <div id="jiraConnectionStep" class="jira-step active">
+      <div class="jira-modal-header">
+        <h3>🔗 Connect to JIRA</h3>
+        <button class="close-button" onclick="hideJiraImportModal()">&times;</button>
+      </div>
+      
+      <div class="jira-connection-section">
+        <div class="jira-form-group">
+          <label for="jiraUrl">JIRA Instance URL:</label>
+          <input type="url" id="jiraUrl" placeholder="https://yourcompany.atlassian.net" class="jira-input">
+        </div>
+        
+        <div class="jira-form-group">
+          <label for="jiraEmail">Email:</label>
+          <input type="email" id="jiraEmail" placeholder="your-email@company.com" class="jira-input">
+        </div>
+        
+        <div class="jira-form-group">
+          <label for="jiraToken">API Token:</label>
+          <input type="password" id="jiraToken" placeholder="Your JIRA API Token" class="jira-input">
+          <small style="color: #666; display: block; margin-top: 5px;">
+            <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color: #673ab7;">Generate API Token here</a>
+          </small>
+        </div>
+        
+        <div class="jira-form-group">
+          <label for="jiraProject">Project Key:</label>
+          <input type="text" id="jiraProject" placeholder="e.g., PROJ, DEV, TEST" class="jira-input">
+        </div>
+        
+        <div id="jiraConnectionStatus" class="connection-status-indicator" style="display: none;">
+          <span class="status-text"></span>
+        </div>
+      </div>
+      
+      <div class="jira-modal-footer">
+        <button id="testJiraConnection" class="jira-btn jira-btn-secondary">Test Connection</button>
+        <button id="proceedToStories" class="jira-btn jira-btn-primary" disabled>Connect & Load Stories</button>
+        <button onclick="hideJiraImportModal()" class="jira-btn jira-btn-cancel">Cancel</button>
+      </div>
+    </div>
+    
+    <!-- Step 2: Story Selection -->
+    <div id="jiraSelectionStep" class="jira-step">
+      <div class="jira-modal-header">
+        <button class="jira-back-btn" onclick="backToJiraConnection()">←</button>
+        <h3>📋 Select Stories to Import</h3>
+        <button class="close-button" onclick="hideJiraImportModal()">&times;</button>
+      </div>
+      
+      <div class="jira-selection-section">
+        <div class="jira-filters">
+          <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <div class="filter-group">
+              <label for="jiraStatusFilter">Status:</label>
+              <select id="jiraStatusFilter" class="jira-select">
+                <option value="">All Statuses</option>
+                <option value="To Do">To Do</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Ready for Review">Ready for Review</option>
+                <option value="Done">Done</option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label for="jiraTypeFilter">Issue Type:</label>
+              <select id="jiraTypeFilter" class="jira-select">
+                <option value="">All Types</option>
+                <option value="Story">Story</option>
+                <option value="Bug">Bug</option>
+                <option value="Task">Task</option>
+                <option value="Epic">Epic</option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label for="jiraSearchInput">Search:</label>
+              <input type="text" id="jiraSearchInput" placeholder="Search stories..." class="jira-input" style="width: 200px;">
+            </div>
+            
+            <button id="applyJiraFilters" class="jira-btn jira-btn-secondary">Apply Filters</button>
+          </div>
+        </div>
+        
+        <div class="jira-selection-controls">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <button id="selectAllJiraStories" class="jira-btn jira-btn-secondary">Select All</button>
+              <button id="deselectAllJiraStories" class="jira-btn jira-btn-secondary">Deselect All</button>
+            </div>
+            <div>
+              <span id="selectedCount">0 selected</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="jira-stories-container">
+          <div id="jiraStoriesList" class="jira-stories-list">
+            <!-- Stories will be loaded here -->
+          </div>
+          
+          <div id="jiraLoadingIndicator" style="display: none; text-align: center; padding: 40px; color: #666;">
+            <div class="loading-spinner"></div>
+            Loading JIRA stories...
+          </div>
+        </div>
+      </div>
+      
+      <div class="jira-modal-footer">
+        <button id="importSelectedStories" class="jira-btn jira-btn-primary" disabled>Import Selected Stories</button>
+        <button onclick="hideJiraImportModal()" class="jira-btn jira-btn-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>   
      
 <!-- Updated Upload Section - moved to right side as per screenshot -->
 
