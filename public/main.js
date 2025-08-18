@@ -718,17 +718,49 @@ function populateExportDropdowns() {
 function generateExportPreview() {
   const stories = collectStoriesForExport();
   const mappedData = mapStoriesForExport(stories);
-  const csvContent = generateCsvContent(mappedData);
   
-  const previewEl = document.getElementById('exportPreview');
-  if (previewEl) {
-    // Show first 10 lines of the CSV
-    const lines = csvContent.split('\n').slice(0, 10);
-    const preview = lines.join('\n');
-    const totalLines = csvContent.split('\n').length - 1; // -1 for empty last line
-    
-    previewEl.textContent = preview + (totalLines > 10 ? `\n... (${totalLines - 10} more rows)` : '');
+  const previewContainer = document.getElementById('exportPreviewTable');
+  if (!previewContainer) return;
+  
+  if (stories.length === 0) {
+    previewContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">No stories available to export</p>';
+    return;
   }
+  
+  const { mappedStories, headers } = mappedData;
+  const includeHeader = document.getElementById('includeHeader')?.checked || false;
+  
+  // Create table HTML similar to import preview
+  let html = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+  
+  // Add headers if enabled
+  if (includeHeader) {
+    html += '<thead><tr style="background: #f0f0f0;">';
+    headers.forEach(header => {
+      html += `<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">${header}</th>`;
+    });
+    html += '</tr></thead>';
+  }
+  
+  // Add data rows (show first 10 for preview)
+  html += '<tbody>';
+  const previewRows = mappedStories.slice(0, 10);
+  previewRows.forEach(row => {
+    html += '<tr>';
+    row.forEach(cell => {
+      const cellValue = String(cell || '').substring(0, 50); // Limit length
+      html += `<th style="padding: 8px; border: 1px solid #ddd; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${cellValue}</th>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  html += '</table>';
+  
+  if (mappedStories.length > 10) {
+    html += `<p style="padding: 10px; font-size: 12px; color: #666; text-align: center;">Showing first 10 rows of ${mappedStories.length} total rows</p>`;
+  }
+  
+  previewContainer.innerHTML = html;
 }
 
 /**
@@ -744,10 +776,11 @@ function collectStoriesForExport() {
     const storyIdDisplay = card.dataset.id || card.querySelector('.story-id')?.textContent || storyId;
     const titleEl = card.querySelector('.story-title');
     const pointsEl = card.querySelector('.story-points');
-    const voteCountEl = card.querySelector('.vote-count');
     
-    const title = titleEl ? titleEl.textContent : '';
-    const description = card.dataset.description || card.getAttribute('data-description') || '';
+    // Separate title and description properly
+    const title = titleEl ? titleEl.textContent.trim() : '';
+    const description = card.dataset.description || '';
+    
     const storyPoints = pointsEl ? pointsEl.textContent : '?';
     const isRevealed = votesRevealed[storyId] === true;
     const hasRevealedPoints = revealedStoryPoints[storyId] !== undefined;
@@ -779,8 +812,7 @@ function collectStoriesForExport() {
     stories.push({
       storyId: storyIdDisplay,
       title: title,
-      description: description,
-      fullText: title && description ? `${title}: ${description}` : (title || description),
+      description: description, // Keep separate
       storyPoints: storyPoints,
       voteCount: voteCount,
       averageVote: averageVote,
@@ -797,63 +829,77 @@ function collectStoriesForExport() {
  */
 function mapStoriesForExport(stories) {
   const storyIdMapping = document.getElementById('storyIdMapping')?.value;
+  const titleMapping = document.getElementById('titleMapping')?.value;
   const descriptionMapping = document.getElementById('descriptionMapping')?.value;
   const storyPointsMapping = document.getElementById('storyPointsMapping')?.value;
   const voteCountMapping = document.getElementById('voteCountMapping')?.value;
   const averageVoteMapping = document.getElementById('averageVoteMapping')?.value;
   const includeVoteDetails = document.getElementById('includeVoteDetails')?.checked || false;
   
-  // Determine the maximum number of columns needed
-  const mappings = [storyIdMapping, descriptionMapping, storyPointsMapping, voteCountMapping, averageVoteMapping];
-  const maxColumns = Math.max(...mappings.map(mapping => {
-    if (mapping === 'skip') return 0;
-    return parseInt(mapping.match(/Column ([A-Z])/)?.[1]?.charCodeAt(0) - 'A'.charCodeAt(0) + 1) || 0;
-  })) || 5;
+  // Build headers array
+  const headers = [];
+  const columnMap = {};
   
+  if (storyIdMapping !== 'skip') {
+    headers.push('Story ID');
+    columnMap['storyId'] = headers.length - 1;
+  }
+  if (titleMapping !== 'skip') {
+    headers.push('Title');
+    columnMap['title'] = headers.length - 1;
+  }
+  if (descriptionMapping !== 'skip') {
+    headers.push('Description');
+    columnMap['description'] = headers.length - 1;
+  }
+  if (storyPointsMapping !== 'skip') {
+    headers.push('Story Points');
+    columnMap['storyPoints'] = headers.length - 1;
+  }
+  if (voteCountMapping !== 'skip') {
+    headers.push('Vote Count');
+    columnMap['voteCount'] = headers.length - 1;
+  }
+  if (averageVoteMapping !== 'skip') {
+    headers.push('Average Vote');
+    columnMap['averageVote'] = headers.length - 1;
+  }
+  if (includeVoteDetails) {
+    headers.push('Vote Details');
+    columnMap['voteDetails'] = headers.length - 1;
+  }
+  
+  // Map stories to rows
   const mappedStories = stories.map(story => {
-    const row = [];
+    const row = new Array(headers.length).fill('');
     
-    // Map fields to columns
-    if (storyIdMapping !== 'skip') {
-      const colIndex = getColumnIndex(storyIdMapping);
-      if (colIndex >= 0) row[colIndex] = story.storyId;
+    if (columnMap['storyId'] !== undefined) {
+      row[columnMap['storyId']] = story.storyId;
     }
-    
-    if (descriptionMapping !== 'skip') {
-      const colIndex = getColumnIndex(descriptionMapping);
-      if (colIndex >= 0) {
-        let value = story.fullText;
-        if (descriptionMapping === 'title') value = story.title;
-        else if (descriptionMapping === 'description') value = story.description;
-        row[colIndex] = value;
-      }
+    if (columnMap['title'] !== undefined) {
+      row[columnMap['title']] = story.title;
     }
-    
-    if (storyPointsMapping !== 'skip') {
-      const colIndex = getColumnIndex(storyPointsMapping);
-      if (colIndex >= 0) row[colIndex] = story.storyPoints;
+    if (columnMap['description'] !== undefined) {
+      row[columnMap['description']] = story.description;
     }
-    
-    if (voteCountMapping !== 'skip') {
-      const colIndex = getColumnIndex(voteCountMapping);
-      if (colIndex >= 0) row[colIndex] = story.voteCount.toString();
+    if (columnMap['storyPoints'] !== undefined) {
+      row[columnMap['storyPoints']] = story.storyPoints;
     }
-    
-    if (averageVoteMapping !== 'skip') {
-      const colIndex = getColumnIndex(averageVoteMapping);
-      if (colIndex >= 0) row[colIndex] = story.averageVote;
+    if (columnMap['voteCount'] !== undefined) {
+      row[columnMap['voteCount']] = story.voteCount.toString();
     }
-    
-    // Add vote details if requested
-    if (includeVoteDetails && story.userVotes.length > 0) {
+    if (columnMap['averageVote'] !== undefined) {
+      row[columnMap['averageVote']] = story.averageVote;
+    }
+    if (columnMap['voteDetails'] !== undefined && story.userVotes.length > 0) {
       const voteDetails = story.userVotes.map(v => `${v.userName}:${v.vote}`).join(';');
-      row.push(voteDetails);
+      row[columnMap['voteDetails']] = voteDetails;
     }
     
     return row;
   });
   
-  return { stories: mappedStories, maxColumns, includeVoteDetails };
+  return { mappedStories, headers };
 }
 
 /**
