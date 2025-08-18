@@ -112,7 +112,11 @@ async function testAnonymousAccess(jiraUrl, projectKey) {
     const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
     
     // Try to access project info without authentication
-    const response = await fetch(`${baseUrl}/rest/api/3/project/${projectKey}`, {
+    const response = await fetch(`/api/jira/project`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jiraUrl: baseUrl, projectKey })
+    },
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -145,7 +149,11 @@ async function testJiraConnectionWithToken(url, email, token, project) {
     const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
     const auth = btoa(`${email}:${token}`);
     
-    const response = await fetch(`${baseUrl}/rest/api/3/project/${project}`, {
+    const response = await fetch(`/api/jira/project`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jiraUrl: baseUrl, email, token, projectKey: project })
+    },
       headers: {
         'Authorization': `Basic ${auth}`,
         'Accept': 'application/json'
