@@ -63,47 +63,218 @@ function saveJiraCredentials() {
   localStorage.setItem('jiraCredentials', JSON.stringify(creds));
 }
 
-// Test JIRA Connection
-async function testJiraConnection() {
+// ========== ENHANCED SMART CONNECTION FUNCTIONS ==========
+
+// Enhanced JIRA connection with better UX
+async function smartJiraConnection() {
   const url = document.getElementById('jiraUrl').value.trim();
   const email = document.getElementById('jiraEmail').value.trim();
-  const token = document.getElementById('jiraToken').value.trim();
   const project = document.getElementById('jiraProject').value.trim();
   
-  if (!url || !email || !token || !project) {
-    showConnectionStatus('error', 'Please fill in all fields');
+  if (!url || !project) {
+    showConnectionStatus('error', 'Please fill in JIRA URL and Project Key');
     return false;
   }
   
-  showConnectionStatus('loading', 'Testing connection...');
+  // Step 1: Try anonymous access first
+  showConnectionStatus('loading', 'Checking if authentication is required...');
   
+  const anonymousTest = await testAnonymousAccess(url, project);
+  if (anonymousTest.success) {
+    showConnectionStatus('success', 'Connected without authentication! 🎉');
+    document.getElementById('proceedToStories').disabled = false;
+    saveJiraCredentials();
+    jiraConnection = { url, email: '', token: '', project, isAnonymous: true };
+    return true;
+  }
+  
+  // Step 2: If auth required, check if token is provided
+  const token = document.getElementById('jiraToken').value.trim();
+  
+  if (!token) {
+    showTokenHelp();
+    return false;
+  }
+  
+  if (!email) {
+    showConnectionStatus('error', 'Email is required when using API token');
+    return false;
+  }
+  
+  // Step 3: Try with provided token
+  return testJiraConnectionWithToken(url, email, token, project);
+}
+
+// Test anonymous access to JIRA
+async function testAnonymousAccess(jiraUrl, projectKey) {
   try {
-    const response = await fetch('/api/jira/test-connection', {
-      method: 'POST',
+    // Clean URL
+    const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
+    
+    // Try to access project info without authentication
+    const response = await fetch(`${baseUrl}/rest/api/3/project/${projectKey}`, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ url, email, token, project })
+      timeout: 10000
     });
     
-    const result = await response.json();
-    
-    if (response.ok && result.success) {
-      showConnectionStatus('success', `Connected successfully! Found ${result.projectName} project`);
-      document.getElementById('proceedToStories').disabled = false;
-      saveJiraCredentials();
-      jiraConnection = { url, email, token, project };
-      return true;
+    if (response.ok) {
+      const projectData = await response.json();
+      return { 
+        success: true, 
+        requiresAuth: false, 
+        projectName: projectData.name 
+      };
+    } else if (response.status === 401 || response.status === 403) {
+      return { success: false, requiresAuth: true };
     } else {
-      showConnectionStatus('error', result.error || 'Connection failed');
-      return false;
+      return { success: false, requiresAuth: true, error: `HTTP ${response.status}` };
     }
   } catch (error) {
-    console.error('JIRA connection test failed:', error);
-    showConnectionStatus('error', 'Connection failed. Please check your credentials.');
+    console.log('[JIRA] Anonymous access test failed:', error.message);
+    return { success: false, requiresAuth: true, error: error.message };
+  }
+}
+
+// Test JIRA Connection with token (enhanced version)
+async function testJiraConnectionWithToken(url, email, token, project) {
+  try {
+    const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+    const auth = btoa(`${email}:${token}`);
+    
+    const response = await fetch(`${baseUrl}/rest/api/3/project/${project}`, {
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Accept': 'application/json'
+      },
+      timeout: 10000
+    });
+    
+    if (response.ok) {
+      const projectData = await response.json();
+      showConnectionStatus('success', `Connected successfully! Found "${projectData.name}" project 🎉`);
+      document.getElementById('proceedToStories').disabled = false;
+      saveJiraCredentials();
+      jiraConnection = { url, email, token, project, isAnonymous: false };
+      return true;
+    } else {
+      const errorText = response.status === 401 ? 'Invalid credentials' : 
+                       response.status === 404 ? 'Project not found' : 
+                       `API error: ${response.status}`;
+      showConnectionStatus('error', errorText);
+      return false;
+    }
+    
+  } catch (error) {
+    console.error('JIRA connection test failed:', error.message);
+    showConnectionStatus('error', 'Connection failed. Check URL and network connection.');
     return false;
   }
 }
+
+// Show helpful token generation guidance
+function showTokenHelp() {
+  const helpDiv = document.createElement('div');
+  helpDiv.className = 'jira-token-help';
+  helpDiv.innerHTML = `
+    <div style="background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%); border: 2px solid #4a90e2; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 12px rgba(74, 144, 226, 0.1);">
+      <div style="display: flex; align-items: center; margin-bottom: 15px;">
+        <div style="width: 40px; height: 40px; background: #4a90e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+          🔐
+        </div>
+        <div>
+          <h4 style="margin: 0; color: #2c5282; font-size: 18px;">Authentication Required</h4>
+          <p style="margin: 5px 0 0 0; color: #4a5568; font-size: 14px;">This JIRA instance requires authentication. No worries, it's quick!</p>
+        </div>
+      </div>
+      
+      <div style="background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+        <h5 style="margin: 0 0 10px 0; color: #2c5282; font-size: 16px;">📋 Quick Setup Steps:</h5>
+        <ol style="margin: 0; padding-left: 20px; color: #4a5568;">
+          <li>Click the "Generate Token" button below</li>
+          <li>On the Atlassian page, click "Create API token"</li>
+          <li>Name it something like "Planning Poker"</li>
+          <li>Copy the generated token</li>
+          <li>Come back and paste it in the API Token field above</li>
+        </ol>
+      </div>
+      
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button onclick="openTokenGenerator()" class="jira-btn jira-btn-primary" style="display: flex; align-items: center; gap: 8px;">
+          🔗 Generate API Token
+        </button>
+        <button onclick="dismissTokenHelp()" class="jira-btn jira-btn-secondary">
+          I'll do this later
+        </button>
+      </div>
+      
+      <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 6px; border: 1px solid #ffeaa7;">
+        <small style="color: #856404; display: flex; align-items: center; gap: 8px;">
+          <span>💡</span>
+          <strong>Tip:</strong> API tokens are safer than passwords and can be revoked anytime.
+        </small>
+      </div>
+    </div>
+  `;
+  
+  const statusEl = document.getElementById('jiraConnectionStatus');
+  statusEl.innerHTML = '';
+  statusEl.appendChild(helpDiv);
+  statusEl.style.display = 'block';
+}
+
+// Open token generator in new tab
+function openTokenGenerator() {
+  window.open('https://id.atlassian.com/manage-profile/security/api-tokens', '_blank');
+  
+  // Update the help text to show next steps
+  const helpEl = document.querySelector('.jira-token-help');
+  if (helpEl) {
+    const waitingDiv = document.createElement('div');
+    waitingDiv.innerHTML = `
+      <div style="background: #e8f5e8; border: 2px solid #4caf50; border-radius: 8px; padding: 15px; margin-top: 15px; text-align: center;">
+        <div style="font-size: 24px; margin-bottom: 10px;">⏳</div>
+        <p style="margin: 0; color: #2e7d2e; font-weight: 600;">Waiting for you to generate the token...</p>
+        <p style="margin: 5px 0 0 0; color: #4a5568; font-size: 14px;">Once you have the token, paste it above and try connecting again</p>
+      </div>
+    `;
+    helpEl.appendChild(waitingDiv);
+  }
+}
+
+// Dismiss token help
+function dismissTokenHelp() {
+  const statusEl = document.getElementById('jiraConnectionStatus');
+  statusEl.style.display = 'none';
+  statusEl.innerHTML = '';
+}
+
+// Helper function to extract description text from JIRA's complex description format
+function extractDescription(descriptionObj) {
+  if (!descriptionObj) return '';
+  
+  try {
+    if (typeof descriptionObj === 'string') return descriptionObj;
+    
+    if (descriptionObj.content && Array.isArray(descriptionObj.content)) {
+      return descriptionObj.content.map(paragraph => {
+        if (paragraph.content && Array.isArray(paragraph.content)) {
+          return paragraph.content.map(item => item.text || '').join(' ');
+        }
+        return paragraph.text || '';
+      }).join(' ').trim();
+    }
+    
+    return '';
+  } catch (error) {
+    return '';
+  }
+}
+
+// ========== EXISTING FUNCTIONS (UPDATED) ==========
 
 // Show connection status
 function showConnectionStatus(type, message) {
@@ -120,7 +291,7 @@ function showConnectionStatus(type, message) {
   }
 }
 
-// Load JIRA Stories
+// Enhanced load JIRA stories function
 async function loadJiraStories() {
   if (!jiraConnection) {
     showConnectionStatus('error', 'No active JIRA connection');
@@ -130,29 +301,56 @@ async function loadJiraStories() {
   showJiraLoadingIndicator(true);
   
   try {
-    const response = await fetch('/api/jira/get-stories', {
-      method: 'POST',
+    let response;
+    const baseUrl = jiraConnection.url.endsWith('/') ? jiraConnection.url.slice(0, -1) : jiraConnection.url;
+    const jql = `project = "${jiraConnection.project}" AND issueType IN (Story, Task, Bug, Epic) ORDER BY created DESC`;
+    
+    const requestOptions = {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(jiraConnection)
-    });
+      timeout: 15000
+    };
     
-    const result = await response.json();
+    // Add authentication header if not anonymous
+    if (!jiraConnection.isAnonymous) {
+      const auth = btoa(`${jiraConnection.email}:${jiraConnection.token}`);
+      requestOptions.headers['Authorization'] = `Basic ${auth}`;
+    }
     
-    if (response.ok && result.success) {
-      jiraStories = result.stories || [];
+    const url = `${baseUrl}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=100&fields=key,summary,description,issuetype,status,priority,assignee,customfield_10016`;
+    
+    response = await fetch(url, requestOptions);
+    
+    if (response.ok) {
+      const data = await response.json();
+      const issues = data.issues || [];
+      
+      jiraStories = issues.map(issue => ({
+        key: issue.key,
+        summary: issue.fields.summary,
+        description: extractDescription(issue.fields.description),
+        issueType: issue.fields.issuetype?.name || 'Unknown',
+        status: issue.fields.status?.name || 'Unknown',
+        priority: issue.fields.priority?.name || 'Medium',
+        assignee: issue.fields.assignee?.displayName || null,
+        storyPoints: issue.fields.customfield_10016 || null
+      }));
+      
       displayJiraStories(jiraStories);
       
       // Switch to story selection step
       document.getElementById('jiraConnectionStep').classList.remove('active');
       document.getElementById('jiraSelectionStep').classList.add('active');
     } else {
-      showConnectionStatus('error', result.error || 'Failed to load stories');
+      showConnectionStatus('error', `Failed to load stories: HTTP ${response.status}`);
     }
+    
   } catch (error) {
     console.error('Failed to load JIRA stories:', error);
-    showConnectionStatus('error', 'Failed to load stories');
+    showConnectionStatus('error', 'Failed to load stories. Please check your connection.');
   } finally {
     showJiraLoadingIndicator(false);
   }
@@ -400,14 +598,14 @@ function setupJiraEventListeners() {
     });
   }
   
-  // Connection step listeners
-  const testConnectionBtn = document.getElementById('testJiraConnection');
-  const proceedBtn = document.getElementById('proceedToStories');
-  
-  if (testConnectionBtn) {
-    testConnectionBtn.addEventListener('click', testJiraConnection);
+  // Smart connect button (NEW)
+  const smartConnectBtn = document.getElementById('smartJiraConnect');
+  if (smartConnectBtn) {
+    smartConnectBtn.addEventListener('click', smartJiraConnection);
   }
   
+  // Proceed to stories button
+  const proceedBtn = document.getElementById('proceedToStories');
   if (proceedBtn) {
     proceedBtn.addEventListener('click', loadJiraStories);
   }
@@ -466,11 +664,18 @@ function setupJiraEventListeners() {
 window.JiraIntegration = {
   showJiraImportModal,
   hideJiraImportModal,
-  testJiraConnection,
+  smartJiraConnection,
   loadJiraStories,
   importSelectedStories,
   initializeJiraIntegration
 };
+
+// Make functions available globally for onclick handlers
+window.showJiraImportModal = showJiraImportModal;
+window.hideJiraImportModal = hideJiraImportModal;
+window.backToJiraConnection = backToJiraConnection;
+window.openTokenGenerator = openTokenGenerator;
+window.dismissTokenHelp = dismissTokenHelp;
 
 // Auto-initialize when DOM is loaded
 if (document.readyState === 'loading') {
@@ -478,7 +683,3 @@ if (document.readyState === 'loading') {
 } else {
   initializeJiraIntegration();
 }
-
-window.showJiraImportModal = showJiraImportModal;
-window.hideJiraImportModal = hideJiraImportModal;
-window.backToJiraConnection = backToJiraConnection;
