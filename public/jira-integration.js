@@ -558,7 +558,10 @@ async function importSelectedStories() {
 // Initialize JIRA Integration
 function initializeJiraIntegration() {
   console.log('[JIRA] Initializing JIRA integration module');
-  
+
+  //Add check to see if only visible
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+
   // Add JIRA Import menu option to profile menu
   const uploadBtn = document.getElementById('uploadTicketMenuBtn');
   if (uploadBtn && uploadBtn.parentNode) {
@@ -571,11 +574,12 @@ function initializeJiraIntegration() {
       </svg>
       Import from JIRA
     `;
-    
-    uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
-    
-    // Add event listeners
-    setupJiraEventListeners();
+
+    if(isHost){
+      uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
+    }
+
+      setupJiraEventListeners();
   }
 }
 
