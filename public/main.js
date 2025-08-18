@@ -730,7 +730,7 @@ function collectStoriesForExport() {
     const voteCountEl = card.querySelector('.vote-count');
     
     const title = titleEl ? titleEl.textContent : '';
-    const description = card.dataset.description || '';
+    const description = card.dataset.description || card.getAttribute('data-description') || '';
     const storyPoints = pointsEl ? pointsEl.textContent : '?';
     const isRevealed = votesRevealed[storyId] === true;
     const hasRevealedPoints = revealedStoryPoints[storyId] !== undefined;
@@ -4885,4 +4885,19 @@ if (exportCsvConfirmBtn) {
 
     exportCsvModal.style.display = "none";
   });
+}
+
+
+function generateImportPreview(headers, rows) {
+  const previewEl = document.getElementById("importPreview");
+  if (!previewEl) return;
+  let html = "<table border='1' cellspacing='0' cellpadding='4' style='border-collapse:collapse; width:100%;'>";
+  html += "<thead><tr>";
+  headers.forEach(h => { html += `<th style='background:#f0f0f0;'>${h}</th>`; });
+  html += "</tr></thead><tbody>";
+  rows.slice(0, 5).forEach(r => {
+    html += "<tr>" + r.map(c => `<td>${c}</td>`).join("") + "</tr>";
+  });
+  html += "</tbody></table>";
+  previewEl.innerHTML = html;
 }
