@@ -176,6 +176,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Toggle menu when avatar/name is clicked
   const trigger = document.getElementById('profileMenuTrigger');
   const menu = document.getElementById('profileMenu');
+   if (window.JiraIntegration && typeof window.JiraIntegration.initializeJiraIntegration === 'function') {
+    console.log('[MAIN] Initializing JIRA integration');
+    // The JIRA module will auto-initialize, but we can call it explicitly if needed
+    // window.JiraIntegration.initializeJiraIntegration();
+  }
 
   if (trigger && menu) {
     trigger.addEventListener('click', function(e) {
