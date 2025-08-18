@@ -22,7 +22,7 @@ app.get('/', (req, res) => {
 });
 app.use(express.static(join(__dirname, 'public')));
 
-import fetch from 'node-fetch';  // <-- added for JIRA proxy support
+// import fetch from 'node-fetch';  // <-- added for JIRA proxy support
 
 app.use(express.json());
 
