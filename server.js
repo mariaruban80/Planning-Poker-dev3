@@ -22,6 +22,42 @@ app.get('/', (req, res) => {
 });
 app.use(express.static(join(__dirname, 'public')));
 
+import fetch from 'node-fetch';  // <-- added for JIRA proxy support
+
+app.use(express.json());
+
+// JIRA Proxy route (avoids CORS issues)
+app.post('/api/jira/project', async (req, res) => {
+  const { jiraUrl, email, token, projectKey } = req.body;
+  if (!jiraUrl || !projectKey) {
+    return res.status(400).json({ error: 'Missing parameters' });
+  }
+
+  const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
+  const url = `${baseUrl}/rest/api/3/project/${projectKey}`;
+
+  const headers = {
+    'Accept': 'application/json'
+  };
+
+  if (email && token) {
+    const auth = Buffer.from(`${email}:${token}`).toString('base64');
+    headers['Authorization'] = `Basic ${auth}`;
+  }
+
+  try {
+    const response = await fetch(url, { headers });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('[SERVER] JIRA fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch from JIRA' });
+  }
+});
+
+
 // Enhanced room structure with improved state management
 const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed, tickets, deletedStoryIds, deletedStoriesTimestamp, userNameVotes }
 const roomVotingSystems = {}; // roomId → voting system
