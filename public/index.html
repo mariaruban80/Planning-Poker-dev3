@@ -5515,12 +5515,19 @@ function parseCsvContent(csvText) {
 }
 
 // Show mapping step
+// Show mapping step
 function showMappingStep() {
   document.getElementById('csvUploadStep').classList.remove('active');
   document.getElementById('csvMappingStep').classList.add('active');
   
   populateMappingDropdowns();
-  populatePreviewTable();
+  populatePreviewTable(); // Show initial preview
+  
+  // Update preview when mappings change
+  const selects = document.querySelectorAll('.csv-mapping-select');
+  selects.forEach(select => {
+    select.addEventListener('change', populatePreviewTable);
+  });
 }
 
 // Populate mapping dropdowns
@@ -5569,62 +5576,64 @@ function autoMapFields() {
     }
   });
 }
-
 // Populate preview table
 function populatePreviewTable() {
-  const header = document.getElementById('csvPreviewHeader');
-  const body = document.getElementById('csvPreviewBody');
+  const previewEl = document.getElementById('importPreview');
+  if (!previewEl) return;
   
-  if (!header || !body) return;
+  if (!csvData || csvData.length === 0) {
+    previewEl.innerHTML = '<p>No data to preview</p>';
+    return;
+  }
+
+  // Create table HTML structure
+  let html = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse; width:100%; font-size:12px;">';
   
-  header.innerHTML = '';
-  body.innerHTML = '';
-  
-  // Create header
-  const headerRow = document.createElement('tr');
+  // Add header row
+  html += '<thead><tr style="background:#f0f0f0;">';
   ['Summary', 'Key', 'Description', 'Link', 'Estimate'].forEach(headerText => {
-    const th = document.createElement('th');
-    th.textContent = headerText;
-    headerRow.appendChild(th);
+    html += `<th style="padding:6px; border:1px solid #ccc;">${headerText}</th>`;
   });
-  header.appendChild(headerRow);
+  html += '</tr></thead>';
   
-  // Create preview rows
+  // Add data rows (show first 5 rows as preview)
+  html += '<tbody>';
   const previewData = csvData.slice(0, 5);
+  
   previewData.forEach(row => {
-    const tr = document.createElement('tr');
+    html += '<tr>';
     
-    const summaryIndex = document.getElementById('summaryMapping').value;
-    const keyIndex = document.getElementById('keyMapping').value;
-    const descIndex = document.getElementById('descriptionMapping').value;
-    const linkIndex = document.getElementById('linkMapping').value;
-    const estimateIndex = document.getElementById('estimateMapping').value;
+    // Get mapping values
+    const summaryIndex = document.getElementById('summaryMapping')?.value || '';
+    const keyIndex = document.getElementById('keyMapping')?.value || '';
+    const descIndex = document.getElementById('descriptionMapping')?.value || '';
+    const linkIndex = document.getElementById('linkMapping')?.value || '';
+    const estimateIndex = document.getElementById('estimateMapping')?.value || '';
     
+    // Extract values based on mappings
     const values = [
-      summaryIndex !== '' ? (row[summaryIndex] || '') : '',
-      keyIndex !== '' ? (row[keyIndex] || '') : '',
-      descIndex !== '' ? (row[descIndex] || '') : '',
-      linkIndex !== '' ? (row[linkIndex] || '') : '',
-      estimateIndex !== '' ? (row[estimateIndex] || '') : ''
+      summaryIndex !== '' ? (row[parseInt(summaryIndex)] || '') : '',
+      keyIndex !== '' ? (row[parseInt(keyIndex)] || '') : '',
+      descIndex !== '' ? (row[parseInt(descIndex)] || '') : '',
+      linkIndex !== '' ? (row[parseInt(linkIndex)] || '') : '',
+      estimateIndex !== '' ? (row[parseInt(estimateIndex)] || '') : ''
     ];
     
     values.forEach(value => {
-      const td = document.createElement('td');
-      td.textContent = value;
-      td.style.maxWidth = '200px';
-      td.style.overflow = 'hidden';
-      td.style.textOverflow = 'ellipsis';
-      tr.appendChild(td);
+      const cellValue = String(value).substring(0, 50); // Limit cell content length
+      html += `<td style="padding:6px; border:1px solid #ccc; max-width:150px; overflow:hidden; text-overflow:ellipsis;">${cellValue}</td>`;
     });
     
-    body.appendChild(tr);
+    html += '</tr>';
   });
   
-  // Update preview when mappings change
-  const selects = document.querySelectorAll('.csv-mapping-select');
-  selects.forEach(select => {
-    select.addEventListener('change', populatePreviewTable);
-  });
+  html += '</tbody></table>';
+  
+  if (csvData.length > 5) {
+    html += `<p style="font-size:12px; color:#666; margin-top:8px;">Showing first 5 rows of ${csvData.length} total rows</p>`;
+  }
+  
+  previewEl.innerHTML = html;
 }
 
 // Handle CSV Import - FIXED VERSION
