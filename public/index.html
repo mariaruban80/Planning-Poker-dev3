@@ -3456,68 +3456,67 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
         </div>
       </div>
     </div>
-<!-- Step 2: Field Mapping -->
-<div id="csvMappingStep" class="csv-step">
-  <div class="csv-modal-header">
-    <button class="csv-back-btn" onclick="goBackToCsvUpload()">←</button>
-    <h3>Import from CSV file</h3>
-    <button class="close-button" onclick="hideCsvUploadModal()">&times;</button>
-  </div>
-  
-  <div class="csv-mapping-section">
-    <div class="csv-mapping-dropdowns">
-      <div class="csv-mapping-item">
-        <label>Summary (required)</label>
-        <select id="summaryMapping" class="csv-mapping-select" required>
-          <option value="">Select...</option>
-        </select>
+    
+    <!-- Step 2: Field Mapping -->
+    <div id="csvMappingStep" class="csv-step">
+      <div class="csv-modal-header">
+        <button class="csv-back-btn" onclick="goBackToCsvUpload()">←</button>
+        <h3>Import from CSV file</h3>
+        <button class="close-button" onclick="hideCsvUploadModal()">&times;</button>
       </div>
       
-      <div class="csv-mapping-item">
-        <label>Key</label>
-        <select id="keyMapping" class="csv-mapping-select">
-          <option value="">Select...</option>
-        </select>
-      </div>
-      
-      <div class="csv-mapping-item">
-        <label>Description</label>
-        <select id="descriptionMapping" class="csv-mapping-select">
-          <option value="">Select...</option>
-        </select>
-      </div>
-      
-      <div class="csv-mapping-item">
-        <label>Link</label>
-        <select id="linkMapping" class="csv-mapping-select">
-          <option value="">Select...</option>
-        </select>
-      </div>
-      
-      <div class="csv-mapping-item">
-        <label>Estimate</label>
-        <select id="estimateMapping" class="csv-mapping-select">
-          <option value="">Select...</option>
-        </select>
-      </div>
-    </div>
+      <div class="csv-mapping-section">
+        <div class="csv-mapping-dropdowns">
+        <div class="csv-mapping-item">
+            <label>Summary (required)</label>
+            <select id="summaryMapping" class="csv-mapping-select" required>
+              <option value="">Select...</option>
+            </select>
+          </div>
+          
+          <div class="csv-mapping-item">
+            <label>Key</label>
+            <select id="keyMapping" class="csv-mapping-select">
+              <option value="">Select...</option>
+            </select>
+          </div>
+          
+          <div class="csv-mapping-item">
+            <label>Description</label>
+            <select id="descriptionMapping" class="csv-mapping-select">
+              <option value="">Select...</option>
+            </select>
+          </div>
+          
+          <div class="csv-mapping-item">
+            <label>Link</label>
+            <select id="linkMapping" class="csv-mapping-select">
+              <option value="">Select...</option>
+            </select>
+          </div>
+          
+          <div class="csv-mapping-item">
+            <label>Estimate</label>
+            <select id="estimateMapping" class="csv-mapping-select">
+              <option value="">Select...</option>
+            </select>
+          </div>
+        </div>
 
-    <!-- ✅ CSV Preview container -->
+            <!-- ✅ Add preview container here -->
     <div id="importPreview" 
          style="margin-top:15px; max-height:200px; overflow:auto; 
-                border:1px solid #ccc; border-radius:6px; padding:8px; background:#fafafa;">
-      <em>CSV preview will appear here...</em>
+                border:1px solid #ccc; padding:8px; font-size:0.9em;">
     </div> 
            
-    <div class="csv-modal-footer">
-      <button class="csv-cancel-btn" onclick="hideCsvUploadModal()">Cancel</button>
-      <button id="importCsvBtn" class="csv-import-btn">Import Issues</button>
+        <div class="csv-modal-footer">
+  <button class="csv-cancel-btn" onclick="hideCsvUploadModal()">Cancel</button>
+  <button id="importCsvBtn" class="csv-import-btn">Import Issues</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-
-    
-   
 
 
 <!-- Export CSV Modal -->
