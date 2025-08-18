@@ -2646,7 +2646,11 @@ function processAllTickets(tickets) {
   if (filtered.length > 0) {
     if (currentStoryIndex === null || currentStoryIndex === undefined || currentStoryIndex < 0 || currentStoryIndex >= filtered.length) {
       currentStoryIndex = 0;
-      selectStory(0, false);
+if (stories && stories.length > 0) {
+  selectStory(0, false);
+} else {
+  console.warn("[UI] No stories available, skipping auto-select");
+}
     } else {
       console.log('[INIT] Skipping auto-select, currentStoryIndex already set:', currentStoryIndex);
       selectStory(currentStoryIndex, false);
@@ -3273,7 +3277,11 @@ function ConfirmEdit(e) {
   window.editingTicketData = null;
 
   setTimeout(() => {
-    selectStory(0, false);
+if (stories && stories.length > 0) {
+  selectStory(0, false);
+} else {
+  console.warn("[UI] No stories available, skipping auto-select");
+}
   }, 200);
 }
 
