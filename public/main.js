@@ -130,9 +130,12 @@ window.addTicketFromModal = function(ticketData) {
       socket.emit('addTicket', ticketData);
     }
 
+    if (ticketData.descriptionDisplay) {
+      const card = document.getElementById(ticketData.id);
+      if (card) { card.dataset.description = ticketData.descriptionDisplay; }
+    }
     addTicketToUI(ticketData, true);
-    
-  } else {
+} else {
     console.log('[MODAL] Processing manual ticket add');
     
     const ticketName = document.getElementById('ticketNameInput')?.value?.trim() || '';
@@ -299,6 +302,9 @@ document.addEventListener('DOMContentLoaded', function() {
           addTicketToUI(ticket, true);
         });
       } else {
+      if (typeof generateExportPreview === 'function') {
+        generateExportPreview();
+      }
         alert('No valid tickets found in the CSV.');
       }
     };
@@ -788,7 +794,7 @@ function mapStoriesForExport(stories) {
   })) || 5;
   
   const mappedStories = stories.map(story => {
-    const row = new Array(maxColumns).fill('');
+    const row = [];
     
     // Map fields to columns
     if (storyIdMapping !== 'skip') {
