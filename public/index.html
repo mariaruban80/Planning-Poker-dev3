@@ -3674,6 +3674,19 @@ body::-webkit-scrollbar {
 viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-icon">
 <path d="M192 64C156.7 64 128 92.7 128 128L128 368L310.1 368L279.1 337C269.7 327.6 269.7 312.4 279.1 303.1C288.5 293.8 303.7 293.7 313 303.1L385 375.1C394.4 384.5 394.4 399.7 385 409L313 481C303.6 490.4 288.4 490.4 279.1 481C269.8 471.6 269.7 456.4 279.1 447.1L310.1 416.1L128 416.1L128 512.1C128 547.4 156.7 576.1 192 576.1L448 576.1C483.3 576.1 512 547.4 512 512.1L512 234.6C512 217.6 505.3 201.3 493.3 189.3L386.7 82.7C374.7 70.7 358.5 64 341.5 64L192 64zM453.5 240L360 240C346.7 240 336 229.3 336 216L336 122.5L453.5 240z"/> </svg> Import from CSV </button>
 
+<!-- Import from JIRA -->
+
+  <button class="profile-menu-item" id="jiraImportMenuBtn">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+             width="16" height="16" fill="currentColor" class="menu-icon">
+          <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4
+                   1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0
+                   4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97
+                   4.37 4.37H2V11.53z"/>
+        </svg>
+        Import from JIRA
+      </button>     
+
    <!-- Export button here -->
   <button class="profile-menu-item" id="exportToCsvMenuBtn">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-icon">
@@ -4273,56 +4286,81 @@ function initUserHeaderDisplay() {
 }
 
 // Handle username synchronization and prompt for invited users
+
 document.addEventListener('DOMContentLoaded', function() {
   // STEP 1: Check for username from main.html (userName with capital N)
   const storedUserName = sessionStorage.getItem('userName');
-  
+
   // STEP 2: Check if this is a new user joining via invite link
   const urlParams = new URLSearchParams(window.location.search);
   const isJoiningViaInvite = urlParams.has('roomId') && !storedUserName;
-  
+
   if (isJoiningViaInvite) {
     // This is someone joining via invite link who doesn't have a userName yet
     // ✅ Mark them as guest since they're joining via invite
     sessionStorage.setItem('isHost', 'false');
     sessionStorage.setItem('isRoomCreator', 'false');
-    
+
     showLoginModal();
-    
+
     // Important: Mark username as not ready to prevent socket connection
     window.userNameReady = false;
-    
+
     // Hide main content until user provides name
     hideMainContent();
   } else {
     // User already has a name, mark as ready
     window.userNameReady = true;
-    
+
     // ✅ If no host status is set, check if they have room creator status
     if (!sessionStorage.getItem('isHost')) {
       const isCreator = sessionStorage.getItem('isRoomCreator') === 'true';
       sessionStorage.setItem('isHost', isCreator ? 'true' : 'false');
     }
-    
+
     // ✅ Update header if we have username - NEW ADDITION
     if (storedUserName) {
       setTimeout(initUserHeaderDisplay, 100);
     }
   }
-  
+
+  // Secure the visibility of import buttons based on host status
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
+  const exportBtn = document.getElementById('exportToCsvMenuBtn');
+  const jiraImportBtn = document.getElementById('jiraImportMenuBtn');
+
+  if (uploadBtn) {
+    uploadBtn.style.display = isHost ? 'flex' : 'none';
+  }
+  if (exportBtn) {
+    exportBtn.style.display = isHost ? 'flex' : 'none';
+  }
+  if (jiraImportBtn) {
+    jiraImportBtn.style.display = isHost ? 'flex' : 'none';
+        jiraImportBtn.addEventListener('click', function() {
+          window.JiraIntegration.showJiraImportModal();
+        });
+  }
+
+  // Debugging info
+  console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
+  console.log('Host status:', sessionStorage.getItem('isHost'));
+  console.log('Room creator:', sessionStorage.getItem('isRoomCreator'));
+
   // ✅ NEW ADDITIONS FOR HEADER FUNCTIONALITY
   // Add periodic check to ensure header stays updated
   setInterval(function() {
     const usernameEl = document.getElementById('headerUsername');
     const currentStoredUserName = sessionStorage.getItem('userName');
-    
+
     // If header shows "User" but we have a real username, update it
     if (usernameEl && currentStoredUserName && (usernameEl.textContent === 'User' || usernameEl.textContent === 'Guest')) {
       console.log('[HEADER] Header showing default text, updating with stored username:', currentStoredUserName);
       initUserHeaderDisplay();
     }
   }, 2000);
-  
+
   // Add a callback to the join session button to update header after login
   const joinButton = document.getElementById('joinSessionWithName');
   if (joinButton) {
@@ -4333,7 +4371,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }, 100);
     });
   }
-  
+
   // Also listen for Enter key in username input
   const userNameInput = document.getElementById('userNameInput');
   if (userNameInput) {
@@ -4346,7 +4384,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-  
+
   // Check when page becomes visible (in case user switched tabs)
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
@@ -4359,12 +4397,9 @@ document.addEventListener('DOMContentLoaded', function() {
       }, 500);
     }
   });
-  
-  // Debugging info
-  console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
-  console.log('Host status:', sessionStorage.getItem('isHost'));
-  console.log('Room creator:', sessionStorage.getItem('isRoomCreator'));
+
 });
+
 
 // Setup mobile-specific features
 function setupMobileLayout() {
