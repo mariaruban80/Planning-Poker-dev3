@@ -219,15 +219,43 @@ function displayJiraStories(stories) {
 // -----------------------------------------------------------
 // Initialization (hook menu button, etc.)
 function initializeJiraIntegration() {
-  console.log('[JIRA] Initializing JIRA integration');
+  console.log('[JIRA] Initializing JIRA integration module');
 
-  const btn = document.getElementById('importFromJiraBtn');
-  if (btn) {
-    btn.addEventListener('click', showJiraImportModal);
+  // Only show to host
+  if (!window.isHost) {
+    console.log('[JIRA] Current user is guest - hiding JIRA import');
+    return;
+  }
+
+  // Add JIRA Import menu option to profile menu
+  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
+  if (uploadBtn && uploadBtn.parentNode) {
+    // Avoid duplicating the button
+    if (!document.getElementById('jiraImportMenuBtn')) {
+      const jiraImportBtn = document.createElement('button');
+      jiraImportBtn.className = 'profile-menu-item';
+      jiraImportBtn.id = 'jiraImportMenuBtn';
+      jiraImportBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
+             width="16" height="16" fill="currentColor" class="menu-icon">
+          <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 
+                   1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 
+                   4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 
+                   4.37 4.37H2V11.53z"/>
+        </svg>
+        Import from JIRA
+      `;
+      
+      uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
+
+      // Open modal when clicked
+      jiraImportBtn.addEventListener('click', showJiraImportModal);
+    }
   } else {
-    console.warn('[JIRA] Import from JIRA button not found in DOM');
+    console.warn('[JIRA] uploadTicketMenuBtn not found in DOM');
   }
 }
+
 
 // Expose to window
 window.JiraIntegration = {
