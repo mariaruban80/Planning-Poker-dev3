@@ -5,7 +5,7 @@ let jiraStories = [];
 
 // Show the JIRA import modal
 function showJiraImportModal() {
-  document.getElementById('jiraImportModal').style.display = 'block';
+  document.getElementById('jiraImportModal').style.display = 'flex';
 }
 
 // Hide the modal
