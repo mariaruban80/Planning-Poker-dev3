@@ -57,6 +57,49 @@ app.post('/api/jira/project', async (req, res) => {
   }
 });
 
+// JIRA Search route (fetches issues for a project with optional JQL)
+app.post('/api/jira/search', async (req, res) => {
+  const { jiraUrl, email, token, projectKey, jql } = req.body;
+
+  if (!jiraUrl || !projectKey) {
+    return res.status(400).json({ error: 'Missing parameters' });
+  }
+
+  const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
+
+  // Use provided JQL or fall back to default
+  const finalJql = jql && jql.trim().length > 0
+    ? jql
+    : `project=${projectKey} ORDER BY created DESC`;
+
+  const url = `${baseUrl}/rest/api/3/search?jql=${encodeURIComponent(finalJql)}&maxResults=50`;
+
+  const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  };
+
+  if (email && token) {
+    const auth = Buffer.from(`${email}:${token}`).toString('base64');
+    headers['Authorization'] = `Basic ${auth}`;
+  }
+
+  try {
+    const response = await fetch(url, { headers });
+    const text = await response.text();
+    let data;
+    try { 
+      data = JSON.parse(text); 
+    } catch { 
+      data = { raw: text }; 
+    }
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('[SERVER] JIRA search error:', err);
+    res.status(500).json({ error: 'Failed to fetch issues from JIRA' });
+  }
+});
+
 
 // Enhanced room structure with improved state management
 const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed, tickets, deletedStoryIds, deletedStoriesTimestamp, userNameVotes }
