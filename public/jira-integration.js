@@ -151,7 +151,7 @@ async function smartJiraConnection() {
 }
 
 // -----------------------------------------------------------
-// Load stories via proxy
+// Load stories via proxy and push them into Planning Poker
 async function loadJiraStories() {
   if (!jiraConnection) {
     showConnectionStatus('error', 'No active JIRA connection');
@@ -191,6 +191,22 @@ async function loadJiraStories() {
 
       displayJiraStories(jiraStories);
 
+      // ✅ Push stories into Planning Poker board
+      jiraStories.forEach(story => {
+        const storyObj = {
+          title: `${story.key}: ${story.summary}`,
+          description: story.description,
+          source: 'jira',
+          jiraKey: story.key
+        };
+
+        if (typeof addStoryFromObject === 'function') {
+          addStoryFromObject(storyObj, true); // true = broadcast to server
+        } else {
+          console.warn('[JIRA] addStoryFromObject not available, story not added to board');
+        }
+      });
+
       document.getElementById('jiraConnectionStep').classList.remove('active');
       document.getElementById('jiraSelectionStep').classList.add('active');
     } else {
@@ -222,8 +238,11 @@ function displayJiraStories(stories) {
 function initializeJiraIntegration() {
   console.log('[JIRA] Initializing JIRA integration module');
 
-  // ✅ Check host status
-  const isHost = sessionStorage.getItem('isHost') === 'true';
+  // ✅ Use the same host detection logic as main.js
+  const isHost = (typeof isCurrentUserHost === 'function')
+    ? isCurrentUserHost()
+    : sessionStorage.getItem('isHost') === 'true';
+
   console.log(`[JIRA] JIRA import -> isHost: ${isHost}`);
 
   if (!isHost) {
@@ -235,9 +254,6 @@ function initializeJiraIntegration() {
   window.addEventListener('DOMContentLoaded', () => {
     const uploadBtn = document.getElementById('uploadTicketMenuBtn');
     const profileMenu = document.getElementById('profileMenu');
-
-    console.log('[JIRA DEBUG] uploadTicketMenuBtn:', uploadBtn);
-    console.log('[JIRA DEBUG] profileMenu:', profileMenu);
 
     if (!document.getElementById('jiraImportMenuBtn')) {
       const jiraImportBtn = document.createElement('button');
@@ -270,10 +286,6 @@ function initializeJiraIntegration() {
     }
   });
 }
-
-
-
-
 
 // Expose to window
 window.JiraIntegration = {
