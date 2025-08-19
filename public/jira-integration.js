@@ -235,6 +235,7 @@ async function loadJiraStories() {
 }
 
 // Display the fetched stories in UI (with checkboxes + data attributes)
+
 function displayJiraStories(stories) {
   const container = $id('jiraStoriesList');
   if (!container) return;
@@ -272,7 +273,44 @@ function displayJiraStories(stories) {
   });
 
   container.appendChild(fragment);
+
+  // === Hook up buttons and checkbox logic ===
+  const importBtn = $id('importSelectedStoriesBtn');
+  const selectAllBtn = $id('selectAllStoriesBtn');
+  const deselectAllBtn = $id('deselectAllStoriesBtn');
+  const checkboxes = container.querySelectorAll('.jira-story-checkbox');
+
+  // Helper: refresh button state
+  const updateImportButtonState = () => {
+    const anyChecked = [...checkboxes].some(cb => cb.checked);
+    if (importBtn) importBtn.disabled = !anyChecked;
+  };
+
+  // Add listener to each checkbox
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', updateImportButtonState);
+  });
+
+  // Select All
+  if (selectAllBtn) {
+    selectAllBtn.onclick = () => {
+      checkboxes.forEach(cb => cb.checked = true);
+      updateImportButtonState();
+    };
+  }
+
+  // Deselect All
+  if (deselectAllBtn) {
+    deselectAllBtn.onclick = () => {
+      checkboxes.forEach(cb => cb.checked = false);
+      updateImportButtonState();
+    };
+  }
+
+  // Initialize state on render
+  updateImportButtonState();
 }
+
 
 // Escape HTML to avoid layout break from summary text
 function escapeHtml(str) {
