@@ -222,45 +222,60 @@ function displayJiraStories(stories) {
 function initializeJiraIntegration() {
   console.log('[JIRA] Initializing JIRA integration module');
 
-  // ✅ Get host status safely from sessionStorage (set earlier in main.js)
+  // ✅ Get host status from sessionStorage
   const isHost = sessionStorage.getItem('isHost') === 'true';
   console.log(`[JIRA] JIRA import -> isHost: ${isHost}`);
 
-  // ✅ Only inject menu if user is the host
   if (!isHost) {
     console.log('[JIRA] User is guest or not the host - hiding JIRA import');
     return;
   }
 
-  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
-  if (uploadBtn && uploadBtn.parentNode) {
-    console.log('[JIRA] Found uploadTicketMenuBtn, inserting JIRA Import button');
+  // ✅ Run only after DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    let uploadBtn = document.getElementById('uploadTicketMenuBtn');
+    let menuContainer = document.getElementById('profileMenu'); // fallback
 
-    // Prevent duplicate buttons
-    if (!document.getElementById('jiraImportMenuBtn')) {
-      const jiraImportBtn = document.createElement('button');
-      jiraImportBtn.className = 'profile-menu-item';
-      jiraImportBtn.id = 'jiraImportMenuBtn';
-      jiraImportBtn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-             width="16" height="16" fill="currentColor" class="menu-icon">
-          <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4
-                   1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0
-                   4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97
-                   4.37 4.37H2V11.53z"/>
-        </svg>
-        Import from JIRA
-      `;
+    console.log('[JIRA DEBUG] uploadTicketMenuBtn:', uploadBtn);
+    console.log('[JIRA DEBUG] profileMenu container:', menuContainer);
 
-      uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
-      jiraImportBtn.addEventListener('click', showJiraImportModal);
-
-      console.log('[JIRA] Import from JIRA button created');
+    // Decide where to insert
+    let parentNode = null;
+    if (uploadBtn && uploadBtn.parentNode) {
+      parentNode = uploadBtn.parentNode;
+    } else if (menuContainer) {
+      parentNode = menuContainer;
+      console.warn('[JIRA] uploadTicketMenuBtn not found, falling back to profileMenu container');
     }
-  } else {
-    console.warn('[JIRA] uploadTicketMenuBtn not found in DOM - JIRA import will not appear');
-  }
+
+    if (parentNode) {
+      // Avoid duplicates
+      if (!document.getElementById('jiraImportMenuBtn')) {
+        const jiraImportBtn = document.createElement('button');
+        jiraImportBtn.className = 'profile-menu-item';
+        jiraImportBtn.id = 'jiraImportMenuBtn';
+        jiraImportBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+               width="16" height="16" fill="currentColor" class="menu-icon">
+            <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4
+                     1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0
+                     4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97
+                     4.37 4.37H2V11.53z"/>
+          </svg>
+          Import from JIRA
+        `;
+
+        parentNode.appendChild(jiraImportBtn);
+        jiraImportBtn.addEventListener('click', showJiraImportModal);
+
+        console.log('[JIRA] Import from JIRA button created');
+      }
+    } else {
+      console.error('[JIRA] No valid container found for JIRA import button');
+    }
+  });
 }
+
 
 
 
