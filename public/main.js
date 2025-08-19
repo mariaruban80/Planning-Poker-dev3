@@ -191,7 +191,8 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('profileMenuEmail').textContent = sessionStorage.getItem('userEmail') || "";
       const isHost = isCurrentUserHost();
     const uploadBtn = document.getElementById('uploadTicketMenuBtn');
-  const exportBtn = document.getElementById('exportToCsvMenuBtn');
+    const exportBtn = document.getElementById('exportToCsvMenuBtn');
+    const jiraImportBtn = document.getElementById('jiraImportMenuBtn');
 
   if (uploadBtn) {
     uploadBtn.style.display = isHost ? 'flex' : 'none';
@@ -199,6 +200,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (exportBtn) {
     exportBtn.style.display = isHost ? 'flex' : 'none';
   }
+       if (jiraImportBtn) {
+     jiraImportBtn.style.display = isHost ? 'flex' : 'none';
+   }
     });
 
     // Hide menu if clicking outside
