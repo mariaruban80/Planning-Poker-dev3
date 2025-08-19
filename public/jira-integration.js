@@ -234,7 +234,6 @@ function displayJiraStories(stories) {
 
 // -----------------------------------------------------------
 // Initialization (hook menu button, etc.)
-
 function initializeJiraIntegration() {
   console.log('[JIRA] Initializing JIRA integration module');
 
@@ -242,65 +241,66 @@ function initializeJiraIntegration() {
     ? isCurrentUserHost()
     : sessionStorage.getItem('isHost') === 'true';
 
-  console.log(`[JIRA] JIRA import -> isHost: ${isHost}`);
-
   if (!isHost) {
-    console.log('[JIRA] User is guest or not the host - hiding JIRA import');
+    console.log('[JIRA] User is guest - hiding JIRA import');
     return;
   }
 
-  function injectButton(attempt = 1) {
+  function createJiraButton() {
+    if (document.getElementById('jiraImportMenuBtn')) return null;
+
+    const btn = document.createElement('button');
+    btn.className = 'profile-menu-item';
+    btn.id = 'jiraImportMenuBtn';
+    btn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="menu-icon">
+        <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 4.37 4.37H2V11.53z"/>
+      </svg>
+      Import from JIRA
+    `;
+    btn.addEventListener('click', showJiraImportModal);
+    return btn;
+  }
+
+  function injectButton() {
     const uploadBtn = document.getElementById('uploadTicketMenuBtn');
     const profileMenu = document.getElementById('profileMenu');
+    const jiraBtn = createJiraButton();
 
-    if (!document.getElementById('jiraImportMenuBtn')) {
-      if (uploadBtn && uploadBtn.parentNode) {
-        const jiraImportBtn = document.createElement('button');
-        jiraImportBtn.className = 'profile-menu-item';
-        jiraImportBtn.id = 'jiraImportMenuBtn';
-        jiraImportBtn.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="menu-icon">
-            <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 4.37 4.37H2V11.53z"/>
-          </svg>
-          Import from JIRA
-        `;
-        uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
-        jiraImportBtn.addEventListener('click', showJiraImportModal);
-        console.log('[JIRA] Import from JIRA button inserted ✅');
-        return;
-      }
+    if (!jiraBtn) return; // already added
 
-      if (profileMenu) {
-        const jiraImportBtn = document.createElement('button');
-        jiraImportBtn.className = 'profile-menu-item';
-        jiraImportBtn.id = 'jiraImportMenuBtn';
-        jiraImportBtn.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="menu-icon">
-            <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 4.37 4.37H2V11.53z"/>
-          </svg>
-          Import from JIRA
-        `;
-        profileMenu.appendChild(jiraImportBtn);
-        jiraImportBtn.addEventListener('click', showJiraImportModal);
-        console.warn('[JIRA] CSV button not found, added to profile menu instead ⚠️');
-        return;
-      }
-    }
-
-    if (attempt < 10) {
-      console.log(`[JIRA] Retry injection attempt ${attempt}`);
-      setTimeout(() => injectButton(attempt + 1), 500);
+    if (uploadBtn && uploadBtn.parentNode) {
+      uploadBtn.parentNode.insertBefore(jiraBtn, uploadBtn.nextSibling);
+      console.log('[JIRA] Import from JIRA button inserted after CSV ✅');
+    } else if (profileMenu) {
+      profileMenu.appendChild(jiraBtn);
+      console.warn('[JIRA] CSV not found, added to profile menu ⚠️');
     } else {
-      console.error('[JIRA] Failed to inject Import from JIRA button after retries ❌');
+      console.log('[JIRA] Menu not ready yet, retrying...');
+      return false;
     }
+    return true;
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => injectButton());
-  } else {
-    injectButton();
-  }
+  // Immediate attempt
+  if (injectButton()) return;
+
+  // Retry with MutationObserver
+  const observer = new MutationObserver(() => {
+    if (injectButton()) {
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Hard fallback retry loop (10 tries)
+  let attempts = 0;
+  const interval = setInterval(() => {
+    if (injectButton() || attempts++ > 10) clearInterval(interval);
+  }, 500);
 }
+
+
 
 
 // Expose to window
