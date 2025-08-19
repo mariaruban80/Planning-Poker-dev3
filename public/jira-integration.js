@@ -221,39 +221,43 @@ function displayJiraStories(stories) {
 function initializeJiraIntegration() {
   console.log('[JIRA] Initializing JIRA integration module');
 
-  // Only show to host
-  if (!window.isHost) {
-    console.log('[JIRA] Current user is guest - hiding JIRA import');
-    return;
-  }
+  // Check and set host status from sessionStorage - very important now
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  console.log(`[JIRA] JIRA import -> isHost: ${isHost}`);
 
-  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
-  if (uploadBtn && uploadBtn.parentNode) {
-    console.log('[JIRA] Found uploadTicketMenuBtn, inserting JIRA Import button');
+  // Only try to inject menu for logged in hosts
+  if (isHost) {
+    const uploadBtn = document.getElementById('uploadTicketMenuBtn');
+    if (uploadBtn && uploadBtn.parentNode) {
+      console.log('[JIRA] Found uploadTicketMenuBtn, inserting JIRA Import button');
 
-    // Avoid duplicates
-    if (!document.getElementById('jiraImportMenuBtn')) {
-      const jiraImportBtn = document.createElement('button');
-      jiraImportBtn.className = 'profile-menu-item';
-      jiraImportBtn.id = 'jiraImportMenuBtn';
-      jiraImportBtn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-             width="16" height="16" fill="currentColor" class="menu-icon">
-          <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 
-                   1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 
-                   4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 
-                   4.37 4.37H2V11.53z"/>
-        </svg>
-        Import from JIRA
-      `;
+      // Avoid duplicates
+      if (!document.getElementById('jiraImportMenuBtn')) {
+        const jiraImportBtn = document.createElement('button');
+        jiraImportBtn.className = 'profile-menu-item';
+        jiraImportBtn.id = 'jiraImportMenuBtn';
+        jiraImportBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+               width="16" height="16" fill="currentColor" class="menu-icon">
+            <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4
+                     1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0
+                     4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97
+                     4.37 4.37H2V11.53z"/>
+          </svg>
+          Import from JIRA
+        `;
 
-      uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
-      jiraImportBtn.addEventListener('click', showJiraImportModal);
+        uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
+        jiraImportBtn.addEventListener('click', showJiraImportModal);
 
-      console.log('[JIRA] Import from JIRA button created');
+
+        console.log('[JIRA] Import from JIRA button created');
+      }
+    } else {
+      console.warn('[JIRA] uploadTicketMenuBtn not found in DOM - JIRA import will not appear');
     }
   } else {
-    console.warn('[JIRA] uploadTicketMenuBtn not found in DOM');
+    console.log('[JIRA] User is guest, or not the host - hiding JIRA import');
   }
 }
 
