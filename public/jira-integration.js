@@ -108,32 +108,17 @@ async function smartJiraConnection() {
 // Test anonymous access to JIRA
 async function testAnonymousAccess(jiraUrl, projectKey) {
   try {
-    // Clean URL
     const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
-    
-    // Try to access project info without authentication
+
     const response = await fetch('/api/jira/project', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ jiraUrl: baseUrl, projectKey })
-});
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jiraUrl: baseUrl, projectKey })
-    },
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      timeout: 10000
     });
-    
+
     if (response.ok) {
       const projectData = await response.json();
-      return { 
-        success: true, 
-        requiresAuth: false, 
-        projectName: projectData.name 
-      };
+      return { success: true, requiresAuth: false, projectName: projectData.name };
     } else if (response.status === 401 || response.status === 403) {
       return { success: false, requiresAuth: true };
     } else {
@@ -144,27 +129,23 @@ async function testAnonymousAccess(jiraUrl, projectKey) {
     return { success: false, requiresAuth: true, error: error.message };
   }
 }
+  } catch (error) {
+    console.log('[JIRA] Anonymous access test failed:', error.message);
+    return { success: false, requiresAuth: true, error: error.message };
+  }
+}
 
 // Test JIRA Connection with token (enhanced version)
 async function testJiraConnectionWithToken(url, email, token, project) {
   try {
     const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
-    const auth = btoa(`${email}:${token}`);
-    
+
     const response = await fetch('/api/jira/project', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ jiraUrl: baseUrl, projectKey })
-});
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jiraUrl: baseUrl, email, token, projectKey: project })
-    },
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Accept': 'application/json'
-      },
-      timeout: 10000
     });
-    
+
     if (response.ok) {
       const projectData = await response.json();
       showConnectionStatus('success', `Connected successfully! Found "${projectData.name}" project 🎉`);
@@ -179,6 +160,12 @@ async function testJiraConnectionWithToken(url, email, token, project) {
       showConnectionStatus('error', errorText);
       return false;
     }
+  } catch (error) {
+    console.error('JIRA connection test failed:', error.message);
+    showConnectionStatus('error', 'Connection failed. Check URL and network connection.');
+    return false;
+  }
+}
     
   } catch (error) {
     console.error('JIRA connection test failed:', error.message);
@@ -309,6 +296,52 @@ async function loadJiraStories() {
     showConnectionStatus('error', 'No active JIRA connection');
     return;
   }
+
+  showJiraLoadingIndicator(true);
+
+  try {
+    const baseUrl = jiraConnection.url.endsWith('/') ? jiraConnection.url.slice(0, -1) : jiraConnection.url;
+
+    const response = await fetch('/api/jira/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jiraUrl: baseUrl,
+        email: jiraConnection.email,
+        token: jiraConnection.token,
+        projectKey: jiraConnection.project
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const issues = data.issues || [];
+
+      jiraStories = issues.map(issue => ({
+        key: issue.key,
+        summary: issue.fields.summary,
+        description: extractDescription(issue.fields.description),
+        issueType: issue.fields.issuetype?.name || 'Unknown',
+        status: issue.fields.status?.name || 'Unknown',
+        priority: issue.fields.priority?.name || 'Medium',
+        assignee: issue.fields.assignee?.displayName || null,
+        storyPoints: issue.fields.customfield_10016 || null
+      }));
+
+      displayJiraStories(jiraStories);
+
+      document.getElementById('jiraConnectionStep').classList.remove('active');
+      document.getElementById('jiraSelectionStep').classList.add('active');
+    } else {
+      showConnectionStatus('error', `Failed to load stories: HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Failed to load JIRA stories:', error);
+    showConnectionStatus('error', 'Failed to load stories. Please check your connection.');
+  } finally {
+    showJiraLoadingIndicator(false);
+  }
+}
   
   showJiraLoadingIndicator(true);
   
