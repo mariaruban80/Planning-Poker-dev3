@@ -35,10 +35,10 @@ function resetJiraModal() {
 // Save credentials to local storage
 function saveJiraCredentials() {
   const creds = {
-    url: document.getElementById('jiraUrl').value.trim(),
-    email: document.getElementById('jiraEmail').value.trim(),
-    token: document.getElementById('jiraToken').value.trim(),
-    project: document.getElementById('jiraProject').value.trim()
+    url: document.getElementById('jiraUrl').value().trim(),
+    email: document.getElementById('jiraEmail').value().trim(),
+    token: document.getElementById('jiraToken').value().trim(),
+    project: document.getElementById('jiraProject').value().trim()
   };
   localStorage.setItem('jiraCredentials', JSON.stringify(creds));
 }
@@ -50,7 +50,7 @@ function extractDescription(desc) {
   if (desc.content) {
     return desc.content.map(block =>
       block.content ? block.content.map(c => c.text || '').join(' ') : ''
-    ).join('\n');
+    ).join('\\n');
   }
   return '';
 }
@@ -128,10 +128,10 @@ async function testJiraConnectionWithToken(url, email, token, project) {
 
 // Smart connection flow (tries anon, then token)
 async function smartJiraConnection() {
-  const url = document.getElementById('jiraUrl').value.trim();
-  const project = document.getElementById('jiraProject').value.trim();
-  const email = document.getElementById('jiraEmail').value.trim();
-  const token = document.getElementById('jiraToken').value.trim();
+  const url = document.getElementById('jiraUrl').value().trim();
+  const project = document.getElementById('jiraProject').value().trim();
+  const email = document.getElementById('jiraEmail').value().trim();
+  const token = document.getElementById('jiraToken').value().trim();
 
   showConnectionStatus('info', 'Testing connection...');
 
@@ -151,7 +151,7 @@ async function smartJiraConnection() {
 }
 
 // -----------------------------------------------------------
-// Load stories via proxy and push them into Planning Poker
+// Load stories via proxy
 async function loadJiraStories() {
   if (!jiraConnection) {
     showConnectionStatus('error', 'No active JIRA connection');
@@ -191,22 +191,6 @@ async function loadJiraStories() {
 
       displayJiraStories(jiraStories);
 
-      // ✅ Push stories into Planning Poker board
-      jiraStories.forEach(story => {
-        const storyObj = {
-          title: `${story.key}: ${story.summary}`,
-          description: story.description,
-          source: 'jira',
-          jiraKey: story.key
-        };
-
-        if (typeof addStoryFromObject === 'function') {
-          addStoryFromObject(storyObj, true); // true = broadcast to server
-        } else {
-          console.warn('[JIRA] addStoryFromObject not available, story not added to board');
-        }
-      });
-
       document.getElementById('jiraConnectionStep').classList.remove('active');
       document.getElementById('jiraSelectionStep').classList.add('active');
     } else {
@@ -234,74 +218,19 @@ function displayJiraStories(stories) {
 
 // -----------------------------------------------------------
 // Initialization (hook menu button, etc.)
+
 function initializeJiraIntegration() {
   console.log('[JIRA] Initializing JIRA integration module');
 
-  const isHost = (typeof isCurrentUserHost === 'function')
-    ? isCurrentUserHost()
-    : sessionStorage.getItem('isHost') === 'true';
+  // ✅ Check host status
+  const isHost = sessionStorage.getItem('isHost') === 'true';
+  console.log(`[JIRA] JIRA import -> isHost: ${isHost}`);
 
   if (!isHost) {
-    console.log('[JIRA] User is guest - hiding JIRA import');
+    console.log('[JIRA] User is guest or not the host - hiding JIRA import');
     return;
   }
-
-  function createJiraButton() {
-    if (document.getElementById('jiraImportMenuBtn')) return null;
-
-    const btn = document.createElement('button');
-    btn.className = 'profile-menu-item';
-    btn.id = 'jiraImportMenuBtn';
-    btn.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="menu-icon">
-        <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 4.37 4.37H2V11.53z"/>
-      </svg>
-      Import from JIRA
-    `;
-    btn.addEventListener('click', showJiraImportModal);
-    return btn;
-  }
-
-  function injectButton() {
-    const uploadBtn = document.getElementById('uploadTicketMenuBtn');
-    const profileMenu = document.getElementById('profileMenu');
-    const jiraBtn = createJiraButton();
-
-    if (!jiraBtn) return; // already added
-
-    if (uploadBtn && uploadBtn.parentNode) {
-      uploadBtn.parentNode.insertBefore(jiraBtn, uploadBtn.nextSibling);
-      console.log('[JIRA] Import from JIRA button inserted after CSV ✅');
-    } else if (profileMenu) {
-      profileMenu.appendChild(jiraBtn);
-      console.warn('[JIRA] CSV not found, added to profile menu ⚠️');
-    } else {
-      console.log('[JIRA] Menu not ready yet, retrying...');
-      return false;
-    }
-    return true;
-  }
-
-  // Immediate attempt
-  if (injectButton()) return;
-
-  // Retry with MutationObserver
-  const observer = new MutationObserver(() => {
-    if (injectButton()) {
-      observer.disconnect();
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  // Hard fallback retry loop (10 tries)
-  let attempts = 0;
-  const interval = setInterval(() => {
-    if (injectButton() || attempts++ > 10) clearInterval(interval);
-  }, 500);
 }
-
-
-
 
 // Expose to window
 window.JiraIntegration = {
