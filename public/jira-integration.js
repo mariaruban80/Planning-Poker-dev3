@@ -249,44 +249,59 @@ function initializeJiraIntegration() {
     return;
   }
 
-  function injectButton() {
+  function injectButton(attempt = 1) {
     const uploadBtn = document.getElementById('uploadTicketMenuBtn');
     const profileMenu = document.getElementById('profileMenu');
 
     if (!document.getElementById('jiraImportMenuBtn')) {
-  const jiraImportBtn = document.createElement('button');
-jiraImportBtn.className = 'profile-menu-item';
-jiraImportBtn.id = 'jiraImportMenuBtn';
-jiraImportBtn.innerHTML = `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="menu-icon">
-    <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 4.37 4.37H2V11.53z"/>
-  </svg>
-  Import from JIRA
-`;
-
-
       if (uploadBtn && uploadBtn.parentNode) {
+        const jiraImportBtn = document.createElement('button');
+        jiraImportBtn.className = 'profile-menu-item';
+        jiraImportBtn.id = 'jiraImportMenuBtn';
+        jiraImportBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="menu-icon">
+            <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 4.37 4.37H2V11.53z"/>
+          </svg>
+          Import from JIRA
+        `;
         uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
-        console.log('[JIRA] Import from JIRA button inserted after CSV button');
-      } else if (profileMenu) {
-        profileMenu.appendChild(jiraImportBtn);
-        console.warn('[JIRA] CSV button not found, appended JIRA button to profile menu');
-      } else {
-        document.body.appendChild(jiraImportBtn);
-        console.error('[JIRA] No profile menu found, appended JIRA button to body');
+        jiraImportBtn.addEventListener('click', showJiraImportModal);
+        console.log('[JIRA] Import from JIRA button inserted ✅');
+        return;
       }
 
-      jiraImportBtn.addEventListener('click', showJiraImportModal);
+      if (profileMenu) {
+        const jiraImportBtn = document.createElement('button');
+        jiraImportBtn.className = 'profile-menu-item';
+        jiraImportBtn.id = 'jiraImportMenuBtn';
+        jiraImportBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="menu-icon">
+            <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 4.37 4.37H2V11.53z"/>
+          </svg>
+          Import from JIRA
+        `;
+        profileMenu.appendChild(jiraImportBtn);
+        jiraImportBtn.addEventListener('click', showJiraImportModal);
+        console.warn('[JIRA] CSV button not found, added to profile menu instead ⚠️');
+        return;
+      }
+    }
+
+    if (attempt < 10) {
+      console.log(`[JIRA] Retry injection attempt ${attempt}`);
+      setTimeout(() => injectButton(attempt + 1), 500);
+    } else {
+      console.error('[JIRA] Failed to inject Import from JIRA button after retries ❌');
     }
   }
 
-  // ✅ Run immediately if DOM is ready, otherwise wait
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectButton);
+    document.addEventListener('DOMContentLoaded', () => injectButton());
   } else {
     injectButton();
   }
 }
+
 
 // Expose to window
 window.JiraIntegration = {
