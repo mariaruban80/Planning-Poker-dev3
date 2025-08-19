@@ -161,13 +161,7 @@ async function testJiraConnectionWithToken(url, email, token, project) {
     return false;
   }
 }
-    
-  } catch (error) {
-    console.error('JIRA connection test failed:', error.message);
-    showConnectionStatus('error', 'Connection failed. Check URL and network connection.');
-    return false;
-  }
-}
+
 
 // Show helpful token generation guidance
 function showTokenHelp() {
