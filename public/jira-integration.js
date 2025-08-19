@@ -238,7 +238,6 @@ function displayJiraStories(stories) {
 function initializeJiraIntegration() {
   console.log('[JIRA] Initializing JIRA integration module');
 
-  // ✅ Use the same host detection logic as main.js
   const isHost = (typeof isCurrentUserHost === 'function')
     ? isCurrentUserHost()
     : sessionStorage.getItem('isHost') === 'true';
@@ -250,27 +249,22 @@ function initializeJiraIntegration() {
     return;
   }
 
-  // ✅ Ensure DOM is ready before searching
-  window.addEventListener('DOMContentLoaded', () => {
+  function injectButton() {
     const uploadBtn = document.getElementById('uploadTicketMenuBtn');
     const profileMenu = document.getElementById('profileMenu');
 
     if (!document.getElementById('jiraImportMenuBtn')) {
-      const jiraImportBtn = document.createElement('button');
-      jiraImportBtn.className = 'profile-menu-item';
-      jiraImportBtn.id = 'jiraImportMenuBtn';
-      jiraImportBtn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-             width="16" height="16" fill="currentColor" class="menu-icon">
-          <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4
-                   1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0
-                   4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97
-                   4.37 4.37H2V11.53z"/>
-        </svg>
-        Import from JIRA
-      `;
+  const jiraImportBtn = document.createElement('button');
+jiraImportBtn.className = 'profile-menu-item';
+jiraImportBtn.id = 'jiraImportMenuBtn';
+jiraImportBtn.innerHTML = `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="menu-icon">
+    <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4 1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0 4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97 4.37 4.37H2V11.53z"/>
+  </svg>
+  Import from JIRA
+`;
 
-      // ✅ Insert after CSV button if it exists, otherwise append at end of menu
+
       if (uploadBtn && uploadBtn.parentNode) {
         uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
         console.log('[JIRA] Import from JIRA button inserted after CSV button');
@@ -284,7 +278,14 @@ function initializeJiraIntegration() {
 
       jiraImportBtn.addEventListener('click', showJiraImportModal);
     }
-  });
+  }
+
+  // ✅ Run immediately if DOM is ready, otherwise wait
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectButton);
+  } else {
+    injectButton();
+  }
 }
 
 // Expose to window
