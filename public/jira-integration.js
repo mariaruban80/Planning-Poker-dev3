@@ -129,11 +129,6 @@ async function testAnonymousAccess(jiraUrl, projectKey) {
     return { success: false, requiresAuth: true, error: error.message };
   }
 }
-  } catch (error) {
-    console.log('[JIRA] Anonymous access test failed:', error.message);
-    return { success: false, requiresAuth: true, error: error.message };
-  }
-}
 
 // Test JIRA Connection with token (enhanced version)
 async function testJiraConnectionWithToken(url, email, token, project) {
