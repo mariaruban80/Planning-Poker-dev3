@@ -222,7 +222,7 @@ function displayJiraStories(stories) {
 function initializeJiraIntegration() {
   console.log('[JIRA] Initializing JIRA integration module');
 
-  // ✅ Get host status from sessionStorage
+  // ✅ Check host status
   const isHost = sessionStorage.getItem('isHost') === 'true';
   console.log(`[JIRA] JIRA import -> isHost: ${isHost}`);
 
@@ -231,50 +231,46 @@ function initializeJiraIntegration() {
     return;
   }
 
-  // ✅ Run only after DOM is ready
-  document.addEventListener('DOMContentLoaded', () => {
-    let uploadBtn = document.getElementById('uploadTicketMenuBtn');
-    let menuContainer = document.getElementById('profileMenu'); // fallback
+  // ✅ Ensure DOM is ready before searching
+  window.addEventListener('DOMContentLoaded', () => {
+    const uploadBtn = document.getElementById('uploadTicketMenuBtn');
+    const profileMenu = document.getElementById('profileMenu');
 
     console.log('[JIRA DEBUG] uploadTicketMenuBtn:', uploadBtn);
-    console.log('[JIRA DEBUG] profileMenu container:', menuContainer);
+    console.log('[JIRA DEBUG] profileMenu:', profileMenu);
 
-    // Decide where to insert
-    let parentNode = null;
-    if (uploadBtn && uploadBtn.parentNode) {
-      parentNode = uploadBtn.parentNode;
-    } else if (menuContainer) {
-      parentNode = menuContainer;
-      console.warn('[JIRA] uploadTicketMenuBtn not found, falling back to profileMenu container');
-    }
+    if (!document.getElementById('jiraImportMenuBtn')) {
+      const jiraImportBtn = document.createElement('button');
+      jiraImportBtn.className = 'profile-menu-item';
+      jiraImportBtn.id = 'jiraImportMenuBtn';
+      jiraImportBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+             width="16" height="16" fill="currentColor" class="menu-icon">
+          <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4
+                   1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0
+                   4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97
+                   4.37 4.37H2V11.53z"/>
+        </svg>
+        Import from JIRA
+      `;
 
-    if (parentNode) {
-      // Avoid duplicates
-      if (!document.getElementById('jiraImportMenuBtn')) {
-        const jiraImportBtn = document.createElement('button');
-        jiraImportBtn.className = 'profile-menu-item';
-        jiraImportBtn.id = 'jiraImportMenuBtn';
-        jiraImportBtn.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-               width="16" height="16" fill="currentColor" class="menu-icon">
-            <path d="M11.53 2c0 2.4 1.97 4.37 4.37 4.37h.1v.1c0 2.4
-                     1.97 4.37 4.37 4.37V2H11.53zM2 11.53c2.4 0
-                     4.37 1.97 4.37 4.37v.1h.1c2.4 0 4.37 1.97
-                     4.37 4.37H2V11.53z"/>
-          </svg>
-          Import from JIRA
-        `;
-
-        parentNode.appendChild(jiraImportBtn);
-        jiraImportBtn.addEventListener('click', showJiraImportModal);
-
-        console.log('[JIRA] Import from JIRA button created');
+      // ✅ Insert after CSV button if it exists, otherwise append at end of menu
+      if (uploadBtn && uploadBtn.parentNode) {
+        uploadBtn.parentNode.insertBefore(jiraImportBtn, uploadBtn.nextSibling);
+        console.log('[JIRA] Import from JIRA button inserted after CSV button');
+      } else if (profileMenu) {
+        profileMenu.appendChild(jiraImportBtn);
+        console.warn('[JIRA] CSV button not found, appended JIRA button to profile menu');
+      } else {
+        document.body.appendChild(jiraImportBtn);
+        console.error('[JIRA] No profile menu found, appended JIRA button to body');
       }
-    } else {
-      console.error('[JIRA] No valid container found for JIRA import button');
+
+      jiraImportBtn.addEventListener('click', showJiraImportModal);
     }
   });
 }
+
 
 
 
