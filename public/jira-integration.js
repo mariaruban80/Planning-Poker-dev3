@@ -35,10 +35,10 @@ function resetJiraModal() {
 // Save credentials to local storage
 function saveJiraCredentials() {
   const creds = {
-    url: document.getElementById('jiraUrl').value().trim(),
-    email: document.getElementById('jiraEmail').value().trim(),
-    token: document.getElementById('jiraToken').value().trim(),
-    project: document.getElementById('jiraProject').value().trim()
+    url: document.getElementById('jiraUrl').value.trim(), // Remove extra ()
+    email: document.getElementById('jiraEmail').value.trim(), // Remove extra ()
+    token: document.getElementById('jiraToken').value.trim(), // Remove extra ()
+    project: document.getElementById('jiraProject').value.trim() // Remove extra ()
   };
   localStorage.setItem('jiraCredentials', JSON.stringify(creds));
 }
@@ -57,9 +57,25 @@ function extractDescription(desc) {
 
 // Show a status message inside modal
 function showConnectionStatus(type, message) {
-  const el = document.getElementById('jiraConnectionStatus');
-  el.textContent = message;
-  el.className = type; // success / error
+  console.log('[JIRA] Connection status:', type, message);
+  
+  let statusEl = document.getElementById('jiraConnectionStatus');
+  if (!statusEl) {
+    // Create status element if it doesn't exist
+    statusEl = document.createElement('div');
+    statusEl.id = 'jiraConnectionStatus';
+    statusEl.className = 'connection-status-indicator';
+    
+    // Insert it after the last form group
+    const connectionSection = document.querySelector('.jira-connection-section');
+    if (connectionSection) {
+      connectionSection.appendChild(statusEl);
+    }
+  }
+  
+  statusEl.textContent = message;
+  statusEl.className = `connection-status-indicator ${type}`;
+  statusEl.style.display = 'block';
 }
 
 // Show or hide loading spinner
@@ -128,25 +144,34 @@ async function testJiraConnectionWithToken(url, email, token, project) {
 
 // Smart connection flow (tries anon, then token)
 async function smartJiraConnection() {
-  const url = document.getElementById('jiraUrl').value().trim();
-  const project = document.getElementById('jiraProject').value().trim();
-  const email = document.getElementById('jiraEmail').value().trim();
-  const token = document.getElementById('jiraToken').value().trim();
+  console.log('[JIRA] Smart connection started');
+  
+  const url = document.getElementById('jiraUrl').value.trim(); // Remove extra ()
+  const project = document.getElementById('jiraProject').value.trim(); // Remove extra ()
+  const email = document.getElementById('jiraEmail').value.trim(); // Remove extra ()
+  const token = document.getElementById('jiraToken').value.trim(); // Remove extra ()
 
-  showConnectionStatus('info', 'Testing connection...');
+  console.log('[JIRA] Connection details:', { url, project, email: email ? 'provided' : 'empty', token: token ? 'provided' : 'empty' });
 
-  const anon = await testAnonymousAccess(url, project);
-  if (anon.success && !anon.requiresAuth) {
-    showConnectionStatus('success', `Connected anonymously to "${anon.projectName}" 🎉`);
-    jiraConnection = { url, email: null, token: null, project, isAnonymous: true };
-    document.getElementById('proceedToStories').disabled = false;
-    return;
-  }
+  showConnectionStatus('loading', 'Testing connection...');
 
-  if (email && token) {
-    await testJiraConnectionWithToken(url, email, token, project);
-  } else {
-    showConnectionStatus('error', 'Authentication required. Please enter email & token.');
+  try {
+    const anon = await testAnonymousAccess(url, project);
+    if (anon.success && !anon.requiresAuth) {
+      showConnectionStatus('success', `Connected anonymously to "${anon.projectName}" 🎉`);
+      jiraConnection = { url, email: null, token: null, project, isAnonymous: true };
+      document.getElementById('proceedToStories').disabled = false;
+      return;
+    }
+
+    if (email && token) {
+      await testJiraConnectionWithToken(url, email, token, project);
+    } else {
+      showConnectionStatus('error', 'Authentication required. Please enter email & token.');
+    }
+  } catch (error) {
+    console.error('[JIRA] Smart connection error:', error);
+    showConnectionStatus('error', 'Connection failed: ' + error.message);
   }
 }
 
@@ -231,6 +256,61 @@ function initializeJiraIntegration() {
     return;
   }
 }
+
+// Initialize JIRA modal event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('[JIRA] Setting up JIRA modal event listeners');
+  
+  // Smart Connect button
+  const smartConnectBtn = document.getElementById('smartJiraConnect');
+  if (smartConnectBtn) {
+    smartConnectBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('[JIRA] Smart Connect button clicked');
+      smartJiraConnection();
+    });
+  }
+  
+  // Proceed to Stories button
+  const proceedBtn = document.getElementById('proceedToStories');
+  if (proceedBtn) {
+    proceedBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('[JIRA] Proceed to Stories button clicked');
+      loadJiraStories();
+    });
+  }
+  
+  // Cancel button
+  const cancelBtns = document.querySelectorAll('.jira-btn-cancel');
+  cancelBtns.forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('[JIRA] Cancel button clicked');
+      hideJiraImportModal();
+    });
+  });
+  
+  // Close button (X)
+  const closeBtns = document.querySelectorAll('#jiraImportModal .close-button');
+  closeBtns.forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('[JIRA] Close button clicked');
+      hideJiraImportModal();
+    });
+  });
+  
+  // Back button
+  const backBtn = document.getElementById('jiraBackBtn');
+  if (backBtn) {
+    backBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('[JIRA] Back button clicked');
+      backToJiraConnection();
+    });
+  }
+});
 
 // Expose to window
 window.JiraIntegration = {
