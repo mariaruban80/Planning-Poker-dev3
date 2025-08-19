@@ -3349,7 +3349,7 @@ body::-webkit-scrollbar {
 
 </style>
 <style>
-/* JIRA Import Modal Styles - Fixed */
+/* JIRA Import Modal Styles - Centered Fix */
 #jiraImportModal {
   position: fixed;
   top: 0;
@@ -3361,31 +3361,41 @@ body::-webkit-scrollbar {
   align-items: center;
   justify-content: center;
   z-index: 10004;
+  padding: 20px; /* Add padding for mobile */
+  box-sizing: border-box;
 }
 
-/* Remove the ::before pseudo-element that was causing issues */
+/* When modal is shown, use flex display */
+#jiraImportModal.show {
+  display: flex;
+}
 
 #jiraImportModal .jira-modal-content {
-  background: white; /* Add solid white background */
-  border-radius: 18px; /* Match other modals */
-  padding: 0; /* Reset padding to be handled by children */
-  max-width: 850px; /* Match Add Ticket modal width */
+  background: white;
+  border-radius: 18px;
+  padding: 0;
+  max-width: 850px;
   width: 96%;
-  box-shadow: 0 6px 32px rgba(98,54,184,0.16); /* Match other modals */
-  border: 2px solid #a98cdf; /* Match other modals */
+  box-shadow: 0 6px 32px rgba(98,54,184,0.16);
+  border: 2px solid #a98cdf;
   box-sizing: border-box;
   position: relative;
   display: flex;
   flex-direction: column;
   max-height: 90vh;
   overflow: hidden;
+  margin: auto; /* Fallback centering */
+  
+  /* Ensure it's centered */
+  align-self: center;
+  justify-self: center;
 }
 
 .jira-step {
   display: none;
   flex-direction: column;
   height: 100%;
-  background: white; /* Ensure white background */
+  background: white;
 }
 
 .jira-step.active {
@@ -3395,18 +3405,19 @@ body::-webkit-scrollbar {
 .jira-modal-header {
   display: flex;
   align-items: center;
-  padding: 40px 28px 24px 28px; /* Match Add Ticket modal padding */
+  padding: 40px 28px 24px 28px;
   border-bottom: 1px solid #e0e0e0;
-  background: white; /* Solid white background */
+  background: white;
+  position: relative;
 }
 
 .jira-modal-header h3 {
   margin: 0;
-  color: #753acb; /* Match other modals' purple color */
-  font-size: 26px; /* Match Add Ticket modal */
-  font-weight: 700; /* Match Add Ticket modal */
+  color: #753acb;
+  font-size: 26px;
+  font-weight: 700;
   flex: 1;
-  text-align: left; /* Align left like Add Ticket modal */
+  text-align: left;
   letter-spacing: 0.02em;
 }
 
@@ -3426,10 +3437,35 @@ body::-webkit-scrollbar {
   background-color: #e9ecef;
 }
 
+/* Close button positioned in top right */
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 5px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  position: absolute;
+  right: 20px;
+  top: 20px;
+}
+
+.close-button:hover {
+  background-color: #f5f5f5;
+}
+
 .jira-connection-section {
-  padding: 28px; /* Match Add Ticket modal */
+  padding: 28px;
   flex: 1;
   background: white;
+  overflow-y: auto;
 }
 
 .jira-form-group {
@@ -3439,7 +3475,7 @@ body::-webkit-scrollbar {
 .jira-form-group label {
   display: block;
   font-weight: 600;
-  color: #753acb; /* Match other modals */
+  color: #753acb;
   margin-bottom: 7px;
   font-size: 15px;
 }
@@ -3447,7 +3483,7 @@ body::-webkit-scrollbar {
 .jira-input, .jira-select {
   width: 100%;
   padding: 12px 13px;
-  border: 1.5px solid #cdbdee; /* Match other modals */
+  border: 1.5px solid #cdbdee;
   border-radius: 6px;
   font-size: 16px;
   background-color: white;
@@ -3529,7 +3565,7 @@ body::-webkit-scrollbar {
   padding: 10px;
   border-radius: 6px;
   margin: 15px 0;
-  background: white; /* Ensure solid background */
+  background: white;
 }
 
 .connection-status-indicator.success {
@@ -3660,10 +3696,14 @@ body::-webkit-scrollbar {
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
+  #jiraImportModal {
+    padding: 10px;
+  }
+  
   #jiraImportModal .jira-modal-content {
-    width: 95%;
+    width: 100%;
     max-height: 95vh;
-    margin: 20px;
+    max-width: none;
   }
   
   .jira-filters > div {
@@ -3688,31 +3728,6 @@ body::-webkit-scrollbar {
     width: 100%;
   }
 }
-
-/* Close button styling to match other modals */
-.close-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #999;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s;
-  position: absolute;
-  right: 20px;
-  top: 20px;
-}
-
-.close-button:hover {
-  background-color: #f5f5f5;
-}
-
      
 </style>
      
