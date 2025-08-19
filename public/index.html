@@ -3349,17 +3349,54 @@ body::-webkit-scrollbar {
 
 </style>
 <style>
-     /* JIRA Import Modal Styles */
-.jira-modal-content {
-  background: white;
-  border-radius: 12px;
-  max-width: 900px;
-  width: 90%;
-  max-height: 90vh;
+   /\* JIRA Import Modal Styles \*/
+#jiraImportModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: none; /* hidden by default */
+  align-items: center;
+  justify-content: center;
+  z-index: 10004; /\* ensure it's above other modals \*/
+  overflow: auto; /\* allows scrolling for smaller screens \*/
+}
+
+/\* inner wrapper \*/
+#jiraImportModal::before {
+  content: '';
+  display: inline-block;
+  height: 50%;
+  margin-bottom: -1px; /\* removes the small space under the inline element \*/
+}
+#jiraImportModal .jira-modal-content {
   display: flex;
   flex-direction: column;
+  margin: auto; /\* Magic centering \*/
+  max-height: 90vh; /\* Limit height \*/
+  max-width: 900px;
+  width: 90%;
+  border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  overflow: hidden;
+  overflow: hidden; /\* Ensure content stays within \*/
+  
+  /\* Fixes inner scroll issue \*/
+  position: relative;
+}
+
+/\* mobile adjustments \*/
+@media (max-width: 768px) {
+  #jiraImportModal .jira-modal-content {
+    width: 95%;
+     max-height: 95vh;
+  }
+  
+  .jira-filters > div {
+    flex-direction: column;
+    gap: 10px;
+  }
 }
 
 .jira-step {
@@ -3519,7 +3556,7 @@ body::-webkit-scrollbar {
   border: 1px solid #fed7aa;
 }
 
-/* Selection step styles */
+/\* Selection step styles \*/
 .jira-selection-section {
   display: flex;
   flex-direction: column;
@@ -3557,7 +3594,7 @@ body::-webkit-scrollbar {
   color: #374151;
 }
 
-/* Story item styles */
+/\* Story item styles \*/
 .jira-story-item {
   display: flex;
   align-items: center;
@@ -3636,6 +3673,55 @@ body::-webkit-scrollbar {
     gap: 10px;
   }
 }
+ #jiraImportModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: none; /* hidden by default */
+  align-items: center;
+  justify-content: center;
+  z-index: 10004; /* ensure it's above other modals */
+  overflow: auto; /* allows scrolling for smaller screens */
+}
+
+/* inner wrapper */
+#jiraImportModal::before {
+  content: '';
+  display: inline-block;
+  height: 50%;
+  margin-bottom: -1px; /* removes the small space under the inline element */
+}
+#jiraImportModal .jira-modal-content {
+  display: flex;
+  flex-direction: column;
+  margin: auto; /* Magic centering */
+  max-height: 90vh; /* Limit height */
+  max-width: 900px;
+  width: 90%;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  overflow: hidden; /* Ensure content stays within */
+  
+  /* Fixes inner scroll issue */
+  position: relative;
+}
+
+/* mobile adjustments */
+@media (max-width: 768px) {
+  #jiraImportModal .jira-modal-content {
+    width: 95%;
+     max-height: 95vh;
+  }
+  
+  .jira-filters > div {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+</style>
 </style>
      
 </head>
