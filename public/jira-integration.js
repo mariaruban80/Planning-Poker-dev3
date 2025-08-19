@@ -217,8 +217,21 @@ function displayJiraStories(stories) {
 }
 
 // -----------------------------------------------------------
+// Initialization (hook menu button, etc.)
+function initializeJiraIntegration() {
+  console.log('[JIRA] Initializing JIRA integration');
+
+  const btn = document.getElementById('importFromJiraBtn');
+  if (btn) {
+    btn.addEventListener('click', showJiraImportModal);
+  } else {
+    console.warn('[JIRA] Import from JIRA button not found in DOM');
+  }
+}
+
 // Expose to window
 window.JiraIntegration = {
+  initializeJiraIntegration,
   showJiraImportModal,
   hideJiraImportModal,
   backToJiraConnection,
