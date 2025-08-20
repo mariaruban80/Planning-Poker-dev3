@@ -3637,6 +3637,19 @@ body::-webkit-scrollbar {
   accent-color: #753acb;
   cursor: pointer;
 }
+     .jira-header-checkbox:indeterminate {
+  background-color: #753acb;
+  border-color: #753acb;
+}
+
+     .jira-header-checkbox:indeterminate::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 2px;
+  background: white;
+  margin: 7px auto;
+}
 
 .jira-stories-container {
   flex: 1;
@@ -3690,11 +3703,18 @@ body::-webkit-scrollbar {
   text-align: center;
   padding: 12px 8px;
 }
+     .jira-stories-table tr {
+  transition: all 0.2s ease;
+}
 .jira-stories-table tr:hover {
   background: #f9fafb;
 }
-     .jira-stories-table tr.selected {
+  .jira-stories-table tr.selected {
   background: #f0e6ff;
+  border-left: 3px solid #753acb;
+}
+.jira-stories-table tr.selected:hover {
+  background: #e8d8ff;
 }
 
 
@@ -3727,6 +3747,11 @@ body::-webkit-scrollbar {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+     .checkbox-cell {
+  text-align: center;
+  padding: 12px 8px;
+  width: 60px;
 }
 
 .jira-type-icon, .jira-status-icon {
