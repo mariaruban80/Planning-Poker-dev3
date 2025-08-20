@@ -4456,58 +4456,76 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
     <h3>📋 Select Stories to Import</h3>
     <button class="close-button" onclick="hideJiraImportModal()">&times;</button>
   </div>
-
+  
+  <!-- Compact Filters Section -->
   <div class="jira-filters">
+    <!-- Status and Issue Type in single row -->
     <div class="jira-filters-row">
       <div class="jira-filter-group">
         <label for="jiraStatusFilter">Status:</label>
         <select id="jiraStatusFilter" class="jira-select">
-          </select>
+          <option value="">All Statuses</option>
+          <!-- Options will be populated dynamically -->
+        </select>
       </div>
-
+      
       <div class="jira-filter-group">
         <label for="jiraTypeFilter">Issue Type:</label>
         <select id="jiraTypeFilter" class="jira-select">
-         </select>
+          <option value="">All Types</option>
+          <!-- Options will be populated dynamically -->
+        </select>
       </div>
     </div>
-
+    
+    <!-- JQL Search in separate row -->
     <div class="jira-search-section">
       <label for="jiraJqlInput">JQL:</label>
-      <input type="text" id="jiraJqlInput" class="jira-jql-input" placeholder="ORDER BY Rank ASC" value="">
+      <input type="text" 
+             id="jiraJqlInput" 
+             class="jira-jql-input" 
+             placeholder="ORDER BY Rank ASC"
+             value="">
       <button id="jiraSearchBtn" class="jira-search-btn">SEARCH JIRA</button>
     </div>
   </div>
-
+  
+  <!-- Stories Container with Fixed Height and Scroll -->
   <div class="jira-stories-container">
     <div class="jira-stories-table-wrapper">
       <table class="jira-stories-table">
         <thead>
           <tr>
             <th class="select-column">
-              <input type="checkbox" id="jiraSelectAllCheckbox" class="jira-header-checkbox" title="Select/Deselect All">
+              <input type="checkbox" 
+                     id="jiraSelectAllCheckbox" 
+                     class="jira-header-checkbox"
+                     title="Select/Deselect All">
             </th>
             <th class="key-column">Key</th>
             <th class="status-column">Status</th>
-            <th>Name</th>
+            <th class="name-column">Name</th>
           </tr>
         </thead>
         <tbody id="jiraStoriesTableBody">
+          <!-- Stories will be populated here -->
         </tbody>
       </table>
-
-      <div class="jira-selection-count">
-        <span id="selectedCount">0 selected</span>
-      </div>
     </div>
-
-    <div id="jiraLoadingIndicator" style="display: none;">
+    
+    <!-- Selection Count Bar - Always Visible -->
+    <div class="jira-selection-count">
+      <span id="selectedCount">0 selected</span>
+    </div>
+    
+    <div id="jiraLoadingIndicator" style="display: none; text-align: center; padding: 40px; color: #666;">
       <div class="loading-spinner"></div>
       Loading JIRA stories...
     </div>
   </div>
-
-  <div class="jira-modal-footer" style="position: sticky; bottom: 0; background: white; z-index: 10;">
+  
+  <!-- Footer Actions - Always Visible at Bottom -->
+  <div class="jira-modal-footer">
     <button id="importSelectedStories" class="jira-btn jira-btn-primary" disabled>
       Import Selected Stories
     </button>
@@ -4516,10 +4534,6 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
     </button>
   </div>
 </div>
-
-  </div>
-</div>   
-     
 
 
 <div class="upload-section">
