@@ -76,6 +76,7 @@ function importSelectedJiraStories() {
 
         importedStories.push(ticketData);
 
+        // ✅ Reuse the same flow as CSV import
         if (typeof emitAddTicket === 'function') {
             emitAddTicket(ticketData);
         } else if (window.socket) {
@@ -325,25 +326,9 @@ function setupJiraCheckboxLogic() {
         });
     });
 
+    // Initial state
     updateSelectionState();
-} else {
-                    cb.closest('tr')?.classList.remove('selected');
-                }
-            });
-        });
-    }
-
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', () => {
-            if (!cb.checked) {
-                cb.closest('tr')?.classList.remove('selected');
-            } else {
-                cb.closest('tr')?.classList.add('selected');
-            }
-        });
-    });
 }
-
 // --- Display and Rendering ---
 function displayJiraStories(stories) {
     const tableBody = $id('jiraStoriesTableBody');
@@ -465,12 +450,17 @@ function setupJiraFiltering() {
     searchInput.addEventListener('input', applyFilters);
   }
 }
-    function updateSelectionState() {
-        const selectedCount = document.querySelectorAll('.jira-story-checkbox:checked').length;
-        selectedCountEl && (selectedCountEl.textContent = selectedCount + ' selected');
-        const importSelectedStoriesBtn = document.getElementById("importSelectedStories");
-        if (importSelectedStoriesBtn) importSelectedStoriesBtn.disabled = selectedCount === 0;
+  function updateSelectionState() {
+    const selectedCount = document.querySelectorAll('.jira-story-checkbox:checked').length;
+    const selectedCountEl = document.getElementById('selectedCount');
+    if (selectedCountEl) {
+        selectedCountEl.textContent = selectedCount + ' selected';
     }
+    const importSelectedStoriesBtn = document.getElementById("importSelectedStories");
+    if (importSelectedStoriesBtn) {
+        importSelectedStoriesBtn.disabled = selectedCount === 0;
+    }
+}
 
     setupJiraCheckboxLogic();
     setupJiraFiltering();
@@ -632,3 +622,11 @@ if (typeof showJiraImportModal === 'function') {
 if (typeof hideJiraImportModal === 'function') {
     window.hideJiraImportModal = hideJiraImportModal;
 }
+
+// Wire the "Import Selected Stories" button
+document.addEventListener('DOMContentLoaded', () => {
+    const importBtn = document.getElementById('importSelectedStories');
+    if (importBtn) {
+        importBtn.addEventListener('click', importSelectedJiraStories);
+    }
+});
