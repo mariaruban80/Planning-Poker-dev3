@@ -91,34 +91,7 @@ function importSelectedJiraStories() {
     hideJiraImportModal();
 }
 
-    const importedStories = [];
-    selectedCheckboxes.forEach(cb => {
-        const story = {
-            id: cb.dataset.key,
-            name: decodeURIComponent(cb.dataset.summary || ''),
-            description: decodeURIComponent(cb.dataset.description || ''),
-            type: cb.dataset.type || '',
-            status: cb.dataset.status || '',
-            priority: cb.dataset.priority || '',
-            url: cb.dataset.url || ''
-        };
-
-        importedStories.push(story);
-
-        // 🚀 Push story into Planning Poker UI via socket or local method
-        if (window.addNewStoryCard) {
-            // Your app's frontend story card method
-            window.addNewStoryCard(story.name, story.description, story.id);
-        }
-        if (window.socket) {
-            // Broadcast to all clients
-            window.socket.emit('addStory', story);
-        }
-    });
-
-    console.log(`[JIRA] Imported ${importedStories.length} stories`, importedStories);
-    hideJiraImportModal();
-}
+ 
 // --- Helper Functions ---
 function saveJiraCredentials() {
     const creds = {
@@ -651,3 +624,11 @@ window.JiraIntegration = {
   toggleSelectAllJiraStories
 };
 
+
+// Expose modal functions globally so HTML buttons can call them
+if (typeof showJiraImportModal === 'function') {
+    window.showJiraImportModal = showJiraImportModal;
+}
+if (typeof hideJiraImportModal === 'function') {
+    window.hideJiraImportModal = hideJiraImportModal;
+}
