@@ -99,7 +99,61 @@ app.post('/api/jira/search', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch issues from JIRA' });
   }
 });
+// ✅ New: Test JIRA connection with token
+app.post('/api/jira/test-token', async (req, res) => {
+  const { jiraUrl, email, token, projectKey } = req.body;
+  if (!jiraUrl || !projectKey || !email || !token) {
+    return res.status(400).json({ success: false, error: 'Missing parameters' });
+  }
 
+  const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
+  const url = `${baseUrl}/rest/api/3/project/${projectKey}`;
+
+  try {
+    const auth = Buffer.from(`${email}:${token}`).toString('base64');
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Basic ${auth}`
+      }
+    });
+
+    if (response.ok) {
+      res.json({ success: true });
+    } else {
+      res.status(response.status).json({ success: false });
+    }
+  } catch (err) {
+    console.error('[SERVER] /test-token error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ✅ New: Test JIRA anonymous access
+app.post('/api/jira/test-anonymous', async (req, res) => {
+  const { jiraUrl, projectKey } = req.body;
+  if (!jiraUrl || !projectKey) {
+    return res.status(400).json({ success: false, error: 'Missing parameters' });
+  }
+
+  const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
+  const url = `${baseUrl}/rest/api/3/project/${projectKey}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (response.ok) {
+      res.json({ success: true });
+    } else {
+      res.status(response.status).json({ success: false });
+    }
+  } catch (err) {
+    console.error('[SERVER] /test-anonymous error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // Enhanced room structure with improved state management
 const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed, tickets, deletedStoryIds, deletedStoriesTimestamp, userNameVotes }
