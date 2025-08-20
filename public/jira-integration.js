@@ -363,5 +363,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // --- Expose Functions ---
 window.JiraIntegration = {
-    initializeJiraIntegration, showJiraImportModal, hideJiraImportModal, backToJiraConnection, smartJiraConnection, loadJiraStories, resetJiraModal, importSelectedJiraStories, toggleSelectAllJiraStories
+    initializeJiraIntegration, 
+    showJiraImportModal,
+    hideJiraImportModal,
+    backToJiraConnection,
+    smartJiraConnection, 
+    loadJiraStories, 
+    resetJiraModal, 
+    importSelectedJiraStories, 
+    toggleSelectAllJiraStories
+}
 };
