@@ -3602,9 +3602,40 @@ body::-webkit-scrollbar {
 }
 
 .jira-selection-controls {
-  padding: 15px 28px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 28px;
   background: white;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.jira-selection-count {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+ .jira-stories-table th {
+  background: #f8f9fa;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+     .jira-stories-table th.select-column {
+  width: 60px;
+  text-align: center;
+  padding: 12px 8px;
+}
+     .jira-header-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #753acb;
+  cursor: pointer;
 }
 
 .jira-stories-container {
@@ -3650,11 +3681,22 @@ body::-webkit-scrollbar {
 }
 
 .jira-story-checkbox {
-  margin-right: 15px;
   width: 18px;
   height: 18px;
   accent-color: #753acb;
+  cursor: pointer;
 }
+     .jira-stories-table td.checkbox-cell {
+  text-align: center;
+  padding: 12px 8px;
+}
+.jira-stories-table tr:hover {
+  background: #f9fafb;
+}
+     .jira-stories-table tr.selected {
+  background: #f0e6ff;
+}
+
 
 .jira-story-content {
   flex: 1;
@@ -3696,16 +3738,23 @@ body::-webkit-scrollbar {
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
-  #jiraImportModal {
-    padding: 10px;
+  .jira-stories-table th.select-column {
+    width: 45px;
+    padding: 8px 4px;
   }
-  
+  .jira-stories-table td.checkbox-cell {
+    padding: 8px 4px;
+  }
   #jiraImportModal .jira-modal-content {
     width: 100%;
     max-height: 95vh;
     max-width: none;
   }
-  
+    .jira-header-checkbox,
+  .jira-story-checkbox {
+    width: 16px;
+    height: 16px;
+  }
   .jira-filters > div {
     flex-direction: column;
     gap: 10px;
@@ -4085,78 +4134,96 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
         <button onclick="hideJiraImportModal()" class="jira-btn jira-btn-cancel">Cancel</button>
       </div>
     </div>
-    
-    <!-- Step 2: Story Selection -->
-    <div id="jiraSelectionStep" class="jira-step">
-      <div class="jira-modal-header">
-        <button class="jira-back-btn" onclick="backToJiraConnection()">←</button>
-        <h3>📋 Select Stories to Import</h3>
-        <button class="close-button" onclick="hideJiraImportModal()">&times;</button>
+    <!-- Step 2: Story Selection with header checkbox -->
+<div id="jiraSelectionStep" class="jira-step">
+  <div class="jira-modal-header">
+    <button class="jira-back-btn" onclick="backToJiraConnection()">←</button>
+    <h3>📋 Select Stories to Import</h3>
+    <button class="close-button" onclick="hideJiraImportModal()">&times;</button>
+  </div>
+  
+  <!-- Filters Section (unchanged) -->
+  <div class="jira-filters">
+    <div class="jira-filters-grid">
+      <div class="jira-filter-group">
+        <label for="jiraStatusFilter">Status:</label>
+        <select id="jiraStatusFilter" class="jira-select">
+          <option value="">All Statuses</option>
+          <option value="To Do">To Do</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Ready for Review">Ready for Review</option>
+          <option value="Done">Done</option>
+        </select>
       </div>
       
-      <div class="jira-selection-section">
-        <div class="jira-filters">
-          <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-            <div class="filter-group">
-              <label for="jiraStatusFilter">Status:</label>
-              <select id="jiraStatusFilter" class="jira-select">
-                <option value="">All Statuses</option>
-                <option value="To Do">To Do</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Ready for Review">Ready for Review</option>
-                <option value="Done">Done</option>
-              </select>
-            </div>
-            
-            <div class="filter-group">
-              <label for="jiraTypeFilter">Issue Type:</label>
-              <select id="jiraTypeFilter" class="jira-select">
-                <option value="">All Types</option>
-                <option value="Story">Story</option>
-                <option value="Bug">Bug</option>
-                <option value="Task">Task</option>
-                <option value="Epic">Epic</option>
-              </select>
-            </div>
-            
-            <div class="filter-group">
-              <label for="jiraSearchInput">Search:</label>
-              <input type="text" id="jiraSearchInput" placeholder="Search stories..." class="jira-input" style="width: 200px;">
-            </div>
-            
-            <button id="applyJiraFilters" class="jira-btn jira-btn-secondary">Apply Filters</button>
-          </div>
-        </div>
-        
-        <div class="jira-selection-controls">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <button id="selectAllJiraStories" class="jira-btn jira-btn-secondary">Select All</button>
-              <button id="deselectAllJiraStories" class="jira-btn jira-btn-secondary">Deselect All</button>
-            </div>
-            <div>
-              <span id="selectedCount">0 selected</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="jira-stories-container">
-          <div id="jiraStoriesList" class="jira-stories-list">
-            <!-- Stories will be loaded here -->
-          </div>
-          
-          <div id="jiraLoadingIndicator" style="display: none; text-align: center; padding: 40px; color: #666;">
-            <div class="loading-spinner"></div>
-            Loading JIRA stories...
-          </div>
-        </div>
+      <div class="jira-filter-group">
+        <label for="jiraTypeFilter">Issue Type:</label>
+        <select id="jiraTypeFilter" class="jira-select">
+          <option value="">All Types</option>
+          <option value="Story">Story</option>
+          <option value="Bug">Bug</option>
+          <option value="Task">Task</option>
+          <option value="Epic">Epic</option>
+        </select>
       </div>
       
-      <div class="jira-modal-footer">
-        <button id="importSelectedStories" class="jira-btn jira-btn-primary" disabled>Import Selected Stories</button>
-        <button onclick="hideJiraImportModal()" class="jira-btn jira-btn-cancel">Cancel</button>
+      <div class="jira-filter-group">
+        <label for="jiraSearchInput">Search:</label>
+        <input type="text" id="jiraSearchInput" placeholder="Search stories..." class="jira-search-input">
       </div>
+      
+      <button id="applyJiraFilters" class="jira-apply-filters-btn">Apply Filters</button>
     </div>
+  </div>
+  
+  <!-- Selection Count Only -->
+  <div class="jira-selection-controls">
+    <div class="jira-selection-count">
+      <span id="selectedCount">0 selected</span>
+    </div>
+  </div>
+  
+  <!-- Stories Table with Header Checkbox -->
+  <div class="jira-stories-container">
+    <div class="jira-stories-table-wrapper">
+      <table class="jira-stories-table">
+        <thead>
+          <tr>
+            <th class="select-column">
+              <input type="checkbox" 
+                     id="jiraSelectAllCheckbox" 
+                     class="jira-header-checkbox"
+                     title="Select/Deselect All">
+            </th>
+            <th width="100">Key</th>
+            <th>Summary</th>
+            <th width="80">Type</th>
+            <th width="100">Status</th>
+          </tr>
+        </thead>
+        <tbody id="jiraStoriesTableBody">
+          <!-- Stories will be populated here -->
+        </tbody>
+      </table>
+    </div>
+    
+    <div id="jiraLoadingIndicator" style="display: none; text-align: center; padding: 40px; color: #666;">
+      <div class="loading-spinner"></div>
+      Loading JIRA stories...
+    </div>
+  </div>
+  
+  <!-- Footer Actions -->
+  <div class="jira-modal-footer">
+    <button id="importSelectedStories" class="jira-btn jira-btn-primary" disabled>
+      Import Selected Stories
+    </button>
+    <button onclick="hideJiraImportModal()" class="jira-btn jira-btn-cancel">
+      Cancel
+    </button>
+  </div>
+</div>
+
   </div>
 </div>   
      
