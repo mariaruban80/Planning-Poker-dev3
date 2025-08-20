@@ -30,7 +30,67 @@ function resetJiraModal() {
     $id('jiraSelectionStep')?.classList.remove('active');
     hideJiraImportModal();
 }
+function initializeJiraIntegration() {
+    console.log("[JIRA] Initializing Jira Integration");
 
+    // Load saved credentials if present
+    try {
+        const savedCreds = localStorage.getItem("jiraCredentials");
+        if (savedCreds) {
+            const { url, email, token, project } = JSON.parse(savedCreds);
+            if ($id("jiraUrl")) $id("jiraUrl").value = url || "";
+            if ($id("jiraEmail")) $id("jiraEmail").value = email || "";
+            if ($id("jiraToken")) $id("jiraToken").value = token || "";
+            if ($id("jiraProject")) $id("jiraProject").value = project || "";
+            console.log("[JIRA] Restored saved credentials");
+        }
+    } catch (err) {
+        console.warn("[JIRA] Could not restore credentials:", err);
+    }
+
+    // Ensure modal starts in connection step
+    if ($id('jiraConnectionStep')) {
+        $id('jiraConnectionStep').classList.add('active');
+    }
+    if ($id('jiraSelectionStep')) {
+        $id('jiraSelectionStep').classList.remove('active');
+    }
+}
+function importSelectedJiraStories() {
+    const selectedCheckboxes = document.querySelectorAll('.jira-story-checkbox:checked');
+    if (!selectedCheckboxes.length) {
+        alert('Please select at least one story to import.');
+        return;
+    }
+
+    const importedStories = [];
+    selectedCheckboxes.forEach(cb => {
+        const story = {
+            id: cb.dataset.key,
+            name: decodeURIComponent(cb.dataset.summary || ''),
+            description: decodeURIComponent(cb.dataset.description || ''),
+            type: cb.dataset.type || '',
+            status: cb.dataset.status || '',
+            priority: cb.dataset.priority || '',
+            url: cb.dataset.url || ''
+        };
+
+        importedStories.push(story);
+
+        // 🚀 Push story into Planning Poker UI via socket or local method
+        if (window.addNewStoryCard) {
+            // Your app's frontend story card method
+            window.addNewStoryCard(story.name, story.description, story.id);
+        }
+        if (window.socket) {
+            // Broadcast to all clients
+            window.socket.emit('addStory', story);
+        }
+    });
+
+    console.log(`[JIRA] Imported ${importedStories.length} stories`, importedStories);
+    hideJiraImportModal();
+}
 // --- Helper Functions ---
 function saveJiraCredentials() {
     const creds = {
