@@ -31,7 +31,6 @@ function resetJiraModal() {
     hideJiraImportModal();
 }
 
-
 // --- Helper Functions ---
 function saveJiraCredentials() {
     const creds = {
@@ -43,7 +42,7 @@ function saveJiraCredentials() {
     try {
         localStorage.setItem('jiraCredentials', JSON.stringify(creds));
     } catch (error) {
-      console.error("Error saving credentials:", error);
+        console.error("Error saving credentials:", error);
     }
 }
 
@@ -76,11 +75,10 @@ function showConnectionStatus(type, message) {
 
 function showJiraLoadingIndicator(show) {
     const el = $id('jiraLoadingIndicator');
-    if (el) el.style.display = show ? 'flex' : 'none'; // Use flex for better centering
+    if (el) el.style.display = show ? 'flex' : 'none';
     const tableWrapper = document.querySelector('.jira-stories-table-wrapper');
-    if (tableWrapper) tableWrapper.style.display = show ? 'none' : 'block'; // Hide table while loading
+    if (tableWrapper) tableWrapper.style.display = show ? 'none' : 'block';
 }
-
 
 function escapeHtml(str) {
     return (str || '').replace(/[&<>"']/g, (ch) => ({
@@ -88,42 +86,181 @@ function escapeHtml(str) {
     })[ch]);
 }
 
-
-
 // --- Connection Functions ---
-
 async function testAnonymousAccess(jiraUrl, projectKey) {
-    // ... (Your existing code)
+    try {
+        const response = await fetch('/api/jira/test-anonymous', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jiraUrl, projectKey })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                showConnectionStatus('success', 'Connected anonymously to JIRA project.');
+                jiraConnection = { url: jiraUrl, email: null, token: null, project: projectKey };
+                return true;
+            }
+        }
+        showConnectionStatus('error', 'Anonymous access failed.');
+        return false;
+    } catch (err) {
+        console.error('[JIRA] Anonymous access error:', err);
+        showConnectionStatus('error', 'Anonymous access failed, check console.');
+        return false;
+    }
 }
 
-
 async function testJiraConnectionWithToken(url, email, token, project) {
-    // ... (Your existing code)
+    try {
+        const response = await fetch('/api/jira/test-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jiraUrl: url, email, token, projectKey: project })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                showConnectionStatus('success', 'Connected to JIRA with token.');
+                jiraConnection = { url, email, token, project };
+                saveJiraCredentials();
+                return true;
+            }
+        }
+        showConnectionStatus('error', 'Token-based connection failed.');
+        return false;
+    } catch (err) {
+        console.error('[JIRA] Token connection error:', err);
+        showConnectionStatus('error', 'Token connection failed, check console.');
+        return false;
+    }
 }
 
 async function smartJiraConnection() {
-    // ... (Your existing code)
+    const jiraUrl = $id('jiraUrl')?.value.trim();
+    const email = $id('jiraEmail')?.value.trim();
+    const token = $id('jiraToken')?.value.trim();
+    const project = $id('jiraProject')?.value.trim();
+
+    if (!jiraUrl || !project) {
+        showConnectionStatus('error', 'Please provide JIRA URL and Project Key.');
+        return;
+    }
+
+    if (email && token) {
+        const success = await testJiraConnectionWithToken(jiraUrl, email, token, project);
+        if (success) return;
+    }
+
+    // fallback to anonymous access
+    await testAnonymousAccess(jiraUrl, project);
 }
 
 // --- Core JIRA Functions ---
-
 async function performJiraSearch() {
-  // ... (Your existing code)
+    if (!jiraConnection) {
+        showConnectionStatus('error', 'No active JIRA connection');
+        return;
+    }
+
+    const jqlInput = $id('jiraJqlInput');
+    const jql = jqlInput && jqlInput.value ? jqlInput.value.trim() : '';
+
+    if (!jql) {
+        showConnectionStatus('error', 'Please enter a JQL query.');
+        return;
+    }
+
+    showJiraLoadingIndicator(true);
+    try {
+        const baseUrl = jiraConnection.url.endsWith('/') ? jiraConnection.url.slice(0, -1) : jiraConnection.url;
+        const response = await fetch('/api/jira/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jiraUrl: baseUrl,
+                email: jiraConnection.email,
+                token: jiraConnection.token,
+                projectKey: jiraConnection.project,
+                jql
+            })
+        });
+
+        showJiraLoadingIndicator(false);
+        if (response.ok) {
+            const data = await response.json();
+            jiraStories = (data?.issues || []).map(issue => ({
+                key: issue.key,
+                summary: issue.fields?.summary || '',
+                description: extractDescription(issue.fields?.description),
+                issueType: issue.fields?.issuetype?.name || 'Unknown',
+                status: issue.fields?.status?.name || 'Unknown',
+                priority: issue.fields?.priority?.name || 'Medium',
+                assignee: issue.fields?.assignee?.displayName || null,
+                storyPoints: issue.fields?.customfield_10016 || null,
+                url: (jiraConnection.url || '').replace(/\/$/, '') + '/browse/' + issue.key
+            }));
+
+            displayJiraStories(jiraStories);
+        } else {
+            showConnectionStatus('error', `Search failed: HTTP ${response.status}`);
+        }
+    } catch (err) {
+        showJiraLoadingIndicator(false);
+        console.error('[JIRA] performJiraSearch error:', err);
+        showConnectionStatus('error', 'Search failed, check console for details.');
+    }
 }
 
 function applyJiraFilters() {
-    // ... existing code
+    const statusFilter = $id('jiraStatusFilter')?.value || '';
+    const typeFilter = $id('jiraTypeFilter')?.value || '';
+
+    let filteredStories = jiraStories;
+
+    if (statusFilter) {
+        filteredStories = filteredStories.filter(story => story.status === statusFilter);
+    }
+
+    if (typeFilter) {
+        filteredStories = filteredStories.filter(story => story.issueType === typeFilter);
+    }
+
+    displayJiraStories(filteredStories);
 }
 
 function setupJiraCheckboxLogic() {
-    // ... (Your existing code)
+    const headerCheckbox = $id('jiraSelectAllCheckbox');
+    const checkboxes = document.querySelectorAll('.jira-story-checkbox');
+
+    if (headerCheckbox) {
+        headerCheckbox.addEventListener('change', () => {
+            checkboxes.forEach(cb => {
+                cb.checked = headerCheckbox.checked;
+                if (headerCheckbox.checked) {
+                    cb.closest('tr')?.classList.add('selected');
+                } else {
+                    cb.closest('tr')?.classList.remove('selected');
+                }
+            });
+        });
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (!cb.checked) {
+                cb.closest('tr')?.classList.remove('selected');
+            } else {
+                cb.closest('tr')?.classList.add('selected');
+            }
+        });
+    });
 }
 
-
 // --- Display and Rendering ---
-
 function displayJiraStories(stories) {
-
     const tableBody = $id('jiraStoriesTableBody');
     const selectedCountEl = $id('selectedCount');
     const headerCheckbox = $id('jiraSelectAllCheckbox');
@@ -132,23 +269,17 @@ function displayJiraStories(stories) {
 
     tableBody.innerHTML = '';
 
-
     if (!stories || stories.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px;">No stories found.</td></tr>`;
-
         if (headerCheckbox) headerCheckbox.style.display = 'none';
         selectedCountEl.textContent = "0 selected";
-
         return;
     }
 
-
     if (headerCheckbox) headerCheckbox.style.display = 'block';
 
-
-    populateFilterDropdowns(stories); //Call the populateFilterDropdowns
+    populateFilterDropdowns(stories);
     const rows = [];
-
 
     stories.forEach((story, index) => {
         const row = document.createElement('tr');
@@ -156,107 +287,84 @@ function displayJiraStories(stories) {
         row.dataset.index = index;
 
         row.innerHTML = `
-      <td class="checkbox-cell">
-        <input type="checkbox" class="jira-story-checkbox" value="${story.key}" 
-          data-key="${story.key}" data-summary="${encodeURIComponent(story.summary)}" 
-          data-description="${encodeURIComponent(story.description)}" data-type="${story.issueType}" 
-          data-status="${story.status}" data-priority="${story.priority}" data-url="${story.url}">
-      </td>
-      <td class="key-cell"><span class="jira-story-key">${story.key}</span></td>
-      <td class="status-cell"><span class="jira-story-status" data-status="${story.status}">${story.status}</span></td>
-      <td><div class="jira-story-summary">${escapeHtml(story.summary)}</div></td>
-    `;
+            <td class="checkbox-cell">
+                <input type="checkbox" class="jira-story-checkbox" value="${story.key}" 
+                    data-key="${story.key}" data-summary="${encodeURIComponent(story.summary)}" 
+                    data-description="${encodeURIComponent(story.description)}" data-type="${story.issueType}" 
+                    data-status="${story.status}" data-priority="${story.priority}" data-url="${story.url}">
+            </td>
+            <td class="key-cell"><span class="jira-story-key">${story.key}</span></td>
+            <td class="status-cell"><span class="jira-story-status" data-status="${story.status}">${story.status}</span></td>
+            <td><div class="jira-story-summary">${escapeHtml(story.summary)}</div></td>
+        `;
 
-        rows.push(row);  // Store rows to append later for performance.
+        rows.push(row);
         tableBody.appendChild(row);
     });
 
+    rows.forEach(row => {
+        row.addEventListener('click', (e) => {
+            const cell = row.querySelector('.checkbox-cell');
+            const checkbox = cell.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
 
-        // Attach event listeners to the input checkbox element inside the table header cell
-        const selectColumn = tableBody.querySelector('.select-column input[type="checkbox"]');
-        if (selectColumn) {
-            selectColumn.addEventListener('click', function() {
-                const checkboxes = document.querySelectorAll('.jira-story-checkbox');
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = this.checked;
-                });
-                updateSelectionState(); // Call updateSelectionState after updating checkboxes
-            });
-        }
-
-        // Attach event listeners for rows (toggle style between regular and selected)
-        rows.forEach(row => {
-            row.addEventListener('click', (e) => {
-
-                const cell = row.querySelector('.checkbox-cell');   
-                const checkbox = cell.querySelector('input[type="checkbox"]');
-
-
-                checkbox.checked = !checkbox.checked; // Toggle checkbox
-                updateSelectionState(); // Update visual status
-
-              if (checkbox.checked) {
+            if (checkbox.checked) {
                 row.classList.add("selected");
-              } else {
+            } else {
                 row.classList.remove("selected");
-              }
+            }
 
-                updateSelectionState(); // Update selection count at the end of actions
-            });
+            updateSelectionState();
         });
+    });
 
-    // Update selection count display
     function updateSelectionState() {
-
-
-        const anyChecked = [...document.querySelectorAll('.jira-story-checkbox')].some(cb => cb.checked);  // Check some not all
-
-
         const selectedCount = document.querySelectorAll('.jira-story-checkbox:checked').length;
         selectedCountEl && (selectedCountEl.textContent = selectedCount + ' selected');
-
-
         const importSelectedStoriesBtn = document.getElementById("importSelectedStories");
         if (importSelectedStoriesBtn) importSelectedStoriesBtn.disabled = selectedCount === 0;
-    };
+    }
 
-
-    setupJiraCheckboxLogic(); // Call setupJiraCheckboxLogic after the stories loaded to tbody
+    setupJiraCheckboxLogic();
     setupJiraFiltering();
 }
 
-
-
 // --- Utility Functions ---
-
 async function loadJiraStories() {
     if (!jiraConnection) {
         showConnectionStatus('error', 'No active JIRA connection');
         return;
     }
 
-    showJiraLoadingIndicator(true);  //Show the Loading indicator
+    showJiraLoadingIndicator(true);
 
     try {
         const baseUrl = jiraConnection.url.endsWith('/') ? jiraConnection.url.slice(0, -1) : jiraConnection.url;
         const jqlInput = $id('jiraJql');    
         const jql = jqlInput && jqlInput.value ? jqlInput.value : undefined;
 
-
         const response = await fetch('/api/jira/search', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ jiraUrl: baseUrl, email: jiraConnection.email, token: jiraConnection.token, projectKey: jiraConnection.project, ...(jql ? { jql } : {}) })
         });
 
-        showJiraLoadingIndicator(false); //Hide the loading indicator
+        showJiraLoadingIndicator(false);
 
         if (response.ok) {
             const data = await response.json();
-            const issues = data?.issues || [];  //Error handling
+            const issues = data?.issues || [];
 
             jiraStories = issues.map(issue => {
                 return {
-                    key: issue.key, summary: issue.fields?.summary || '',   description: extractDescription(issue.fields?.description),  issueType: issue.fields?.issuetype?.name || 'Unknown', status: issue.fields?.status?.name || 'Unknown',  priority: issue.fields?.priority?.name || 'Medium',   assignee: issue.fields?.assignee?.displayName || null,    storyPoints: issue.fields?.customfield_10016 || null,   url: (jiraConnection.url || '').replace(/\/$/, '') + '/browse/' + issue.key
+                    key: issue.key,
+                    summary: issue.fields?.summary || '',
+                    description: extractDescription(issue.fields?.description),
+                    issueType: issue.fields?.issuetype?.name || 'Unknown',
+                    status: issue.fields?.status?.name || 'Unknown',
+                    priority: issue.fields?.priority?.name || 'Medium',
+                    assignee: issue.fields?.assignee?.displayName || null,
+                    storyPoints: issue.fields?.customfield_10016 || null,
+                    url: (jiraConnection.url || '').replace(/\/$/, '') + '/browse/' + issue.key
                 };
             });
 
@@ -265,41 +373,28 @@ async function loadJiraStories() {
             $id('jiraConnectionStep')?.classList.remove('active');
             $id('jiraSelectionStep')?.classList.add('active');
 
-
-
-
         } else {
             showConnectionStatus('error', `Failed to load stories: HTTP ${response.status}`);
         }
 
-
-
     } catch (error) {
-        showJiraLoadingIndicator(false); //Hide the loading indicator in case of error
+        showJiraLoadingIndicator(false);
         console.error('Failed to load JIRA stories:', error);
         showConnectionStatus('error', 'Failed to load stories. Please check your connection.');
     }
 }
 
-
-
-//Populate the filter dropdowns to include the filter by the status and issue type
-
 function populateFilterDropdowns(stories) {
-    console.log("populateFilterDropdowns called");
     const statusFilter = document.getElementById('jiraStatusFilter');
     const typeFilter = document.getElementById('jiraTypeFilter');
 
-
     if (statusFilter) {
-        //Clear the filter options
         statusFilter.innerHTML = '<option value=""> All Statuses</option>';
         const uniqueStatuses = [...new Set(stories.map(s => s.status))];
         uniqueStatuses.forEach(status => {
             statusFilter.add(new Option(status, status));
         });
     }
-
 
     if (typeFilter) {
         typeFilter.innerHTML = '<option value = "">All Types </option>';
@@ -309,8 +404,6 @@ function populateFilterDropdowns(stories) {
         });
     }
 }
-
-
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', function () {
@@ -337,40 +430,39 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#jiraImportModal .close-button').forEach(btn => {
         btn.addEventListener('click', function (e) {
             e.preventDefault(); hideJiraImportModal();
-        });
-    });
+         });
+  });
 
-    $id('jiraBackBtn')?.addEventListener('click', function (e) {
-        e.preventDefault(); backToJiraConnection();
-    });
-
-
-    // --- JQL Search and Filtering ---
-
-
-    const jiraSearchBtn = $id('jiraSearchBtn');
-    jiraSearchBtn?.addEventListener('click', performJiraSearch);
-
-
-    const jiraJqlInput = $id('jiraJqlInput');
-    jiraJqlInput?.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            e.preventDefault(); performJiraSearch();
-        }
-    });
-
+  // Back button
+  $id('jiraBackBtn')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    console.log('[JIRA] Back button clicked');
+    backToJiraConnection();
+  });
 });
 
-// --- Expose Functions ---
-window.JiraIntegration = {
-    initializeJiraIntegration, 
-    showJiraImportModal,
-    hideJiraImportModal,
-    backToJiraConnection,
-    smartJiraConnection, 
-    loadJiraStories, 
-    resetJiraModal, 
-    importSelectedJiraStories, 
-    toggleSelectAllJiraStories
+// Optional: listen for server confirmation to refresh UI
+if (window.socket) {
+  try {
+    window.socket.on?.('jiraStoriesImported', (allStories) => {
+      console.log('[SOCKET] Received updated stories from JIRA:', allStories?.length);
+      if (typeof window.displayStoriesInUI === 'function') {
+        try { window.displayStoriesInUI(allStories); } catch {}
+      }
+    });
+  } catch {}
 }
+
+// Expose to window
+window.JiraIntegration = {
+  initializeJiraIntegration,
+  showJiraImportModal,
+  hideJiraImportModal,
+  backToJiraConnection,
+  smartJiraConnection,
+  loadJiraStories,
+  resetJiraModal,
+  importSelectedJiraStories,
+  toggleSelectAllJiraStories
 };
+
