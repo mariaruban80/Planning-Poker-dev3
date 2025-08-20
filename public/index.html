@@ -3592,10 +3592,10 @@ body::-webkit-scrollbar {
   background: white;
   border-bottom: 1px solid #e5e7eb;
 }
-     .jira-filters-row {
+.jira-filters-row {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 30px;
   margin-bottom: 12px;
 }
 .jira-filter-group {
@@ -3638,7 +3638,7 @@ display: none;
   color: #666;
   font-weight: 500;
 }
-     .jira-jql-input {
+.jira-jql-input {
   flex: 1;
   padding: 8px 12px;
   border: 1px solid #d1d5db;
@@ -3646,7 +3646,6 @@ display: none;
   font-size: 14px;
   background: white;
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  color: #374151;
 }
      .jira-search-btn {
   background: #8b5cf6;
@@ -3664,22 +3663,31 @@ display: none;
 .jira-search-btn:hover {
   background: #7c3aed;
 }
-     
- .jira-stories-table th {
-  background: #f8f9fa;
+     .jira-stories-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: white;
+}
+.jira-stories-table th {
+  background: #f8fafc;
   padding: 12px;
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  border-bottom: 2px solid #e0e0e0;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 13px;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 5;
+  vertical-align: middle;
 }
-     .jira-stories-table th.select-column {
-  width: 60px;
+   .jira-stories-table th.select-column {
+  width: 50px;
   text-align: center;
-  padding: 12px 8px;
+  padding: 12px;
+  vertical-align: middle;
 }
      .jira-header-checkbox {
   width: 18px;
@@ -3775,12 +3783,25 @@ display: none;
   accent-color: #753acb;
   cursor: pointer;
 }
-     .jira-stories-table td.checkbox-cell {
+ .jira-stories-table td.checkbox-cell {
+  width: 50px;
   text-align: center;
-  padding: 12px 8px;
+  padding: 12px;
+  vertical-align: middle;
 }
      .jira-stories-table tr {
   transition: all 0.2s ease;
+}
+     .jira-header-checkbox,
+.jira-story-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #8b5cf6;
+  cursor: pointer;
+  margin: 0;
+  vertical-align: middle;
+  position: relative;
+  top: 0;
 }
 .jira-stories-table tr:hover {
   background: #f9fafb;
@@ -3860,11 +3881,18 @@ display: none;
 .jira-stories-table th.status-column {
   width: 120px;
 }
-
+.jira-stories-table th.key-column,
+.jira-stories-table td.key-cell {
+  width: 100px;
+}
+.jira-stories-table th.status-column,
+.jira-stories-table td.status-cell {
+  width: 120px;
+}
 .jira-stories-table td {
   padding: 12px;
   border-bottom: 1px solid #f1f5f9;
-  vertical-align: top;
+  vertical-align: middle;
   font-size: 14px;
   color: #334155;
 }
@@ -3889,7 +3917,7 @@ display: none;
   font-weight: 700;
   color: #8b5cf6;
   font-size: 13px;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: 'Segoe UI', sans-serif;
 }
 
 .jira-story-summary {
@@ -3897,7 +3925,7 @@ display: none;
   line-height: 1.4;
   font-size: 14px;
   font-weight: 400;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Segoe UI', sans-serif;
 }
 
 .jira-story-status {
@@ -3905,7 +3933,6 @@ display: none;
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 500;
-  display: inline-block;
   font-family: 'Segoe UI', sans-serif;
 }
 
@@ -3995,27 +4022,33 @@ display: none;
   color: #6b7280;
   font-size: 14px;
 }
-
+.jira-filters {
+  padding: 16px 24px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
      
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .jira-filters-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 12px;
+}
   
-  .jira-filter-group {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-  }
+.jira-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
   
-  .jira-search-section {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
+.jira-search-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
   
   .jira-stories-table {
     font-size: 13px;
@@ -4393,7 +4426,7 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
   
   <!-- Compact Filters Section -->
   <div class="jira-filters">
-    <!-- Filters in single row -->
+    <!-- Status and Issue Type in single row -->
     <div class="jira-filters-row">
       <div class="jira-filter-group">
         <label for="jiraStatusFilter">Status:</label>
@@ -4425,18 +4458,13 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
              id="jiraJqlInput" 
              class="jira-jql-input" 
              placeholder="ORDER BY Rank ASC"
-             value="ORDER BY Rank ASC">
-      <button id="jiraSearchBtn" class="jira-search-btn">Search JIRA</button>
+             value="">
+      <button id="jiraSearchBtn" class="jira-search-btn">SEARCH JIRA</button>
     </div>
   </div>
   
-  <!-- Stories Table -->
+  <!-- Stories Table with Selection Count -->
   <div class="jira-stories-container">
-    <!-- Selection count overlay -->
-    <div class="jira-selection-count-overlay">
-      <span id="selectedCount">0 selected</span>
-    </div>
-    
     <div class="jira-stories-table-wrapper">
       <table class="jira-stories-table">
         <thead>
@@ -4456,9 +4484,14 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
           <!-- Stories will be populated here -->
         </tbody>
       </table>
+      
+      <!-- Selection count positioned in table area -->
+      <div class="jira-selection-count" style="text-align: right; padding: 8px 12px; color: #8b5cf6; font-weight: 600; font-size: 13px;">
+        <span id="selectedCount">0 selected</span>
+      </div>
     </div>
     
-    <div id="jiraLoadingIndicator" style="display: none;">
+    <div id="jiraLoadingIndicator" style="display: none; text-align: center; padding: 40px; color: #666;">
       <div class="loading-spinner"></div>
       Loading JIRA stories...
     </div>
