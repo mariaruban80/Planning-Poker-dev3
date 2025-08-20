@@ -4094,7 +4094,347 @@ display: none;
 }
      
 </style>
-     
+     <style>
+/* JIRA Modal - Perfect Layout with Scrolling and Fixed Buttons */
+#jiraImportModal .jira-modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 850px;
+  width: 90%;
+  height: 85vh; /* Fixed height to ensure scrolling works */
+  max-height: 85vh;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Modal Header - Fixed */
+.jira-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.jira-modal-header h3 {
+  margin: 0;
+  color: #8b5cf6;
+  font-size: 18px;
+  font-weight: 600;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Filters Section - Fixed */
+.jira-filters {
+  padding: 16px 24px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.jira-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 12px;
+}
+
+.jira-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jira-filter-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.jira-select {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  min-width: 140px;
+  font-family: inherit;
+}
+
+.jira-search-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.jira-search-section label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.jira-jql-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+}
+
+.jira-search-btn {
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.jira-search-btn:hover {
+  background: #7c3aed;
+}
+
+/* Stories Container - Scrollable Middle Section */
+.jira-stories-container {
+  flex: 1; /* Takes remaining space */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: white;
+  min-height: 0; /* Important for flex scrolling */
+}
+
+.jira-stories-table-wrapper {
+  flex: 1;
+  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-x: hidden;
+  padding: 0 24px;
+  min-height: 0; /* Important for flex scrolling */
+}
+
+/* Scrollbar styling */
+.jira-stories-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.jira-stories-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.jira-stories-table-wrapper::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.jira-stories-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Table Styling with Perfect Checkbox Alignment */
+.jira-stories-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: white;
+}
+
+.jira-stories-table th {
+  background: #f8fafc;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 2px solid #e2e8f0;
+  font-size: 13px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  vertical-align: middle;
+}
+
+.jira-stories-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  font-size: 14px;
+  color: #334155;
+}
+
+/* Perfect Checkbox Column Alignment */
+.jira-stories-table th.select-column,
+.jira-stories-table td.checkbox-cell {
+  width: 50px;
+  text-align: center;
+  padding: 12px 8px;
+  vertical-align: middle;
+}
+
+/* Perfect Checkbox Styling */
+.jira-header-checkbox,
+.jira-story-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #8b5cf6;
+  cursor: pointer;
+  margin: 0;
+  vertical-align: middle;
+  display: inline-block;
+  position: relative;
+}
+
+/* Column Widths */
+.jira-stories-table th.key-column,
+.jira-stories-table td.key-cell {
+  width: 100px;
+}
+
+.jira-stories-table th.status-column,
+.jira-stories-table td.status-cell {
+  width: 120px;
+}
+
+/* Story Content Styling */
+.jira-story-key {
+  font-weight: 700;
+  color: #8b5cf6;
+  font-size: 13px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.jira-story-summary {
+  color: #374151;
+  line-height: 1.4;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.jira-story-status {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-family: 'Segoe UI', sans-serif;
+  display: inline-block;
+}
+
+/* Status Colors */
+.jira-story-status[data-status="To Do"] {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.jira-story-status[data-status="In Progress"] {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.jira-story-status[data-status="Done"] {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Row Selection */
+.jira-stories-table tr:hover {
+  background: #f8fafc;
+}
+
+.jira-stories-table tr.selected {
+  background: #f3f0ff;
+  border-left: 3px solid #8b5cf6;
+}
+
+/* Selection Count Bar - Always Visible */
+.jira-selection-count {
+  text-align: right;
+  padding: 8px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  color: #8b5cf6;
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Modal Footer - Always Visible at Bottom */
+.jira-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.jira-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.jira-btn-primary {
+  background: #8b5cf6;
+  color: white;
+  border-color: #8b5cf6;
+}
+
+.jira-btn-primary:hover {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.jira-btn-primary:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.jira-btn-cancel {
+  background: white;
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.jira-btn-cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Loading State */
+#jiraLoadingIndicator {
+  padding: 40px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+          
+     </style>
 </head>
 <body>
 
