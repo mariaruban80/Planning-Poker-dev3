@@ -235,25 +235,40 @@ async function loadJiraStories() {
 }
 
 // Display the fetched stories in UI (with checkboxes + data attributes)
-
 function displayJiraStories(stories) {
-  const container = $id('jiraStoriesList');
-  if (!container) return;
-  container.innerHTML = '';
-
+  const tableBody = document.getElementById('jiraStoriesTableBody');
+  const selectedCountEl = document.getElementById('selectedCount');
+  const headerCheckbox = document.getElementById('jiraSelectAllCheckbox');
+  
+  if (!tableBody) return;
+  
+  tableBody.innerHTML = '';
+  
   if (!stories.length) {
-    container.innerHTML = '<div class="jira-empty">No issues found for this query.</div>';
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+          No issues found for this query.
+        </td>
+      </tr>
+    `;
+    if (headerCheckbox) {
+      headerCheckbox.style.display = 'none';
+    }
     return;
   }
 
-  const fragment = document.createDocumentFragment();
+  // Show header checkbox if we have stories
+  if (headerCheckbox) {
+    headerCheckbox.style.display = 'block';
+  }
 
   stories.forEach(story => {
-    const div = document.createElement('div');
-    div.className = 'jira-story';
-    div.innerHTML = `
-      <label class="jira-story-row">
-        <input type="checkbox"
+    const row = document.createElement('tr');
+    row.className = 'jira-story-row';
+    row.innerHTML = `
+      <td class="checkbox-cell">
+        <input type="checkbox" 
                class="jira-story-checkbox"
                value="${story.key}"
                data-key="${story.key}"
@@ -262,53 +277,97 @@ function displayJiraStories(stories) {
                data-type="${story.issueType || ''}"
                data-status="${story.status || ''}"
                data-priority="${story.priority || ''}"
-               data-assignee="${encodeURIComponent(story.assignee || '')}"
-               data-storypoints="${story.storyPoints ?? ''}"
                data-url="${story.url}">
-        <span class="jira-story-text">
-          <strong>${story.key}</strong>: ${escapeHtml(story.summary || '')}
-        </span>
-      </label>`;
-    fragment.appendChild(div);
+      </td>
+      <td>
+        <span class="jira-story-key">${story.key}</span>
+      </td>
+      <td>
+        <div class="jira-story-summary">${escapeHtml(story.summary || '')}</div>
+      </td>
+      <td>
+        <span class="jira-story-type">${story.issueType || 'Story'}</span>
+      </td>
+      <td>
+        <span class="jira-story-status">${story.status || 'Unknown'}</span>
+      </td>
+    `;
+    
+    tableBody.appendChild(row);
   });
 
-  container.appendChild(fragment);
+  setupJiraCheckboxLogic();
+}
 
-  // === Hook up buttons and checkbox logic ===
-  const importBtn = $id('importSelectedStoriesBtn');
-  const selectAllBtn = $id('selectAllStoriesBtn');
-  const deselectAllBtn = $id('deselectAllStoriesBtn');
-  const checkboxes = container.querySelectorAll('.jira-story-checkbox');
+// Setup checkbox logic with header checkbox
+function setupJiraCheckboxLogic() {
+  const headerCheckbox = document.getElementById('jiraSelectAllCheckbox');
+  const storyCheckboxes = document.querySelectorAll('.jira-story-checkbox');
+  const selectedCountEl = document.getElementById('selectedCount');
+  const importBtn = document.getElementById('importSelectedStories');
 
-  // Helper: refresh button state
-  const updateImportButtonState = () => {
-    const anyChecked = [...checkboxes].some(cb => cb.checked);
-    if (importBtn) importBtn.disabled = !anyChecked;
-  };
+  // Update selection count and import button state
+  function updateSelectionState() {
+    const selectedCount = [...storyCheckboxes].filter(cb => cb.checked).length;
+    const totalCount = storyCheckboxes.length;
+    
+    // Update selection count display
+    if (selectedCountEl) {
+      selectedCountEl.textContent = `${selectedCount} selected`;
+    }
+    
+    // Update import button state
+    if (importBtn) {
+      importBtn.disabled = selectedCount === 0;
+    }
+    
+    // Update header checkbox state
+    if (headerCheckbox) {
+      if (selectedCount === 0) {
+        headerCheckbox.checked = false;
+        headerCheckbox.indeterminate = false;
+      } else if (selectedCount === totalCount) {
+        headerCheckbox.checked = true;
+        headerCheckbox.indeterminate = false;
+      } else {
+        headerCheckbox.checked = false;
+        headerCheckbox.indeterminate = true; // Show intermediate state
+      }
+    }
+    
+    // Add visual feedback to selected rows
+    storyCheckboxes.forEach(cb => {
+      const row = cb.closest('tr');
+      if (row) {
+        if (cb.checked) {
+          row.classList.add('selected');
+        } else {
+          row.classList.remove('selected');
+        }
+      }
+    });
+  }
 
-  // Add listener to each checkbox
-  checkboxes.forEach(cb => {
-    cb.addEventListener('change', updateImportButtonState);
+  // Header checkbox change handler
+  if (headerCheckbox) {
+    headerCheckbox.addEventListener('change', function() {
+      const shouldSelectAll = this.checked;
+      
+      storyCheckboxes.forEach(cb => {
+        cb.checked = shouldSelectAll;
+      });
+      
+      updateSelectionState();
+    });
+  }
+
+  // Individual checkbox change handlers
+  storyCheckboxes.forEach(cb => {
+    cb.addEventListener('change', updateSelectionState);
   });
 
-  // Select All
-  if (selectAllBtn) {
-    selectAllBtn.onclick = () => {
-      checkboxes.forEach(cb => cb.checked = true);
-      updateImportButtonState();
-    };
-  }
-
-  // Deselect All
-  if (deselectAllBtn) {
-    deselectAllBtn.onclick = () => {
-      checkboxes.forEach(cb => cb.checked = false);
-      updateImportButtonState();
-    };
-  }
-
-  // Initialize state on render
-  updateImportButtonState();
+  // Initialize state
+  updateSelectionState();
 }
 
 
