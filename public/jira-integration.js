@@ -57,39 +57,68 @@ function initializeJiraIntegration() {
     }
 }
 function importSelectedJiraStories() {
-  const selectedCheckboxes = document.querySelectorAll('.jira-story-checkbox:checked');
-  if (!selectedCheckboxes.length) {
-    alert('Please select at least one story to import.');
-    return;
-  }
-
-  const importedStories = [];
-  selectedCheckboxes.forEach(cb => {
-    const ticketData = {
-      id: cb.dataset.key, // Jira key (e.g., RIN-1234)
-      text: decodeURIComponent(cb.dataset.summary || ''), // card title text
-      idDisplay: cb.dataset.key, // show Jira key in purple ID spot
-      descriptionDisplay: decodeURIComponent(cb.dataset.description || ''), // detailed description
-      originalText: decodeURIComponent(cb.dataset.summary || ''),
-      originalLang: 'en'
-    };
-
-    importedStories.push(ticketData);
-
-    // ✅ Reuse the same CSV flow
-    if (typeof emitAddTicket === 'function') {
-      emitAddTicket(ticketData);
-    } else if (window.socket) {
-      window.socket.emit('addTicket', ticketData);
+    const selectedCheckboxes = document.querySelectorAll('.jira-story-checkbox:checked');
+    if (!selectedCheckboxes.length) {
+        alert('Please select at least one story to import.');
+        return;
     }
 
-    addTicketToUI(ticketData, true);
-  });
+    const importedStories = [];
+    selectedCheckboxes.forEach(cb => {
+        const ticketData = {
+            id: cb.dataset.key,
+            text: decodeURIComponent(cb.dataset.summary || ''),
+            idDisplay: cb.dataset.key,
+            descriptionDisplay: decodeURIComponent(cb.dataset.description || ''),
+            originalText: decodeURIComponent(cb.dataset.summary || ''),
+            originalLang: 'en'
+        };
 
-  console.log(`[JIRA] Imported ${importedStories.length} stories`, importedStories);
-  hideJiraImportModal();
+        importedStories.push(ticketData);
+
+        if (typeof emitAddTicket === 'function') {
+            emitAddTicket(ticketData);
+        } else if (window.socket) {
+            window.socket.emit('addTicket', ticketData);
+        }
+
+        if (typeof addTicketToUI === 'function') {
+            addTicketToUI(ticketData, true);
+        }
+    });
+
+    console.log(`[JIRA] Imported ${importedStories.length} stories`, importedStories);
+    hideJiraImportModal();
 }
 
+    const importedStories = [];
+    selectedCheckboxes.forEach(cb => {
+        const story = {
+            id: cb.dataset.key,
+            name: decodeURIComponent(cb.dataset.summary || ''),
+            description: decodeURIComponent(cb.dataset.description || ''),
+            type: cb.dataset.type || '',
+            status: cb.dataset.status || '',
+            priority: cb.dataset.priority || '',
+            url: cb.dataset.url || ''
+        };
+
+        importedStories.push(story);
+
+        // 🚀 Push story into Planning Poker UI via socket or local method
+        if (window.addNewStoryCard) {
+            // Your app's frontend story card method
+            window.addNewStoryCard(story.name, story.description, story.id);
+        }
+        if (window.socket) {
+            // Broadcast to all clients
+            window.socket.emit('addStory', story);
+        }
+    });
+
+    console.log(`[JIRA] Imported ${importedStories.length} stories`, importedStories);
+    hideJiraImportModal();
+}
 // --- Helper Functions ---
 function saveJiraCredentials() {
     const creds = {
@@ -295,52 +324,52 @@ function applyJiraFilters() {
 }
 
 function setupJiraCheckboxLogic() {
-  const headerCheckbox = $id('jiraSelectAllCheckbox');
-  const checkboxes = document.querySelectorAll('.jira-story-checkbox');
-  const selectedCountEl = $id('selectedCount');
+    const headerCheckbox = $id('jiraSelectAllCheckbox');
+    const checkboxes = document.querySelectorAll('.jira-story-checkbox');
 
-  function updateSelectionState() {
-    const selectedCount = document.querySelectorAll('.jira-story-checkbox:checked').length;
-    if (selectedCountEl) {
-      selectedCountEl.textContent = selectedCount + ' selected';
+    if (headerCheckbox) {
+        headerCheckbox.addEventListener('change', () => {
+            checkboxes.forEach(cb => {
+                cb.checked = headerCheckbox.checked;
+                if (headerCheckbox.checked) {
+                    cb.closest('tr')?.classList.add('selected');
+                } else {
+                    cb.closest('tr')?.classList.remove('selected');
+                }
+            });
+            updateSelectionState();
+        });
     }
-    const importSelectedStoriesBtn = document.getElementById("importSelectedStories");
-    if (importSelectedStoriesBtn) {
-      importSelectedStoriesBtn.disabled = selectedCount === 0;
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (!cb.checked) {
+                cb.closest('tr')?.classList.remove('selected');
+            } else {
+                cb.closest('tr')?.classList.add('selected');
+            }
+            updateSelectionState();
+        });
+    });
+
+    updateSelectionState();
+} else {
+                    cb.closest('tr')?.classList.remove('selected');
+                }
+            });
+        });
     }
-  }
 
-  // "Select All" checkbox
-  if (headerCheckbox) {
-    headerCheckbox.addEventListener('change', () => {
-      checkboxes.forEach(cb => {
-        cb.checked = headerCheckbox.checked;
-        if (headerCheckbox.checked) {
-          cb.closest('tr')?.classList.add('selected');
-        } else {
-          cb.closest('tr')?.classList.remove('selected');
-        }
-      });
-      updateSelectionState();
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (!cb.checked) {
+                cb.closest('tr')?.classList.remove('selected');
+            } else {
+                cb.closest('tr')?.classList.add('selected');
+            }
+        });
     });
-  }
-
-  // Individual checkboxes
-  checkboxes.forEach(cb => {
-    cb.addEventListener('change', () => {
-      if (!cb.checked) {
-        cb.closest('tr')?.classList.remove('selected');
-      } else {
-        cb.closest('tr')?.classList.add('selected');
-      }
-      updateSelectionState(); // ✅ ensure state updates
-    });
-  });
-
-  // Initialize state on load
-  updateSelectionState();
 }
-
 
 // --- Display and Rendering ---
 function displayJiraStories(stories) {
