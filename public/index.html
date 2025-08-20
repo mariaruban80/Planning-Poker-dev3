@@ -5145,27 +5145,12 @@ document.addEventListener('DOMContentLoaded', function() {
     exportBtn.style.display = isHost ? 'flex' : 'none';
   }
 
-if (jiraImportBtn) {
-  jiraImportBtn.style.display = isHost ? 'flex' : 'none';
-  
-  // FIXED: Safe event listener that checks if JiraIntegration exists
-  jiraImportBtn.addEventListener('click', function() {
-    console.log('[JIRA] Import button clicked');
-    
-    // Check if JiraIntegration is available
-    if (window.JiraIntegration && typeof window.JiraIntegration.showJiraImportModal === 'function') {
-      window.JiraIntegration.showJiraImportModal();
-    } else {
-      // Fallback: try to call it directly if the module loaded differently
-      if (typeof showJiraImportModal === 'function') {
-        showJiraImportModal();
-      } else {
-        console.error('JIRA Integration not loaded yet. Please try again.');
-        alert('JIRA integration is loading. Please try again in a moment.');
-      }
-    }
-  });
-}
+  if (jiraImportBtn) {
+    jiraImportBtn.style.display = isHost ? 'flex' : 'none';
+        jiraImportBtn.addEventListener('click', function() {
+          window.JiraIntegration.showJiraImportModal();
+        });
+  }
   // Debugging info
   console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
   console.log('Host status:', sessionStorage.getItem('isHost'));
