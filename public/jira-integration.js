@@ -329,6 +329,17 @@ function setupJiraCheckboxLogic() {
     // Initial state
     updateSelectionState();
 }
+ function updateSelectionState() {
+    const selectedCount = document.querySelectorAll('.jira-story-checkbox:checked').length;
+    const selectedCountEl = document.getElementById('selectedCount');
+    if (selectedCountEl) {
+        selectedCountEl.textContent = selectedCount + ' selected';
+    }
+    const importSelectedStoriesBtn = document.getElementById("importSelectedStories");
+    if (importSelectedStoriesBtn) {
+        importSelectedStoriesBtn.disabled = selectedCount === 0;
+    }
+}
 // --- Display and Rendering ---
 function displayJiraStories(stories) {
     const tableBody = $id('jiraStoriesTableBody');
@@ -387,84 +398,53 @@ function displayJiraStories(stories) {
             updateSelectionState();
         });
     });
+        setupJiraCheckboxLogic();
+    setupJiraFiltering();
+}
 function setupJiraFiltering() {
   const statusFilter = document.getElementById('jiraStatusFilter');
   const typeFilter = document.getElementById('jiraTypeFilter');
   const searchInput = document.getElementById('jiraSearchInput');
-  
+
   function applyFilters() {
     const statusValue = statusFilter?.value || '';
     const typeValue = typeFilter?.value || '';
     const searchValue = searchInput?.value.toLowerCase() || '';
-    
+
     const rows = document.querySelectorAll('.jira-story-row');
     let visibleCount = 0;
-    
+
     rows.forEach(row => {
       const checkbox = row.querySelector('.jira-story-checkbox');
       const storyStatus = checkbox?.dataset.status || '';
       const storyType = checkbox?.dataset.type || '';
-      const storySummary = checkbox?.dataset.summary ? 
-        decodeURIComponent(checkbox.dataset.summary).toLowerCase() : '';
+      const storySummary = checkbox?.dataset.summary
+        ? decodeURIComponent(checkbox.dataset.summary).toLowerCase()
+        : '';
       const storyKey = checkbox?.dataset.key?.toLowerCase() || '';
-      
+
       let shouldShow = true;
-      
-      // Apply status filter
-      if (statusValue && storyStatus !== statusValue) {
+
+      if (statusValue && storyStatus !== statusValue) shouldShow = false;
+      if (typeValue && storyType !== typeValue) shouldShow = false;
+      if (searchValue && !storySummary.includes(searchValue) && !storyKey.includes(searchValue)) {
         shouldShow = false;
       }
-      
-      // Apply type filter
-      if (typeValue && storyType !== typeValue) {
-        shouldShow = false;
-      }
-      
-      // Apply search filter
-      if (searchValue && 
-          !storySummary.includes(searchValue) && 
-          !storyKey.includes(searchValue)) {
-        shouldShow = false;
-      }
-      
+
       row.style.display = shouldShow ? '' : 'none';
       if (shouldShow) visibleCount++;
     });
-    
+
     console.log(`[JIRA] Filtered to ${visibleCount} visible stories`);
-    
-    // Update checkbox logic for visible items only
-    setupJiraCheckboxLogic();
   }
-  
-  // Add event listeners for real-time filtering
-  if (statusFilter) {
-    statusFilter.addEventListener('change', applyFilters);
-  }
-  
-  if (typeFilter) {
-    typeFilter.addEventListener('change', applyFilters);
-  }
-  
-  if (searchInput) {
-    searchInput.addEventListener('input', applyFilters);
-  }
-}
-  function updateSelectionState() {
-    const selectedCount = document.querySelectorAll('.jira-story-checkbox:checked').length;
-    const selectedCountEl = document.getElementById('selectedCount');
-    if (selectedCountEl) {
-        selectedCountEl.textContent = selectedCount + ' selected';
-    }
-    const importSelectedStoriesBtn = document.getElementById("importSelectedStories");
-    if (importSelectedStoriesBtn) {
-        importSelectedStoriesBtn.disabled = selectedCount === 0;
-    }
+
+  // Attach once
+  statusFilter?.addEventListener('change', applyFilters);
+  typeFilter?.addEventListener('change', applyFilters);
+  searchInput?.addEventListener('input', applyFilters);
 }
 
-    setupJiraCheckboxLogic();
-    setupJiraFiltering();
-}
+
 
 // --- Utility Functions ---
 async function loadJiraStories() {
