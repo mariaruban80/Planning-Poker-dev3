@@ -171,21 +171,38 @@ async function smartJiraConnection() {
 }
 
 // -----------------------------------------------------------
-// Load stories via proxy
-async function loadJiraStories() {
+// 🔥 ADD THE NEW FUNCTIONS HERE - AFTER THE CONNECTION FUNCTIONS
+
+// Enhanced JQL search with better error handling
+async function performJiraSearch() {
   if (!jiraConnection) {
     showConnectionStatus('error', 'No active JIRA connection');
     return;
   }
 
+  const jqlInput = document.getElementById('jiraJqlInput');
+  const customJql = jqlInput?.value.trim() || '';
+  
   showJiraLoadingIndicator(true);
-
+  
   try {
-    const baseUrl = jiraConnection.url.endsWith('/') ? jiraConnection.url.slice(0, -1) : jiraConnection.url;
+    const baseUrl = jiraConnection.url.endsWith('/') ? 
+      jiraConnection.url.slice(0, -1) : jiraConnection.url;
 
-    // Optional JQL support if you add an input with id=jiraJql
-    const jqlInput = $id('jiraJql');
-    const jql = jqlInput && jqlInput.value ? jqlInput.value : undefined;
+    // Build JQL - ensure project is included
+    let finalJql;
+    if (customJql) {
+      // Check if JQL already includes project
+      if (customJql.toLowerCase().includes('project')) {
+        finalJql = customJql;
+      } else {
+        finalJql = `project = ${jiraConnection.project} AND (${customJql})`;
+      }
+    } else {
+      finalJql = `project = ${jiraConnection.project} ORDER BY created DESC`;
+    }
+
+    console.log('[JIRA] Executing JQL search:', finalJql);
 
     const response = await fetch('/api/jira/search', {
       method: 'POST',
@@ -195,46 +212,170 @@ async function loadJiraStories() {
         email: jiraConnection.email,
         token: jiraConnection.token,
         projectKey: jiraConnection.project,
-        ...(jql ? { jql } : {})
+        jql: finalJql
       })
     });
 
     if (response.ok) {
       const data = await response.json();
-      const issues = data.issues || [];
+      console.log('[JIRA] Search response:', data);
+      
+      if (data.issues && Array.isArray(data.issues)) {
+        jiraStories = data.issues.map(issue => ({
+          key: issue.key,
+          summary: issue.fields?.summary || '',
+          description: extractDescription(issue.fields?.description),
+          issueType: issue.fields?.issuetype?.name || 'Unknown',
+          status: issue.fields?.status?.name || 'Unknown',
+          priority: issue.fields?.priority?.name || 'Medium',
+          assignee: issue.fields?.assignee?.displayName || null,
+          storyPoints: issue.fields?.customfield_10016 || null,
+          url: (jiraConnection.url || '').replace(/\/$/, '') + '/browse/' + issue.key
+        }));
 
-      jiraStories = issues.map(issue => ({
-        key: issue.key,
-        summary: issue.fields?.summary || '',
-        description: extractDescription(issue.fields?.description),
-        issueType: issue.fields?.issuetype?.name || 'Unknown',
-        status: issue.fields?.status?.name || 'Unknown',
-        priority: issue.fields?.priority?.name || 'Medium',
-        assignee: issue.fields?.assignee?.displayName || null,
-        storyPoints: issue.fields?.customfield_10016 || null,
-        url: (jiraConnection.url || '').replace(/\/$/, '') + '/browse/' + issue.key
-      }));
-
-      displayJiraStories(jiraStories);
-
-      $id('jiraConnectionStep')?.classList.remove('active');
-      $id('jiraSelectionStep')?.classList.add('active');
-
-      // Update count if you have a counter element
-      const countEl = $id('jiraStoriesCount');
-      if (countEl) countEl.textContent = String(jiraStories.length);
+        console.log(`[JIRA] Successfully loaded ${jiraStories.length} stories`);
+        displayJiraStories(jiraStories);
+        
+        // Show success message
+        showConnectionStatus('success', `Found ${jiraStories.length} stories`);
+      } else {
+        console.warn('[JIRA] No issues in response:', data);
+        jiraStories = [];
+        displayJiraStories([]);
+        showConnectionStatus('error', 'No issues found');
+      }
     } else {
-      showConnectionStatus('error', `Failed to load stories: HTTP ${response.status}`);
+      const errorText = await response.text();
+      console.error('[JIRA] Search failed:', response.status, errorText);
+      showConnectionStatus('error', `Search failed: ${response.status}`);
     }
   } catch (error) {
-    console.error('Failed to load JIRA stories:', error);
-    showConnectionStatus('error', 'Failed to load stories. Please check your connection.');
+    console.error('[JIRA] Search error:', error);
+    showConnectionStatus('error', 'Search failed: ' + error.message);
   } finally {
     showJiraLoadingIndicator(false);
   }
 }
 
-// Display the fetched stories in UI (with checkboxes + data attributes)
+// Apply filters to currently displayed stories
+function applyJiraFilters() {
+  const statusValue = document.getElementById('jiraStatusFilter')?.value || '';
+  const typeValue = document.getElementById('jiraTypeFilter')?.value || '';
+  
+  const rows = document.querySelectorAll('.jira-story-row');
+  let visibleCount = 0;
+  
+  rows.forEach(row => {
+    const checkbox = row.querySelector('.jira-story-checkbox');
+    const storyStatus = checkbox?.dataset.status || '';
+    const storyType = checkbox?.dataset.type || '';
+    
+    let shouldShow = true;
+    
+    // Apply status filter
+    if (statusValue && storyStatus !== statusValue) {
+      shouldShow = false;
+    }
+    
+    // Apply type filter  
+    if (typeValue && storyType !== typeValue) {
+      shouldShow = false;
+    }
+    
+    row.style.display = shouldShow ? '' : 'none';
+    if (shouldShow) visibleCount++;
+  });
+  
+  console.log(`[JIRA] Applied filters, ${visibleCount} stories visible`);
+  
+  // Update checkbox logic for filtered results
+  setupJiraCheckboxLogic();
+}
+
+// Setup enhanced checkbox logic
+function setupJiraCheckboxLogic() {
+  const headerCheckbox = document.getElementById('jiraSelectAllCheckbox');
+  const storyCheckboxes = document.querySelectorAll('.jira-story-checkbox');
+  const selectedCountEl = document.getElementById('selectedCount');
+  const importBtn = document.getElementById('importSelectedStories');
+
+  // Get only visible checkboxes for filtering
+  const visibleCheckboxes = [...storyCheckboxes].filter(cb => {
+    const row = cb.closest('tr');
+    return row && row.style.display !== 'none';
+  });
+
+  function updateSelectionState() {
+    const selectedCount = visibleCheckboxes.filter(cb => cb.checked).length;
+    const totalVisible = visibleCheckboxes.length;
+    
+    // Update selection count display
+    if (selectedCountEl) {
+      selectedCountEl.textContent = `${selectedCount} selected`;
+    }
+    
+    // Update import button state
+    if (importBtn) {
+      importBtn.disabled = selectedCount === 0;
+    }
+    
+    // Update header checkbox state (only consider visible checkboxes)
+    if (headerCheckbox && totalVisible > 0) {
+      if (selectedCount === 0) {
+        headerCheckbox.checked = false;
+        headerCheckbox.indeterminate = false;
+      } else if (selectedCount === totalVisible) {
+        headerCheckbox.checked = true;
+        headerCheckbox.indeterminate = false;
+      } else {
+        headerCheckbox.checked = false;
+        headerCheckbox.indeterminate = true;
+      }
+    }
+    
+    // Visual feedback for selected rows
+    storyCheckboxes.forEach(cb => {
+      const row = cb.closest('tr');
+      if (row) {
+        if (cb.checked) {
+          row.classList.add('selected');
+        } else {
+          row.classList.remove('selected');
+        }
+      }
+    });
+  }
+
+  // Header checkbox handler - only affects visible checkboxes
+  if (headerCheckbox) {
+    // Remove old listeners
+    const newHeaderCheckbox = headerCheckbox.cloneNode(true);
+    headerCheckbox.parentNode.replaceChild(newHeaderCheckbox, headerCheckbox);
+    
+    newHeaderCheckbox.addEventListener('change', function() {
+      const shouldSelectAll = this.checked;
+      
+      visibleCheckboxes.forEach(cb => {
+        cb.checked = shouldSelectAll;
+      });
+      
+      updateSelectionState();
+    });
+  }
+
+  // Individual checkbox handlers
+  visibleCheckboxes.forEach(cb => {
+    cb.addEventListener('change', updateSelectionState);
+  });
+
+  // Initialize state
+  updateSelectionState();
+}
+
+// -----------------------------------------------------------
+// 🔥 REPLACE THE EXISTING displayJiraStories FUNCTION WITH THIS ONE
+
+// Enhanced story display function with working filters
 function displayJiraStories(stories) {
   const tableBody = document.getElementById('jiraStoriesTableBody');
   const selectedCountEl = document.getElementById('selectedCount');
@@ -279,13 +420,13 @@ function displayJiraStories(stories) {
                data-priority="${story.priority || ''}"
                data-url="${story.url}">
       </td>
-      <td>
+      <td class="key-cell">
         <span class="jira-story-key">${story.key}</span>
       </td>
-      <td>
+      <td class="status-cell">
         <span class="jira-story-status" data-status="${story.status}">${story.status || 'Unknown'}</span>
       </td>
-      <td>
+      <td class="summary-cell">
         <div class="jira-story-summary">${escapeHtml(story.summary || '')}</div>
       </td>
     `;
@@ -294,86 +435,92 @@ function displayJiraStories(stories) {
   });
 
   setupJiraCheckboxLogic();
+  setupJiraFiltering();
 }
 
-// Setup checkbox logic with header checkbox
-function setupJiraCheckboxLogic() {
-  const headerCheckbox = document.getElementById('jiraSelectAllCheckbox');
-  const storyCheckboxes = document.querySelectorAll('.jira-story-checkbox');
-  const selectedCountEl = document.getElementById('selectedCount');
-  const importBtn = document.getElementById('importSelectedStories');
-
-  // Update selection count and import button state
-  function updateSelectionState() {
-    const selectedCount = [...storyCheckboxes].filter(cb => cb.checked).length;
-    const totalCount = storyCheckboxes.length;
+// Setup filtering functionality
+function setupJiraFiltering() {
+  const statusFilter = document.getElementById('jiraStatusFilter');
+  const typeFilter = document.getElementById('jiraTypeFilter');
+  const searchInput = document.getElementById('jiraSearchInput');
+  
+  function applyFilters() {
+    const statusValue = statusFilter?.value || '';
+    const typeValue = typeFilter?.value || '';
+    const searchValue = searchInput?.value.toLowerCase() || '';
     
-    // Update selection count display
-    if (selectedCountEl) {
-      selectedCountEl.textContent = `${selectedCount} selected`;
-    }
+    const rows = document.querySelectorAll('.jira-story-row');
+    let visibleCount = 0;
     
-    // Update import button state
-    if (importBtn) {
-      importBtn.disabled = selectedCount === 0;
-    }
-    
-    // Update header checkbox state
-    if (headerCheckbox) {
-      if (selectedCount === 0) {
-        headerCheckbox.checked = false;
-        headerCheckbox.indeterminate = false;
-      } else if (selectedCount === totalCount) {
-        headerCheckbox.checked = true;
-        headerCheckbox.indeterminate = false;
-      } else {
-        headerCheckbox.checked = false;
-        headerCheckbox.indeterminate = true; // Show intermediate state
+    rows.forEach(row => {
+      const checkbox = row.querySelector('.jira-story-checkbox');
+      const storyStatus = checkbox?.dataset.status || '';
+      const storyType = checkbox?.dataset.type || '';
+      const storySummary = checkbox?.dataset.summary ? 
+        decodeURIComponent(checkbox.dataset.summary).toLowerCase() : '';
+      const storyKey = checkbox?.dataset.key?.toLowerCase() || '';
+      
+      let shouldShow = true;
+      
+      // Apply status filter
+      if (statusValue && storyStatus !== statusValue) {
+        shouldShow = false;
       }
-    }
-    
-    // Add visual feedback to selected rows
-    storyCheckboxes.forEach(cb => {
-      const row = cb.closest('tr');
-      if (row) {
-        if (cb.checked) {
-          row.classList.add('selected');
-        } else {
-          row.classList.remove('selected');
-        }
+      
+      // Apply type filter
+      if (typeValue && storyType !== typeValue) {
+        shouldShow = false;
       }
+      
+      // Apply search filter
+      if (searchValue && 
+          !storySummary.includes(searchValue) && 
+          !storyKey.includes(searchValue)) {
+        shouldShow = false;
+      }
+      
+      row.style.display = shouldShow ? '' : 'none';
+      if (shouldShow) visibleCount++;
     });
+    
+    console.log(`[JIRA] Filtered to ${visibleCount} visible stories`);
+    
+    // Update checkbox logic for visible items only
+    setupJiraCheckboxLogic();
+  }
+  
+  // Add event listeners for real-time filtering
+  if (statusFilter) {
+    statusFilter.addEventListener('change', applyFilters);
+  }
+  
+  if (typeFilter) {
+    typeFilter.addEventListener('change', applyFilters);
+  }
+  
+  if (searchInput) {
+    searchInput.addEventListener('input', applyFilters);
+  }
+}
+
+// -----------------------------------------------------------
+// Load stories via proxy (keep existing function but call performJiraSearch instead)
+async function loadJiraStories() {
+  if (!jiraConnection) {
+    showConnectionStatus('error', 'No active JIRA connection');
+    return;
   }
 
-  // Header checkbox change handler
-  if (headerCheckbox) {
-    headerCheckbox.addEventListener('change', function() {
-      const shouldSelectAll = this.checked;
-      
-      storyCheckboxes.forEach(cb => {
-        cb.checked = shouldSelectAll;
-      });
-      
-      updateSelectionState();
-    });
-  }
+  // Switch to selection step
+  $id('jiraConnectionStep')?.classList.remove('active');
+  $id('jiraSelectionStep')?.classList.add('active');
 
-  // Individual checkbox change handlers
-  storyCheckboxes.forEach(cb => {
-    cb.addEventListener('change', updateSelectionState);
-  });
-
-  // Initialize state
-  updateSelectionState();
+  // Perform initial search
+  await performJiraSearch();
 }
 
-
-// Escape HTML to avoid layout break from summary text
-function escapeHtml(str) {
-  return (str || '').replace(/[&<>"']/g, (ch) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-  })[ch]);
-}
+// -----------------------------------------------------------
+// KEEP ALL EXISTING FUNCTIONS BELOW THIS LINE...
 
 // Toggle all checkboxes
 function toggleSelectAllJiraStories(select = true) {
@@ -384,7 +531,7 @@ function toggleSelectAllJiraStories(select = true) {
 // Return selected stories using data-* (no reliance on global array order)
 function getSelectedJiraStories() {
   const selected = [];
-  document.querySelectorAll('#jiraStoriesList .jira-story-checkbox:checked').forEach(cb => {
+  document.querySelectorAll('.jira-story-checkbox:checked').forEach(cb => {
     selected.push({
       key: cb.dataset.key,
       summary: decodeURIComponent(cb.dataset.summary || ''),
@@ -402,14 +549,11 @@ function getSelectedJiraStories() {
 
 // Map JIRA issues to your app's story schema
 function mapJiraToAppStories(issues) {
-  // If your app expects { id, name, description }, create accordingly
   return issues.map(issue => ({
-    // Keep original key for traceability
     jiraKey: issue.key,
-    id: issue.key, // you can change to a generated id if needed
+    id: issue.key,
     name: `${issue.key}: ${issue.summary || ''}`.trim(),
     description: issue.description || '',
-    // Optional metadata to keep
     meta: {
       source: 'jira',
       url: issue.url,
@@ -433,7 +577,6 @@ function importSelectedJiraStories() {
   console.log('[JIRA] Importing selected stories:', selected.length);
   const appStories = mapJiraToAppStories(selected);
 
-  // Preferred: use your socket event if available
   if (window.socket && typeof window.socket.emit === 'function') {
     try {
       window.socket.emit('importJiraStories', appStories);
@@ -442,16 +585,13 @@ function importSelectedJiraStories() {
       document.dispatchEvent(new CustomEvent('jiraImportedStories', { detail: appStories }));
     }
   } else {
-    // Fallback: fire a DOM event your app can listen to
     document.dispatchEvent(new CustomEvent('jiraImportedStories', { detail: appStories }));
   }
 
-  // Optionally update UI immediately if you have a renderer
   if (typeof window.displayStoriesInUI === 'function') {
     try { window.displayStoriesInUI(appStories, { append: true }); } catch {}
   }
 
-  // Close modal
   hideJiraImportModal();
 }
 
@@ -468,6 +608,16 @@ function initializeJiraIntegration() {
     return;
   }
 }
+
+// Escape HTML to avoid layout break from summary text
+function escapeHtml(str) {
+  return (str || '').replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  })[ch]);
+}
+
+// -----------------------------------------------------------
+// 🔥 ADD THE NEW EVENT LISTENERS AT THE END
 
 // Initialize JIRA modal event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -487,15 +637,46 @@ document.addEventListener('DOMContentLoaded', function() {
     loadJiraStories();
   });
 
-  // Select all / deselect all
-  $id('jiraSelectAll')?.addEventListener('click', function(e) {
-    e.preventDefault();
-    toggleSelectAllJiraStories(true);
-  });
-  $id('jiraDeselectAll')?.addEventListener('click', function(e) {
-    e.preventDefault();
-    toggleSelectAllJiraStories(false);
-  });
+  // 🔥 NEW EVENT LISTENERS FOR SEARCH AND FILTERS
+  
+  // JQL Search button
+  const jiraSearchBtn = document.getElementById('jiraSearchBtn');
+  if (jiraSearchBtn) {
+    jiraSearchBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('[JIRA] Search button clicked');
+      performJiraSearch();
+    });
+  }
+  
+  // Enter key in JQL input
+  const jiraJqlInput = document.getElementById('jiraJqlInput');
+  if (jiraJqlInput) {
+    jiraJqlInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        performJiraSearch();
+      }
+    });
+  }
+  
+  // Filter dropdowns - real-time filtering
+  const statusFilter = document.getElementById('jiraStatusFilter');
+  const typeFilter = document.getElementById('jiraTypeFilter');
+  
+  if (statusFilter) {
+    statusFilter.addEventListener('change', function() {
+      console.log('[JIRA] Status filter changed to:', this.value);
+      applyJiraFilters();
+    });
+  }
+  
+  if (typeFilter) {
+    typeFilter.addEventListener('change', function() {
+      console.log('[JIRA] Type filter changed to:', this.value);
+      applyJiraFilters();
+    });
+  }
 
   // Import selected
   $id('jiraImportSelectedBtn')?.addEventListener('click', function(e) {
