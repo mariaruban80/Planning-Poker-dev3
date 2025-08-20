@@ -1186,8 +1186,8 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
       
       // Broadcast the new ticket to everyone in the room EXCEPT sender
    //   socket.broadcast.to(roomId).emit('addTicket', { ticketData });
-     io.to(roomId).emit('addTicket', { ticketData });
- 
+  //   io.to(roomId).emit('addTicket', { ticketData });
+ io.to(roomId).emit('addTicket', ticketData);
       // Keep track of tickets on the server
       if (!rooms[roomId].tickets) {
         rooms[roomId].tickets = [];
