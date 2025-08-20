@@ -480,7 +480,9 @@ document.addEventListener('DOMContentLoaded', function () {
     $id('proceedToStories')?.addEventListener('click', function (e) {
         e.preventDefault(); loadJiraStories();
     });
-
+    const proceedBtn = $id('proceedToStories');
+    if (proceedBtn) proceedBtn.disabled = false;
+    
     $id('jiraImportSelectedBtn')?.addEventListener('click', function (e) {
         e.preventDefault(); importSelectedJiraStories();
     });
