@@ -247,7 +247,7 @@ function displayJiraStories(stories) {
   if (!stories.length) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+        <td colspan="4" style="text-align: center; padding: 40px; color: #6b7280;">
           No issues found for this query.
         </td>
       </tr>
@@ -283,13 +283,10 @@ function displayJiraStories(stories) {
         <span class="jira-story-key">${story.key}</span>
       </td>
       <td>
+        <span class="jira-story-status" data-status="${story.status}">${story.status || 'Unknown'}</span>
+      </td>
+      <td>
         <div class="jira-story-summary">${escapeHtml(story.summary || '')}</div>
-      </td>
-      <td>
-        <span class="jira-story-type">${story.issueType || 'Story'}</span>
-      </td>
-      <td>
-        <span class="jira-story-status">${story.status || 'Unknown'}</span>
       </td>
     `;
     
