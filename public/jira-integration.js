@@ -458,10 +458,19 @@ function setupJiraFiltering() {
 // --- Utility Functions ---
 async function loadJiraStories() {
     if (!jiraConnection) {
-        showConnectionStatus('error', 'No active JIRA connection');
-        return;
-    }
+        const jiraUrl = $id('jiraUrl')?.value?.trim();
+        const email = $id('jiraEmail')?.value?.trim();
+        const token = $id('jiraToken')?.value?.trim();
+        const project = $id('jiraProject')?.value?.trim();
 
+        if (jiraUrl && email && token && project) {
+            jiraConnection = { url: jiraUrl, email, token, project };
+            saveJiraCredentials();
+        } else {
+            showConnectionStatus('error', 'No active JIRA connection. Please enter credentials.');
+            return;
+        }
+    }
     showJiraLoadingIndicator(true);
 
     try {
