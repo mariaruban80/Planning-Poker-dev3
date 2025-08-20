@@ -105,6 +105,10 @@ function saveJiraCredentials() {
         console.error("Error saving credentials:", error);
     }
 }
+function toggleSelectAllJiraStories(select = true) {
+  document.querySelectorAll('#jiraStoriesList .jira-story-checkbox')
+    .forEach(cb => { cb.checked = !!select; });
+}
 
 function extractDescription(desc) {
     if (!desc) return '';
