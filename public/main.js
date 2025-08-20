@@ -2600,7 +2600,7 @@ const storyItem = e.target.closest('.story-card'); // Ensure the correct element
     }
   }
 }
-
+window.addTicketToUI = addTicketToUI;
 /**
  * Set up a mutation observer to catch any newly added story cards
  */
