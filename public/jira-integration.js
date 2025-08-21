@@ -63,29 +63,24 @@ function importSelectedJiraStories() {
         return;
     }
 
-    const importedStories = [];
+       const importedStories = [];
     selectedCheckboxes.forEach(cb => {
-        const ticketData = {
-            id: cb.dataset.key,
-            text: decodeURIComponent(cb.dataset.summary || ''),
-            idDisplay: cb.dataset.key,
-            descriptionDisplay: decodeURIComponent(cb.dataset.description || ''),
-            originalText: decodeURIComponent(cb.dataset.summary || ''),
-            originalLang: 'en'
-        };
+        const ticketData = {  // ... ticketData creation ...  };
 
         importedStories.push(ticketData);
 
-        // ✅ Reuse the same flow as CSV import
-        if (typeof emitAddTicket === 'function') {
-            emitAddTicket(ticketData);
-        } else if (window.socket) {
-            window.socket.emit('addTicket', ticketData);
+        // ✅ Correct approach: Use window.addTicketFromModal
+        if (window.addTicketFromModal) {
+            window.addTicketFromModal(ticketData); 
+        } else {  // Fallback if modal function isn't available
+            if (typeof emitAddTicket === 'function') {
+                emitAddTicket(ticketData);
+            } else if (window.socket) {  // Use window.socket
+                window.socket.emit('addTicket', ticketData);
+            }
+            addTicketToUI(ticketData, true);  // UI update inside this branch
         }
 
-        if (typeof addTicketToUI === 'function') {
-            addTicketToUI(ticketData, true);
-        }
     });
 
     console.log(`[JIRA] Imported ${importedStories.length} stories`, importedStories);
