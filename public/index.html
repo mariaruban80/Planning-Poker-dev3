@@ -4426,39 +4426,100 @@ display: none;
 }
 
 .jira-instructions {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 16px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);
+  border: 1px solid #e1e8ff;
+  border-radius: 12px;
+  padding: 20px;
   margin: 20px 0;
-  font-size: 14px;
 }
 
-.instruction-item {
-  margin-bottom: 12px;
+.instruction-header h4 {
+  margin: 0 0 16px 0;
+  color: #8b5cf6;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.instruction-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.instruction-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.instruction-card:hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1);
+}
+
+.card-icon {
+  font-size: 20px;
+  min-width: 24px;
+}
+
+.card-content strong {
+  color: #374151;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.card-content p {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
   line-height: 1.4;
 }
 
-.instruction-item:last-of-type {
-  margin-bottom: 8px;
+.card-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #10b981;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
 }
 
-.instruction-note {
-  background: #e3f2fd;
-  border-left: 3px solid #2196f3;
-  padding: 8px 12px;
-  border-radius: 4px;
-  margin-top: 8px;
+.tip-section {
+  background: #fef7e0;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.tip-icon {
+  font-size: 16px;
+  min-width: 20px;
+}
+
+.tip-content {
   font-size: 13px;
+  color: #92400e;
 }
 
-.instruction-item strong {
-  color: #8b5cf6;
+.tip-content strong {
+  color: #78350f;
 }
 
-.instruction-note strong {
-  color: #1976d2;
-}
+          
      
      </style>
 </head>
@@ -4803,18 +4864,38 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
           <input type="text" id="jiraProject" placeholder="e.g., PROJ, DEV, TEST" class="jira-input">
         </div>
 
-          <!-- Add this instruction section -->
+          <!-- instruction section -->
 <div class="jira-instructions">
-  <div class="instruction-item">
-    <strong>🚀 Smart Connect:</strong> Automatically tests your connection and discovers available projects. Use this if you're unsure about the project key.
+  <div class="instruction-header">
+    <h4>🔗 Connection Options</h4>
   </div>
-  <div class="instruction-item">
-    <strong>🔗 Connect & Load Stories:</strong> Directly connects using the details above and loads stories from the specified project.
+  
+  <div class="instruction-grid">
+    <div class="instruction-card smart-connect">
+      <div class="card-icon">🚀</div>
+      <div class="card-content">
+        <strong>Smart Connect</strong>
+        <p>Automatically tests connection and discovers projects</p>
+        <span class="card-badge">Recommended</span>
+      </div>
+    </div>
+    
+    <div class="instruction-card manual-connect">
+      <div class="card-icon">⚡</div>
+      <div class="card-content">
+        <strong>Connect & Load Stories</strong>
+        <p>Direct connection using project key above</p>
+      </div>
+    </div>
   </div>
-  <div class="instruction-note">
-    <strong>💡 Tip:</strong> You can find your project key in JIRA by going to Project Settings → Details, or it's usually shown in issue keys (e.g., "PROJ-123").
+  
+  <div class="tip-section">
+    <div class="tip-icon">💡</div>
+    <div class="tip-content">
+      <strong>Finding your Project Key:</strong> Go to Project Settings → Details, or look at any issue (e.g., "PROJ-123")
+    </div>
   </div>
-</div>      
+</div>   
         
         <div id="jiraConnectionStatus" class="connection-status-indicator" style="display: none;">
           <span class="status-text"></span>
