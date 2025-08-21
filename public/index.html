@@ -4425,29 +4425,40 @@ display: none;
   border-color: #9ca3af;
 }
 
-/* Loading State */
-#jiraLoadingIndicator {
-  padding: 40px;
-  text-align: center;
-  color: #6b7280;
+.jira-instructions {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
   font-size: 14px;
-  flex-shrink: 0;
 }
 
-/* Ultra-compact JIRA modal */
-.jira-connection-section {
-  padding: 20px 28px 0px 28px !important; /* No bottom padding */
+.instruction-item {
+  margin-bottom: 12px;
+  line-height: 1.4;
 }
 
-.jira-modal-footer {
-  padding: 10px 28px !important; /* Minimal top padding */
-  margin-top: 0 !important;
+.instruction-item:last-of-type {
+  margin-bottom: 8px;
 }
 
-.jira-form-group:last-child {
-  margin-bottom: -5px !important; /* Negative margin to pull footer up */
+.instruction-note {
+  background: #e3f2fd;
+  border-left: 3px solid #2196f3;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 13px;
 }
-          
+
+.instruction-item strong {
+  color: #8b5cf6;
+}
+
+.instruction-note strong {
+  color: #1976d2;
+}
      
      </style>
 </head>
@@ -4791,6 +4802,19 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
           <label for="jiraProject">Project Key:</label>
           <input type="text" id="jiraProject" placeholder="e.g., PROJ, DEV, TEST" class="jira-input">
         </div>
+
+          <!-- Add this instruction section -->
+<div class="jira-instructions">
+  <div class="instruction-item">
+    <strong>🚀 Smart Connect:</strong> Automatically tests your connection and discovers available projects. Use this if you're unsure about the project key.
+  </div>
+  <div class="instruction-item">
+    <strong>🔗 Connect & Load Stories:</strong> Directly connects using the details above and loads stories from the specified project.
+  </div>
+  <div class="instruction-note">
+    <strong>💡 Tip:</strong> You can find your project key in JIRA by going to Project Settings → Details, or it's usually shown in issue keys (e.g., "PROJ-123").
+  </div>
+</div>      
         
         <div id="jiraConnectionStatus" class="connection-status-indicator" style="display: none;">
           <span class="status-text"></span>
