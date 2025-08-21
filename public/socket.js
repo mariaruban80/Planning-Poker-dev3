@@ -93,22 +93,30 @@ socket.on('connect_error', (error) => {
   // Socket Event Handlers
   // ------------------------------
 
-  socket.on('addTicket', ({ ticketData }) => {
-    console.log('[SOCKET] Received new ticket from another user:', ticketData);
-    
-    // Check if this ticket is in our deleted stories list
-    if (lastKnownRoomState.deletedStoryIds.includes(ticketData.id)) {
-      console.log('[SOCKET] Ignoring ticket that was previously deleted:', ticketData.id);
-      return;
+socket.on('addTicket', ({ ticketData }) => {
+  console.log('[SOCKET] Received new ticket from another user:', ticketData);
+
+  // Ignore if deleted
+  if (lastKnownRoomState.deletedStoryIds.includes(ticketData.id)) {
+    console.log('[SOCKET] Ignoring ticket that was previously deleted:', ticketData.id);
+    return;
+  }
+
+  // Add to local state
+  if (!lastKnownRoomState.tickets.some(t => t.id === ticketData.id)) {
+    lastKnownRoomState.tickets.push(ticketData);
+    console.log("[SOCKET] Ticket added locally. Total now:", lastKnownRoomState.tickets.length);
+
+    // ✅ Immediately update the UI
+    if (typeof renderTicketCard === "function") {
+      renderTicketCard(ticketData);
     }
-    
-    // Add to local state if we're tracking tickets
-    if (!lastKnownRoomState.tickets.some(t => t.id === ticketData.id)) {
-      lastKnownRoomState.tickets.push(ticketData);
-    }
-    
-    handleMessage({ type: 'addTicket', ticketData });
-  });
+  }
+
+  // Still pass to your existing handler if needed
+  handleMessage({ type: 'addTicket', ticketData });
+});
+
 
   socket.on('allTickets', ({ tickets }) => {
     console.log('[SOCKET] Received all tickets:', tickets.length);
@@ -1052,6 +1060,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
