@@ -4433,18 +4433,16 @@ display: none;
   font-size: 14px;
   flex-shrink: 0;
 }
-     /* Reduce space between form fields and buttons in Connect to JIRA modal */
-#loginModalCustom .modal-content .input-group,
-#loginModalCustom .modal-content input[type="text"],
-#loginModalCustom .modal-content input[type="email"],
-#loginModalCustom .modal-content input[type="password"],
-#loginModalCustom .modal-content input[type="url"] {
-  margin-bottom: 10px !important; /* tighten space */
+/* Fix spacing inside the JIRA Connect modal */
+#jiraConnectModal .modal-content .input-group:last-of-type,
+#jiraConnectModal .modal-content input:last-of-type {
+  margin-bottom: 0 !important;   /* remove bottom gap under Project Key */
 }
 
-#loginModalCustom .modal-content .button-group {
-  margin-top: 15px !important; /* reduce top margin before buttons */
+#jiraConnectModal .modal-content .button-group {
+  margin-top: 10px !important;   /* tighten space above buttons */
 }
+
      
      </style>
 </head>
