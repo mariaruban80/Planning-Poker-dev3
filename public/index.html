@@ -3634,19 +3634,17 @@ display: none;
   color: #374151;
 }
 .jira-selection-count {
-    text-align: right;
-    padding: 8px 12px;
-    color: #8b5cf6;           
-    font-weight: 600;       
-    font-size: 13px;         
-    background: #f9fafb;      
-    width: 100%;             
-    border-top:1px solid #e5e7eb; 
-    position: sticky;   
-    bottom: 0;          
-    z-index: 10;      
-
-
+  text-align: right;
+  padding: 8px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  color: #8b5cf6;
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0;
+  width: auto; /* Ensure it expands to content width */
+  overflow: visible; /* Ensure text is not clipped */
+  white-space: nowrap; /* Prevent text from wrapping */
 }
 .jira-jql-input {
   flex: 1;
@@ -3718,9 +3716,10 @@ display: none;
 }
 .jira-stories-table th.select-column,
 .jira-stories-table td.checkbox-cell {
-    width: 44px;  
-    text-align: center;
-    padding: 10px;  
+  width: 50px;
+  text-align: left; /* Change to left */
+  padding: 12px 8px;
+  vertical-align: middle;
 }
      .jira-header-checkbox,
 .jira-story-checkbox {
@@ -4887,7 +4886,7 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
             </th>
             <th class="key-column">Key</th>
             <th class="status-column">Status</th>
-            <th class="name-column">Name</th>
+            <th class="name-column">Description</th>
           </tr>
         </thead>
         <tbody id="jiraStoriesTableBody">
