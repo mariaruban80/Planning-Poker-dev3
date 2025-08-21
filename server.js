@@ -1171,38 +1171,36 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
   });
   
   // Handle ticket synchronization
-  socket.on('addTicket', (ticketData) => {
-    const roomId = socket.data.roomId;
-    if (roomId && rooms[roomId]) {
-      console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData.id);
-      
-      // Update room activity timestamp
-      rooms[roomId].lastActivity = Date.now();
-      
-      // Make sure the ticket isn't in the deleted set
-      if (rooms[roomId].deletedStoryIds && rooms[roomId].deletedStoryIds.has(ticketData.id)) {
-        rooms[roomId].deletedStoryIds.delete(ticketData.id);
-      }
-      
-      // Broadcast the new ticket to everyone in the room EXCEPT sender
-      socket.broadcast.to(roomId).emit('addTicket', { ticketData });
-  //   io.to(roomId).emit('addTicket', { ticketData });
- //io.to(roomId).emit('addTicket', ticketData);
-      // Keep track of tickets on the server
-      if (!rooms[roomId].tickets) {
-        rooms[roomId].tickets = [];
-      }
-      
-      // Check for duplicate tickets before adding
-      const existingIndex = rooms[roomId].tickets.findIndex(ticket => ticket.id === ticketData.id);
-      if (existingIndex === -1) {
-        rooms[roomId].tickets.push(ticketData);
-        console.log(`[SERVER] Ticket added to server state. Total tickets: ${rooms[roomId].tickets.length}`);
-      } else {
-        console.log(`[SERVER] Ticket ${ticketData.id} already exists, not duplicating`);
-      }
-    }
-  });
+socket.on('addTicket', (ticketData) => {
+  const roomId = socket.data.roomId;
+  if (!roomId || !rooms[roomId] || !ticketData?.id) return;
+
+  console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData.id);
+
+  rooms[roomId].lastActivity = Date.now();
+
+  // Ensure ticket list exists
+  if (!rooms[roomId].tickets) {
+    rooms[roomId].tickets = [];
+  }
+
+  // Remove from deleted set if re-added
+  if (rooms[roomId].deletedStoryIds?.has(ticketData.id)) {
+    rooms[roomId].deletedStoryIds.delete(ticketData.id);
+  }
+
+  // Add to server state if not already present
+  const existingIndex = rooms[roomId].tickets.findIndex(ticket => ticket.id === ticketData.id);
+  if (existingIndex === -1) {
+    rooms[roomId].tickets.push(ticketData);
+    console.log(`[SERVER] Ticket stored in room ${roomId}. Total tickets: ${rooms[roomId].tickets.length}`);
+  } else {
+    console.log(`[SERVER] Ticket ${ticketData.id} already exists in room ${roomId}, skipping duplicate`);
+  }
+
+  // ✅ Broadcast AFTER storing so new guests always see it in allTickets
+  socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+});
   
   socket.on('deleteCSVStory', ({ storyId, csvIndex }) => {
     const roomId = socket.data.roomId;
@@ -1314,26 +1312,27 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
   });
   
   // Handle getting all tickets
-  socket.on('requestAllTickets', () => {
-    const roomId = socket.data.roomId;
-    if (roomId && rooms[roomId]) {
-      console.log(`[SERVER] Ticket request from client ${socket.id}`);
-      
-      // Update room activity timestamp
-      rooms[roomId].lastActivity = Date.now();
-      
-      // CRITICAL: Filter out deleted stories before sending
-      const filteredTickets = rooms[roomId].tickets.filter(ticket => 
-        !rooms[roomId].deletedStoryIds || !rooms[roomId].deletedStoryIds.has(ticket.id)
-      );
-      
-      console.log(`[SERVER] Sending ${filteredTickets.length} active tickets (filtered from ${rooms[roomId].tickets.length} total)`);
-      socket.emit('allTickets', { tickets: filteredTickets });
-    } else {
-      console.log(`[SERVER] No tickets available to send to client ${socket.id}`);
-      socket.emit('allTickets', { tickets: [] });
-    }
-  });
+socket.on('requestAllTickets', () => {
+  const roomId = socket.data.roomId;
+  if (!roomId || !rooms[roomId]) {
+    console.log(`[SERVER] No tickets available for client ${socket.id}`);
+    socket.emit('allTickets', { tickets: [] });
+    return;
+  }
+
+  rooms[roomId].lastActivity = Date.now();
+
+  const tickets = rooms[roomId].tickets || [];
+
+  // Filter out deleted tickets
+  const filteredTickets = tickets.filter(ticket =>
+    !rooms[roomId].deletedStoryIds?.has(ticket.id)
+  );
+
+  console.log(`[SERVER] Sending ${filteredTickets.length} active tickets (of ${tickets.length}) to ${socket.id} in room ${roomId}`);
+
+  socket.emit('allTickets', { tickets: filteredTickets });
+});
 
   // Handle CSV data loaded confirmation
   socket.on('csvDataLoaded', () => {
