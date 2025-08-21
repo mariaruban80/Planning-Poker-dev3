@@ -4433,47 +4433,24 @@ display: none;
   font-size: 14px;
   flex-shrink: 0;
 }
-/* === JIRA Connect Modal Unified Styling === */
-#jiraConnectModal .modal-content label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #673ab7;
-  margin-bottom: 6px;
-  text-align: left;
+/* === Fix spacing in JIRA Import Modal === */
+#jiraImportModal .jira-form-group:last-of-type {
+  margin-bottom: 0 !important;   /* kill bottom margin under Project Key */
+  padding-bottom: 0 !important;
 }
 
-#jiraConnectModal .modal-content input[type="text"],
-#jiraConnectModal .modal-content input[type="email"],
-#jiraConnectModal .modal-content input[type="password"],
-#jiraConnectModal .modal-content input[type="url"] {
-  width: 100%;
-  padding: 12px 14px;
-  font-size: 15px;
-  border: 1.5px solid #cdbdee;
-  border-radius: 25px;   /* rounded like Add Ticket modal */
-  box-sizing: border-box;
-  margin-bottom: 14px;
-  transition: border 0.18s, box-shadow 0.18s;
-}
-
-#jiraConnectModal .modal-content input:focus {
-  outline: none;
-  border-color: #673ab7;
-  box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
-}
-
-/* Buttons inside JIRA modal */
-#jiraConnectModal .modal-content .button-group {
-  display: flex !important;
-  justify-content: center !important;
+#jiraImportModal .jira-modal-footer {
+  margin-top: 8px !important;    /* tighten gap before buttons */
+  padding-top: 0 !important;
+  display: flex;
+  justify-content: center;
   gap: 12px;
-  margin-top: 8px !important;
 }
 
-#jiraConnectModal .modal-content .button-group button {
+/* Style buttons to match purple/white theme */
+#jiraImportModal .jira-modal-footer .jira-btn {
   flex: 1;
-  max-width: 140px;
+  max-width: 160px;
   height: 42px;
   border-radius: 25px;
   font-weight: 600;
@@ -4482,42 +4459,27 @@ display: none;
   transition: all 0.2s ease;
 }
 
-/* Cancel button (white with purple border) */
-#jiraConnectModal .modal-content .button-group .cancel-button {
-  background-color: white;
-  color: #673ab7;
-  border: 1px solid #673ab7;
-}
-
-#jiraConnectModal .modal-content .button-group .cancel-button:hover {
-  background-color: #f0e6ff;
-}
-
-/* Smart Connect button (solid purple) */
-#jiraConnectModal .modal-content .button-group .confirm-button {
+#jiraImportModal .jira-modal-footer .jira-btn-primary {
   background-color: #673ab7;
   color: white;
   border: 1px solid #673ab7;
 }
 
-#jiraConnectModal .modal-content .button-group .confirm-button:hover {
+#jiraImportModal .jira-modal-footer .jira-btn-primary:hover {
   background-color: #5c33a4;
   border-color: #5c33a4;
 }
 
-#jiraConnectModal .modal-content .input-group:last-of-type {
-  margin-bottom: 6px !important;   /* remove gap under last field */
-  padding-bottom: 0 !important;
+#jiraImportModal .jira-modal-footer .jira-btn-cancel {
+  background-color: white;
+  color: #673ab7;
+  border: 1px solid #673ab7;
 }
 
-#jiraConnectModal .modal-content input:last-of-type {
-  margin-bottom: 0 !important;
+#jiraImportModal .jira-modal-footer .jira-btn-cancel:hover {
+  background-color: #f0e6ff;
 }
 
-#jiraConnectModal .modal-content .button-group {
-  margin-top: 0 !important;      /* no artificial gap above buttons */
-  padding-top: 0 !important;
-}
 
      
      </style>
