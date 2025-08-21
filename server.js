@@ -1199,7 +1199,8 @@ socket.on('addTicket', (ticketData) => {
   }
 
   // ✅ Broadcast AFTER storing so new guests always see it in allTickets
-  socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+  //socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+    io.to(roomId).emit('addTicket', { ticketData });
 });
   
   socket.on('deleteCSVStory', ({ storyId, csvIndex }) => {
