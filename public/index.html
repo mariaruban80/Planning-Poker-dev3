@@ -4472,27 +4472,30 @@ input:checked + .slider:before {transform: translateX(16px);}
 .profile-menu-item {
   display: flex;
   align-items: center;
-  justify-content: flex-start;   /* keep icons + text on left */
-  gap: 10px;                     /* space between icon and text */
-  padding: 8px 12px;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 16px;        /* add enough horizontal padding */
   font-size: 14px;
   color: #333;
+  box-sizing: border-box;   /* important: keeps switch inside */
 }
 
-/* Text label inside menu */
 .profile-menu-item span {
-  flex: 1;                       /* text expands */
-  text-align: left;              /* align text left */
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
 }
 
 /* Toggle switch container */
 .profile-menu-item .switch {
-  margin-left: auto;             /* push switch to right edge */
+  margin-left: auto;        /* push it to the right */
+  margin-right: 0;          /* prevent overflow */
   position: relative;
   display: inline-block;
   width: 40px;
   height: 22px;
-  flex-shrink: 0;                /* don’t shrink */
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 /* Hide default checkbox */
