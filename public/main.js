@@ -4877,6 +4877,11 @@ document.addEventListener("DOMContentLoaded", () => {
   setupTicketSearch();
   setupFilterButton();
 });
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof initializeJiraIntegration === "function") {
+        initializeJiraIntegration();
+    }
+});
 
 
 // ===================== Export CSV Modal Handling ===================== //
