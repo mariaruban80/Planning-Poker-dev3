@@ -55,7 +55,14 @@ function initializeJiraIntegration() {
     if ($id('jiraSelectionStep')) {
         $id('jiraSelectionStep').classList.remove('active');
     }
+
+    // 🔹 Bind JQL Search button
+    const searchBtn = document.getElementById('jiraSearchBtn') || document.querySelector('#jiraImportModal button#searchJira');
+    if (searchBtn) {
+        searchBtn.onclick = performJiraSearch;
+    }
 }
+
 function importSelectedJiraStories() {
     const selectedCheckboxes = document.querySelectorAll('.jira-story-checkbox:checked');
     if (!selectedCheckboxes.length) {
