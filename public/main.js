@@ -100,6 +100,26 @@ async function translateTicketsIfNeeded(tickets) {
   }
 }
 
+function enableHostFeatures() {
+  // Show controls, enable CSV, JIRA, add ticket, etc.
+  document.querySelectorAll('.hide-for-guests').forEach(e=>e.style.display='');
+  document.getElementById('addTicketBtn')?.classList.remove('hide-for-guests');
+  document.getElementById('uploadTicketMenuBtn')?.style.display = 'flex';
+  document.getElementById('jiraImportMenuBtn')?.style.display = 'flex';
+  document.getElementById('exportToCsvMenuBtn')?.style.display = 'flex';
+  // More UI code as needed
+}
+
+function disableHostFeatures() {
+  // Hide controls, disable CSV, JIRA, add ticket, etc.
+  document.querySelectorAll('.hide-for-guests').forEach(e=>e.style.display='none');
+  document.getElementById('addTicketBtn')?.classList.add('hide-for-guests');
+  document.getElementById('uploadTicketMenuBtn')?.style.display = 'none';
+  document.getElementById('jiraImportMenuBtn')?.style.display = 'none';
+  document.getElementById('exportToCsvMenuBtn')?.style.display = 'none';
+  // More UI code as needed
+}
+
 /**
  * Handle adding a ticket from the modal
  * @param {Object} ticketData - Ticket data {id, text}
@@ -225,7 +245,53 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+ /** ---------- HOST ENABLE HANDLER ---------- **/
+const hostToggle = document.getElementById('hostModeToggle');
+  if (hostToggle) {
+    hostToggle.checked = sessionStorage.getItem('isHost') === 'true';
 
+    hostToggle.addEventListener('change', async function() {
+      if (hostToggle.checked) {
+        // Try to become host
+        // Simulate via server or socket call to check for another host
+        let isHostAlreadyPresent = false;
+
+        // 1. Try via socket, or fallback to checking other users in session
+        if(window.socket && typeof window.socket.emit === "function") {
+          // You must have server support for 'checkForHost'
+          window.socket.emit('checkForHost', {}, function(result) {
+            if(result && result.hostPresent) {
+              isHostAlreadyPresent = true;
+              hostToggle.checked = false;
+              document.getElementById('hostModeErrorModal').style.display = 'flex';
+            } else {
+              // Become the host
+              sessionStorage.setItem('isHost', 'true');
+              enableHostFeatures();
+            }
+          });
+        } else {
+          // Local fallback (less reliable, for demo): scan DOM for host flag
+          const users = document.querySelectorAll('.user-entry');
+          isHostAlreadyPresent = Array.from(users).some(u => 
+            (u.dataset && u.dataset.host === 'true')
+          );
+          if (isHostAlreadyPresent) {
+            hostToggle.checked = false;
+            document.getElementById('hostModeErrorModal').style.display = 'flex';
+          } else {
+            sessionStorage.setItem('isHost', 'true');
+            enableHostFeatures();
+          }
+        }
+      } else {
+        // Switch to guest
+        sessionStorage.setItem('isHost', 'false');
+        disableHostFeatures();
+      }
+    });
+  }
+  
   /** ---------- CSV DRAG AND DROP HANDLER ---------- **/
   const dropZone = document.getElementById('csvDropZone');
   if (dropZone) {
