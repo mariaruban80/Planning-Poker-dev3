@@ -3031,8 +3031,8 @@ function displayCSVData(data) {
       const storyPointsEl = document.createElement('div');
       storyPointsEl.className = 'story-points';
       storyPointsEl.id = `story-points-${story.id}`;
-      storyPointsEl.textContent = textContent = '?';
-      
+     // storyPointsEl.textContent = textContent = '?';
+      storyPointsEl.textContent = '?';
       // Add story points editing functionality
       storyPointsEl.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -3183,8 +3183,8 @@ function displayCSVData(data) {
       const storyPointsEl = document.createElement('div');
       storyPointsEl.className = 'story-points';
       storyPointsEl.id = `story-points-${csvStoryId}`;
-      storyPointsEl.textContent = textContent = '?';
-      
+    //  storyPointsEl.textContent = textContent = '?';
+      storyPointsEl.textContent = '?';
       // Add story points editing functionality
       storyPointsEl.addEventListener('click', (e) => {
         e.stopPropagation();
