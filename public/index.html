@@ -4458,6 +4458,27 @@ display: none;
 .instruction-note strong {
   color: #1976d2;
 }  
+
+   /* Fix checkbox alignment in Jira import table */
+#jiraStoriesTable th.checkbox-cell,
+#jiraStoriesTable td.checkbox-cell {
+  text-align: center;
+  vertical-align: middle;
+  width: 40px;
+  padding: 0;
+}
+#jiraStoriesTable input[type="checkbox"] {
+  margin: 0;
+  display: block;
+}
+
+/* Force story key text to black */
+.jira-story-key {
+  color: #000 !important;
+  font-weight: 500;
+  text-decoration: none;
+}
+       
      
      </style>
 </head>
