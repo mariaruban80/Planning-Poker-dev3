@@ -4434,7 +4434,34 @@ display: none;
   position: relative;
   top: 0;
 }
-  
+  .switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  vertical-align: middle;
+}
+.switch input {display:none;}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0;
+  right: 0; bottom: 0;
+  background-color: #ccc;
+  border-radius: 14px;
+  transition: .2s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px; width: 16px;
+  left: 2px; bottom: 2px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: .2s;
+}
+input:checked + .slider {background-color: #673ab7;}
+input:checked + .slider:before {transform: translateX(16px);}
      
      </style>
 </head>
@@ -4467,6 +4494,17 @@ display: none;
 <button class="profile-menu-item" onclick="showLanguageModal()">
               <img src="https://flagcdn.com/gb.svg" alt="UK Flag" class="flag-icon" />&nbsp;Change Language
             </button>   
+ <!-- Host Mode Toggle in Profile Menu -->
+<div class="profile-menu-item" style="justify-content:space-between;">
+  <span>
+    <i class="fas fa-user-shield" style="margin-right:8px;color:#673ab7;"></i>
+    Host mode
+  </span>
+  <label class="switch">
+    <input type="checkbox" id="hostModeToggle">
+    <span class="slider round"></span>
+  </label>
+</div>
 
 <!-- Import from CSV -->
 <button class="profile-menu-item" id="uploadTicketMenuBtn"> <svg xmlns="http://www.w3.org/2000/svg" 
@@ -4563,7 +4601,18 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
       </button>
     </div>
   </div>
-</div>    
+</div> 
+<!-- Modal for Host Mode Error -->
+<div id="hostModeErrorModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:white; padding:24px 32px; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.2); max-width:350px; text-align:center;">
+    <h2 style="margin-bottom:12px;color:#e53935;">Cannot convert to host</h2>
+    <p>There is already another host in this session.</p>
+    <button onclick="document.getElementById('hostModeErrorModal').style.display='none';"
+            style="padding:8px 16px; background:#753acb; color:white; border:none; border-radius:5px; cursor:pointer;margin-top:12px;">
+      OK
+    </button>
+  </div>
+</div>
 <!-- CSV Upload Modal -->
 <div id="csvUploadModal" style="display: none;">
   <div class="csv-modal-content">
