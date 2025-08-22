@@ -393,19 +393,23 @@ function displayJiraStories(stories) {
     });
 
     rows.forEach(row => {
-        row.addEventListener('click', (e) => {
-            const cell = row.querySelector('.checkbox-cell');
-            const checkbox = cell.querySelector('input[type="checkbox"]');
-            checkbox.checked = !checkbox.checked;
+    row.addEventListener('click', (e) => {
+    // If the click was directly on a checkbox, let the checkbox handle itself
+    if (e.target && e.target.type === 'checkbox') return;
 
-            if (checkbox.checked) {
-                row.classList.add("selected");
-            } else {
-                row.classList.remove("selected");
-            }
+    const cell = row.querySelector('.checkbox-cell');
+    const checkbox = cell.querySelector('input[type="checkbox"]');
+    checkbox.checked = !checkbox.checked;
 
-            updateSelectionState();
-        });
+    if (checkbox.checked) {
+        row.classList.add("selected");
+    } else {
+        row.classList.remove("selected");
+    }
+
+    updateSelectionState();
+});
+
     });
         setupJiraCheckboxLogic();
     setupJiraFiltering();
