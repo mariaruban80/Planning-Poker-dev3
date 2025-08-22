@@ -4469,43 +4469,30 @@ input:checked + .slider {background-color: #673ab7;}
 input:checked + .slider:before {transform: translateX(16px);}
        
 /* Make sure profile menu items align properly */
-
 .profile-menu-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;   /* keep icons + text on left */
+  gap: 10px;                     /* space between icon and text */
   padding: 8px 12px;
   font-size: 14px;
   color: #333;
 }
 
+/* Text label inside menu */
 .profile-menu-item span {
-  flex: 1;
-  text-align: left;
-}
-
-.profile-menu-item .switch {
-  flex-shrink: 0;
-  margin-left: 12px;
-}
-
-
-          
-.profile-menu-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #333;
+  flex: 1;                       /* text expands */
+  text-align: left;              /* align text left */
 }
 
 /* Toggle switch container */
 .profile-menu-item .switch {
+  margin-left: auto;             /* push switch to right edge */
   position: relative;
   display: inline-block;
   width: 40px;
   height: 22px;
-  flex-shrink: 0;   /* prevent it from squishing */
+  flex-shrink: 0;                /* don’t shrink */
 }
 
 /* Hide default checkbox */
@@ -4515,7 +4502,7 @@ input:checked + .slider:before {transform: translateX(16px);}
   height: 0;
 }
 
-/* Slider styling */
+/* Slider track */
 .profile-menu-item .slider {
   position: absolute;
   cursor: pointer;
@@ -4528,6 +4515,7 @@ input:checked + .slider:before {transform: translateX(16px);}
   border-radius: 22px;
 }
 
+/* Slider knob */
 .profile-menu-item .slider:before {
   position: absolute;
   content: "";
@@ -4540,7 +4528,7 @@ input:checked + .slider:before {transform: translateX(16px);}
   border-radius: 50%;
 }
 
-/* When checked */
+/* Active (checked) state */
 .profile-menu-item .switch input:checked + .slider {
   background-color: #673ab7;
 }
@@ -4548,6 +4536,7 @@ input:checked + .slider:before {transform: translateX(16px);}
 .profile-menu-item .switch input:checked + .slider:before {
   transform: translateX(18px);
 }
+
 
 
      
