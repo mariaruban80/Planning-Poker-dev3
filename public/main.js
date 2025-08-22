@@ -5016,38 +5016,52 @@ if (exportCsvConfirmBtn) {
   });
 }
 
-
 function generateImportPreview(headers, rows) {
   const previewEl = document.getElementById("importPreview");
   if (!previewEl) return;
+
   let html = "<table border='1' cellspacing='0' cellpadding='4' style='border-collapse:collapse; width:100%;'>";
   html += "<thead><tr>";
-  headers.forEach(h => { html += `<th style='background:#f0f0f0;'>${h}</th>`; });
+  headers.forEach(h => {
+    html += `<th style='background:#f0f0f0;'>${h}</th>`;
+  });
   html += "</tr></thead><tbody>";
+
   rows.slice(0, 5).forEach(r => {
     html += "<tr>" + r.map(c => `<td>${c}</td>`).join("") + "</tr>";
   });
+
   html += "</tbody></table>";
   previewEl.innerHTML = html;
 }
 
-
-
+// ✅ Clean separation between functions
 function enableHostFeatures() {
   // Show controls, enable CSV, JIRA, add ticket, etc.
   document.querySelectorAll('.hide-for-guests').forEach(e => e.style.display = '');
   document.getElementById('addTicketBtn')?.classList.remove('hide-for-guests');
-  document.getElementById('uploadTicketMenuBtn')?.style.display = 'flex';
-  document.getElementById('jiraImportMenuBtn')?.style.display = 'flex';
-  document.getElementById('exportToCsvMenuBtn')?.style.display = 'flex';
+
+  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
+  if (uploadBtn) uploadBtn.style.display = 'flex';
+
+  const jiraBtn = document.getElementById('jiraImportMenuBtn');
+  if (jiraBtn) jiraBtn.style.display = 'flex';
+
+  const exportBtn = document.getElementById('exportToCsvMenuBtn');
+  if (exportBtn) exportBtn.style.display = 'flex';
 }
 
 function disableHostFeatures() {
   // Hide controls, disable CSV, JIRA, add ticket, etc.
   document.querySelectorAll('.hide-for-guests').forEach(e => e.style.display = 'none');
   document.getElementById('addTicketBtn')?.classList.add('hide-for-guests');
-  document.getElementById('uploadTicketMenuBtn')?.style.display = 'none';
-  document.getElementById('jiraImportMenuBtn')?.style.display = 'none';
-  document.getElementById('exportToCsvMenuBtn')?.style.display = 'none';
-}
 
+  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
+  if (uploadBtn) uploadBtn.style.display = 'none';
+
+  const jiraBtn = document.getElementById('jiraImportMenuBtn');
+  if (jiraBtn) jiraBtn.style.display = 'none';
+
+  const exportBtn = document.getElementById('exportToCsvMenuBtn');
+  if (exportBtn) exportBtn.style.display = 'none';
+}
