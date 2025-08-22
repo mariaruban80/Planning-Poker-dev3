@@ -4469,6 +4469,27 @@ input:checked + .slider {background-color: #673ab7;}
 input:checked + .slider:before {transform: translateX(16px);}
        
 /* Make sure profile menu items align properly */
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #333;
+}
+
+.profile-menu-item span {
+  flex: 1;
+  text-align: left;
+}
+
+.profile-menu-item .switch {
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+
+          
 .profile-menu-item {
   display: flex;
   justify-content: space-between;
