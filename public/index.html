@@ -3877,12 +3877,16 @@ display: none;
   align-items: center;
   gap: 4px;
 }
-     .checkbox-cell {
+.checkbox-cell {
   text-align: center;
-  padding: 12px 8px;
-  width: 60px;
+  vertical-align: middle;
+  width: 40px;
+  padding: 0 !important;
 }
-
+.checkbox-cell input[type="checkbox"] {
+  margin: auto;
+  display: block;
+}
 .jira-type-icon, .jira-status-icon {
   width: 16px;
   height: 16px;
