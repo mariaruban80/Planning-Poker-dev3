@@ -4482,7 +4482,27 @@ display: none;
   font-weight: 500;
   text-decoration: none;
 }
-       
+     /* Force checkbox alignment in Jira modal table */
+#jiraStoriesTable th.checkbox-cell,
+#jiraStoriesTable td.checkbox-cell {
+  text-align: center !important;
+  vertical-align: middle !important;
+  width: 40px !important;
+  padding: 0 !important;
+}
+
+#jiraStoriesTable th.checkbox-cell {
+  height: 40px; /* keeps header checkbox centered vertically */
+}
+
+#jiraStoriesTable td.checkbox-cell input[type="checkbox"],
+#jiraStoriesTable th.checkbox-cell input[type="checkbox"] {
+  margin: auto !important;
+  display: block !important;
+  position: relative;
+  top: 0;
+}
+  
      
      </style>
 </head>
