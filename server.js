@@ -352,6 +352,28 @@ io.on('connection', (socket) => {
   });
 
   console.log(`[SERVER] New client connected: ${socket.id}`);
+
+let currentHostId = null;
+
+ socket.on('requestHost', (data, callback) => {
+    if (!currentHostId) {
+      // No host, approve this socket
+      currentHostId = socket.id;
+      callback({ allowed: true });
+    } else {
+      // A host already exists, deny
+      callback({ allowed: false });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    // If host leaves, free host slot
+    if (socket.id === currentHostId) {
+      currentHostId = null;
+      io.emit('hostLeft'); // notify others
+    }
+  });
+ 
   
 socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   const roomId = socket.data.roomId;
