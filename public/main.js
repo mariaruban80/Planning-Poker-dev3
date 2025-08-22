@@ -100,25 +100,6 @@ async function translateTicketsIfNeeded(tickets) {
   }
 }
 
-function enableHostFeatures() {
-  // Show controls, enable CSV, JIRA, add ticket, etc.
-  document.querySelectorAll('.hide-for-guests').forEach(e=>e.style.display='');
-  document.getElementById('addTicketBtn')?.classList.remove('hide-for-guests');
-  document.getElementById('uploadTicketMenuBtn')?.style.display = 'flex';
-  document.getElementById('jiraImportMenuBtn')?.style.display = 'flex';
-  document.getElementById('exportToCsvMenuBtn')?.style.display = 'flex';
-  // More UI code as needed
-}
-
-function disableHostFeatures() {
-  // Hide controls, disable CSV, JIRA, add ticket, etc.
-  document.querySelectorAll('.hide-for-guests').forEach(e=>e.style.display='none');
-  document.getElementById('addTicketBtn')?.classList.add('hide-for-guests');
-  document.getElementById('uploadTicketMenuBtn')?.style.display = 'none';
-  document.getElementById('jiraImportMenuBtn')?.style.display = 'none';
-  document.getElementById('exportToCsvMenuBtn')?.style.display = 'none';
-  // More UI code as needed
-}
 
 /**
  * Handle adding a ticket from the modal
