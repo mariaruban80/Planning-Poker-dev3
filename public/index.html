@@ -3691,11 +3691,11 @@ display: none;
   z-index: 5;
   vertical-align: middle;
 }
-   .jira-stories-table th.select-column {
-  width: 50px;
-  text-align: center;
-  padding: 12px;
-  vertical-align: middle;
+.jira-stories-table th.select-column {
+    width: 50px !important;
+    text-align: center !important;
+    padding: 12px 8px !important;
+    vertical-align: middle !important;
 }
 .jira-stories-table th,
 .jira-stories-table td {
@@ -3716,19 +3716,20 @@ display: none;
 }
 .jira-stories-table th.select-column,
 .jira-stories-table td.checkbox-cell {
-  width: 50px;
-  text-align: left; /* Change to left */
-  padding: 12px 8px;
-  vertical-align: middle;
+    width: 50px !important;
+    text-align: center !important;
+    padding: 12px 8px !important;
+    vertical-align: middle !important;
 }
-     .jira-header-checkbox,
+.jira-header-checkbox,
 .jira-story-checkbox {
-    width: 18px;  
-    height: 18px;  
-    margin: 0;      
-    vertical-align: middle;
-    position: relative;  
-    top: 2px;            
+    width: 18px !important;
+    height: 18px !important;
+    accent-color: #8b5cf6 !important;
+    cursor: pointer !important;
+    margin: 0 auto !important;
+    display: block !important;
+    vertical-align: middle !important;
 }
      .jira-header-checkbox:indeterminate::before {
   content: '';
@@ -3815,26 +3816,11 @@ display: none;
   accent-color: #753acb;
   cursor: pointer;
 }
- .jira-stories-table td.checkbox-cell {
-  width: 50px;
-  text-align: center;
-  padding: 12px;
-  vertical-align: middle;
-}
+
      .jira-stories-table tr {
   transition: all 0.2s ease;
 }
-     .jira-header-checkbox,
-.jira-story-checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: #8b5cf6;
-  cursor: pointer;
-  margin: 0;
-  vertical-align: middle;
-  position: relative;
-  top: 0;
-}
+
 .jira-stories-table tr:hover {
   background: #f9fafb;
 }
@@ -3905,12 +3891,6 @@ display: none;
   top: 0;
   z-index: 5;
 }
-     
- .jira-stories-table th.select-column {
-  width: 40px;
-  text-align: center;
-  padding: 12px 8px;
-}
           .jira-stories-table th.key-column {
   width: 90px;
 }
@@ -3931,12 +3911,6 @@ display: none;
   vertical-align: middle;
   font-size: 14px;
   color: #334155;
-}
-
-.jira-stories-table td.checkbox-cell {
-  text-align: center;
-  padding: 12px 8px;
-  width: 40px;
 }
 
 .jira-stories-table tr:hover {
@@ -3992,16 +3966,6 @@ display: none;
   background: #fef3c7;
   color: #92400e;
 }
-
-/* Checkboxes */
-.jira-header-checkbox,
-.jira-story-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: #8b5cf6;
-  cursor: pointer;
-}
-
 /* Modal Footer */
 .jira-modal-footer {
   display: flex;
@@ -4289,19 +4253,6 @@ display: none;
   text-align: center;
   padding: 12px 8px;
   vertical-align: middle;
-}
-
-/* Perfect Checkbox Styling */
-.jira-header-checkbox,
-.jira-story-checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: #8b5cf6;
-  cursor: pointer;
-  margin: 0;
-  vertical-align: middle;
-  display: inline-block;
-  position: relative;
 }
 
 /* Column Widths */
