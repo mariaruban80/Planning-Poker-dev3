@@ -227,35 +227,122 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
  /** ---------- HOST ENABLE HANDLER ---------- **/
+// ================= server.js FIX =================
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: { origin: '*' },
+  pingTimeout: 120000,
+  pingInterval: 25000,
+  connectTimeout: 30000
+});
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+app.get('/', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'About.html'));
+});
+app.use(express.static(join(__dirname, 'public')));
+app.use(express.json());
+
+// ================= HOST TRACKING FIX =================
+const roomHosts = {}; // roomId → hostSocketId
+
+io.on('connection', (socket) => {
+  console.log(`[SERVER] New client connected: ${socket.id}`);
+
+  socket.on('joinRoom', ({ roomId, userName }) => {
+    socket.join(roomId);
+    socket.data.roomId = roomId;
+    socket.data.userName = userName;
+    console.log(`[SERVER] ${userName} joined room ${roomId}`);
+  });
+
+  socket.on('requestHost', (data, callback) => {
+    const roomId = socket.data.roomId;
+    if (!roomId) return callback({ allowed: false, error: "No room joined" });
+
+    if (!roomHosts[roomId]) {
+      roomHosts[roomId] = socket.id;
+      callback({ allowed: true });
+      io.to(roomId).emit('hostChanged', { hostId: socket.id, userName: socket.data.userName });
+      console.log(`[SERVER] Host assigned: ${socket.data.userName} (${socket.id}) in room ${roomId}`);
+    } else if (roomHosts[roomId] === socket.id) {
+      callback({ allowed: true, alreadyHost: true });
+    } else {
+      callback({ allowed: false });
+    }
+  });
+
+  socket.on('releaseHost', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && roomHosts[roomId] === socket.id) {
+      delete roomHosts[roomId];
+      io.to(roomId).emit('hostLeft');
+      console.log(`[SERVER] Host released by ${socket.data.userName} in room ${roomId}`);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && roomHosts[roomId] === socket.id) {
+      delete roomHosts[roomId];
+      io.to(roomId).emit('hostLeft');
+      console.log(`[SERVER] Host disconnected from room ${roomId}`);
+    }
+  });
+});
+
+// ================= main.js FIX =================
+
+// Existing host toggle handler replacement
 const hostToggle = document.getElementById('hostModeToggle');
 if (hostToggle) {
   hostToggle.checked = sessionStorage.getItem('isHost') === 'true';
 
   hostToggle.addEventListener('change', function() {
     if (hostToggle.checked) {
-      // Ask server: can this user become host?
       if (window.socket && typeof window.socket.emit === "function") {
         window.socket.emit('requestHost', {}, function(response) {
           if (response && response.allowed) {
-            // ✅ Server approved host
             sessionStorage.setItem('isHost', 'true');
             enableHostFeatures();
           } else {
-            // ❌ Server denied host (already taken)
             hostToggle.checked = false;
             document.getElementById('hostModeErrorModal').style.display = 'flex';
           }
         });
       } else {
-        // Fallback: disable toggle if no server support
         hostToggle.checked = false;
         alert("Host validation not supported in demo mode.");
       }
     } else {
-      // Switch back to guest
-      sessionStorage.setItem('isHost', 'false');
-      disableHostFeatures();
+      // Only release if this client is the host
+      if (sessionStorage.getItem('isHost') === 'true') {
+        sessionStorage.setItem('isHost', 'false');
+        disableHostFeatures();
+        if (window.socket && typeof window.socket.emit === "function") {
+          window.socket.emit('releaseHost');
+        }
+      }
     }
+  });
+}
+
+// Listen for server notifications
+if (window.socket) {
+  window.socket.on('hostChanged', ({ hostId, userName }) => {
+    console.log(`[CLIENT] New host assigned: ${userName} (${hostId})`);
+  });
+
+  window.socket.on('hostLeft', () => {
+    console.log('[CLIENT] Host left the room. Host role is now available.');
   });
 }
 
