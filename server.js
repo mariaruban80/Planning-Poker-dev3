@@ -25,6 +25,8 @@ app.use(express.static(join(__dirname, 'public')));
 // import fetch from 'node-fetch';  // <-- added for JIRA proxy support
 
 app.use(express.json());
+// ================= HOST TRACKING FIX =================
+const roomHosts = {}; // roomId → hostSocketId
 
 // JIRA Proxy route (avoids CORS issues)
 app.post('/api/jira/project', async (req, res) => {
@@ -353,26 +355,40 @@ io.on('connection', (socket) => {
 
   console.log(`[SERVER] New client connected: ${socket.id}`);
 
-let currentHostId = null;
+socket.on('requestHost', (data, callback) => {
+const roomId = socket.data.roomId;
+if (!roomId) return callback({ allowed: false, error: "No room joined" });
 
- socket.on('requestHost', (data, callback) => {
-    if (!currentHostId) {
-      // No host, approve this socket
-      currentHostId = socket.id;
-      callback({ allowed: true });
-    } else {
-      // A host already exists, deny
-      callback({ allowed: false });
-    }
-  });
 
-  socket.on('disconnect', () => {
-    // If host leaves, free host slot
-    if (socket.id === currentHostId) {
-      currentHostId = null;
-      io.emit('hostLeft'); // notify others
-    }
-  });
+if (!roomHosts[roomId]) {
+roomHosts[roomId] = socket.id;
+callback({ allowed: true });
+io.to(roomId).emit('hostChanged', { hostId: socket.id, userName: socket.data.userName });
+console.log(`[SERVER] Host assigned: ${socket.data.userName} (${socket.id}) in room ${roomId}`);
+} else if (roomHosts[roomId] === socket.id) {
+callback({ allowed: true, alreadyHost: true });
+} else {
+callback({ allowed: false });
+}
+});
+  socket.on('releaseHost', () => {
+const roomId = socket.data.roomId;
+if (roomId && roomHosts[roomId] === socket.id) {
+delete roomHosts[roomId];
+io.to(roomId).emit('hostLeft');
+console.log(`[SERVER] Host released by ${socket.data.userName} in room ${roomId}`);
+}
+});
+
+socket.on('disconnect', () => {
+const roomId = socket.data.roomId;
+if (roomId && roomHosts[roomId] === socket.id) {
+delete roomHosts[roomId];
+io.to(roomId).emit('hostLeft');
+console.log(`[SERVER] Host disconnected from room ${roomId}`);
+}
+});
+});
  
   
 socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
@@ -589,7 +605,7 @@ if (existingVote !== vote) {
 
 socket.on('joinRoom', ({ roomId, userName }) => {
   if (!userName) return socket.emit('error', { message: 'Username is required' });
-
+socket.join(roomId);
   socket.data.roomId = roomId;
   socket.data.userName = userName;
 
