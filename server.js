@@ -388,8 +388,7 @@ io.to(roomId).emit('hostLeft');
 console.log(`[SERVER] Host disconnected from room ${roomId}`);
 }
 });
-});
- 
+
   
 socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   const roomId = socket.data.roomId;
