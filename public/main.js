@@ -503,6 +503,7 @@ window.initializeSocketWithName = function(roomId, name) {
   
   // Add CSS for new layout
   addNewLayoutStyles();
+    setupHostToggle();
 };
 
 /**
