@@ -226,55 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-    /** ---------- HOST MODE TOGGLE ---------- **/
-
-function setupHostToggle() {
-  const hostToggle = document.getElementById('hostModeToggle');
-  if (!hostToggle) return;
-
-  hostToggle.checked = sessionStorage.getItem('isHost') === 'true';
-
-  hostToggle.addEventListener('change', function() {
-    if (hostToggle.checked) {
-      if (window.socket && typeof window.socket.emit === "function") {
-        window.socket.emit('requestHost', {}, function(response) {
-          if (response && response.allowed) {
-            sessionStorage.setItem('isHost', 'true');
-            enableHostFeatures();
-          } else {
-            hostToggle.checked = false;
-            const errorModal = document.getElementById('hostModeErrorModal');
-            const errorText = errorModal?.querySelector('.modal-message');
-            if (errorText) errorText.textContent = response.error || "Unable to become host.";
-            if (errorModal) errorModal.style.display = 'flex';
-          }
-        });
-      } else {
-        hostToggle.checked = false;
-        console.warn("[HOST] No socket available yet");
-      }
-    } else {
-      if (sessionStorage.getItem('isHost') === 'true') {
-        sessionStorage.setItem('isHost', 'false');
-        disableHostFeatures();
-        if (window.socket && typeof window.socket.emit === "function") {
-          window.socket.emit('releaseHost');
-        }
-      }
-    }
-  });
-}
-
-// Run once socket connects
-if (window.socket) {
-  window.socket.on('connect', () => {
-    console.log('[HOST] Socket connected, setting up host toggle');
-    setupHostToggle();
-  });
-}
-
-
-
+   
   /** ---------- CSV DRAG AND DROP HANDLER ---------- **/
   const dropZone = document.getElementById('csvDropZone');
   if (dropZone) {
@@ -4149,6 +4101,62 @@ function setupInviteButton() {
     }
   };
 }
+
+function setupHostToggle() {
+  const hostToggle = document.getElementById('hostModeToggle');
+  if (!hostToggle) {
+    console.warn("[HOST] Host toggle element not found in DOM");
+    return;
+  }
+
+  // Restore checked state if already host
+  hostToggle.checked = sessionStorage.getItem('isHost') === 'true';
+
+  hostToggle.addEventListener('change', function() {
+    if (hostToggle.checked) {
+      if (window.socket && typeof window.socket.emit === "function") {
+        window.socket.emit('requestHost', {}, function(response) {
+          if (response && response.allowed) {
+            sessionStorage.setItem('isHost', 'true');
+            enableHostFeatures();
+          } else {
+            hostToggle.checked = false;
+            const errorModal = document.getElementById('hostModeErrorModal');
+            const errorText = errorModal?.querySelector('.modal-message');
+            if (errorText) errorText.textContent = response.error || "Unable to become host.";
+            if (errorModal) errorModal.style.display = 'flex';
+          }
+        });
+      } else {
+        hostToggle.checked = false;
+        console.warn("[HOST] Socket not ready yet");
+      }
+    } else {
+      // Releasing host role
+      if (sessionStorage.getItem('isHost') === 'true') {
+        sessionStorage.setItem('isHost', 'false');
+        disableHostFeatures();
+        if (window.socket && typeof window.socket.emit === "function") {
+          window.socket.emit('releaseHost');
+        }
+      }
+    }
+  });
+
+  // Socket events for host changes
+  if (window.socket) {
+    window.socket.on('hostChanged', ({ hostId, userName }) => {
+      console.log(`[CLIENT] New host assigned: ${userName} (${hostId})`);
+    });
+
+    window.socket.on('hostLeft', () => {
+      console.log('[CLIENT] Host left the room. Host role is now available.');
+    });
+  }
+
+  console.log("[HOST] Host toggle initialized");
+}
+
 
 /**
  * Setup vote cards drag functionality
