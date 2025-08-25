@@ -100,7 +100,6 @@ async function translateTicketsIfNeeded(tickets) {
   }
 }
 
-
 /**
  * Handle adding a ticket from the modal
  * @param {Object} ticketData - Ticket data {id, text}
@@ -226,127 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
- /** ---------- HOST ENABLE HANDLER ---------- **/
-// ================= server.js FIX =================
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: { origin: '*' },
-  pingTimeout: 120000,
-  pingInterval: 25000,
-  connectTimeout: 30000
-});
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-app.get('/', (req, res) => {
-  res.sendFile(join(__dirname, 'public', 'About.html'));
-});
-app.use(express.static(join(__dirname, 'public')));
-app.use(express.json());
-
-// ================= HOST TRACKING FIX =================
-const roomHosts = {}; // roomId → hostSocketId
-
-io.on('connection', (socket) => {
-  console.log(`[SERVER] New client connected: ${socket.id}`);
-
-  socket.on('joinRoom', ({ roomId, userName }) => {
-    socket.join(roomId);
-    socket.data.roomId = roomId;
-    socket.data.userName = userName;
-    console.log(`[SERVER] ${userName} joined room ${roomId}`);
-  });
-
-  socket.on('requestHost', (data, callback) => {
-    const roomId = socket.data.roomId;
-    if (!roomId) return callback({ allowed: false, error: "No room joined" });
-
-    if (!roomHosts[roomId]) {
-      roomHosts[roomId] = socket.id;
-      callback({ allowed: true });
-      io.to(roomId).emit('hostChanged', { hostId: socket.id, userName: socket.data.userName });
-      console.log(`[SERVER] Host assigned: ${socket.data.userName} (${socket.id}) in room ${roomId}`);
-    } else if (roomHosts[roomId] === socket.id) {
-      callback({ allowed: true, alreadyHost: true });
-    } else {
-      callback({ allowed: false });
-    }
-  });
-
-  socket.on('releaseHost', () => {
-    const roomId = socket.data.roomId;
-    if (roomId && roomHosts[roomId] === socket.id) {
-      delete roomHosts[roomId];
-      io.to(roomId).emit('hostLeft');
-      console.log(`[SERVER] Host released by ${socket.data.userName} in room ${roomId}`);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    const roomId = socket.data.roomId;
-    if (roomId && roomHosts[roomId] === socket.id) {
-      delete roomHosts[roomId];
-      io.to(roomId).emit('hostLeft');
-      console.log(`[SERVER] Host disconnected from room ${roomId}`);
-    }
-  });
-});
-
-// ================= main.js FIX =================
-
-// Existing host toggle handler replacement
-const hostToggle = document.getElementById('hostModeToggle');
-if (hostToggle) {
-  hostToggle.checked = sessionStorage.getItem('isHost') === 'true';
-
-  hostToggle.addEventListener('change', function() {
-    if (hostToggle.checked) {
-      if (window.socket && typeof window.socket.emit === "function") {
-        window.socket.emit('requestHost', {}, function(response) {
-          if (response && response.allowed) {
-            sessionStorage.setItem('isHost', 'true');
-            enableHostFeatures();
-          } else {
-            hostToggle.checked = false;
-            document.getElementById('hostModeErrorModal').style.display = 'flex';
-          }
-        });
-      } else {
-        hostToggle.checked = false;
-        alert("Host validation not supported in demo mode.");
-      }
-    } else {
-      // Only release if this client is the host
-      if (sessionStorage.getItem('isHost') === 'true') {
-        sessionStorage.setItem('isHost', 'false');
-        disableHostFeatures();
-        if (window.socket && typeof window.socket.emit === "function") {
-          window.socket.emit('releaseHost');
-        }
-      }
-    }
-  });
-}
-
-// Listen for server notifications
-if (window.socket) {
-  window.socket.on('hostChanged', ({ hostId, userName }) => {
-    console.log(`[CLIENT] New host assigned: ${userName} (${hostId})`);
-  });
-
-  window.socket.on('hostLeft', () => {
-    console.log('[CLIENT] Host left the room. Host role is now available.');
-  });
-}
-
-  
   /** ---------- CSV DRAG AND DROP HANDLER ---------- **/
   const dropZone = document.getElementById('csvDropZone');
   if (dropZone) {
@@ -3106,7 +2985,7 @@ function displayCSVData(data) {
       storyPointsEl.className = 'story-points';
       storyPointsEl.id = `story-points-${story.id}`;
       storyPointsEl.textContent = textContent = '?';
-    //  storyPointsEl.textContent = '?';
+      
       // Add story points editing functionality
       storyPointsEl.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -3257,8 +3136,8 @@ function displayCSVData(data) {
       const storyPointsEl = document.createElement('div');
       storyPointsEl.className = 'story-points';
       storyPointsEl.id = `story-points-${csvStoryId}`;
-     storyPointsEl.textContent = textContent = '?';
-   //   storyPointsEl.textContent = '?';
+      storyPointsEl.textContent = textContent = '?';
+      
       // Add story points editing functionality
       storyPointsEl.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -4998,11 +4877,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupTicketSearch();
   setupFilterButton();
 });
-document.addEventListener("DOMContentLoaded", () => {
-    if (typeof initializeJiraIntegration === "function") {
-        initializeJiraIntegration();
-    }
-});
 
 
 // ===================== Export CSV Modal Handling ===================== //
@@ -5090,52 +4964,17 @@ if (exportCsvConfirmBtn) {
   });
 }
 
+
 function generateImportPreview(headers, rows) {
   const previewEl = document.getElementById("importPreview");
   if (!previewEl) return;
-
   let html = "<table border='1' cellspacing='0' cellpadding='4' style='border-collapse:collapse; width:100%;'>";
   html += "<thead><tr>";
-  headers.forEach(h => {
-    html += `<th style='background:#f0f0f0;'>${h}</th>`;
-  });
+  headers.forEach(h => { html += `<th style='background:#f0f0f0;'>${h}</th>`; });
   html += "</tr></thead><tbody>";
-
   rows.slice(0, 5).forEach(r => {
     html += "<tr>" + r.map(c => `<td>${c}</td>`).join("") + "</tr>";
   });
-
   html += "</tbody></table>";
   previewEl.innerHTML = html;
-}
-
-// ✅ Clean separation between functions
-function enableHostFeatures() {
-  // Show controls, enable CSV, JIRA, add ticket, etc.
-  document.querySelectorAll('.hide-for-guests').forEach(e => e.style.display = '');
-  document.getElementById('addTicketBtn')?.classList.remove('hide-for-guests');
-
-  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
-  if (uploadBtn) uploadBtn.style.display = 'flex';
-
-  const jiraBtn = document.getElementById('jiraImportMenuBtn');
-  if (jiraBtn) jiraBtn.style.display = 'flex';
-
-  const exportBtn = document.getElementById('exportToCsvMenuBtn');
-  if (exportBtn) exportBtn.style.display = 'flex';
-}
-
-function disableHostFeatures() {
-  // Hide controls, disable CSV, JIRA, add ticket, etc.
-  document.querySelectorAll('.hide-for-guests').forEach(e => e.style.display = 'none');
-  document.getElementById('addTicketBtn')?.classList.add('hide-for-guests');
-
-  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
-  if (uploadBtn) uploadBtn.style.display = 'none';
-
-  const jiraBtn = document.getElementById('jiraImportMenuBtn');
-  if (jiraBtn) jiraBtn.style.display = 'none';
-
-  const exportBtn = document.getElementById('exportToCsvMenuBtn');
-  if (exportBtn) exportBtn.style.display = 'none';
 }
