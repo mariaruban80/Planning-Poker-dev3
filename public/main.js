@@ -4105,56 +4105,70 @@ function setupInviteButton() {
 function setupHostToggle() {
   const hostToggle = document.getElementById('hostModeToggle');
   if (!hostToggle) {
-    console.warn("[HOST] Host toggle element not found in DOM");
+    console.warn('[HOST] Host toggle not found');
     return;
   }
 
-  // Restore checked state if already host
-  hostToggle.checked = sessionStorage.getItem('isHost') === 'true';
+  hostToggle.addEventListener('change', function () {
+    if (!socket) {
+      console.warn('[HOST] Socket not ready yet');
+      hostToggle.checked = false;
+      return;
+    }
 
-  hostToggle.addEventListener('change', function() {
-    if (hostToggle.checked) {
-      if (window.socket && typeof window.socket.emit === "function") {
-        window.socket.emit('requestHost', {}, function(response) {
-          if (response && response.allowed) {
-            sessionStorage.setItem('isHost', 'true');
-            enableHostFeatures();
-          } else {
-            hostToggle.checked = false;
-            const errorModal = document.getElementById('hostModeErrorModal');
-            const errorText = errorModal?.querySelector('.modal-message');
-            if (errorText) errorText.textContent = response.error || "Unable to become host.";
-            if (errorModal) errorModal.style.display = 'flex';
-          }
-        });
-      } else {
-        hostToggle.checked = false;
-        console.warn("[HOST] Socket not ready yet");
-      }
-    } else {
-      // Releasing host role
-      if (sessionStorage.getItem('isHost') === 'true') {
-        sessionStorage.setItem('isHost', 'false');
-        disableHostFeatures();
-        if (window.socket && typeof window.socket.emit === "function") {
-          window.socket.emit('releaseHost');
+    if (this.checked) {
+      console.log('[HOST] Requesting host role...');
+      socket.emit('requestHost', {}, (response) => {
+        if (response.allowed) {
+          console.log('[HOST] Host granted');
+          enableHostUI();
+        } else {
+          console.log('[HOST] Host already exists');
+          this.checked = false;
+          showHostAlreadyExistsModal();
         }
-      }
+      });
+    } else {
+      console.log('[HOST] Releasing host role...');
+      socket.emit('releaseHost');
+      disableHostUI();
     }
   });
 
-  // Socket events for host changes
-  if (window.socket) {
-    window.socket.on('hostChanged', ({ hostId, userName }) => {
-      console.log(`[CLIENT] New host assigned: ${userName} (${hostId})`);
-    });
+  // React to host changes in room
+  socket.on('hostChanged', ({ hostId, userName }) => {
+    console.log(`[HOST] Host changed: ${userName}`);
+    if (socket.id !== hostId) {
+      // If someone else became host, disable host UI for this client
+      hostToggle.checked = false;
+      disableHostUI();
+    }
+  });
 
-    window.socket.on('hostLeft', () => {
-      console.log('[CLIENT] Host left the room. Host role is now available.');
-    });
+  socket.on('hostLeft', () => {
+    console.log('[HOST] Host left — room is free now');
+  });
+}
+
+function enableHostUI() {
+  document.querySelectorAll('.host-only').forEach(el => {
+    el.style.display = 'flex';
+  });
+}
+
+function disableHostUI() {
+  document.querySelectorAll('.host-only').forEach(el => {
+    el.style.display = 'none';
+  });
+}
+
+function showHostAlreadyExistsModal() {
+  const modal = document.getElementById('hostExistsModal');
+  if (modal) {
+    modal.style.display = 'flex';
+  } else {
+    alert('Host already available');
   }
-
-  console.log("[HOST] Host toggle initialized");
 }
 
 
