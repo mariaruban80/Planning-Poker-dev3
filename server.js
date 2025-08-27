@@ -389,6 +389,29 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 }
 });
 
+  socket.on("checkHostStatus", ({ sessionId, requestedHost }, callback) => {
+  const room = io.sockets.adapter.rooms.get(sessionId);
+  let hostExists = false;
+
+  if (room) {
+    for (let id of room) {
+      const s = io.sockets.sockets.get(id);
+      if (s && s.isHost) {
+        hostExists = true;
+        break;
+      }
+    }
+  }
+
+  if (requestedHost && !hostExists) {
+    socket.isHost = true;
+    callback({ canBeHost: true });
+  } else {
+    socket.isHost = false;
+    callback({ canBeHost: false });
+  }
+});
+
   
 socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   const roomId = socket.data.roomId;
