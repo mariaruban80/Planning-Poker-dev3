@@ -389,6 +389,40 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 }
 });
 
+  // ==========================
+// Join Session + Decide Role
+// ==========================
+socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+  // ✅ Always join the room first
+  socket.join(sessionId);
+
+  // Check if a host already exists in this room
+  const room = io.sockets.adapter.rooms.get(sessionId);
+  let hostExists = false;
+
+  if (room) {
+    for (let id of room) {
+      const s = io.sockets.sockets.get(id);
+      if (s && s.isHost) {
+        hostExists = true;
+        break;
+      }
+    }
+  }
+
+  // Decide host or guest
+  if (requestedHost && !hostExists) {
+    socket.isHost = true;
+    console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
+    callback({ isHost: true });
+  } else {
+    socket.isHost = false;
+    console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
+    callback({ isHost: false });
+  }
+});
+
+
   socket.on("checkHostStatus", ({ sessionId, requestedHost }, callback) => {
     const room = io.sockets.adapter.rooms.get(sessionId);
     let hostExists = false;
