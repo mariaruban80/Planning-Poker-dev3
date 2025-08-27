@@ -686,6 +686,11 @@
             <label for="joinNameInput">Your name *</label>
             <input type="text" id="joinNameInput" placeholder="How should we call you?" />
           </div>
+
+          <div class="checkbox-container">
+  <input type="checkbox" id="allowJoinAsHost" />
+  <label for="allowJoinAsHost">Allow members to Join a session as Host</label>
+</div>
           
           <button class="action-button" onclick="joinRoom()">Join session</button>
         </div>
@@ -862,6 +867,7 @@
 function joinRoom() {
   const name = document.getElementById("joinNameInput").value.trim();
   const sessionId = document.getElementById("sessionIdInput").value.trim();
+  const requestHost = document.getElementById("allowJoinAsHost").checked;
   
   if (!name) {
     alert("Please enter your name.");
@@ -873,14 +879,15 @@ function joinRoom() {
     return;
   }
   
-  // Store user data in sessionStorage - MARK AS GUEST
+  // Save details in sessionStorage
   sessionStorage.setItem("userName", name);
-  sessionStorage.setItem("isHost", "false"); // ✅ Set as guest
-  sessionStorage.setItem("isRoomCreator", "false"); // ✅ Mark as guest
+  sessionStorage.setItem("requestedHost", requestHost); // ✅ Save intent
+  sessionStorage.setItem("isRoomCreator", "false"); // ✅ joining, not creating
   
   // Navigate to the room
   window.location.href = `/index.html?roomId=${sessionId}`;
 }
+
 
     
     function joinRoom() {
