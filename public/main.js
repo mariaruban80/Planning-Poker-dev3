@@ -7,6 +7,14 @@ const isPremiumUser = false;
 
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, getUserVotes } from './socket.js'; 
+// Ensure username exists before anything else
+if (!sessionStorage.getItem('userName')) {
+  const name = prompt("Enter your username:");
+  if (name) {
+    sessionStorage.setItem('userName', name);
+  }
+}
+
 
 // Track deleted stories client-side
 let deletedStoryIds = new Set();
@@ -597,7 +605,7 @@ window.initializeSocketWithName = function(roomId, name) {
   
   // Add CSS for new layout
   addNewLayoutStyles();
-    setupHostToggle();
+    
 };
 
 /**
@@ -1503,6 +1511,7 @@ function initializeApp(roomId) {
   socket.on('connect', () => {
     if (!window.userMap) window.userMap = {};
     window.userMap[socket.id] = userName;
+    setupHostToggle();
   });
 
   if (socket && socket.io) {
@@ -4253,7 +4262,6 @@ function setupInviteButton() {
     }
   };
 }
-
 function setupHostToggle() {
   const hostToggle = document.getElementById('hostModeToggle');
   if (!hostToggle) {
@@ -4264,7 +4272,7 @@ function setupHostToggle() {
   // Restore checked state if already host
   const isCurrentHost = sessionStorage.getItem('isHost') === 'true';
   hostToggle.checked = isCurrentHost;
-  
+
   // Apply current host state to UI
   if (isCurrentHost) {
     enableHostFeatures();
@@ -4274,42 +4282,44 @@ function setupHostToggle() {
 
   hostToggle.addEventListener('change', function() {
     console.log('[HOST] Host toggle changed, checked:', hostToggle.checked);
-    
+
     if (hostToggle.checked) {
       console.log('[HOST] Requesting host role...');
-      
-      if (window.socket && typeof window.socket.emit === "function") {
+
+      if (window.socket && window.socket.connected && typeof window.socket.emit === "function") {
         window.socket.emit('requestHost', {}, function(response) {
           console.log('[HOST] Server response:', response);
-          
+
           if (response && response.allowed) {
             console.log('[HOST] Host granted');
             enableHostFeatures();
+            sessionStorage.setItem('isHost', 'true');
           } else {
             console.log('[HOST] Host denied, showing error modal');
             hostToggle.checked = false;
-            
+            sessionStorage.setItem('isHost', 'false');
+
             const errorModal = document.getElementById('hostModeErrorModal');
             if (errorModal) {
               errorModal.style.display = 'flex';
             } else {
-              alert('Host already available in this room');
+              alert('Host already taken in this room');
             }
           }
         });
       } else {
-        console.warn("[HOST] Socket not ready yet");
+        console.warn("[HOST] Socket not connected yet");
         hostToggle.checked = false;
-        alert('Connection not ready. Please try again.');
+        alert('Connection not ready. Please wait until connected.');
       }
     } else {
       console.log('[HOST] Releasing host role...');
-      
-      // Releasing host role
+
       if (sessionStorage.getItem('isHost') === 'true') {
         disableHostFeatures();
-        
-        if (window.socket && typeof window.socket.emit === "function") {
+        sessionStorage.setItem('isHost', 'false');
+
+        if (window.socket && window.socket.connected && typeof window.socket.emit === "function") {
           window.socket.emit('releaseHost');
         }
       }
@@ -4318,6 +4328,10 @@ function setupHostToggle() {
 
   console.log("[HOST] Host toggle initialized");
 }
+
+
+
+
 
 function enableHostUI() {
   document.querySelectorAll('.host-only').forEach(el => {
