@@ -322,7 +322,7 @@ window.addTicketFromModal = function(ticketData) {
 };
 
 window.handleLoginSubmit = function() {
-  const nameInput = document.getElementById('loginNameInput');
+  const nameInput = document.getElementById('userNameInput'); // ✅ match your HTML
   const name = nameInput?.value?.trim();
   if (name) {
     sessionStorage.setItem('userName', name);
@@ -335,6 +335,7 @@ window.handleLoginSubmit = function() {
     }
   }
 };
+
 
 
 // Script for drop down menu
@@ -4975,14 +4976,14 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
-// **FIXED: Centralize and stabilize vote bubble handling**
-// Ensures exactly one vote bubble per .story-card
-// Moves the bubble under the 3-dot menu (.story-actions)
-// Updates bubble count in real-time from vote events
-// Listens for reveal events and updates bubble accordingly
+document.addEventListener('DOMContentLoaded', () => {
+  const joinBtn = document.getElementById('joinSessionWithName');
+  if (joinBtn) {
+    joinBtn.addEventListener('click', handleLoginSubmit);
+  }
+});
 
 
-  // **FIXED: ensureVoteBubbleForCard function**
   function ensureVoteBubbleForCard(storyCard) {
     if (!storyCard) return null;
     const storyId = storyCard.id || storyCard.getAttribute('data-id') || storyCard.dataset.id;
