@@ -9,9 +9,9 @@ const isPremiumUser = false;
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, getUserVotes } from './socket.js'; 
 // Ensure username exists before anything else
 if (!sessionStorage.getItem('userName')) {
-  const name = prompt("Enter your username:");
-  if (name) {
-    sessionStorage.setItem('userName', name);
+  const loginModal = document.getElementById('loginModalCustom');
+  if (loginModal) {
+    loginModal.style.display = 'flex'; // show modal
   }
 }
 
@@ -320,6 +320,22 @@ window.addTicketFromModal = function(ticketData) {
   manuallyAddedTickets.push(ticketData);
   return;
 };
+
+window.handleLoginSubmit = function() {
+  const nameInput = document.getElementById('loginNameInput');
+  const name = nameInput?.value?.trim();
+  if (name) {
+    sessionStorage.setItem('userName', name);
+    document.getElementById('loginModalCustom').style.display = 'none';
+
+    // Initialize socket after name is set
+    const roomId = new URLSearchParams(window.location.search).get('roomId');
+    if (roomId) {
+      window.initializeSocketWithName(roomId, name);
+    }
+  }
+};
+
 
 // Script for drop down menu
 document.addEventListener('DOMContentLoaded', function() {
