@@ -585,8 +585,6 @@ window.initializeSocketWithName = function(roomId, name) {
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
   // After socket is initialized
 const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-const roomId = roomId; // already passed to initializeSocketWithName
-
 socket.emit("checkHostStatus", { sessionId: roomId, requestedHost }, (response) => {
   if (response && response.canBeHost) {
     console.log("[JOIN] Granted Host Role");
