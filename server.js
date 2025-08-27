@@ -421,37 +421,6 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     callback({ isHost: false });
   }
 });
-
-
-  socket.on("checkHostStatus", ({ sessionId, requestedHost }, callback) => {
-    const room = io.sockets.adapter.rooms.get(sessionId);
-    let hostExists = false;
-
-    if (room) {
-      for (let id of room) {
-        const s = io.sockets.sockets.get(id);
-        if (s && s.isHost) {
-          hostExists = true;
-          break;
-        }
-      }
-    }
-
-    // ✅ If user wants to be host AND no host exists yet → make them host
-    if (requestedHost && !hostExists) {
-      socket.isHost = true;
-      console.log(`[HOST] ${socket.id} is now HOST of ${sessionId}`);
-      callback({ canBeHost: true });
-    } else {
-      socket.isHost = false;
-      console.log(`[GUEST] ${socket.id} joined ${sessionId} as guest`);
-      callback({ canBeHost: false });
-    }
-
-    // 🔹 Actually join the socket.io room
-    socket.join(sessionId);
-  });
-
   socket.on("disconnect", () => {
     console.log("[SOCKET] Disconnected:", socket.id);
   });
