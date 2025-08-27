@@ -7,14 +7,6 @@ const isPremiumUser = false;
 
 // Import socket functionality
 import { initializeWebSocket, emitCSVData, requestStoryVotes, emitAddTicket, getUserVotes } from './socket.js'; 
-// Ensure username exists before anything else
-if (!sessionStorage.getItem('userName')) {
-  const loginModal = document.getElementById('loginModalCustom');
-  if (loginModal) {
-    loginModal.style.display = 'flex'; // show modal
-  }
-}
-
 
 // Track deleted stories client-side
 let deletedStoryIds = new Set();
@@ -321,23 +313,6 @@ window.addTicketFromModal = function(ticketData) {
   return;
 };
 
-window.handleLoginSubmit = function() {
-  const nameInput = document.getElementById('userNameInput'); // ✅ match your HTML
-  const name = nameInput?.value?.trim();
-  if (name) {
-    sessionStorage.setItem('userName', name);
-    document.getElementById('loginModalCustom').style.display = 'none';
-
-    // Initialize socket after name is set
-    const roomId = new URLSearchParams(window.location.search).get('roomId');
-    if (roomId) {
-      window.initializeSocketWithName(roomId, name);
-    }
-  }
-};
-
-
-
 // Script for drop down menu
 document.addEventListener('DOMContentLoaded', function() {
   // Toggle menu when avatar/name is clicked
@@ -622,7 +597,7 @@ window.initializeSocketWithName = function(roomId, name) {
   
   // Add CSS for new layout
   addNewLayoutStyles();
-    
+    setupHostToggle();
 };
 
 /**
@@ -1528,7 +1503,6 @@ function initializeApp(roomId) {
   socket.on('connect', () => {
     if (!window.userMap) window.userMap = {};
     window.userMap[socket.id] = userName;
-    setupHostToggle();
   });
 
   if (socket && socket.io) {
@@ -4279,6 +4253,7 @@ function setupInviteButton() {
     }
   };
 }
+
 function setupHostToggle() {
   const hostToggle = document.getElementById('hostModeToggle');
   if (!hostToggle) {
@@ -4289,7 +4264,7 @@ function setupHostToggle() {
   // Restore checked state if already host
   const isCurrentHost = sessionStorage.getItem('isHost') === 'true';
   hostToggle.checked = isCurrentHost;
-
+  
   // Apply current host state to UI
   if (isCurrentHost) {
     enableHostFeatures();
@@ -4299,44 +4274,42 @@ function setupHostToggle() {
 
   hostToggle.addEventListener('change', function() {
     console.log('[HOST] Host toggle changed, checked:', hostToggle.checked);
-
+    
     if (hostToggle.checked) {
       console.log('[HOST] Requesting host role...');
-
-      if (window.socket && window.socket.connected && typeof window.socket.emit === "function") {
+      
+      if (window.socket && typeof window.socket.emit === "function") {
         window.socket.emit('requestHost', {}, function(response) {
           console.log('[HOST] Server response:', response);
-
+          
           if (response && response.allowed) {
             console.log('[HOST] Host granted');
             enableHostFeatures();
-            sessionStorage.setItem('isHost', 'true');
           } else {
             console.log('[HOST] Host denied, showing error modal');
             hostToggle.checked = false;
-            sessionStorage.setItem('isHost', 'false');
-
+            
             const errorModal = document.getElementById('hostModeErrorModal');
             if (errorModal) {
               errorModal.style.display = 'flex';
             } else {
-              alert('Host already taken in this room');
+              alert('Host already available in this room');
             }
           }
         });
       } else {
-        console.warn("[HOST] Socket not connected yet");
+        console.warn("[HOST] Socket not ready yet");
         hostToggle.checked = false;
-        alert('Connection not ready. Please wait until connected.');
+        alert('Connection not ready. Please try again.');
       }
     } else {
       console.log('[HOST] Releasing host role...');
-
+      
+      // Releasing host role
       if (sessionStorage.getItem('isHost') === 'true') {
         disableHostFeatures();
-        sessionStorage.setItem('isHost', 'false');
-
-        if (window.socket && window.socket.connected && typeof window.socket.emit === "function") {
+        
+        if (window.socket && typeof window.socket.emit === "function") {
           window.socket.emit('releaseHost');
         }
       }
@@ -4345,10 +4318,6 @@ function setupHostToggle() {
 
   console.log("[HOST] Host toggle initialized");
 }
-
-
-
-
 
 function enableHostUI() {
   document.querySelectorAll('.host-only').forEach(el => {
@@ -4976,14 +4945,14 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-  const joinBtn = document.getElementById('joinSessionWithName');
-  if (joinBtn) {
-    joinBtn.addEventListener('click', handleLoginSubmit);
-  }
-});
+// **FIXED: Centralize and stabilize vote bubble handling**
+// Ensures exactly one vote bubble per .story-card
+// Moves the bubble under the 3-dot menu (.story-actions)
+// Updates bubble count in real-time from vote events
+// Listens for reveal events and updates bubble accordingly
 
 
+  // **FIXED: ensureVoteBubbleForCard function**
   function ensureVoteBubbleForCard(storyCard) {
     if (!storyCard) return null;
     const storyId = storyCard.id || storyCard.getAttribute('data-id') || storyCard.dataset.id;
