@@ -46,29 +46,50 @@ window.notifyStoriesUpdated = function() {
   console.log(`Preserved ${preservedManualTickets.length} manual tickets`);
 };
 
+/**
+ * Enable host-only features and UI elements
+ */
 function enableHostFeatures() {
   console.log('[HOST] Enabling host features');
   
-  // Show host-only buttons and features
-  const hostOnlyElements = [
-    'revealVotesBtn',
-    'resetVotesBtn', 
-    'addTicketBtn',
+  // Update session storage
+  sessionStorage.setItem('isHost', 'true');
+  
+  // Show host-only buttons in the profile menu
+  const hostOnlyMenuItems = [
     'uploadTicketMenuBtn',
-    'exportToCsvMenuBtn',
+    'exportToCsvMenuBtn', 
     'jiraImportMenuBtn'
   ];
   
-  hostOnlyElements.forEach(elementId => {
+  hostOnlyMenuItems.forEach(elementId => {
     const element = document.getElementById(elementId);
     if (element) {
-      element.style.display = '';
-      element.disabled = false;
-      element.classList.remove('hide-for-guests', 'disabled');
+      element.style.display = 'flex';
+      element.classList.remove('hide-for-guests');
     }
   });
   
-  // Enable story navigation
+  // Show control buttons in sidebar
+  const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
+  controlButtons.forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.style.display = 'block';
+      button.disabled = false;
+      button.classList.remove('hide-for-guests');
+    }
+  });
+  
+  // Show add ticket button
+  const addTicketBtn = document.getElementById('addTicketBtn');
+  if (addTicketBtn) {
+    addTicketBtn.style.display = 'flex';
+    addTicketBtn.disabled = false;
+    addTicketBtn.classList.remove('hide-for-guests');
+  }
+  
+  // Enable story navigation buttons
   const navButtons = ['nextStory', 'prevStory'];
   navButtons.forEach(buttonId => {
     const button = document.getElementById(buttonId);
@@ -78,42 +99,70 @@ function enableHostFeatures() {
     }
   });
   
-  // Enable story card interactions
+  // Remove guest restrictions from story cards
   document.querySelectorAll('.story-card').forEach(card => {
     card.classList.remove('disabled-story');
-    // Re-enable click handlers if needed
+    
+    // Re-enable click handlers
     const index = parseInt(card.dataset.index);
     if (!isNaN(index)) {
       card.onclick = () => selectStory(index);
     }
   });
   
-  console.log('[HOST] Host features enabled');
+  // Enable planning cards
+  document.querySelectorAll('#planningCards .card').forEach(card => {
+    card.classList.remove('disabled');
+    card.setAttribute('draggable', 'true');
+  });
+  
+  console.log('[HOST] Host features enabled successfully');
 }
 
+/**
+ * Disable host-only features and UI elements  
+ */
 function disableHostFeatures() {
   console.log('[HOST] Disabling host features');
   
-  // Hide host-only buttons and features
-  const hostOnlyElements = [
-    'revealVotesBtn',
-    'resetVotesBtn',
-    'addTicketBtn', 
+  // Update session storage
+  sessionStorage.setItem('isHost', 'false');
+  
+  // Hide host-only buttons in the profile menu
+  const hostOnlyMenuItems = [
     'uploadTicketMenuBtn',
     'exportToCsvMenuBtn',
     'jiraImportMenuBtn'
   ];
   
-  hostOnlyElements.forEach(elementId => {
+  hostOnlyMenuItems.forEach(elementId => {
     const element = document.getElementById(elementId);
     if (element) {
       element.style.display = 'none';
-      element.disabled = true;
-      element.classList.add('hide-for-guests', 'disabled');
+      element.classList.add('hide-for-guests');
     }
   });
   
-  // Disable story navigation  
+  // Hide control buttons in sidebar
+  const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
+  controlButtons.forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.style.display = 'none';
+      button.disabled = true;
+      button.classList.add('hide-for-guests');
+    }
+  });
+  
+  // Hide add ticket button
+  const addTicketBtn = document.getElementById('addTicketBtn');
+  if (addTicketBtn) {
+    addTicketBtn.style.display = 'none';
+    addTicketBtn.disabled = true;
+    addTicketBtn.classList.add('hide-for-guests');
+  }
+  
+  // Disable story navigation buttons
   const navButtons = ['nextStory', 'prevStory'];
   navButtons.forEach(buttonId => {
     const button = document.getElementById(buttonId);
@@ -123,15 +172,20 @@ function disableHostFeatures() {
     }
   });
   
-  // Disable story card interactions
+  // Add guest restrictions to story cards
   document.querySelectorAll('.story-card').forEach(card => {
     card.classList.add('disabled-story');
     card.onclick = null; // Remove click handler
   });
   
-  console.log('[HOST] Host features disabled');
+  // Disable planning cards
+  document.querySelectorAll('#planningCards .card').forEach(card => {
+    card.classList.add('disabled');
+    card.setAttribute('draggable', 'false');
+  });
+  
+  console.log('[HOST] Host features disabled successfully');
 }
-
 
 
 /** function to disable the change language */
@@ -1471,6 +1525,16 @@ function initializeApp(roomId) {
     updateVoteCountUI(storyId);
   });
 
+
+socket.on('hostChanged', ({ hostId, userName }) => {
+  console.log(`[HOST] Host changed: ${userName}`);
+
+});
+
+socket.on('hostLeft', () => {
+  console.log('[HOST] Host left — room is free now');
+
+});
 socket.on('storyPointsUpdate', ({ storyId, points }) => {
     console.log(`[SOCKET] Story points update received from server: ${storyId} = ${points}`);
 
@@ -1747,7 +1811,7 @@ socket.on('resyncState', ({ tickets, votesPerStory: serverVotes, votesRevealed: 
   setupCSVDeleteButtons();
   
   addNewLayoutStyles();
-  
+  setupHostToggle();
   setInterval(refreshCurrentStoryVotes, 30000);
 
   // Close dropdowns when clicking outside
@@ -4193,49 +4257,66 @@ function setupInviteButton() {
 function setupHostToggle() {
   const hostToggle = document.getElementById('hostModeToggle');
   if (!hostToggle) {
-    console.warn('[HOST] Host toggle not found');
+    console.warn("[HOST] Host toggle element not found in DOM");
     return;
   }
 
-  hostToggle.addEventListener('change', function () {
-    if (!socket) {
-      console.warn('[HOST] Socket not ready yet');
-      hostToggle.checked = false;
-      return;
-    }
+  // Restore checked state if already host
+  const isCurrentHost = sessionStorage.getItem('isHost') === 'true';
+  hostToggle.checked = isCurrentHost;
+  
+  // Apply current host state to UI
+  if (isCurrentHost) {
+    enableHostFeatures();
+  } else {
+    disableHostFeatures();
+  }
 
-    if (this.checked) {
+  hostToggle.addEventListener('change', function() {
+    console.log('[HOST] Host toggle changed, checked:', hostToggle.checked);
+    
+    if (hostToggle.checked) {
       console.log('[HOST] Requesting host role...');
-      socket.emit('requestHost', {}, (response) => {
-        if (response.allowed) {
-          console.log('[HOST] Host granted');
-          enableHostUI();
-        } else {
-          console.log('[HOST] Host already exists');
-          this.checked = false;
-          showHostAlreadyExistsModal();
-        }
-      });
+      
+      if (window.socket && typeof window.socket.emit === "function") {
+        window.socket.emit('requestHost', {}, function(response) {
+          console.log('[HOST] Server response:', response);
+          
+          if (response && response.allowed) {
+            console.log('[HOST] Host granted');
+            enableHostFeatures();
+          } else {
+            console.log('[HOST] Host denied, showing error modal');
+            hostToggle.checked = false;
+            
+            const errorModal = document.getElementById('hostModeErrorModal');
+            if (errorModal) {
+              errorModal.style.display = 'flex';
+            } else {
+              alert('Host already available in this room');
+            }
+          }
+        });
+      } else {
+        console.warn("[HOST] Socket not ready yet");
+        hostToggle.checked = false;
+        alert('Connection not ready. Please try again.');
+      }
     } else {
       console.log('[HOST] Releasing host role...');
-      socket.emit('releaseHost');
-      disableHostUI();
+      
+      // Releasing host role
+      if (sessionStorage.getItem('isHost') === 'true') {
+        disableHostFeatures();
+        
+        if (window.socket && typeof window.socket.emit === "function") {
+          window.socket.emit('releaseHost');
+        }
+      }
     }
   });
 
-  // React to host changes in room
-  socket.on('hostChanged', ({ hostId, userName }) => {
-    console.log(`[HOST] Host changed: ${userName}`);
-    if (socket.id !== hostId) {
-      // If someone else became host, disable host UI for this client
-      hostToggle.checked = false;
-      disableHostUI();
-    }
-  });
-
-  socket.on('hostLeft', () => {
-    console.log('[HOST] Host left — room is free now');
-  });
+  console.log("[HOST] Host toggle initialized");
 }
 
 function enableHostUI() {
