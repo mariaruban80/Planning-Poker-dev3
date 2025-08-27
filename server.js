@@ -390,27 +390,39 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 });
 
   socket.on("checkHostStatus", ({ sessionId, requestedHost }, callback) => {
-  const room = io.sockets.adapter.rooms.get(sessionId);
-  let hostExists = false;
+    const room = io.sockets.adapter.rooms.get(sessionId);
+    let hostExists = false;
 
-  if (room) {
-    for (let id of room) {
-      const s = io.sockets.sockets.get(id);
-      if (s && s.isHost) {
-        hostExists = true;
-        break;
+    if (room) {
+      for (let id of room) {
+        const s = io.sockets.sockets.get(id);
+        if (s && s.isHost) {
+          hostExists = true;
+          break;
+        }
       }
     }
-  }
 
-  if (requestedHost && !hostExists) {
-    socket.isHost = true;
-    callback({ canBeHost: true });
-  } else {
-    socket.isHost = false;
-    callback({ canBeHost: false });
-  }
-});
+    // ✅ If user wants to be host AND no host exists yet → make them host
+    if (requestedHost && !hostExists) {
+      socket.isHost = true;
+      console.log(`[HOST] ${socket.id} is now HOST of ${sessionId}`);
+      callback({ canBeHost: true });
+    } else {
+      socket.isHost = false;
+      console.log(`[GUEST] ${socket.id} joined ${sessionId} as guest`);
+      callback({ canBeHost: false });
+    }
+
+    // 🔹 Actually join the socket.io room
+    socket.join(sessionId);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("[SOCKET] Disconnected:", socket.id);
+  });
+
+
 
   
 socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
