@@ -583,19 +583,24 @@ window.initializeSocketWithName = function(roomId, name) {
   
   // Initialize socket with the name
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
-  // After socket is initialized
-const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-socket.emit("checkHostStatus", { sessionId: roomId, requestedHost }, (response) => {
-  if (response && response.canBeHost) {
-    console.log("[JOIN] Granted Host Role");
-    sessionStorage.setItem("isHost", "true");
-    enableHostFeatures();
-  } else {
-    console.log("[JOIN] Joining as Guest");
-    sessionStorage.setItem("isHost", "false");
-    disableHostFeatures();
-  }
-});
+
+  // When socket connects, join the session + decide role
+  socket.on("connect", () => {
+    const requestedHost = sessionStorage.getItem("requestedHost") === "true";
+    const userName = sessionStorage.getItem("userName") || name;
+
+    socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName }, (response) => {
+      if (response && response.isHost) {
+        console.log("[JOIN] Granted Host Role");
+        sessionStorage.setItem("isHost", "true");
+        enableHostFeatures();
+      } else {
+        console.log("[JOIN] Joining as Guest");
+        sessionStorage.setItem("isHost", "false");
+        disableHostFeatures();
+      }
+    });
+  });
 
   // Continue with other initialization steps
   setupCSVUploader();
@@ -610,8 +615,11 @@ socket.emit("checkHostStatus", { sessionId: roomId, requestedHost }, (response) 
   
   // Add CSS for new layout
   addNewLayoutStyles();
-    setupHostToggle();
+  setupHostToggle();
 };
+
+
+
 
 /**
  * Handle updating a ticket from the modal
