@@ -46,6 +46,94 @@ window.notifyStoriesUpdated = function() {
   console.log(`Preserved ${preservedManualTickets.length} manual tickets`);
 };
 
+function enableHostFeatures() {
+  console.log('[HOST] Enabling host features');
+  
+  // Show host-only buttons and features
+  const hostOnlyElements = [
+    'revealVotesBtn',
+    'resetVotesBtn', 
+    'addTicketBtn',
+    'uploadTicketMenuBtn',
+    'exportToCsvMenuBtn',
+    'jiraImportMenuBtn'
+  ];
+  
+  hostOnlyElements.forEach(elementId => {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.style.display = '';
+      element.disabled = false;
+      element.classList.remove('hide-for-guests', 'disabled');
+    }
+  });
+  
+  // Enable story navigation
+  const navButtons = ['nextStory', 'prevStory'];
+  navButtons.forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.disabled = false;
+      button.classList.remove('disabled-nav');
+    }
+  });
+  
+  // Enable story card interactions
+  document.querySelectorAll('.story-card').forEach(card => {
+    card.classList.remove('disabled-story');
+    // Re-enable click handlers if needed
+    const index = parseInt(card.dataset.index);
+    if (!isNaN(index)) {
+      card.onclick = () => selectStory(index);
+    }
+  });
+  
+  console.log('[HOST] Host features enabled');
+}
+
+function disableHostFeatures() {
+  console.log('[HOST] Disabling host features');
+  
+  // Hide host-only buttons and features
+  const hostOnlyElements = [
+    'revealVotesBtn',
+    'resetVotesBtn',
+    'addTicketBtn', 
+    'uploadTicketMenuBtn',
+    'exportToCsvMenuBtn',
+    'jiraImportMenuBtn'
+  ];
+  
+  hostOnlyElements.forEach(elementId => {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.style.display = 'none';
+      element.disabled = true;
+      element.classList.add('hide-for-guests', 'disabled');
+    }
+  });
+  
+  // Disable story navigation  
+  const navButtons = ['nextStory', 'prevStory'];
+  navButtons.forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.disabled = true;
+      button.classList.add('disabled-nav');
+    }
+  });
+  
+  // Disable story card interactions
+  document.querySelectorAll('.story-card').forEach(card => {
+    card.classList.add('disabled-story');
+    card.onclick = null; // Remove click handler
+  });
+  
+  console.log('[HOST] Host features disabled');
+}
+
+
+
 /** function to disable the change language */
 function showPremiumUpgradePopup() {
   const modal = document.getElementById('premiumModal');
