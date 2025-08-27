@@ -583,7 +583,22 @@ window.initializeSocketWithName = function(roomId, name) {
   
   // Initialize socket with the name
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
-  
+  // After socket is initialized
+const requestedHost = sessionStorage.getItem("requestedHost") === "true";
+const roomId = roomId; // already passed to initializeSocketWithName
+
+socket.emit("checkHostStatus", { sessionId: roomId, requestedHost }, (response) => {
+  if (response && response.canBeHost) {
+    console.log("[JOIN] Granted Host Role");
+    sessionStorage.setItem("isHost", "true");
+    enableHostFeatures();
+  } else {
+    console.log("[JOIN] Joining as Guest");
+    sessionStorage.setItem("isHost", "false");
+    disableHostFeatures();
+  }
+});
+
   // Continue with other initialization steps
   setupCSVUploader();
   setupInviteButton();
