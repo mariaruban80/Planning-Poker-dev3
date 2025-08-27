@@ -5102,6 +5102,10 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
 <!-- Scripts -->
 
 <script>
+     // Get values from sessionStorage
+
+  const userName = sessionStorage.getItem("userName");
+  const requestedHost = sessionStorage.getItem("requestedHost") === "true";
 
 function updateHeaderStyle() {
   const style = document.createElement('style');
