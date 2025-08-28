@@ -5270,17 +5270,23 @@ function generateImportPreview(headers, rows) {
 
 
 
-// === FIX: Ensure requestedHost is stored before joining ===
+// === FIX: Properly save requestedHost and userName before joining ===
 const joinBtn = document.getElementById("joinBtn");
 if (joinBtn) {
   joinBtn.addEventListener("click", () => {
+    const name = document.getElementById("userNameInput").value;
+    const roomId = getRoomIdFromUrl();
+
+    // Save both userName and requestedHost before initializing socket
+    sessionStorage.setItem("userName", name);
+
     const joinAsHostCheckbox = document.getElementById("joinAsHostCheckbox");
-    if (joinAsHostCheckbox && joinAsHostCheckbox.checked) {
-      sessionStorage.setItem("requestedHost", "true");
-    } else {
-      sessionStorage.setItem("requestedHost", "false");
-    }
-    // Existing logic will call initializeSocketWithName after this
+    sessionStorage.setItem(
+      "requestedHost",
+      joinAsHostCheckbox && joinAsHostCheckbox.checked ? "true" : "false"
+    );
+
+    window.initializeSocketWithName(roomId, name);
   });
 }
 // === END FIX ===
