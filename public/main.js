@@ -584,13 +584,19 @@ window.initializeSocketWithName = function(roomId, name) {
   // Initialize socket with the name
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // When socket connects, join the session + decide role
-  socket.on("connect", () => {
-    const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-    const userName = sessionStorage.getItem("userName") || name;
+socket.on("connect", () => {
+  const requestedHost = sessionStorage.getItem("requestedHost") === "true";
+  const userName = sessionStorage.getItem("userName") || name;
 
-    socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName }, (response) => {
-      if (response && response.isHost) {
+  socket.emit("joinSession", { 
+    sessionId: roomId, 
+    requestedHost, 
+    name: userName 
+  }, (response) => {
+    console.log("[JOIN] Server response:", response);
+    
+    if (response && response.success) {
+      if (response.isHost) {
         console.log("[JOIN] Granted Host Role");
         sessionStorage.setItem("isHost", "true");
         enableHostFeatures();
@@ -599,8 +605,22 @@ window.initializeSocketWithName = function(roomId, name) {
         sessionStorage.setItem("isHost", "false");
         disableHostFeatures();
       }
-    });
+    } else {
+      // ✅ Handle host already exists case
+      console.log("[JOIN] Host request denied:", response.message);
+      sessionStorage.setItem("isHost", "false");
+      disableHostFeatures();
+      
+      // Show error modal
+      const errorModal = document.getElementById('hostModeErrorModal');
+      if (errorModal) {
+        errorModal.style.display = 'flex';
+      } else {
+        alert('Cannot join as host: ' + (response.message || 'Host already exists in this room'));
+      }
+    }
   });
+});
 
   // Continue with other initialization steps
   setupCSVUploader();
