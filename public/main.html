@@ -867,8 +867,7 @@
 function joinRoom() {
   const name = document.getElementById("joinNameInput").value.trim();
   const sessionId = document.getElementById("sessionIdInput").value.trim();
-  const requestHost = document.getElementById("allowJoinAsHost").checked; 
-  const ihost = document.getElementById('isHost');
+  const requestHost = document.getElementById("allowJoinAsHost").checked;
   
   if (!name) {
     alert("Please enter your name.");
@@ -882,17 +881,8 @@ function joinRoom() {
 
   // Save details in sessionStorage
   sessionStorage.setItem("userName", name);
-  sessionStorage.setItem("requestedHost", requestHost); // ✅ Save intent
- // sessionStorage.setItem("isRoomCreator", "false"); // ✅ joining, not creating
-
-  // Only set isRoomCreator = true if host checkbox is checked
-  if (requestHost) {
-    sessionStorage.setItem("isRoomCreator", "true");
-        console.log('Host found', ihost);
-  } else {
-    sessionStorage.setItem("isRoomCreator", "false");
-        console.log('Host found', ihost);
-  }
+  sessionStorage.setItem("requestedHost", requestHost.toString()); // ✅ Fix: Save as string
+  sessionStorage.setItem("isRoomCreator", "false"); // ✅ Always false when joining
   
   // Navigate to the room
   window.location.href = `/index.html?roomId=${sessionId}`;
