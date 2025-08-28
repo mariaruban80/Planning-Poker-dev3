@@ -584,19 +584,13 @@ window.initializeSocketWithName = function(roomId, name) {
   // Initialize socket with the name
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-socket.on("connect", () => {
-  const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-  const userName = sessionStorage.getItem("userName") || name;
+  // When socket connects, join the session + decide role
+  socket.on("connect", () => {
+    const requestedHost = sessionStorage.getItem("requestedHost") === "true";
+    const userName = sessionStorage.getItem("userName") || name;
 
-  socket.emit("joinSession", { 
-    sessionId: roomId, 
-    requestedHost, 
-    name: userName 
-  }, (response) => {
-    console.log("[JOIN] Server response:", response);
-    
-    if (response && response.success) {
-      if (response.isHost) {
+    socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName }, (response) => {
+      if (response && response.isHost) {
         console.log("[JOIN] Granted Host Role");
         sessionStorage.setItem("isHost", "true");
         enableHostFeatures();
@@ -605,22 +599,8 @@ socket.on("connect", () => {
         sessionStorage.setItem("isHost", "false");
         disableHostFeatures();
       }
-    } else {
-      // ✅ Handle host already exists case
-      console.log("[JOIN] Host request denied:", response.message);
-      sessionStorage.setItem("isHost", "false");
-      disableHostFeatures();
-      
-      // Show error modal
-      const errorModal = document.getElementById('hostModeErrorModal');
-      if (errorModal) {
-        errorModal.style.display = 'flex';
-      } else {
-        alert('Cannot join as host: ' + (response.message || 'Host already exists in this room'));
-      }
-    }
+    });
   });
-});
 
   // Continue with other initialization steps
   setupCSVUploader();
@@ -1541,58 +1521,10 @@ function appendRoomIdToURL(roomId) {
  */
 function initializeApp(roomId) {
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-socket.on('connect', () => {
-  if (!window.userMap) window.userMap = {};
-  window.userMap[socket.id] = userName;
-  
-  // Get room ID from current page
-  const urlParams = new URLSearchParams(window.location.search);
-  const currentRoomId = urlParams.get('roomId');
-  
-  // Check if user requested host role
-  const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-  
-  console.log(`[CONNECT] Joining session ${currentRoomId}, requestedHost: ${requestedHost}`);
-  
-  // Join session with host request
-  socket.emit("joinSession", { 
-    sessionId: currentRoomId, 
-    requestedHost, 
-    name: userName 
-  }, (response) => {
-    console.log("[JOIN] Server response:", response);
-    
-    if (response && response.success) {
-      if (response.isHost) {
-        console.log("[JOIN] Granted Host Role");
-        sessionStorage.setItem("isHost", "true");
-        enableHostFeatures();
-      } else {
-        console.log("[JOIN] Joining as Guest");
-        sessionStorage.setItem("isHost", "false");
-        disableHostFeatures();
-      }
-    } else {
-      // Handle host request denied
-      console.log("[JOIN] Host request denied:", response?.message);
-      sessionStorage.setItem("isHost", "false");
-      disableHostFeatures();
-      
-      // Show error modal
-      setTimeout(() => {
-        const errorModal = document.getElementById('hostModeErrorModal');
-        if (errorModal) {
-          errorModal.style.display = 'flex';
-        } else {
-          alert('Cannot join as host: ' + (response?.message || 'Host already exists in this room'));
-        }
-      }, 500);
-    }
+  socket.on('connect', () => {
+    if (!window.userMap) window.userMap = {};
+    window.userMap[socket.id] = userName;
   });
-  
-  // Clear the requestedHost flag after processing
-  sessionStorage.removeItem("requestedHost");
-});
 
   if (socket && socket.io) {
     socket.io.reconnectionAttempts = 10;
