@@ -583,12 +583,13 @@ mappingSelects.forEach(select => {
  * @param {string} roomId - Room ID to join 
  * @param {string} name - Username to use
  */
+
 window.initializeSocketWithName = function(roomId, name) {
   if (!roomId || !name) return;
 
   console.log(`[APP] Initializing socket with name: ${name} for room: ${roomId}`);
 
-  // Set username in module scope
+  // Store username and roomId
   userName = name;
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
@@ -599,19 +600,17 @@ window.initializeSocketWithName = function(roomId, name) {
   // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // === Handle socket connection ===
+  // === Initial connection: always join as guest ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-    // Initial join: previous host status or default to guest
-    const prevHost = sessionStorage.getItem("isHost") === "true";
     const userNameStored = sessionStorage.getItem("userName") || name;
 
     socket.emit(
       "joinSession",
-      { sessionId: roomId, requestedHost: prevHost, name: userNameStored },
+      { sessionId: roomId, requestedHost: false, name: userNameStored },
       (response) => {
-        console.log("[JOIN CALLBACK RAW]", response);
+        console.log("[JOIN CALLBACK INITIAL]", response);
 
         if (!response) {
           console.error("[JOIN ERROR] No response from server!");
@@ -626,40 +625,35 @@ window.initializeSocketWithName = function(roomId, name) {
           return;
         }
 
-        if (response.isHost) {
-          console.log("[JOIN] Granted Host Role");
-          sessionStorage.setItem("isHost", "true");
-          enableHostFeatures();
-        } else {
-          console.log("[JOIN] Joining as Guest");
-          sessionStorage.setItem("isHost", "false");
-          disableHostFeatures();
-        }
+        if (response.isHost) enableHostFeatures();
+        else disableHostFeatures();
       }
     );
   });
 
-  // === Handle "Allow as host" button ===
+  // === Handle "Allow as host" button click ===
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
       console.log("[HOST REQUEST] User clicked 'Allow as host'");
-      sessionStorage.setItem("requestedHost", "true");
 
-      const userNameStored = sessionStorage.getItem("userName") || name;
+      const userNameStored = sessionStorage.getItem("userName");
 
+      // Emit joinSession with requestedHost = true
       socket.emit(
         "joinSession",
         { sessionId: roomId, requestedHost: true, name: userNameStored },
         (response) => {
           console.log("[JOIN CALLBACK HOST]", response);
 
+          if (!response) return console.error("[HOST] No response from server");
+
           if (response.isHost) {
             console.log("[HOST] Granted Host Role");
             sessionStorage.setItem("isHost", "true");
             enableHostFeatures();
           } else {
-            console.log("[HOST] Still Guest");
+            console.log("[HOST] Still Guest — host already exists");
             sessionStorage.setItem("isHost", "false");
             disableHostFeatures();
           }
@@ -668,7 +662,7 @@ window.initializeSocketWithName = function(roomId, name) {
     });
   }
 
-  // === Continue initialization ===
+  // === Continue with app initialization ===
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -683,7 +677,6 @@ window.initializeSocketWithName = function(roomId, name) {
   addNewLayoutStyles();
   setupHostToggle();
 };
-
 
 
 
