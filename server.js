@@ -392,13 +392,15 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
   // ==========================
 // Join Session + Decide Role
 // ==========================
+
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  // ✅ Always save name before anything else
+  // Store username on socket
   socket.userName = name;
 
-  // ✅ Join room
+  // Join the room
   socket.join(sessionId);
 
+  // Check if a host already exists in this room
   const room = io.sockets.adapter.rooms.get(sessionId);
   let hostExists = false;
 
@@ -412,28 +414,33 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     }
   }
 
-  // ✅ Decide role
-  if (requestedHost && !hostExists) {
+  // Decide host or guest
+  if (!hostExists) {
+    // First user OR no active host → become host
     socket.isHost = true;
-    console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
-  } else if (!hostExists) {
-    // 🔑 Fix: If no host exists at all, auto-promote first user to host
+    console.log(`[HOST] ${name} (${socket.id}) is now HOST of ${sessionId}`);
+  } else if (requestedHost && !hostExists) {
+    // Explicit request, no host → grant
     socket.isHost = true;
-    console.log(`[HOST-AUTO] ${name} (${socket.id}) became HOST of ${sessionId}`);
+    console.log(`[HOST] ${name} (${socket.id}) requested and granted HOST`);
   } else if (requestedHost && hostExists) {
+    // Host already exists → deny host request
     socket.isHost = false;
-    console.log(`[DENIED] ${name} (${socket.id}) tried to join ${sessionId} as HOST but one already exists`);
+    console.log(`[DENIED] ${name} (${socket.id}) wanted HOST, but one exists`);
     callback({ isHost: false, error: "A host already exists in this session." });
-    return; // 🚫 Don’t continue as guest silently
+    return;
   } else {
+    // Normal guest
     socket.isHost = false;
     console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
   }
 
-  // ✅ Always call back with definitive answer
+  // ✅ Always call callback with clear result
   callback({ isHost: socket.isHost, error: null });
+  console.log("[JOIN DEBUG] Sending callback →", { isHost: socket.isHost });
 
-  // ✅ Update all clients with fresh user list
+
+  // Build and emit updated user list
   const users = [];
   if (room) {
     for (let id of room) {
@@ -447,6 +454,7 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
       }
     }
   }
+
   io.to(sessionId).emit("userListUpdate", users);
 });
 
