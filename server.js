@@ -14,22 +14,6 @@ const io = new Server(httpServer, {
   connectTimeout: 30000 // Increased connection timeout for reliability
 });
 
-    // === FIX: Save username and broadcast updated user list immediately ===
-    socket.userName = name;
-    const users = [];
-    const currentRoom = io.sockets.adapter.rooms.get(sessionId);
-    if (currentRoom) {
-      for (let id of currentRoom) {
-        const s = io.sockets.sockets.get(id);
-        if (s) {
-          users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
-        }
-      }
-      io.to(sessionId).emit("userListUpdate", users);
-    }
-    // === END FIX ===
-    
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // added to call the main.html file
@@ -412,11 +396,11 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 
   console.log("[SOCKET] New connection:", socket.id);
 
-socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-    socket.join(sessionId);
-
-    // ✅ Save username on this socket
+  socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+    // === FIX: Save username and broadcast user list ===
     socket.userName = name;
+    
+    socket.join(sessionId);
 
     const room = io.sockets.adapter.rooms.get(sessionId);
     let hostExists = false;
@@ -433,23 +417,27 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
 
     if (requestedHost && !hostExists) {
       socket.isHost = true;
-      if (callback) callback({ isHost: true });
+      console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
+      if (callback) callback({ isHost: true 
+    // Broadcast updated user list
+    {
+      const users = [];
+      const currentRoom = io.sockets.adapter.rooms.get(sessionId);
+      if (currentRoom) {
+        for (let id of currentRoom) {
+          const s = io.sockets.sockets.get(id);
+          if (s) {
+            users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
+          }
+        }
+        io.to(sessionId).emit("userListUpdate", users);
+      }
+    }
+    });
     } else {
       socket.isHost = false;
+      console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
       if (callback) callback({ isHost: false });
-    }
-
-    // ✅ Immediately broadcast updated user list
-    const users = [];
-    const currentRoom = io.sockets.adapter.rooms.get(sessionId);
-    if (currentRoom) {
-      for (let id of currentRoom) {
-        const s = io.sockets.sockets.get(id);
-        if (s) {
-          users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
-        }
-      }
-      io.to(sessionId).emit("userListUpdate", users);
     }
   });
 
