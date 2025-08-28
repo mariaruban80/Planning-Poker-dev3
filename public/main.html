@@ -878,11 +878,18 @@ function joinRoom() {
     alert("Please enter a session ID.");
     return;
   }
-  
+
   // Save details in sessionStorage
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("requestedHost", requestHost); // ✅ Save intent
-  sessionStorage.setItem("isRoomCreator", "false"); // ✅ joining, not creating
+ // sessionStorage.setItem("isRoomCreator", "false"); // ✅ joining, not creating
+
+  // Only set isRoomCreator = true if host checkbox is checked
+  if (requestHost) {
+    sessionStorage.setItem("isRoomCreator", "true");
+  } else {
+    sessionStorage.setItem("isRoomCreator", "false");
+  }
   
   // Navigate to the room
   window.location.href = `/index.html?roomId=${sessionId}`;
