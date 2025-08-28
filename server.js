@@ -354,7 +354,7 @@ io.on('connection', (socket) => {
   });
 
   console.log(`[SERVER] New client connected: ${socket.id}`);
-
+/*
 socket.on('requestHost', (data, callback) => {
 const roomId = socket.data.roomId;
 if (!roomId) return callback({ allowed: false, error: "No room joined" });
@@ -387,7 +387,7 @@ delete roomHosts[roomId];
 io.to(roomId).emit('hostLeft');
 console.log(`[SERVER] Host disconnected from room ${roomId}`);
 }
-});
+}); */
 
   // ==========================
 // Join Session + Decide Role
