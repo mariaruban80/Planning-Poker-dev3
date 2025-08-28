@@ -394,13 +394,10 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // ==========================
 
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  // Store username on socket
+  // Save name
   socket.userName = name;
-
-  // Join the room
   socket.join(sessionId);
 
-  // Check if a host already exists in this room
   const room = io.sockets.adapter.rooms.get(sessionId);
   let hostExists = false;
 
@@ -414,49 +411,33 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     }
   }
 
-  // Decide host or guest
   if (!hostExists) {
-    // First user OR no active host → become host
     socket.isHost = true;
-    console.log(`[HOST] ${name} (${socket.id}) is now HOST of ${sessionId}`);
-  } else if (requestedHost && !hostExists) {
-    // Explicit request, no host → grant
-    socket.isHost = true;
-    console.log(`[HOST] ${name} (${socket.id}) requested and granted HOST`);
-  } else if (requestedHost && hostExists) {
-    // Host already exists → deny host request
-    socket.isHost = false;
-    console.log(`[DENIED] ${name} (${socket.id}) wanted HOST, but one exists`);
-    callback({ isHost: false, error: "A host already exists in this session." });
-    return;
+    console.log(`[HOST] ${name} (${socket.id}) promoted to HOST for ${sessionId}`);
   } else {
-    // Normal guest
     socket.isHost = false;
-    console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
+    console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as guest`);
   }
 
-  // ✅ Always call callback with clear result
-  callback({ isHost: socket.isHost, error: null });
-  console.log("[JOIN DEBUG] Sending callback →", { isHost: socket.isHost });
+  const result = { isHost: socket.isHost, error: null };
+  console.log("[JOIN DEBUG] Sending callback →", result);
 
+  // ✅ Always call callback
+  callback(result);
 
-  // Build and emit updated user list
+  // Send user list
   const users = [];
   if (room) {
     for (let id of room) {
       const s = io.sockets.sockets.get(id);
       if (s) {
-        users.push({
-          id,
-          name: s.userName || "Unknown",
-          isHost: !!s.isHost
-        });
+        users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
       }
     }
   }
-
   io.to(sessionId).emit("userListUpdate", users);
 });
+
 
 
 
