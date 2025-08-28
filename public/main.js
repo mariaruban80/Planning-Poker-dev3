@@ -585,51 +585,90 @@ mappingSelects.forEach(select => {
  */
 window.initializeSocketWithName = function(roomId, name) {
   if (!roomId || !name) return;
-  
+
   console.log(`[APP] Initializing socket with name: ${name} for room: ${roomId}`);
-  
-  // Set username in the module scope
+
+  // Set username in module scope
   userName = name;
-  
-  // Load deleted stories from sessionStorage first
+  sessionStorage.setItem("userName", name);
+  sessionStorage.setItem("sessionId", roomId);
+
+  // Load deleted stories first
   loadDeletedStoriesFromStorage(roomId);
-  
-  // Initialize socket with the name
+
+  // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // When socket connects, join the session + decide role
+  // === Handle socket connection ===
   socket.on("connect", () => {
-    const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-    const userName = sessionStorage.getItem("userName") || name;
+    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName }, (response) => {
-  console.log("[JOIN CALLBACK RAW]", response); // 👈 log raw
+    // Initial join: previous host status or default to guest
+    const prevHost = sessionStorage.getItem("isHost") === "true";
+    const userNameStored = sessionStorage.getItem("userName") || name;
 
-  if (!response) {
-    console.error("[JOIN ERROR] No response from server!");
-    return;
-  }
+    socket.emit(
+      "joinSession",
+      { sessionId: roomId, requestedHost: prevHost, name: userNameStored },
+      (response) => {
+        console.log("[JOIN CALLBACK RAW]", response);
 
-  if (response.error) {
-    console.error("[JOIN ERROR]", response.error);
-    sessionStorage.setItem("isHost", "false");
-    disableHostFeatures();
-    return;
-  }
+        if (!response) {
+          console.error("[JOIN ERROR] No response from server!");
+          disableHostFeatures();
+          return;
+        }
 
-  if (response.isHost) {
-    console.log("[JOIN] Granted Host Role");
-    sessionStorage.setItem("isHost", "true");
-    enableHostFeatures();
-  } else {
-    console.log("[JOIN] Joining as Guest");
-    sessionStorage.setItem("isHost", "false");
-    disableHostFeatures();
-  }
-});
+        if (response.error) {
+          console.error("[JOIN ERROR]", response.error);
+          sessionStorage.setItem("isHost", "false");
+          disableHostFeatures();
+          return;
+        }
+
+        if (response.isHost) {
+          console.log("[JOIN] Granted Host Role");
+          sessionStorage.setItem("isHost", "true");
+          enableHostFeatures();
+        } else {
+          console.log("[JOIN] Joining as Guest");
+          sessionStorage.setItem("isHost", "false");
+          disableHostFeatures();
+        }
+      }
+    );
   });
 
-  // Continue with other initialization steps
+  // === Handle "Allow as host" button ===
+  const allowHostBtn = document.getElementById("allowHostBtn");
+  if (allowHostBtn) {
+    allowHostBtn.addEventListener("click", () => {
+      console.log("[HOST REQUEST] User clicked 'Allow as host'");
+      sessionStorage.setItem("requestedHost", "true");
+
+      const userNameStored = sessionStorage.getItem("userName") || name;
+
+      socket.emit(
+        "joinSession",
+        { sessionId: roomId, requestedHost: true, name: userNameStored },
+        (response) => {
+          console.log("[JOIN CALLBACK HOST]", response);
+
+          if (response.isHost) {
+            console.log("[HOST] Granted Host Role");
+            sessionStorage.setItem("isHost", "true");
+            enableHostFeatures();
+          } else {
+            console.log("[HOST] Still Guest");
+            sessionStorage.setItem("isHost", "false");
+            disableHostFeatures();
+          }
+        }
+      );
+    });
+  }
+
+  // === Continue initialization ===
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -639,11 +678,12 @@ socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName },
   setupGuestModeRestrictions();
   cleanupDeleteButtonHandlers();
   setupCSVDeleteButtons();
-  
+
   // Add CSS for new layout
   addNewLayoutStyles();
   setupHostToggle();
 };
+
 
 
 
