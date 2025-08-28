@@ -393,10 +393,13 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // Join Session + Decide Role
 // ==========================
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  // ✅ Always join the room first
+  // Save username for later use
+  socket.userName = name;
+
+  // Join the room
   socket.join(sessionId);
 
-  // Get the room
+  // Get current room
   const room = io.sockets.adapter.rooms.get(sessionId);
   let hostExists = false;
 
@@ -410,26 +413,31 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     }
   }
 
-  // Decide host or guest
-  if (requestedHost) {
-    if (!hostExists) {
-      // ✅ Grant host role
-      socket.isHost = true;
-      console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
-      callback({ isHost: true });
-    } else {
-      // ❌ Host already exists → reject request
-      console.log(`[ERROR] ${name} (${socket.id}) tried to join ${sessionId} as HOST but one already exists`);
-      callback({ isHost: false, error: "A host already exists in this session." });
-      return; // Don’t continue as guest
-    }
+  // Decide role
+  if (requestedHost && !hostExists) {
+    // ✅ Grant host if requested and none exists
+    socket.isHost = true;
+    console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
+    callback({ isHost: true });
+  } else if (!hostExists) {
+    // ✅ No host exists, make this user host automatically
+    socket.isHost = true;
+    console.log(`[HOST-AUTO] ${name} (${socket.id}) became HOST of ${sessionId}`);
+    callback({ isHost: true });
+  } else if (requestedHost && hostExists) {
+    // ❌ Host already exists, deny host request
+    socket.isHost = false;
+    console.log(`[DENIED] ${name} (${socket.id}) tried to join ${sessionId} as HOST but one already exists`);
+    callback({ isHost: false, error: "A host already exists in this session." });
+    return;
   } else {
+    // ✅ Regular guest
     socket.isHost = false;
     console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
     callback({ isHost: false });
   }
 
-  // ✅ Broadcast updated user list immediately (faster UI update)
+  // ✅ Immediately broadcast updated user list
   const users = [];
   if (room) {
     for (let id of room) {
@@ -443,9 +451,9 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
       }
     }
   }
-
   io.to(sessionId).emit("userListUpdate", users);
 });
+
 
 // Handle disconnect
 socket.on("disconnect", () => {
