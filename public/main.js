@@ -583,27 +583,22 @@ mappingSelects.forEach(select => {
  * @param {string} roomId - Room ID to join 
  * @param {string} name - Username to use
  */
-
 window.initializeSocketWithName = function(roomId, name) {
   if (!roomId || !name) return;
 
   console.log(`[APP] Initializing socket with name: ${name} for room: ${roomId}`);
 
-  // Store username and roomId
   userName = name;
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
 
-  // Load deleted stories first
   loadDeletedStoriesFromStorage(roomId);
 
-  // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // === Initial connection: always join as guest ===
+  // === Initial join: always guest ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
-
     const userNameStored = sessionStorage.getItem("userName") || name;
 
     socket.emit(
@@ -611,44 +606,25 @@ window.initializeSocketWithName = function(roomId, name) {
       { sessionId: roomId, requestedHost: false, name: userNameStored },
       (response) => {
         console.log("[JOIN CALLBACK INITIAL]", response);
-
-        if (!response) {
-          console.error("[JOIN ERROR] No response from server!");
-          disableHostFeatures();
-          return;
-        }
-
-        if (response.error) {
-          console.error("[JOIN ERROR]", response.error);
-          sessionStorage.setItem("isHost", "false");
-          disableHostFeatures();
-          return;
-        }
-
-        if (response.isHost) enableHostFeatures();
+        if (response?.isHost) enableHostFeatures();
         else disableHostFeatures();
       }
     );
   });
 
-  // === Handle "Allow as host" button click ===
+  // === Allow as host button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
       console.log("[HOST REQUEST] User clicked 'Allow as host'");
-
       const userNameStored = sessionStorage.getItem("userName");
 
-      // Emit joinSession with requestedHost = true
       socket.emit(
         "joinSession",
         { sessionId: roomId, requestedHost: true, name: userNameStored },
         (response) => {
           console.log("[JOIN CALLBACK HOST]", response);
-
-          if (!response) return console.error("[HOST] No response from server");
-
-          if (response.isHost) {
+          if (response?.isHost) {
             console.log("[HOST] Granted Host Role");
             sessionStorage.setItem("isHost", "true");
             enableHostFeatures();
@@ -662,7 +638,7 @@ window.initializeSocketWithName = function(roomId, name) {
     });
   }
 
-  // === Continue with app initialization ===
+  // === Continue with other initialization ===
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -672,14 +648,9 @@ window.initializeSocketWithName = function(roomId, name) {
   setupGuestModeRestrictions();
   cleanupDeleteButtonHandlers();
   setupCSVDeleteButtons();
-
-  // Add CSS for new layout
   addNewLayoutStyles();
   setupHostToggle();
 };
-
-
-
 
 /**
  * Handle updating a ticket from the modal
