@@ -394,54 +394,43 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // ==========================
   console.log("[SOCKET] New connection:", socket.id);
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  // Save username on socket
   socket.userName = name;
-
-  // Join the requested room
   socket.join(sessionId);
 
-  // Check if a host already exists in this room
+  // Check if a host exists in this room
   const room = io.sockets.adapter.rooms.get(sessionId);
   let hostExists = false;
-
   if (room) {
     for (let id of room) {
       const s = io.sockets.sockets.get(id);
-      if (s && s.isHost) {
+      if (s?.isHost) {
         hostExists = true;
         break;
       }
     }
   }
+  console.log(`[DEBUG] hostExists in ${sessionId}:`, hostExists);
 
-  // Assign host if requested and no host exists
+  // Assign host only if requested AND no host exists
   if (requestedHost && !hostExists) {
     socket.isHost = true;
     console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
+    if (callback) callback({ isHost: true });
   } else {
     socket.isHost = false;
     console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
+    if (callback) callback({ isHost: false });
   }
 
-  // Callback immediately to inform client of host status
-  if (callback) callback({ isHost: socket.isHost });
-
-  // Broadcast updated user list to all in room
+  // Broadcast updated user list
   const users = [];
-  const currentRoom = io.sockets.adapter.rooms.get(sessionId);
-  if (currentRoom) {
-    for (let id of currentRoom) {
+  if (room) {
+    for (let id of room) {
       const s = io.sockets.sockets.get(id);
-      if (s) {
-        users.push({
-          id,
-          name: s.userName || "Unknown",
-          isHost: !!s.isHost,
-        });
-      }
+      if (s) users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
     }
-    io.to(sessionId).emit("userListUpdate", users);
   }
+  io.to(sessionId).emit("userListUpdate", users);
 });
 
 
