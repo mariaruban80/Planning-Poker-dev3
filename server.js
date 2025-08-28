@@ -397,11 +397,11 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   socket.userName = name;
   socket.join(sessionId);
 
-  // Check if a host exists in this room
-  const room = io.sockets.adapter.rooms.get(sessionId);
+  // Compute if host exists in this room
   let hostExists = false;
+  const room = io.sockets.adapter.rooms.get(sessionId);
   if (room) {
-    for (let id of room) {
+    for (const id of room) {
       const s = io.sockets.sockets.get(id);
       if (s?.isHost) {
         hostExists = true;
@@ -411,30 +411,32 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   }
   console.log(`[DEBUG] hostExists in ${sessionId}:`, hostExists);
 
-  // Assign host only if requested AND no host exists
+  // Upgrade this socket to host if requested AND no host exists
   if (requestedHost && !hostExists) {
     socket.isHost = true;
     console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
-    if (callback) callback({ isHost: true });
+    callback?.({ isHost: true });
+  } else if (!requestedHost && !hostExists) {
+    // No host in room, first user becomes host automatically
+    socket.isHost = true;
+    console.log(`[HOST] ${name} (${socket.id}) auto-assigned HOST`);
+    callback?.({ isHost: true });
   } else {
     socket.isHost = false;
     console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
-    if (callback) callback({ isHost: false });
+    callback?.({ isHost: false });
   }
 
   // Broadcast updated user list
   const users = [];
   if (room) {
-    for (let id of room) {
+    for (const id of room) {
       const s = io.sockets.sockets.get(id);
-      if (s) users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
+      if (s) users.push({ id, name: s.userName, isHost: !!s.isHost });
     }
   }
   io.to(sessionId).emit("userListUpdate", users);
 });
-
-
-
 
 
 
