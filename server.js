@@ -393,50 +393,36 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // Join Session + Decide Role
 // ==========================
 
-socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  // Save name
-  socket.userName = name;
-  socket.join(sessionId);
 
-  const room = io.sockets.adapter.rooms.get(sessionId);
-  let hostExists = false;
+  console.log("[SOCKET] New connection:", socket.id);
 
-  if (room) {
-    for (let id of room) {
-      const s = io.sockets.sockets.get(id);
-      if (s && s.isHost) {
-        hostExists = true;
-        break;
+  socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+    socket.join(sessionId);
+
+    const room = io.sockets.adapter.rooms.get(sessionId);
+    let hostExists = false;
+
+    if (room) {
+      for (let id of room) {
+        const s = io.sockets.sockets.get(id);
+        if (s && s.isHost) {
+          hostExists = true;
+          break;
+        }
       }
     }
-  }
 
-  if (!hostExists) {
-    socket.isHost = true;
-    console.log(`[HOST] ${name} (${socket.id}) promoted to HOST for ${sessionId}`);
-  } else {
-    socket.isHost = false;
-    console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as guest`);
-  }
-
-  const result = { isHost: socket.isHost, error: null };
-  console.log("[JOIN DEBUG] Sending callback →", result);
-
-  // ✅ Always call callback
-  callback(result);
-
-  // Send user list
-  const users = [];
-  if (room) {
-    for (let id of room) {
-      const s = io.sockets.sockets.get(id);
-      if (s) {
-        users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
-      }
+    if (requestedHost && !hostExists) {
+      socket.isHost = true;
+      console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
+      if (callback) callback({ isHost: true });
+    } else {
+      socket.isHost = false;
+      console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
+      if (callback) callback({ isHost: false });
     }
-  }
-  io.to(sessionId).emit("userListUpdate", users);
-});
+  });
+
 
 
 
