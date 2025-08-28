@@ -888,29 +888,7 @@ function joinRoom() {
   window.location.href = `/index.html?roomId=${sessionId}`;
 }
 
-
-    
-    function joinRoom() {
-      const name = document.getElementById("joinNameInput").value.trim();
-      const sessionId = document.getElementById("sessionIdInput").value.trim();
-      
-      if (!name) {
-        alert("Please enter your name.");
-        return;
-      }
-      
-      if (!sessionId) {
-        alert("Please enter a session ID.");
-        return;
-      }
-      
-      // Store user data in sessionStorage
-      sessionStorage.setItem("userName", name);
-      sessionStorage.setItem("isHost", "false");
-      
-      // Navigate to the room with the provided ID
-      window.location.href = `/index.html?roomId=${sessionId}`;
-    }
+   
   </script>
 </body>
 </html>
