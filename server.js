@@ -412,8 +412,11 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 
   console.log("[SOCKET] New connection:", socket.id);
 
-  socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     socket.join(sessionId);
+
+    // ✅ Save username on this socket
+    socket.userName = name;
 
     const room = io.sockets.adapter.rooms.get(sessionId);
     let hostExists = false;
@@ -430,12 +433,23 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 
     if (requestedHost && !hostExists) {
       socket.isHost = true;
-      console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
       if (callback) callback({ isHost: true });
     } else {
       socket.isHost = false;
-      console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
       if (callback) callback({ isHost: false });
+    }
+
+    // ✅ Immediately broadcast updated user list
+    const users = [];
+    const currentRoom = io.sockets.adapter.rooms.get(sessionId);
+    if (currentRoom) {
+      for (let id of currentRoom) {
+        const s = io.sockets.sockets.get(id);
+        if (s) {
+          users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
+        }
+      }
+      io.to(sessionId).emit("userListUpdate", users);
     }
   });
 
