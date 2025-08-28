@@ -396,15 +396,14 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 
 // Add a simple in-memory map to track hosts
 const sessionHosts = new Map(); // sessionId -> socket.id
-
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   socket.userName = name;
   socket.join(sessionId);
 
   const currentHost = sessionHosts.get(sessionId);
 
-  // Assign host role
   if (requestedHost && !currentHost) {
+    // Assign host role
     socket.isHost = true;
     sessionHosts.set(sessionId, socket.id);
     console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
@@ -428,19 +427,20 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     io.to(sessionId).emit("userListUpdate", users);
   }
 
-  console.log("[DEBUG] Current host in sessionHosts map:", sessionHosts.get(sessionId));
+  console.log("[DEBUG] Current host for session:", sessionHosts.get(sessionId));
 });
 
-// Clean up host on disconnect
+// Cleanup on disconnect
 socket.on("disconnect", () => {
   for (let [sessionId, hostId] of sessionHosts.entries()) {
     if (hostId === socket.id) {
       sessionHosts.delete(sessionId);
       console.log(`[HOST] Host ${socket.userName} disconnected from ${sessionId}`);
-      // Optionally: pick a new host automatically
     }
   }
 });
+
+
 
 
 
