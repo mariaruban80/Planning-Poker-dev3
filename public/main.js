@@ -586,33 +586,43 @@ mappingSelects.forEach(select => {
 window.initializeSocketWithName = function(roomId, name) {
   if (!roomId || !name) return;
 
-  console.log(`[APP] Initializing socket with name: ${name} for room: ${roomId}`);
+  console.log(`[APP] Initializing socket for room: ${roomId}, username: ${name}`);
 
-  userName = name;
+  // Store username & sessionId in sessionStorage
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
 
+  userName = name;
+
+  // Load deleted stories first
   loadDeletedStoriesFromStorage(roomId);
 
+  // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // === Initial join: always guest ===
+  // === Initial join: always as guest ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
-    const userNameStored = sessionStorage.getItem("userName") || name;
 
     socket.emit(
       "joinSession",
-      { sessionId: roomId, requestedHost: false, name: userNameStored },
+      { sessionId: roomId, requestedHost: false, name },
       (response) => {
         console.log("[JOIN CALLBACK INITIAL]", response);
-        if (response?.isHost) enableHostFeatures();
-        else disableHostFeatures();
+        if (response?.isHost) {
+          console.log("[JOIN] Auto-assigned HOST");
+          sessionStorage.setItem("isHost", "true");
+          enableHostFeatures();
+        } else {
+          console.log("[JOIN] Joining as Guest");
+          sessionStorage.setItem("isHost", "false");
+          disableHostFeatures();
+        }
       }
     );
   });
 
-  // === Allow as host button ===
+  // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
@@ -638,7 +648,7 @@ window.initializeSocketWithName = function(roomId, name) {
     });
   }
 
-  // === Continue with other initialization ===
+  // === Continue with other initialization steps ===
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -651,6 +661,8 @@ window.initializeSocketWithName = function(roomId, name) {
   addNewLayoutStyles();
   setupHostToggle();
 };
+
+
 
 /**
  * Handle updating a ticket from the modal
