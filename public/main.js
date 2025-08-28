@@ -5267,3 +5267,20 @@ function generateImportPreview(headers, rows) {
   html += "</tbody></table>";
   previewEl.innerHTML = html;
 }
+
+
+
+// === FIX: Ensure requestedHost is stored before joining ===
+const joinBtn = document.getElementById("joinBtn");
+if (joinBtn) {
+  joinBtn.addEventListener("click", () => {
+    const joinAsHostCheckbox = document.getElementById("joinAsHostCheckbox");
+    if (joinAsHostCheckbox && joinAsHostCheckbox.checked) {
+      sessionStorage.setItem("requestedHost", "true");
+    } else {
+      sessionStorage.setItem("requestedHost", "false");
+    }
+    // Existing logic will call initializeSocketWithName after this
+  });
+}
+// === END FIX ===
