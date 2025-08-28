@@ -397,12 +397,14 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // Add a simple in-memory map to track hosts
 const sessionHosts = new Map(); // sessionId -> socket.id
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+  // Save username on socket
   socket.userName = name;
   socket.join(sessionId);
 
   const currentHost = sessionHosts.get(sessionId);
+  const wantsHost = requestedHost === true || requestedHost === "true";
 
-  if (requestedHost && !currentHost) {
+  if (wantsHost && !currentHost) {
     // Assign host role
     socket.isHost = true;
     sessionHosts.set(sessionId, socket.id);
@@ -430,12 +432,32 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   console.log("[DEBUG] Current host for session:", sessionHosts.get(sessionId));
 });
 
-// Cleanup on disconnect
+// Handle disconnects and promote next user as host if needed
 socket.on("disconnect", () => {
   for (let [sessionId, hostId] of sessionHosts.entries()) {
     if (hostId === socket.id) {
       sessionHosts.delete(sessionId);
       console.log(`[HOST] Host ${socket.userName} disconnected from ${sessionId}`);
+
+      // Promote the first guest in the room
+      const room = io.sockets.adapter.rooms.get(sessionId);
+      if (room && room.size > 0) {
+        const nextSocketId = [...room][0];
+        const nextSocket = io.sockets.sockets.get(nextSocketId);
+        if (nextSocket) {
+          nextSocket.isHost = true;
+          sessionHosts.set(sessionId, nextSocket.id);
+          console.log(`[HOST] Promoted ${nextSocket.userName} (${nextSocket.id}) as new HOST`);
+
+          // Broadcast updated user list
+          const updatedUsers = [];
+          for (let id of room) {
+            const s = io.sockets.sockets.get(id);
+            updatedUsers.push({ id, name: s.userName, isHost: !!s.isHost });
+          }
+          io.to(sessionId).emit("userListUpdate", updatedUsers);
+        }
+      }
     }
   }
 });
