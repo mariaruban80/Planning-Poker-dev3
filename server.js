@@ -393,13 +393,12 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // Join Session + Decide Role
 // ==========================
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  // Save username for later use
+  // ✅ Always save name before anything else
   socket.userName = name;
 
-  // Join the room
+  // ✅ Join room
   socket.join(sessionId);
 
-  // Get current room
   const room = io.sockets.adapter.rooms.get(sessionId);
   let hostExists = false;
 
@@ -413,31 +412,28 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     }
   }
 
-  // Decide role
+  // ✅ Decide role
   if (requestedHost && !hostExists) {
-    // ✅ Grant host if requested and none exists
     socket.isHost = true;
     console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
-    callback({ isHost: true });
   } else if (!hostExists) {
-    // ✅ No host exists, make this user host automatically
+    // 🔑 Fix: If no host exists at all, auto-promote first user to host
     socket.isHost = true;
     console.log(`[HOST-AUTO] ${name} (${socket.id}) became HOST of ${sessionId}`);
-    callback({ isHost: true });
   } else if (requestedHost && hostExists) {
-    // ❌ Host already exists, deny host request
     socket.isHost = false;
     console.log(`[DENIED] ${name} (${socket.id}) tried to join ${sessionId} as HOST but one already exists`);
     callback({ isHost: false, error: "A host already exists in this session." });
-    return;
+    return; // 🚫 Don’t continue as guest silently
   } else {
-    // ✅ Regular guest
     socket.isHost = false;
     console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
-    callback({ isHost: false });
   }
 
-  // ✅ Immediately broadcast updated user list
+  // ✅ Always call back with definitive answer
+  callback({ isHost: socket.isHost, error: null });
+
+  // ✅ Update all clients with fresh user list
   const users = [];
   if (room) {
     for (let id of room) {
@@ -453,6 +449,7 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   }
   io.to(sessionId).emit("userListUpdate", users);
 });
+
 
 
 // Handle disconnect
