@@ -393,33 +393,136 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // Join Session + Decide Role
 // ==========================
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  // ✅ Always join the room first
+  console.log(`[JOIN SESSION] ${name} requesting to join ${sessionId}, requestedHost: ${requestedHost}`);
+  
+  // Always join the room first
   socket.join(sessionId);
+  socket.data.roomId = sessionId;
+  socket.data.userName = name;
 
-  // Check if a host already exists in this room
-  const room = io.sockets.adapter.rooms.get(sessionId);
-  let hostExists = false;
+  // Initialize room if it doesn't exist
+  if (!rooms[sessionId]) {
+    rooms[sessionId] = {
+      users: [],
+      votes: {},
+      story: [],
+      revealed: false,
+      csvData: [],
+      selectedIndex: 0,
+      votesPerStory: {},
+      votesRevealed: {},
+      tickets: [],
+      deletedStoryIds: new Set(),
+      deletedStoriesTimestamp: {},
+      userNameVotes: {},
+      lastActivity: Date.now()
+    };
+  }
 
-  if (room) {
-    for (let id of room) {
-      const s = io.sockets.sockets.get(id);
-      if (s && s.isHost) {
-        hostExists = true;
-        break;
-      }
+  rooms[sessionId].lastActivity = Date.now();
+
+  // Handle host request
+  if (requestedHost) {
+    // Check if host already exists
+    if (!roomHosts[sessionId]) {
+      // Grant host role
+      roomHosts[sessionId] = socket.id;
+      socket.isHost = true;
+      
+      console.log(`[HOST] Host granted to ${name} in room ${sessionId}`);
+      
+      // Add user to room
+      rooms[sessionId].users = rooms[sessionId].users.filter(u => u.id !== socket.id);
+      rooms[sessionId].users = rooms[sessionId].users.filter(u => u.name !== name);
+      rooms[sessionId].users.push({ id: socket.id, name });
+      
+      // Broadcast host change
+      io.to(sessionId).emit('hostChanged', { hostId: socket.id, userName: name });
+      
+      callback({ 
+        success: true, 
+        isHost: true, 
+        message: "Host role granted" 
+      });
+    } else if (roomHosts[sessionId] === socket.id) {
+      // Already host
+      socket.isHost = true;
+      callback({ 
+        success: true, 
+        isHost: true, 
+        alreadyHost: true,
+        message: "Already host" 
+      });
+    } else {
+      // Host already exists
+      socket.isHost = false;
+      
+      // Still add as regular user
+      rooms[sessionId].users = rooms[sessionId].users.filter(u => u.id !== socket.id);
+      rooms[sessionId].users = rooms[sessionId].users.filter(u => u.name !== name);
+      rooms[sessionId].users.push({ id: socket.id, name });
+      
+      console.log(`[HOST] Host denied to ${name} in room ${sessionId} - host already exists`);
+      
+      callback({ 
+        success: false, 
+        isHost: false, 
+        message: "A host already exists in this room" 
+      });
     }
+  } else {
+    // Regular guest join
+    socket.isHost = false;
+    
+    // Add user to room
+    rooms[sessionId].users = rooms[sessionId].users.filter(u => u.id !== socket.id);
+    rooms[sessionId].users = rooms[sessionId].users.filter(u => u.name !== name);
+    rooms[sessionId].users.push({ id: socket.id, name });
+    
+    callback({ 
+      success: true, 
+      isHost: false, 
+      message: "Joined as guest" 
+    });
   }
 
-  // Decide host or guest
-  if (requestedHost && !hostExists) {
-    socket.isHost = true;
-    console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
-    callback({ isHost: true });
-  } else {
-    socket.isHost = false;
-    console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
-    callback({ isHost: false });
+  // Common post-join logic
+  // Track user name to socket ID mapping
+  if (!userNameToIdMap[name]) {
+    userNameToIdMap[name] = { socketIds: [] };
   }
+  if (!userNameToIdMap[name].socketIds.includes(socket.id)) {
+    userNameToIdMap[name].socketIds.push(socket.id);
+  }
+  if (userNameToIdMap[name].socketIds.length > 5) {
+    userNameToIdMap[name].socketIds = userNameToIdMap[name].socketIds.slice(-5);
+  }
+
+  // Send initial data to user
+  const activeTickets = rooms[sessionId].tickets ? 
+    rooms[sessionId].tickets.filter(t => !rooms[sessionId].deletedStoryIds?.has(t.id)) : [];
+  
+  if (activeTickets.length > 0) {
+    socket.emit('allTickets', { tickets: activeTickets });
+  }
+
+  // Broadcast updated user list
+  io.to(sessionId).emit('userList', rooms[sessionId].users);
+  
+  // Send voting system
+  socket.emit('votingSystemUpdate', { votingSystem: roomVotingSystems[sessionId] || 'fibonacci' });
+  
+  // Send CSV data if available
+  if (rooms[sessionId].csvData && rooms[sessionId].csvData.length > 0) {
+    socket.emit('syncCSVData', rooms[sessionId].csvData);
+  }
+
+  // Send selected story index
+  if (typeof rooms[sessionId].selectedIndex === 'number') {
+    socket.emit('storySelected', { storyIndex: rooms[sessionId].selectedIndex });
+  }
+
+  console.log(`[JOIN SESSION] ${name} successfully joined ${sessionId} as ${socket.isHost ? 'HOST' : 'GUEST'}`);
 });
   socket.on("disconnect", () => {
     console.log("[SOCKET] Disconnected:", socket.id);
