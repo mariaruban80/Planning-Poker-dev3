@@ -601,26 +601,29 @@ window.initializeSocketWithName = function(roomId, name) {
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
   // === Initial join: always as guest ===
-  socket.on("connect", () => {
-    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
+socket.on("connect", () => {
+  console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-    socket.emit(
-      "joinSession",
-      { sessionId: roomId, requestedHost: false, name },
-      (response) => {
-        console.log("[JOIN CALLBACK INITIAL]", response);
-        if (response?.isHost) {
-          console.log("[JOIN] Auto-assigned HOST");
-          sessionStorage.setItem("isHost", "true");
-          enableHostFeatures();
-        } else {
-          console.log("[JOIN] Joining as Guest");
-          sessionStorage.setItem("isHost", "false");
-          disableHostFeatures();
-        }
+  const isRequestingHost = true; // <-- set true for the intended host
+
+  socket.emit(
+    "joinSession",
+    { sessionId: roomId, requestedHost: isRequestingHost, name },
+    (response) => {
+      console.log("[JOIN CALLBACK INITIAL]", response);
+      if (response?.isHost) {
+        console.log("[JOIN] Auto-assigned HOST");
+        sessionStorage.setItem("isHost", "true");
+        enableHostFeatures();
+      } else {
+        console.log("[JOIN] Joining as Guest");
+        sessionStorage.setItem("isHost", "false");
+        disableHostFeatures();
       }
-    );
-  });
+    }
+  );
+});
+
 
   // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
