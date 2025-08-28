@@ -340,7 +340,10 @@ socket.on('addTicket', ({ ticketData }) => {
       }
     }, 100);
   });
-
+socket.on("userListUpdate", (users) => {
+  console.log("[USERLIST] Updated user list:", users);
+  updateUserListUI(users); // your UI refresh function
+});
   socket.on('voteUpdate', ({ userId, vote, storyId }) => {
     // Check if we should ignore this because the story is deleted
     if (lastKnownRoomState.deletedStoryIds.includes(storyId)) {
@@ -1060,6 +1063,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
