@@ -22,141 +22,6 @@ app.get('/', (req, res) => {
 });
 app.use(express.static(join(__dirname, 'public')));
 
-// import fetch from 'node-fetch';  // <-- added for JIRA proxy support
-
-app.use(express.json());
-// ================= HOST TRACKING FIX =================
-const roomHosts = {}; // roomId → hostSocketId
-
-// JIRA Proxy route (avoids CORS issues)
-app.post('/api/jira/project', async (req, res) => {
-  const { jiraUrl, email, token, projectKey } = req.body;
-  if (!jiraUrl || !projectKey) {
-    return res.status(400).json({ error: 'Missing parameters' });
-  }
-
-  const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
-  const url = `${baseUrl}/rest/api/3/project/${projectKey}`;
-
-  const headers = {
-    'Accept': 'application/json'
-  };
-
-  if (email && token) {
-    const auth = Buffer.from(`${email}:${token}`).toString('base64');
-    headers['Authorization'] = `Basic ${auth}`;
-  }
-
-  try {
-    const response = await fetch(url, { headers });
-    const text = await response.text();
-    let data;
-    try { data = JSON.parse(text); } catch { data = { raw: text }; }
-    res.status(response.status).json(data);
-  } catch (err) {
-    console.error('[SERVER] JIRA fetch error:', err);
-    res.status(500).json({ error: 'Failed to fetch from JIRA' });
-  }
-});
-
-// JIRA Search route (fetches issues for a project with optional JQL)
-app.post('/api/jira/search', async (req, res) => {
-  const { jiraUrl, email, token, projectKey, jql } = req.body;
-
-  if (!jiraUrl || !projectKey) {
-    return res.status(400).json({ error: 'Missing parameters' });
-  }
-
-  const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
-
-  // Use provided JQL or fall back to default
-  const finalJql = jql && jql.trim().length > 0
-    ? jql
-    : `project=${projectKey} ORDER BY created DESC`;
-
-  const url = `${baseUrl}/rest/api/3/search?jql=${encodeURIComponent(finalJql)}&maxResults=50`;
-
-  const headers = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-  };
-
-  if (email && token) {
-    const auth = Buffer.from(`${email}:${token}`).toString('base64');
-    headers['Authorization'] = `Basic ${auth}`;
-  }
-
-  try {
-    const response = await fetch(url, { headers });
-    const text = await response.text();
-    let data;
-    try { 
-      data = JSON.parse(text); 
-    } catch { 
-      data = { raw: text }; 
-    }
-    res.status(response.status).json(data);
-  } catch (err) {
-    console.error('[SERVER] JIRA search error:', err);
-    res.status(500).json({ error: 'Failed to fetch issues from JIRA' });
-  }
-});
-// ✅ New: Test JIRA connection with token
-app.post('/api/jira/test-token', async (req, res) => {
-  const { jiraUrl, email, token, projectKey } = req.body;
-  if (!jiraUrl || !projectKey || !email || !token) {
-    return res.status(400).json({ success: false, error: 'Missing parameters' });
-  }
-
-  const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
-  const url = `${baseUrl}/rest/api/3/project/${projectKey}`;
-
-  try {
-    const auth = Buffer.from(`${email}:${token}`).toString('base64');
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Basic ${auth}`
-      }
-    });
-
-    if (response.ok) {
-      res.json({ success: true });
-    } else {
-      res.status(response.status).json({ success: false });
-    }
-  } catch (err) {
-    console.error('[SERVER] /test-token error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ✅ New: Test JIRA anonymous access
-app.post('/api/jira/test-anonymous', async (req, res) => {
-  const { jiraUrl, projectKey } = req.body;
-  if (!jiraUrl || !projectKey) {
-    return res.status(400).json({ success: false, error: 'Missing parameters' });
-  }
-
-  const baseUrl = jiraUrl.endsWith('/') ? jiraUrl.slice(0, -1) : jiraUrl;
-  const url = `${baseUrl}/rest/api/3/project/${projectKey}`;
-
-  try {
-    const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' }
-    });
-
-    if (response.ok) {
-      res.json({ success: true });
-    } else {
-      res.status(response.status).json({ success: false });
-    }
-  } catch (err) {
-    console.error('[SERVER] /test-anonymous error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
 // Enhanced room structure with improved state management
 const rooms = {}; // roomId: { users, votes, story, revealed, csvData, selectedIndex, votesPerStory, votesRevealed, tickets, deletedStoryIds, deletedStoriesTimestamp, userNameVotes }
 const roomVotingSystems = {}; // roomId → voting system
@@ -354,105 +219,6 @@ io.on('connection', (socket) => {
   });
 
   console.log(`[SERVER] New client connected: ${socket.id}`);
-
-socket.on('requestHost', (data, callback) => {
-const roomId = socket.data.roomId;
-if (!roomId) return callback({ allowed: false, error: "No room joined" });
-
-
-if (!roomHosts[roomId]) {
-roomHosts[roomId] = socket.id;
-callback({ allowed: true });
-io.to(roomId).emit('hostChanged', { hostId: socket.id, userName: socket.data.userName });
-console.log(`[SERVER] Host assigned: ${socket.data.userName} (${socket.id}) in room ${roomId}`);
-} else if (roomHosts[roomId] === socket.id) {
-callback({ allowed: true, alreadyHost: true });
-} else {
-callback({ allowed: false });
-}
-});
-  socket.on('releaseHost', () => {
-const roomId = socket.data.roomId;
-if (roomId && roomHosts[roomId] === socket.id) {
-delete roomHosts[roomId];
-io.to(roomId).emit('hostLeft');
-console.log(`[SERVER] Host released by ${socket.data.userName} in room ${roomId}`);
-}
-});
-
-socket.on('disconnect', () => {
-const roomId = socket.data.roomId;
-if (roomId && roomHosts[roomId] === socket.id) {
-delete roomHosts[roomId];
-io.to(roomId).emit('hostLeft');
-console.log(`[SERVER] Host disconnected from room ${roomId}`);
-}
-});
-
-  // ==========================
-// Join Session + Decide Role
-// ==========================
-
-
-  console.log("[SOCKET] New connection:", socket.id);
-
-  socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-    socket.join(sessionId);
-
-    const room = io.sockets.adapter.rooms.get(sessionId);
-    let hostExists = false;
-
-    if (room) {
-      for (let id of room) {
-        const s = io.sockets.sockets.get(id);
-        if (s && s.isHost) {
-          hostExists = true;
-          break;
-        }
-      }
-    }
-
-    if (requestedHost && !hostExists) {
-      socket.isHost = true;
-      console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
-      if (callback) callback({ isHost: true });
-    } else {
-      socket.isHost = false;
-      console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
-      if (callback) callback({ isHost: false });
-    }
-  });
-
-
-
-
-
-// Handle disconnect
-socket.on("disconnect", () => {
-  console.log("[SOCKET] Disconnected:", socket.id);
-
-  // Find which room(s) this socket was in and update user list
-  for (const [roomId, room] of io.sockets.adapter.rooms) {
-    if (room.has(socket.id)) {
-      const users = [];
-      for (let id of room) {
-        const s = io.sockets.sockets.get(id);
-        if (s) {
-          users.push({
-            id,
-            name: s.userName || "Unknown",
-            isHost: !!s.isHost
-          });
-        }
-      }
-      io.to(roomId).emit("userListUpdate", users);
-    }
-  }
-});
-
-
-
-
   
 socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   const roomId = socket.data.roomId;
@@ -502,9 +268,6 @@ socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   }
 });
 
-  socket.on('ack', (data) => {
-    console.log(`[SERVER] Received acknowledgement for ${data.type} event from socket: ${socket.id}`, data);
-});
 
 // Handle ticket updates
 socket.on('updateTicket', (ticketData) => {
@@ -530,44 +293,20 @@ socket.on('updateTicket', (ticketData) => {
     socket.broadcast.to(roomId).emit('updateTicket', { ticketData });
   }
 });
+// Handle updating story points directly from the story card
 socket.on('updateStoryPoints', ({ storyId, points }) => {
-    const roomId = socket.data.roomId;
-    const senderSocketId = socket.id;
-    console.log(`[SERVER] updateStoryPoints received from ${socket.data.userName || senderSocketId} in room ${roomId}: ${storyId} = ${points}`);
+  const roomId = socket.data.roomId;
+  console.log(`[SERVER DEBUG] updateStoryPoints from ${socket.data.userName} in ${roomId}: ${storyId} = ${points}`);
 
-    if (!roomId || !storyId) return;
+  if (!roomId) return console.warn(`[SERVER] No roomId on socket ${socket.id}`);
+  if (!storyId) return console.warn(`[SERVER] No storyId provided`);
 
-
-    if (rooms[roomId]) {
-        rooms[roomId].lastActivity = Date.now();
-    }
-
-
-
-    // More robust approach: Iterate and emit individually + track successful broadcasts
-    let clientsInRoom = 0;          // Counts the clients in the room excluding sender
-    let successfulBroadcasts = 0; // Counts successful broadcasts
-
-    io.in(roomId).fetchSockets()
-        .then(sockets => {
-          sockets.forEach(s => {
-  s.emit('storyPointsUpdate', { storyId, points });
-  console.log(`[SERVER] Emitted storyPointsUpdate to: ${s.id} in room ${roomId}: ${storyId} = ${points}`);
+  // Broadcast to everyone including sender
+  io.to(roomId).emit('storyPointsUpdate', { storyId, points });
 });
 
-      
-            console.log(`[SERVER] Attempted to broadcast to ${clientsInRoom} client(s)`);
 
-            // Check after a short delay and log the results
-            setTimeout(() => {
-                console.log(`[SERVER] storyPointsUpdate successful broadcasts: ${successfulBroadcasts}/${clientsInRoom}`)
-            }, 1000); // Adjust timeout as needed
-        })
-        .catch(err => {
 
-            console.error('[SERVER] Error fetching sockets or broadcasting:', err);
-        });
-});
 
   
   // Handler for requesting votes by username
@@ -668,7 +407,7 @@ if (existingVote !== vote) {
 
 socket.on('joinRoom', ({ roomId, userName }) => {
   if (!userName) return socket.emit('error', { message: 'Username is required' });
-socket.join(roomId);
+
   socket.data.roomId = roomId;
   socket.data.userName = userName;
 
@@ -767,15 +506,11 @@ socket.join(roomId);
   // Add the current user
   rooms[roomId].users.push({ id: socket.id, name: userName });
   socket.join(roomId);
-    // Ensure guest receives all current tickets from the room
-    if (rooms[roomId] && rooms[roomId].tickets) {
-      const ticketsForGuest = rooms[roomId].tickets.filter(
-        t => !rooms[roomId].deletedStoryIds?.has(t.id)
-      );
-      console.log(`[SERVER] Sending ${ticketsForGuest.length} tickets to guest ${socket.id}`);
-      socket.emit('allTickets', { tickets: ticketsForGuest });
-    }
-
+      // Send all current tickets to the newly joined user without redeclaring variables
+      if (rooms[roomId] && rooms[roomId].tickets) {
+        const ticketsForGuest = rooms[roomId].tickets.filter(t => !rooms[roomId].deletedStoryIds.has(t.id));
+        socket.emit('allTickets', { tickets: ticketsForGuest });
+      }
 
   // STEP 3: RESTORE USER VOTES FROM USERNAME-BASED STORAGE
   // This approach centralizes vote handling in one place
@@ -1272,37 +1007,37 @@ socket.on('restoreUserVote', ({ storyId, vote }) => {
   });
   
   // Handle ticket synchronization
-socket.on('addTicket', (ticketData) => {
-  const roomId = socket.data.roomId;
-  if (!roomId || !rooms[roomId] || !ticketData?.id) return;
-
-  console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData.id);
-
-  rooms[roomId].lastActivity = Date.now();
-
-  // Ensure ticket list exists
-  if (!rooms[roomId].tickets) {
-    rooms[roomId].tickets = [];
-  }
-
-  // Remove from deleted set if re-added
-  if (rooms[roomId].deletedStoryIds?.has(ticketData.id)) {
-    rooms[roomId].deletedStoryIds.delete(ticketData.id);
-  }
-
-  // Add to server state if not already present
-  const existingIndex = rooms[roomId].tickets.findIndex(ticket => ticket.id === ticketData.id);
-  if (existingIndex === -1) {
-    rooms[roomId].tickets.push(ticketData);
-    console.log(`[SERVER] Ticket stored in room ${roomId}. Total tickets: ${rooms[roomId].tickets.length}`);
-  } else {
-    console.log(`[SERVER] Ticket ${ticketData.id} already exists in room ${roomId}, skipping duplicate`);
-  }
-
-  // ✅ Broadcast AFTER storing so new guests always see it in allTickets
-  //socket.broadcast.to(roomId).emit('addTicket', { ticketData });
-    io.to(roomId).emit('addTicket', { ticketData });
-});
+  socket.on('addTicket', (ticketData) => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      console.log(`[SERVER] New ticket added to room ${roomId}:`, ticketData.id);
+      
+      // Update room activity timestamp
+      rooms[roomId].lastActivity = Date.now();
+      
+      // Make sure the ticket isn't in the deleted set
+      if (rooms[roomId].deletedStoryIds && rooms[roomId].deletedStoryIds.has(ticketData.id)) {
+        rooms[roomId].deletedStoryIds.delete(ticketData.id);
+      }
+      
+      // Broadcast the new ticket to everyone in the room EXCEPT sender
+      socket.broadcast.to(roomId).emit('addTicket', { ticketData });
+      
+      // Keep track of tickets on the server
+      if (!rooms[roomId].tickets) {
+        rooms[roomId].tickets = [];
+      }
+      
+      // Check for duplicate tickets before adding
+      const existingIndex = rooms[roomId].tickets.findIndex(ticket => ticket.id === ticketData.id);
+      if (existingIndex === -1) {
+        rooms[roomId].tickets.push(ticketData);
+        console.log(`[SERVER] Ticket added to server state. Total tickets: ${rooms[roomId].tickets.length}`);
+      } else {
+        console.log(`[SERVER] Ticket ${ticketData.id} already exists, not duplicating`);
+      }
+    }
+  });
   
   socket.on('deleteCSVStory', ({ storyId, csvIndex }) => {
     const roomId = socket.data.roomId;
@@ -1414,27 +1149,26 @@ socket.on('addTicket', (ticketData) => {
   });
   
   // Handle getting all tickets
-socket.on('requestAllTickets', () => {
-  const roomId = socket.data.roomId;
-  if (!roomId || !rooms[roomId]) {
-    console.log(`[SERVER] No tickets available for client ${socket.id}`);
-    socket.emit('allTickets', { tickets: [] });
-    return;
-  }
-
-  rooms[roomId].lastActivity = Date.now();
-
-  const tickets = rooms[roomId].tickets || [];
-
-  // Filter out deleted tickets
-  const filteredTickets = tickets.filter(ticket =>
-    !rooms[roomId].deletedStoryIds?.has(ticket.id)
-  );
-
-  console.log(`[SERVER] Sending ${filteredTickets.length} active tickets (of ${tickets.length}) to ${socket.id} in room ${roomId}`);
-
-  socket.emit('allTickets', { tickets: filteredTickets });
-});
+  socket.on('requestAllTickets', () => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      console.log(`[SERVER] Ticket request from client ${socket.id}`);
+      
+      // Update room activity timestamp
+      rooms[roomId].lastActivity = Date.now();
+      
+      // CRITICAL: Filter out deleted stories before sending
+      const filteredTickets = rooms[roomId].tickets.filter(ticket => 
+        !rooms[roomId].deletedStoryIds || !rooms[roomId].deletedStoryIds.has(ticket.id)
+      );
+      
+      console.log(`[SERVER] Sending ${filteredTickets.length} active tickets (filtered from ${rooms[roomId].tickets.length} total)`);
+      socket.emit('allTickets', { tickets: filteredTickets });
+    } else {
+      console.log(`[SERVER] No tickets available to send to client ${socket.id}`);
+      socket.emit('allTickets', { tickets: [] });
+    }
+  });
 
   // Handle CSV data loaded confirmation
   socket.on('csvDataLoaded', () => {
@@ -1738,45 +1472,35 @@ socket.on('castVote', ({ vote, targetUserId, storyId, userName }) => {
   });
 
   // Handle vote reset for current story
-socket.on('resetVotes', ({ storyId }) => {
-  const roomId = socket.data.roomId;
-  if (roomId && rooms[roomId]) {
-    // Update room activity timestamp
-    rooms[roomId].lastActivity = Date.now();
-
-    // Reset votes for this story
-    if (rooms[roomId].votesPerStory?.[storyId]) {
-      rooms[roomId].votesPerStory[storyId] = {};
-
-      // Reset revealed state
-      if (rooms[roomId].votesRevealed) {
-        rooms[roomId].votesRevealed[storyId] = false;
-      }
-
-      // Reset story points if tracked
-      if (rooms[roomId].storyPoints && rooms[roomId].storyPoints[storyId]) {
-        delete rooms[roomId].storyPoints[storyId];
-        // Broadcast story points reset to all clients
-        io.to(roomId).emit('storyPointsUpdate', { storyId, points: '?' });
-      }
-
-      // Clear votes in username-based storage
-      if (rooms[roomId].userNameVotes) {
-        for (const userName in rooms[roomId].userNameVotes) {
-          if (rooms[roomId].userNameVotes[userName][storyId]) {
-            delete rooms[roomId].userNameVotes[userName][storyId];
+  socket.on('resetVotes', ({ storyId }) => {
+    const roomId = socket.data.roomId;
+    if (roomId && rooms[roomId]) {
+      // Update room activity timestamp
+      rooms[roomId].lastActivity = Date.now();
+      
+      // Reset votes for this story
+      if (rooms[roomId].votesPerStory?.[storyId]) {
+        rooms[roomId].votesPerStory[storyId] = {};
+        
+        // Also reset revealed state
+        if (rooms[roomId].votesRevealed) {
+          rooms[roomId].votesRevealed[storyId] = false;
+        }
+        
+        // Also clear votes in username-based storage
+        if (rooms[roomId].userNameVotes) {
+          for (const userName in rooms[roomId].userNameVotes) {
+            if (rooms[roomId].userNameVotes[userName][storyId]) {
+              delete rooms[roomId].userNameVotes[userName][storyId];
+            }
           }
         }
-      }
-
-      // ✅ Broadcast reset to all clients with consistent event name
-   
+        
+        // Broadcast reset to all clients
         io.to(roomId).emit('votesReset', { storyId });
-
+      }
     }
-  }
-});
-
+  });
 
   // Handle story changes
   socket.on('storyChange', ({ story }) => {
