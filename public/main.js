@@ -589,17 +589,26 @@ window.initializeSocketWithName = function(roomId, name) {
     const requestedHost = sessionStorage.getItem("requestedHost") === "true";
     const userName = sessionStorage.getItem("userName") || name;
 
-    socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName }, (response) => {
-      if (response && response.isHost) {
-        console.log("[JOIN] Granted Host Role");
-        sessionStorage.setItem("isHost", "true");
-        enableHostFeatures();
-      } else {
-        console.log("[JOIN] Joining as Guest");
-        sessionStorage.setItem("isHost", "false");
-        disableHostFeatures();
-      }
-    });
+socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName }, (response) => {
+  if (response.error) {
+    console.error("[JOIN ERROR]", response.error);
+    showErrorModal(response.error);  // use your modal system
+    sessionStorage.setItem("isHost", "false");
+    disableHostFeatures();
+    return;
+  }
+
+  if (response.isHost) {
+    console.log("[JOIN] Granted Host Role");
+    sessionStorage.setItem("isHost", "true");
+    enableHostFeatures();
+  } else {
+    console.log("[JOIN] Joining as Guest");
+    sessionStorage.setItem("isHost", "false");
+    disableHostFeatures();
+  }
+});
+
   });
 
   // Continue with other initialization steps
