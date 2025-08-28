@@ -604,11 +604,9 @@ window.initializeSocketWithName = function(roomId, name) {
 socket.on("connect", () => {
   console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-  const isRequestingHost = true; // <-- set true for the intended host
-
   socket.emit(
     "joinSession",
-    { sessionId: roomId, requestedHost: isRequestingHost, name },
+    { sessionId: roomId, name },
     (response) => {
       console.log("[JOIN CALLBACK INITIAL]", response);
       if (response?.isHost) {
@@ -623,6 +621,7 @@ socket.on("connect", () => {
     }
   );
 });
+
 
 
   // === “Allow as host” button ===
