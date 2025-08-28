@@ -394,10 +394,13 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // ==========================
   console.log("[SOCKET] New connection:", socket.id);
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+  // Save username on socket
   socket.userName = name;
 
+  // Join the requested room
   socket.join(sessionId);
 
+  // Check if a host already exists in this room
   const room = io.sockets.adapter.rooms.get(sessionId);
   let hostExists = false;
 
@@ -411,29 +414,36 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     }
   }
 
+  // Assign host if requested and no host exists
   if (requestedHost && !hostExists) {
     socket.isHost = true;
     console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
-    if (callback) callback({ isHost: true });
   } else {
     socket.isHost = false;
     console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
-    if (callback) callback({ isHost: false });
   }
 
-  // Broadcast updated user list
+  // Callback immediately to inform client of host status
+  if (callback) callback({ isHost: socket.isHost });
+
+  // Broadcast updated user list to all in room
   const users = [];
   const currentRoom = io.sockets.adapter.rooms.get(sessionId);
   if (currentRoom) {
     for (let id of currentRoom) {
       const s = io.sockets.sockets.get(id);
       if (s) {
-        users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
+        users.push({
+          id,
+          name: s.userName || "Unknown",
+          isHost: !!s.isHost,
+        });
       }
     }
     io.to(sessionId).emit("userListUpdate", users);
   }
 });
+
 
 
 
