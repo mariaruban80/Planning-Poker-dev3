@@ -867,7 +867,8 @@
 function joinRoom() {
   const name = document.getElementById("joinNameInput").value.trim();
   const sessionId = document.getElementById("sessionIdInput").value.trim();
-  const requestHost = document.getElementById("allowJoinAsHost").checked;
+  const requestHost = document.getElementById("allowJoinAsHost").checked; 
+  const ihost = document.getElementById('isHost');
   
   if (!name) {
     alert("Please enter your name.");
@@ -887,8 +888,10 @@ function joinRoom() {
   // Only set isRoomCreator = true if host checkbox is checked
   if (requestHost) {
     sessionStorage.setItem("isRoomCreator", "true");
+        console.log('Host found', ihost);
   } else {
     sessionStorage.setItem("isRoomCreator", "false");
+        console.log('Host found', ihost);
   }
   
   // Navigate to the room
