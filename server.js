@@ -433,8 +433,7 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
         io.to(sessionId).emit("userListUpdate", users);
       }
     }
-    });
-    } else {
+     } else {
       socket.isHost = false;
       console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
       if (callback) callback({ isHost: false });
