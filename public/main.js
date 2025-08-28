@@ -603,9 +603,15 @@ window.initializeSocketWithName = function(roomId, name) {
     const userName = sessionStorage.getItem("userName") || name;
 
 socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName }, (response) => {
+  console.log("[JOIN CALLBACK RAW]", response); // 👈 log raw
+
+  if (!response) {
+    console.error("[JOIN ERROR] No response from server!");
+    return;
+  }
+
   if (response.error) {
     console.error("[JOIN ERROR]", response.error);
-    showErrorModal(response.error);  // use your modal system
     sessionStorage.setItem("isHost", "false");
     disableHostFeatures();
     return;
@@ -621,7 +627,6 @@ socket.emit("joinSession", { sessionId: roomId, requestedHost, name: userName },
     disableHostFeatures();
   }
 });
-
   });
 
   // Continue with other initialization steps
