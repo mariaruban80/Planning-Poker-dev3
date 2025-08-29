@@ -868,32 +868,29 @@ function joinRoom() {
   const name = document.getElementById("joinNameInput").value.trim();
   const sessionId = document.getElementById("sessionIdInput").value.trim();
   const requestHost = document.getElementById("allowJoinAsHost").checked;
-  
+
   if (!name) {
     alert("Please enter your name.");
     return;
   }
-  
+
   if (!sessionId) {
     alert("Please enter a session ID.");
     return;
   }
-  
+
   // Save details in sessionStorage
   sessionStorage.setItem("userName", name);
-  sessionStorage.setItem("requestedHost", requestHost ? "true" : "false"); // ✅ Save intent properly
-  sessionStorage.setItem("isRoomCreator", "false"); // ✅ joining, not creating
-  
-  // ✅ NEW: Set initial host status based on request
- /* if (requestHost) {
-    sessionStorage.setItem("isHost", "true"); // Optimistically set as host
-  } else {
-    sessionStorage.setItem("isHost", "false");
-  }*/
-  
+  sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
+  sessionStorage.setItem("isRoomCreator", "false");
+
+  // ✅ Always start as guest until server confirms
+  sessionStorage.setItem("isHost", "false");
+
   // Navigate to the room
   window.location.href = `/index.html?roomId=${sessionId}`;
 }
+
    
   </script>
 </body>
