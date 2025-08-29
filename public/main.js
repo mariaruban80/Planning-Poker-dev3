@@ -604,67 +604,25 @@ window.initializeSocketWithName = function(roomId, name) {
 socket.on("connect", () => {
   console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-  const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-  const userName = sessionStorage.getItem("userName");
-
   socket.emit(
     "joinSession",
-    { sessionId: roomId, name: userName, requestedHost }, // ✅ Pass requestedHost
+    { sessionId: roomId, name },
     (response) => {
-      console.log("[JOIN CALLBACK]", response);
-      
+      console.log("[JOIN CALLBACK INITIAL]", response);
       if (response?.isHost) {
-        console.log("[JOIN] Granted Host Role");
+        console.log("[JOIN] Auto-assigned HOST");
         sessionStorage.setItem("isHost", "true");
         enableHostFeatures();
       } else {
-        console.log("[JOIN] Assigned as Guest");
+        console.log("[JOIN] Joining as Guest");
         sessionStorage.setItem("isHost", "false");
         disableHostFeatures();
-        
-        // ✅ Show error modal if host was requested but denied
-        if (requestedHost) {
-          console.log("[HOST] Host was requested but denied - showing error");
-          const errorModal = document.getElementById('hostModeErrorModal');
-          if (errorModal) {
-            errorModal.style.display = 'flex';
-          } else {
-            alert('Cannot become host - another host is already available in this room');
-          }
-        }
       }
     }
   );
 });
 
 
-socket.on('hostStatus', ({ isHost }) => {
-  console.log(`[HOST] Server confirmed host status: ${isHost}`);
-  
-  if (isHost) {
-    sessionStorage.setItem('isHost', 'true');
-    enableHostFeatures();
-  } else {
-    sessionStorage.setItem('isHost', 'false');
-    disableHostFeatures();
-  }
-});
-
-socket.on('hostDenied', ({ reason, existingHostId }) => {
-  console.log(`[HOST] Host request denied: ${reason}, existing host: ${existingHostId}`);
-  
-  // Reset client state
-  sessionStorage.setItem('isHost', 'false');
-  disableHostFeatures();
-  
-  // Show error modal
-  const errorModal = document.getElementById('hostModeErrorModal');
-  if (errorModal) {
-    errorModal.style.display = 'flex';
-  } else {
-    alert('Cannot become host - another host is already available in this room');
-  }
-});
 
   // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
@@ -4361,6 +4319,7 @@ function setupInviteButton() {
     }
   };
 }
+
 function setupHostToggle() {
   const hostToggle = document.getElementById('hostModeToggle');
   if (!hostToggle) {
@@ -4391,7 +4350,6 @@ function setupHostToggle() {
           
           if (response && response.allowed) {
             console.log('[HOST] Host granted');
-            sessionStorage.setItem('isHost', 'true');
             enableHostFeatures();
           } else {
             console.log('[HOST] Host denied, showing error modal');
@@ -4415,7 +4373,6 @@ function setupHostToggle() {
       
       // Releasing host role
       if (sessionStorage.getItem('isHost') === 'true') {
-        sessionStorage.setItem('isHost', 'false');
         disableHostFeatures();
         
         if (window.socket && typeof window.socket.emit === "function") {
@@ -4427,7 +4384,6 @@ function setupHostToggle() {
 
   console.log("[HOST] Host toggle initialized");
 }
-
 
 function enableHostUI() {
   document.querySelectorAll('.host-only').forEach(el => {
