@@ -60,7 +60,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     timeout: 20000,
-    query: { roomId: roomIdentifier, userName: userNameValue,  requestedHost: requestedHost }
+    query: { roomId: roomIdentifier, userName: userNameValue,  requestedHost: String(requestedHost) }
   });
 // Reconnection behavior tuning
 socket.on('reconnect', () => {
@@ -73,9 +73,11 @@ socket.on('reconnect', () => {
   }, 500);
 });
  socket.on("connect", () => { // Reattaching connect handler
-    console.log(`[SOCKET] Connected to server! (ID: ${socket.id}), Emitting joinRoom`);
-
-    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue, requestedHost: requestedHost });
+    const requestedHost = sessionStorage.getItem('requestedHost') || false;
+    console.log(`[SOCKET] Connected to server with ID: ${socket.id} and RequestedHost: ${requestedHost}`);
+    //Load the room 
+    socket.emit('joinRoom', { roomId, userName, requestedHost })
+    clearTimeout(reconnectTimer);
 
     });
 socket.on('disconnect', (reason) => {
@@ -1071,6 +1073,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
