@@ -883,7 +883,13 @@ function joinRoom() {
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("requestedHost", requestHost ? "true" : "false"); // ✅ Save intent properly
   sessionStorage.setItem("isRoomCreator", "false"); // ✅ joining, not creating
-
+  
+  // ✅ NEW: Set initial host status based on request
+  if (requestHost) {
+    sessionStorage.setItem("isHost", "true"); // Optimistically set as host
+  } else {
+    sessionStorage.setItem("isHost", "false");
+  }
   
   // Navigate to the room
   window.location.href = `/index.html?roomId=${sessionId}`;
