@@ -604,37 +604,26 @@ window.initializeSocketWithName = function(roomId, name) {
 socket.on("connect", () => {
   console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-  const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-  const userName = sessionStorage.getItem("userName");
+const sessionId = new URLSearchParams(location.search).get('roomId');
+const name = sessionStorage.getItem('userName') || 'Guest';
+const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+  const isHost = !!(res && res.isHost);
+  sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
 
-  socket.emit(
-    "joinSession",
-    { sessionId: roomId, name: userName, requestedHost }, // ✅ Pass requestedHost
-    (response) => {
-      console.log("[JOIN CALLBACK]", response);
-      
-      if (response?.isHost) {
-        console.log("[JOIN] Granted Host Role");
-        sessionStorage.setItem("isHost", "true");
-        enableHostFeatures();
-      } else {
-        console.log("[JOIN] Assigned as Guest");
-        sessionStorage.setItem("isHost", "false");
-        disableHostFeatures();
-        
-        // ✅ Show error modal if host was requested but denied
-        if (requestedHost) {
-          console.log("[HOST] Host was requested but denied - showing error");
-          const errorModal = document.getElementById('hostModeErrorModal');
-          if (errorModal) {
-            errorModal.style.display = 'flex';
-          } else {
-            alert('Cannot become host - another host is already available in this room');
-          }
-        }
-      }
-    }
-  );
+  if (!isHost && res && res.reason === 'Host already exists') {
+    // optional UX
+    console.info('[JOIN] Host request denied: host already exists');
+  }
+
+  // now toggle UI based on isHost
+  if (isHost) {
+    enableHostFeatures();
+  } else {
+    disableHostFeatures();
+  }
+});
+
 });
 
 
