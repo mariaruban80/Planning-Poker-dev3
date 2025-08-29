@@ -690,8 +690,13 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   socket.data.roomId = roomId;
   socket.data.userName = userName;
 
-  // Initialize room if it doesn't exist
-if (!rooms[roomId]) {
+  // Check if this is a new Host requsted from the USER
+
+  //This need to be done if all user  disconnect  
+ // check for the 2 valid parameter
+    //Check again the values in check
+
+  if (!rooms[roomId]) {
     rooms[roomId] = {
       users: [],
       votes: {},
@@ -709,80 +714,115 @@ if (!rooms[roomId]) {
     };
   }
 
-  // Update room activity timestamp
-  rooms[roomId].lastActivity = Date.now();
-  let currentHost = roomHosts[roomId];
-  if (isHostRequested && !currentHost) {
-    roomHosts[roomId] = socket.id;
-  }
-   socket.isHost = roomHosts[roomId] === socket.id; // Assign host status
-      console.log("The value of checking if the host is true or not based on "+ socket.isHost )
+       rooms[roomId].lastActivity = Date.now();
 
-         // Add this log statement for debugging:
-         if (socket.isHost){
-           console.log("The value with "+socket.id, "has been made the host" )
-             updateSessionPower("power")
-         }
-           function updateSessionPower(power){
-            console.log("The power is",  power)
+  //Make the validation of new client as host
+console.log("the value of checkHost(socket)" + checkHost(socket) +"Is a preCheck beforing the client data arrives or new client" );
 
-           }
-  
+if (isHostRequested && !checkHost(socket)) {
+
+        if (checkHost(socket)) {
+               console.warn("The client that alrready has the validation " +  checkHost(socket))
+             // socket.emit ()
+        }
+       //     
+
+        //Since the data is lost due to the code exicution now we ask for
+        console.log( ["the host change has been made "]+ host);
+             //Set as NewHost
+              rooms[roomId].hasVot =true;
+             // send a server power
+        console.warn ("all the right are being deployed ")
+
+
+             rooms[roomId].usersSocketPower=rooms[roomId].hasVot
+
+              console.warn("Is the new user been  permited more permission" + [ rooms[roomId].usersSocketPower] +"from"+ userName);
+
+             let host =  rooms[roomId].usersSocketPower;
+
+             } else  
+               if (!isHostRequested && checkHost(socket)){
+
+                 //Then remove   the  permissions
+                  console.warn ("invalid permissions, remove " + userName);
+                  handleDefaultPower(socket);
+                  //after that update alll the power
+    function handleDefaultPower(socket){
+                         } //Make something with the defaut function
+               }
+// after that we push all this
+
   // Track user name to socket ID mapping for vote persistence
   if (!userNameToIdMap[userName]) {
     userNameToIdMap[userName] = { socketIds: [] };
   }
-   if (!userNameToIdMap[userName].socketIds.includes(socket.id)) {
+
+
+  if (!userNameToIdMap[userName].socketIds.includes(socket.id)) {
     userNameToIdMap[userName].socketIds.push(socket.id);
   }
 
   if (userNameToIdMap[userName].socketIds.length > 5) {
     userNameToIdMap[userName].socketIds = userNameToIdMap[userName].socketIds.slice(-5);
   }
-rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
+   function updateValue (hostValue){
+
+   const isHost =  hostValue;
+ return                isHost
+
+                }    //Remove existing user with same UserID
+  rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
   // ✅ Also filter out this username to support rejoining after disconnect with a different socket.ID
   rooms[roomId].users = rooms[roomId].users.filter(u => u.name !== userName);
 
-  // Update users
+  let id  =socket.id
+  let isHostpower ;
 
-  rooms[roomId].users.push({ id: socket.id, name: userName, isHost: socket.isHost});  // Push into the current User"
+rooms[roomId].users.push({ id: socket.id,sessionid:socket.sessionId  ,  name: userName, hasCredencial: checkHost(socket)   });
 
-    function listSessionValue(){
+if (!checkHost(socket)){
+   isHostpower = false
+       }
+         else{
+    listSessionValue( );
 
+isHostpower =   true
+            for (const user of  rooms[roomId].users){
+                   console.warn("is a user and a permited has"+ {user} +  "power")
+                 }
+             console.log (+" this value =" +   rooms[roomId].lastActivity      )
+
+              function updateValue(new_num){
+
+                const num =     new_num
+              }    
+              }
+
+
+
+   listSessionValue()
+
+
+   function listSessionValue(){
+            //Update the values from all conections
+
+     const isHost   = socket.id; //Create session   
+
+               let userConecteds  = rooms[roomId].users.length ;    
+        console.warn ("There were  list"+  userConecteds, "sessionId"+sessionid, )
     }
-       console.log ("Power to" + userName, socket.isHost )// Display user object
 
-       if (socket.isHost==true){
-              for (const user of  rooms[roomId].users){
-               console.log([user.name] + "Has host"+ user.isHost)
-             }
+updateToNewClients()
+        function updateToNewClients(){
 
-        } else console.log("The User does not the power to host" + "So this should not trigger ")
-     // Make sure to sync state down to the socket
-        let host =   socket.isHost;
-     for (const user of  rooms[roomId].users){
-               console.log([user.name] + "power " + user.isHost)
 
-             }io.to(roomId).emit('userList', rooms[roomId].users);" to the end of the file   
+        }
+io.to(roomId).emit('userList', rooms[roomId].users);
 
- const isreconnecting =function (){
-}
-      
-   updateToNewClients(userName,  socket.isHost)
-    
-
-  function updateToNewClients(userName,socket) {
-  if (typeof userName === 'string') {
-   }
-        //console.warn("Update user list"+ u.userName, socket.id + rooms[roomId].users.length )
-    }
-
-  console.log('user list: ',rooms[roomId].users)
-
-  // Transmit the new connection to tell add and the name correct
-if (rooms[roomId].csvData.length > 0) {
-                socket.emit('syncCSVData', rooms[roomId].csvData);
-                       console.log("Transmitting to the CSV data for data" ,""   )
+sendPermission(); 
+function sendPermission (){
+       console.warn("newPermission" + hasPermission =  rooms[roomId].votesPerStory  );
 }
 
   
