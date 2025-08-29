@@ -680,62 +680,15 @@ if (existingVote !== vote) {
   
   // Handle room joining with enhanced state management
 
-socket.on('joinRoom', ({ roomId, userName, requestedHost }) => {
+socket.on('joinRoom', ({ roomId, userName }) => {
   if (!userName) return socket.emit('error', { message: 'Username is required' });
-  
-  // ✅ Check if this is a host request from sessionStorage
-  const requestedHost = socket.handshake.query.requestedHost === 'true' || 
-                       socket.request._query?.requestedHost === 'true';
-  
-  console.log(`[JOIN] ${userName} joining ${roomId}, requestedHost: ${requestedHost}`);
-  
+
+  const isHostRequested = socket.handshake.query.requestedHost === 'true';
+  console.log(`[JOIN] ${userName} joining ${roomId}, requestedHost: ${isHostRequested}`);
+
   socket.join(roomId);
   socket.data.roomId = roomId;
   socket.data.userName = userName;
-
-  // ✅ Check current host status for this room
-  let currentHost = roomHosts[roomId];
-  let isHostGranted = false;
-
-  if (requestedHost && !currentHost) {
-    // Grant host role - no existing host
-    roomHosts[roomId] = socket.id;
-    currentHost = socket.id;
-    isHostGranted = true;
-    console.log(`[HOST] ${userName} (${socket.id}) granted HOST role in ${roomId}`);
-    
-  } else if (requestedHost && currentHost && currentHost !== socket.id) {
-    // Host requested but already exists - deny
-    isHostGranted = false;
-    console.log(`[HOST] ${userName} (${socket.id}) DENIED host role in ${roomId} - host ${currentHost} already exists`);
-    
-    // Send error back to client
-    socket.emit('hostDenied', { 
-      reason: 'Host already exists',
-      existingHostId: currentHost 
-    });
-    
-  } else if (!currentHost && !requestedHost) {
-    // No host exists and none requested - auto-assign as host (first user)
-    roomHosts[roomId] = socket.id;
-    currentHost = socket.id;
-    isHostGranted = true;
-    console.log(`[HOST] ${userName} (${socket.id}) auto-assigned as HOST in ${roomId} (first user)`);
-    
-  } else if (currentHost === socket.id) {
-    // This socket is already the host (reconnection case)
-    isHostGranted = true;
-    console.log(`[HOST] ${userName} (${socket.id}) reconnected as existing HOST in ${roomId}`);
-    
-  } else {
-    // Join as guest
-    isHostGranted = false;
-    console.log(`[GUEST] ${userName} (${socket.id}) joined as GUEST in ${roomId}`);
-  }
-
-  // ✅ Send host status back to client
-//  socket.emit('hostStatus', { isHost: isHostGranted });
-  socket.emit('hostStatus', { isHost: !!roomHosts[roomId] && roomHosts[roomId] === socket.id });
 
   // Initialize room if it doesn't exist
 if (!rooms[roomId]) {
@@ -758,11 +711,83 @@ if (!rooms[roomId]) {
 
   // Update room activity timestamp
   rooms[roomId].lastActivity = Date.now();
+  let currentHost = roomHosts[roomId];
+  if (isHostRequested && !currentHost) {
+    roomHosts[roomId] = socket.id;
+  }
+   socket.isHost = roomHosts[roomId] === socket.id; // Assign host status
+      console.log("The value of checking if the host is true or not based on "+ socket.isHost )
 
+         // Add this log statement for debugging:
+         if (socket.isHost){
+           console.log("The value with "+socket.id, "has been made the host" )
+             updateSessionPower("power")
+         }
+           function updateSessionPower(power){
+            console.log("The power is",  power)
+
+           }
+  
   // Track user name to socket ID mapping for vote persistence
   if (!userNameToIdMap[userName]) {
     userNameToIdMap[userName] = { socketIds: [] };
   }
+   if (!userNameToIdMap[userName].socketIds.includes(socket.id)) {
+    userNameToIdMap[userName].socketIds.push(socket.id);
+  }
+
+  if (userNameToIdMap[userName].socketIds.length > 5) {
+    userNameToIdMap[userName].socketIds = userNameToIdMap[userName].socketIds.slice(-5);
+  }
+rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
+  // ✅ Also filter out this username to support rejoining after disconnect with a different socket.ID
+  rooms[roomId].users = rooms[roomId].users.filter(u => u.name !== userName);
+
+  // Update users
+
+  rooms[roomId].users.push({ id: socket.id, name: userName, isHost: socket.isHost});  // Push into the current User"
+
+    function listSessionValue(){
+
+    }
+       console.log ("Power to" + userName, socket.isHost )// Display user object
+
+       if (socket.isHost==true){
+              for (const user of  rooms[roomId].users){
+               console.log([user.name] + "Has host"+ user.isHost)
+             }
+
+        } else console.log("The User does not the power to host" + "So this should not trigger ")
+     // Make sure to sync state down to the socket
+        let host =   socket.isHost;
+     for (const user of  rooms[roomId].users){
+               console.log([user.name] + "power " + user.isHost)
+
+             }io.to(roomId).emit('userList', rooms[roomId].users);" to the end of the file   
+
+ const isreconnecting =function (){
+}
+      
+   updateToNewClients(userName,  socket.isHost)
+    
+
+  function updateToNewClients(userName,socket) {
+  if (typeof userName === 'string') {
+   }
+        //console.warn("Update user list"+ u.userName, socket.id + rooms[roomId].users.length )
+    }
+
+  console.log('user list: ',rooms[roomId].users)
+
+  // Transmit the new connection to tell add and the name correct
+if (rooms[roomId].csvData.length > 0) {
+                socket.emit('syncCSVData', rooms[roomId].csvData);
+                       console.log("Transmitting to the CSV data for data" ,""   )
+}
+
+  
+  
+   // });
   
   // STEP 1: REMOVE ALL PREVIOUS VOTES FOR THIS USER FIRST
   // This is critical to prevent duplicate votes
