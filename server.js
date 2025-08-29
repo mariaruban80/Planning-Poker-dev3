@@ -680,7 +680,7 @@ if (existingVote !== vote) {
   
   // Handle room joining with enhanced state management
 
-socket.on('joinRoom', ({ roomId, userName }) => {
+socket.on('joinRoom', ({ roomId, userName, requestedHost }) => {
   if (!userName) return socket.emit('error', { message: 'Username is required' });
   
   // ✅ Check if this is a host request from sessionStorage
@@ -734,7 +734,8 @@ socket.on('joinRoom', ({ roomId, userName }) => {
   }
 
   // ✅ Send host status back to client
-  socket.emit('hostStatus', { isHost: isHostGranted });
+//  socket.emit('hostStatus', { isHost: isHostGranted });
+  socket.emit('hostStatus', { isHost: !!roomHosts[roomId] && roomHosts[roomId] === socket.id });
 
   // Initialize room if it doesn't exist
 if (!rooms[roomId]) {
