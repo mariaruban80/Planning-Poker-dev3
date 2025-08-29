@@ -36,6 +36,9 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
   roomId = roomIdentifier;
   userName = userNameValue;
   reconnectAttempts = 0;
+
+  // ✅ Check if host was requested
+  const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
   
   // Reset lastKnownRoomState to avoid carrying over state from previous sessions
   lastKnownRoomState = {
@@ -57,7 +60,7 @@ export function initializeWebSocket(roomIdentifier, userNameValue, handleMessage
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     timeout: 20000,
-    query: { roomId: roomIdentifier, userName: userNameValue }
+    query: { roomId: roomIdentifier, userName: userNameValue,  requestedHost: requestedHost }
   });
 // Reconnection behavior tuning
 socket.on('reconnect', () => {
@@ -1063,6 +1066,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
