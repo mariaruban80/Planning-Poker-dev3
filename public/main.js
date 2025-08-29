@@ -4334,7 +4334,6 @@ function setupInviteButton() {
     }
   };
 }
-
 function setupHostToggle() {
   const hostToggle = document.getElementById('hostModeToggle');
   if (!hostToggle) {
@@ -4365,6 +4364,7 @@ function setupHostToggle() {
           
           if (response && response.allowed) {
             console.log('[HOST] Host granted');
+            sessionStorage.setItem('isHost', 'true');
             enableHostFeatures();
           } else {
             console.log('[HOST] Host denied, showing error modal');
@@ -4388,6 +4388,7 @@ function setupHostToggle() {
       
       // Releasing host role
       if (sessionStorage.getItem('isHost') === 'true') {
+        sessionStorage.setItem('isHost', 'false');
         disableHostFeatures();
         
         if (window.socket && typeof window.socket.emit === "function") {
@@ -4399,6 +4400,7 @@ function setupHostToggle() {
 
   console.log("[HOST] Host toggle initialized");
 }
+
 
 function enableHostUI() {
   document.querySelectorAll('.host-only').forEach(el => {
