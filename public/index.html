@@ -7216,34 +7216,36 @@ function handleCsvImport() {
 
     <script type="module" src="main.js"></script>
 
-     <script>
+<script>
 document.getElementById('joinSessionWithName').addEventListener('click', function () {
-    const nameInput = document.getElementById('userNameInput');
-    const userName = nameInput.value.trim();
+  const nameInput = document.getElementById('userNameInput');
+  const userName = nameInput.value.trim();
 
-    if (!userName) {
-      alert('Please enter your name to join.');
-      return;
-    }
+  if (!userName) {
+    alert('Please enter your name to join.');
+    return;
+  }
 
-    sessionStorage.setItem('userName', userName);
+  sessionStorage.setItem('userName', userName);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    let roomId = urlParams.get('roomId');
-    if (!roomId) {
-      roomId = 'room-' + Math.floor(Math.random() * 10000);
-      const newUrl = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'roomId=' + roomId;
-      window.history.pushState({ path: newUrl }, '', newUrl);
-    }
+  const urlParams = new URLSearchParams(window.location.search);
+  let roomId = urlParams.get('roomId');
+  if (!roomId) {
+    roomId = 'room-' + Math.floor(Math.random() \* 10000);
+    const newUrl = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'roomId=' + roomId;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+  }
 
-    // ✅ FIX: Get the requestedHost value from sessionStorage
-    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+ 
+  // Get and save Requested Host Variable before redirect
+    const requestHost = document.getElementById("allowJoinAsHost").checked;
+    //Set the variables
+    sessionStorage.setItem("requestedHost",requestHost)
+           //Load the new page
+    window.location.href = "index.html?roomId=" + roomId
 
-    // ✅ FIX: Pass requestedHost to initializeSocketWithName
-    window.initializeSocketWithName(roomId, userName, requestedHost);
-
-    document.getElementById('loginModalCustom').style.display = 'none';
-  });
+  document.getElementById('loginModalCustom').style.display = 'none';
+});
 </script>
 <!-- Translation Loading Overlay (for language-manager.js) -->
 <div id="translationOverlay" style="display:none; position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10001; background:rgba(0,0,0,0.45); color: white; font-size: 2em; align-items:center;justify-content:center; flex-direction:column;">
