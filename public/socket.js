@@ -72,7 +72,12 @@ socket.on('reconnect', () => {
     socket.emit('requestFullStateResync');
   }, 500);
 });
+ socket.on("connect", () => { // Reattaching connect handler
+    console.log(`[SOCKET] Connected to server! (ID: ${socket.id}), Emitting joinRoom`);
 
+    socket.emit('joinRoom', { roomId: roomIdentifier, userName: userNameValue, requestedHost: requestedHost });
+
+    });
 socket.on('disconnect', (reason) => {
   console.warn('[SOCKET] Disconnected. Reason:', reason);
 });
@@ -1066,6 +1071,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
