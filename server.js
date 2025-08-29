@@ -395,7 +395,6 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
   console.log("[SOCKET] New connection:", socket.id);
 
 const sessionHosts = new Map(); // sessionId -> socket.id
-
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost: ${requestedHost}`);
   
@@ -403,32 +402,33 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   socket.join(sessionId);
 
   let currentHost = sessionHosts.get(sessionId);
+  const room = io.sockets.adapter.rooms.get(sessionId);
+  const isFirstUser = room && room.size === 1; // first user in this session
 
-  // ✅ Check if host is requested and available
   if (requestedHost && !currentHost) {
-    // Grant host role
+    // ✅ Requested host, no existing host → grant
     socket.isHost = true;
     sessionHosts.set(sessionId, socket.id);
     currentHost = socket.id;
     console.log(`[HOST] ${name} (${socket.id}) granted HOST role in ${sessionId}`);
     if (callback) callback({ isHost: true });
-    
+
   } else if (requestedHost && currentHost) {
-    // Host requested but already exists - deny
+    // ❌ Requested host but already taken → deny
     socket.isHost = false;
     console.log(`[HOST] ${name} (${socket.id}) DENIED host role in ${sessionId} - host already exists`);
     if (callback) callback({ isHost: false, reason: "Host already exists" });
-    
-  } else if (!currentHost) {
-    // No host exists and none requested - auto-assign as host
+
+  } else if (!currentHost && isFirstUser) {
+    // ✅ First user in empty room → auto-assign host
     socket.isHost = true;
     sessionHosts.set(sessionId, socket.id);
     currentHost = socket.id;
     console.log(`[HOST] ${name} (${socket.id}) auto-assigned as HOST in ${sessionId}`);
     if (callback) callback({ isHost: true });
-    
+
   } else {
-    // Join as guest
+    // 👥 Everyone else → guest
     socket.isHost = false;
     console.log(`[GUEST] ${name} (${socket.id}) joined as GUEST in ${sessionId}`);
     if (callback) callback({ isHost: false });
@@ -436,7 +436,6 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
 
   // Broadcast updated user list
   const users = [];
-  const room = io.sockets.adapter.rooms.get(sessionId);
   if (room) {
     for (let id of room) {
       const s = io.sockets.sockets.get(id);
@@ -449,6 +448,8 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
 
   console.log(`[DEBUG] Current host for session ${sessionId}:`, currentHost);
 });
+
+
 
 // Cleanup on disconnect
 socket.on("disconnect", () => {
