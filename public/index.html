@@ -7217,7 +7217,7 @@ function handleCsvImport() {
     <script type="module" src="main.js"></script>
 
      <script>
-  document.getElementById('joinSessionWithName').addEventListener('click', function () {
+document.getElementById('joinSessionWithName').addEventListener('click', function () {
     const nameInput = document.getElementById('userNameInput');
     const userName = nameInput.value.trim();
 
@@ -7226,10 +7226,8 @@ function handleCsvImport() {
       return;
     }
 
-    // ✅ FIX: Store userName in sessionStorage so it persists
     sessionStorage.setItem('userName', userName);
 
-    // ✅ FIX: Load roomId from URL or generate one
     const urlParams = new URLSearchParams(window.location.search);
     let roomId = urlParams.get('roomId');
     if (!roomId) {
@@ -7238,12 +7236,12 @@ function handleCsvImport() {
       window.history.pushState({ path: newUrl }, '', newUrl);
     }
 
-    // ✅ FIX: Initialize socket with saved name
-    if (typeof window.initializeSocketWithName === 'function') {
-      window.initializeSocketWithName(roomId, userName);
-    }
+    // ✅ FIX: Get the requestedHost value from sessionStorage
+    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-    // Hide the login modal
+    // ✅ FIX: Pass requestedHost to initializeSocketWithName
+    window.initializeSocketWithName(roomId, userName, requestedHost);
+
     document.getElementById('loginModalCustom').style.display = 'none';
   });
 </script>
