@@ -395,62 +395,58 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
   console.log("[SOCKET] New connection:", socket.id);
 
 const sessionHosts = new Map(); // sessionId -> socket.id
-socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost: ${requestedHost}`);
-  
-  socket.userName = name;
-  socket.join(sessionId);
+  socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+    console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
 
-  let currentHost = sessionHosts.get(sessionId);
-  const room = io.sockets.adapter.rooms.get(sessionId);
-  const isFirstUser = room && room.size === 1;
+    socket.userName = name;
+    socket.join(sessionId);
 
-  if (!currentHost && isFirstUser) {
-    // ✅ First user → auto host
-    socket.isHost = true;
-    sessionHosts.set(sessionId, socket.id);
-    currentHost = socket.id;
-    console.log(`[HOST] ${name} (${socket.id}) auto-assigned as HOST in ${sessionId}`);
-    if (callback) callback({ isHost: true });
+    let currentHost = sessionHosts.get(sessionId);
 
-  } else if (requestedHost && !currentHost) {
-    // ✅ No host yet, user requested → grant host
-    socket.isHost = true;
-    sessionHosts.set(sessionId, socket.id);
-    currentHost = socket.id;
-    console.log(`[HOST] ${name} (${socket.id}) requested & granted HOST role in ${sessionId}`);
-    if (callback) callback({ isHost: true });
+    // --- CASE 1: User requested host AND no host exists
+    if (requestedHost && !currentHost) {
+      socket.isHost = true;
+      sessionHosts.set(sessionId, socket.id);
+      currentHost = socket.id;
+      console.log(`[HOST] ${name} (${socket.id}) granted HOST role in ${sessionId}`);
+      if (callback) callback({ isHost: true });
 
-  } else if (requestedHost && currentHost) {
-    // ❌ Host already exists
-    socket.isHost = false;
-    console.log(`[HOST] ${name} (${socket.id}) DENIED host role - host already exists`);
-    if (callback) callback({ isHost: false, reason: "Host already exists" });
+    // --- CASE 2: User requested host but host already exists
+    } else if (requestedHost && currentHost) {
+      socket.isHost = false;
+      console.log(`[HOST] ${name} (${socket.id}) DENIED host role in ${sessionId} - host already exists`);
+      if (callback) callback({ isHost: false, reason: "Host already exists" });
 
-  } else {
-    // 👥 Guest
-    socket.isHost = false;
-    console.log(`[GUEST] ${name} (${socket.id}) joined as GUEST in ${sessionId}`);
-    if (callback) callback({ isHost: false });
-  }
+    // --- CASE 3: User did NOT request host AND no host exists yet → auto-assign
+    } else if (!requestedHost && !currentHost) {
+      socket.isHost = true;
+      sessionHosts.set(sessionId, socket.id);
+      currentHost = socket.id;
+      console.log(`[HOST] ${name} (${socket.id}) auto-assigned as HOST in ${sessionId}`);
+      if (callback) callback({ isHost: true });
 
-  // Broadcast updated user list
-  const users = [];
-  if (room) {
-    for (let id of room) {
-      const s = io.sockets.sockets.get(id);
-      if (s) {
-        users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
-      }
+    // --- CASE 4: Join as guest
+    } else {
+      socket.isHost = false;
+      console.log(`[GUEST] ${name} (${socket.id}) joined as GUEST in ${sessionId}`);
+      if (callback) callback({ isHost: false });
     }
-    io.to(sessionId).emit("userListUpdate", users);
-  }
 
-  console.log(`[DEBUG] Current host for session ${sessionId}:`, currentHost);
-});
+    // Broadcast updated user list
+    const users = [];
+    const room = io.sockets.adapter.rooms.get(sessionId);
+    if (room) {
+      for (let id of room) {
+        const s = io.sockets.sockets.get(id);
+        if (s) {
+          users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
+        }
+      }
+      io.to(sessionId).emit("userListUpdate", users);
+    }
 
-
-
+    console.log(`[DEBUG] Current host for session ${sessionId}: ${currentHost}`);
+  });
 
 // Cleanup on disconnect
 socket.on("disconnect", () => {
