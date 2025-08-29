@@ -397,40 +397,23 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 const sessionHosts = new Map(); // sessionId -> socket.id
 
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost: ${requestedHost}`);
-  
   socket.userName = name;
   socket.join(sessionId);
 
   let currentHost = sessionHosts.get(sessionId);
 
-  // ✅ Check if host is requested and available
-  if (requestedHost && !currentHost) {
-    // Grant host role
+  // Assign host if:
+  // 1. User requested host OR
+  // 2. No host exists yet
+  if (!currentHost) {
     socket.isHost = true;
     sessionHosts.set(sessionId, socket.id);
     currentHost = socket.id;
-    console.log(`[HOST] ${name} (${socket.id}) granted HOST role in ${sessionId}`);
+    console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
     if (callback) callback({ isHost: true });
-    
-  } else if (requestedHost && currentHost) {
-    // Host requested but already exists - deny
-    socket.isHost = false;
-    console.log(`[HOST] ${name} (${socket.id}) DENIED host role in ${sessionId} - host already exists`);
-    if (callback) callback({ isHost: false, reason: "Host already exists" });
-    
-  } else if (!currentHost) {
-    // No host exists and none requested - auto-assign as host
-    socket.isHost = true;
-    sessionHosts.set(sessionId, socket.id);
-    currentHost = socket.id;
-    console.log(`[HOST] ${name} (${socket.id}) auto-assigned as HOST in ${sessionId}`);
-    if (callback) callback({ isHost: true });
-    
   } else {
-    // Join as guest
     socket.isHost = false;
-    console.log(`[GUEST] ${name} (${socket.id}) joined as GUEST in ${sessionId}`);
+    console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
     if (callback) callback({ isHost: false });
   }
 
@@ -447,7 +430,7 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     io.to(sessionId).emit("userListUpdate", users);
   }
 
-  console.log(`[DEBUG] Current host for session ${sessionId}:`, currentHost);
+  console.log("[DEBUG] Current host for session:", currentHost);
 });
 
 // Cleanup on disconnect
@@ -682,20 +665,11 @@ if (existingVote !== vote) {
 
 socket.on('joinRoom', ({ roomId, userName }) => {
   if (!userName) return socket.emit('error', { message: 'Username is required' });
-
-  const isHostRequested = socket.handshake.query.requestedHost === 'true';
-  console.log(`[JOIN] ${userName} joining ${roomId}, requestedHost: ${isHostRequested}`);
-
-  socket.join(roomId);
+socket.join(roomId);
   socket.data.roomId = roomId;
   socket.data.userName = userName;
 
-  // Check if this is a new Host requsted from the USER
-
-  //This need to be done if all user  disconnect  
- // check for the 2 valid parameter
-    //Check again the values in check
-
+  // Initialize room if it doesn't exist
   if (!rooms[roomId]) {
     rooms[roomId] = {
       users: [],
@@ -714,120 +688,13 @@ socket.on('joinRoom', ({ roomId, userName }) => {
     };
   }
 
-       rooms[roomId].lastActivity = Date.now();
-
-  //Make the validation of new client as host
-console.log("the value of checkHost(socket)" + checkHost(socket) +"Is a preCheck beforing the client data arrives or new client" );
-
-if (isHostRequested && !checkHost(socket)) {
-
-        if (checkHost(socket)) {
-               console.warn("The client that alrready has the validation " +  checkHost(socket))
-             // socket.emit ()
-        }
-       //     
-
-        //Since the data is lost due to the code exicution now we ask for
-        console.log( ["the host change has been made "]+ host);
-             //Set as NewHost
-              rooms[roomId].hasVot =true;
-             // send a server power
-        console.warn ("all the right are being deployed ")
-
-
-             rooms[roomId].usersSocketPower=rooms[roomId].hasVot
-
-              console.warn("Is the new user been  permited more permission" + [ rooms[roomId].usersSocketPower] +"from"+ userName);
-
-             let host =  rooms[roomId].usersSocketPower;
-
-             } else  
-               if (!isHostRequested && checkHost(socket)){
-
-                 //Then remove   the  permissions
-                  console.warn ("invalid permissions, remove " + userName);
-                  handleDefaultPower(socket);
-                  //after that update alll the power
-    function handleDefaultPower(socket){
-                         } //Make something with the defaut function
-               }
-// after that we push all this
+  // Update room activity timestamp
+  rooms[roomId].lastActivity = Date.now();
 
   // Track user name to socket ID mapping for vote persistence
   if (!userNameToIdMap[userName]) {
     userNameToIdMap[userName] = { socketIds: [] };
   }
-
-
-  if (!userNameToIdMap[userName].socketIds.includes(socket.id)) {
-    userNameToIdMap[userName].socketIds.push(socket.id);
-  }
-
-  if (userNameToIdMap[userName].socketIds.length > 5) {
-    userNameToIdMap[userName].socketIds = userNameToIdMap[userName].socketIds.slice(-5);
-  }
-   function updateValue (hostValue){
-
-   const isHost =  hostValue;
- return                isHost
-
-                }    //Remove existing user with same UserID
-  rooms[roomId].users = rooms[roomId].users.filter(u => u.id !== socket.id);
-  // ✅ Also filter out this username to support rejoining after disconnect with a different socket.ID
-  rooms[roomId].users = rooms[roomId].users.filter(u => u.name !== userName);
-
-  let id  =socket.id
-  let isHostpower ;
-
-rooms[roomId].users.push({ id: socket.id,sessionid:socket.sessionId  ,  name: userName, hasCredencial: checkHost(socket)   });
-
-if (!checkHost(socket)){
-   isHostpower = false
-       }
-         else{
-    listSessionValue( );
-
-isHostpower =   true
-            for (const user of  rooms[roomId].users){
-                   console.warn("is a user and a permited has"+ {user} +  "power")
-                 }
-             console.log (+" this value =" +   rooms[roomId].lastActivity      )
-
-              function updateValue(new_num){
-
-                const num =     new_num
-              }    
-              }
-
-
-
-   listSessionValue()
-
-
-   function listSessionValue(){
-            //Update the values from all conections
-
-     const isHost   = socket.id; //Create session   
-
-               let userConecteds  = rooms[roomId].users.length ;    
-        console.warn ("There were  list"+  userConecteds, "sessionId"+sessionid, )
-    }
-
-updateToNewClients()
-        function updateToNewClients(){
-
-
-        }
-io.to(roomId).emit('userList', rooms[roomId].users);
-
-sendPermission(); 
-function sendPermission (){
-     //  console.warn("newPermission" + hasPermission =  rooms[roomId].votesPerStory  );
-}
-
-  
-  
-   // });
   
   // STEP 1: REMOVE ALL PREVIOUS VOTES FOR THIS USER FIRST
   // This is critical to prevent duplicate votes
