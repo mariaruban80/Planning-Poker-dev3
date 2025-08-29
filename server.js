@@ -822,7 +822,7 @@ io.to(roomId).emit('userList', rooms[roomId].users);
 
 sendPermission(); 
 function sendPermission (){
-       console.warn("newPermission" + hasPermission =  rooms[roomId].votesPerStory  );
+     //  console.warn("newPermission" + hasPermission =  rooms[roomId].votesPerStory  );
 }
 
   
