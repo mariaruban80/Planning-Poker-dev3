@@ -638,6 +638,33 @@ socket.on("connect", () => {
 });
 
 
+socket.on('hostStatus', ({ isHost }) => {
+  console.log(`[HOST] Server confirmed host status: ${isHost}`);
+  
+  if (isHost) {
+    sessionStorage.setItem('isHost', 'true');
+    enableHostFeatures();
+  } else {
+    sessionStorage.setItem('isHost', 'false');
+    disableHostFeatures();
+  }
+});
+
+socket.on('hostDenied', ({ reason, existingHostId }) => {
+  console.log(`[HOST] Host request denied: ${reason}, existing host: ${existingHostId}`);
+  
+  // Reset client state
+  sessionStorage.setItem('isHost', 'false');
+  disableHostFeatures();
+  
+  // Show error modal
+  const errorModal = document.getElementById('hostModeErrorModal');
+  if (errorModal) {
+    errorModal.style.display = 'flex';
+  } else {
+    alert('Cannot become host - another host is already available in this room');
+  }
+});
 
   // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
