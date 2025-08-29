@@ -879,18 +879,15 @@ function joinRoom() {
     return;
   }
 
-  // Save details in sessionStorage
+  // Save intent only; start as guest
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
   sessionStorage.setItem("isRoomCreator", "false");
-
-  // ✅ Always start as guest until server confirms
   sessionStorage.setItem("isHost", "false");
 
-  // Navigate to the room
-  window.location.href = `/index.html?roomId=${sessionId}`;
+  // Go to room
+  window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
 }
-
    
   </script>
 </body>
