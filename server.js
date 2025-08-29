@@ -397,23 +397,40 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 const sessionHosts = new Map(); // sessionId -> socket.id
 
 socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+  console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost: ${requestedHost}`);
+  
   socket.userName = name;
   socket.join(sessionId);
 
   let currentHost = sessionHosts.get(sessionId);
 
-  // Assign host if:
-  // 1. User requested host OR
-  // 2. No host exists yet
-  if (!currentHost) {
+  // ✅ Check if host is requested and available
+  if (requestedHost && !currentHost) {
+    // Grant host role
     socket.isHost = true;
     sessionHosts.set(sessionId, socket.id);
     currentHost = socket.id;
-    console.log(`[HOST] ${name} (${socket.id}) joined ${sessionId} as HOST`);
+    console.log(`[HOST] ${name} (${socket.id}) granted HOST role in ${sessionId}`);
     if (callback) callback({ isHost: true });
-  } else {
+    
+  } else if (requestedHost && currentHost) {
+    // Host requested but already exists - deny
     socket.isHost = false;
-    console.log(`[GUEST] ${name} (${socket.id}) joined ${sessionId} as GUEST`);
+    console.log(`[HOST] ${name} (${socket.id}) DENIED host role in ${sessionId} - host already exists`);
+    if (callback) callback({ isHost: false, reason: "Host already exists" });
+    
+  } else if (!currentHost) {
+    // No host exists and none requested - auto-assign as host
+    socket.isHost = true;
+    sessionHosts.set(sessionId, socket.id);
+    currentHost = socket.id;
+    console.log(`[HOST] ${name} (${socket.id}) auto-assigned as HOST in ${sessionId}`);
+    if (callback) callback({ isHost: true });
+    
+  } else {
+    // Join as guest
+    socket.isHost = false;
+    console.log(`[GUEST] ${name} (${socket.id}) joined as GUEST in ${sessionId}`);
     if (callback) callback({ isHost: false });
   }
 
@@ -430,7 +447,7 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     io.to(sessionId).emit("userListUpdate", users);
   }
 
-  console.log("[DEBUG] Current host for session:", currentHost);
+  console.log(`[DEBUG] Current host for session ${sessionId}:`, currentHost);
 });
 
 // Cleanup on disconnect
