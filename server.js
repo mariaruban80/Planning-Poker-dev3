@@ -418,7 +418,7 @@ const sessionHosts = new Map(); // sessionId -> socket.id
       if (callback) callback({ isHost: false, reason: "Host already exists" });
 
     // --- CASE 3: User did NOT request host AND no host exists yet → auto-assign
-    } else if (!requestedHost && !currentHost) {
+    } else if (!requestedHost && !currentHost && socket.isSessionCreator) {
       socket.isHost = true;
       sessionHosts.set(sessionId, socket.id);
       currentHost = socket.id;
