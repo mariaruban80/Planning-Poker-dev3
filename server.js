@@ -403,32 +403,32 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
 
   let currentHost = sessionHosts.get(sessionId);
   const room = io.sockets.adapter.rooms.get(sessionId);
-  const isFirstUser = room && room.size === 1; // first user in this session
+  const isFirstUser = room && room.size === 1;
 
-  if (requestedHost && !currentHost) {
-    // ✅ Requested host, no existing host → grant
-    socket.isHost = true;
-    sessionHosts.set(sessionId, socket.id);
-    currentHost = socket.id;
-    console.log(`[HOST] ${name} (${socket.id}) granted HOST role in ${sessionId}`);
-    if (callback) callback({ isHost: true });
-
-  } else if (requestedHost && currentHost) {
-    // ❌ Requested host but already taken → deny
-    socket.isHost = false;
-    console.log(`[HOST] ${name} (${socket.id}) DENIED host role in ${sessionId} - host already exists`);
-    if (callback) callback({ isHost: false, reason: "Host already exists" });
-
-  } else if (!currentHost && isFirstUser) {
-    // ✅ First user in empty room → auto-assign host
+  if (!currentHost && isFirstUser) {
+    // ✅ First user → auto host
     socket.isHost = true;
     sessionHosts.set(sessionId, socket.id);
     currentHost = socket.id;
     console.log(`[HOST] ${name} (${socket.id}) auto-assigned as HOST in ${sessionId}`);
     if (callback) callback({ isHost: true });
 
+  } else if (requestedHost && !currentHost) {
+    // ✅ No host yet, user requested → grant host
+    socket.isHost = true;
+    sessionHosts.set(sessionId, socket.id);
+    currentHost = socket.id;
+    console.log(`[HOST] ${name} (${socket.id}) requested & granted HOST role in ${sessionId}`);
+    if (callback) callback({ isHost: true });
+
+  } else if (requestedHost && currentHost) {
+    // ❌ Host already exists
+    socket.isHost = false;
+    console.log(`[HOST] ${name} (${socket.id}) DENIED host role - host already exists`);
+    if (callback) callback({ isHost: false, reason: "Host already exists" });
+
   } else {
-    // 👥 Everyone else → guest
+    // 👥 Guest
     socket.isHost = false;
     console.log(`[GUEST] ${name} (${socket.id}) joined as GUEST in ${sessionId}`);
     if (callback) callback({ isHost: false });
@@ -448,6 +448,7 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
 
   console.log(`[DEBUG] Current host for session ${sessionId}:`, currentHost);
 });
+
 
 
 
