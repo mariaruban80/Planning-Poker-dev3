@@ -682,12 +682,62 @@ if (existingVote !== vote) {
 
 socket.on('joinRoom', ({ roomId, userName }) => {
   if (!userName) return socket.emit('error', { message: 'Username is required' });
-socket.join(roomId);
+  
+  // ✅ Check if this is a host request from sessionStorage
+  const requestedHost = socket.handshake.query.requestedHost === 'true' || 
+                       socket.request._query?.requestedHost === 'true';
+  
+  console.log(`[JOIN] ${userName} joining ${roomId}, requestedHost: ${requestedHost}`);
+  
+  socket.join(roomId);
   socket.data.roomId = roomId;
   socket.data.userName = userName;
 
+  // ✅ Check current host status for this room
+  let currentHost = roomHosts[roomId];
+  let isHostGranted = false;
+
+  if (requestedHost && !currentHost) {
+    // Grant host role - no existing host
+    roomHosts[roomId] = socket.id;
+    currentHost = socket.id;
+    isHostGranted = true;
+    console.log(`[HOST] ${userName} (${socket.id}) granted HOST role in ${roomId}`);
+    
+  } else if (requestedHost && currentHost && currentHost !== socket.id) {
+    // Host requested but already exists - deny
+    isHostGranted = false;
+    console.log(`[HOST] ${userName} (${socket.id}) DENIED host role in ${roomId} - host ${currentHost} already exists`);
+    
+    // Send error back to client
+    socket.emit('hostDenied', { 
+      reason: 'Host already exists',
+      existingHostId: currentHost 
+    });
+    
+  } else if (!currentHost && !requestedHost) {
+    // No host exists and none requested - auto-assign as host (first user)
+    roomHosts[roomId] = socket.id;
+    currentHost = socket.id;
+    isHostGranted = true;
+    console.log(`[HOST] ${userName} (${socket.id}) auto-assigned as HOST in ${roomId} (first user)`);
+    
+  } else if (currentHost === socket.id) {
+    // This socket is already the host (reconnection case)
+    isHostGranted = true;
+    console.log(`[HOST] ${userName} (${socket.id}) reconnected as existing HOST in ${roomId}`);
+    
+  } else {
+    // Join as guest
+    isHostGranted = false;
+    console.log(`[GUEST] ${userName} (${socket.id}) joined as GUEST in ${roomId}`);
+  }
+
+  // ✅ Send host status back to client
+  socket.emit('hostStatus', { isHost: isHostGranted });
+
   // Initialize room if it doesn't exist
-  if (!rooms[roomId]) {
+if (!rooms[roomId]) {
     rooms[roomId] = {
       users: [],
       votes: {},
