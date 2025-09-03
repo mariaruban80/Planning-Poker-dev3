@@ -635,22 +635,14 @@ socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
       console.log("[HOST REQUEST] User clicked 'Allow as host'");
       const userNameStored = sessionStorage.getItem("userName");
 
-      socket.emit(
-        "joinSession",
-        { sessionId: roomId, requestedHost: true, name: userNameStored },
-        (response) => {
-          console.log("[JOIN CALLBACK HOST]", response);
-          if (response?.isHost) {
-            console.log("[HOST] Granted Host Role");
-            sessionStorage.setItem("isHost", "true");
-            enableHostFeatures();
-          } else {
-            console.log("[HOST] Still Guest — host already exists");
-            sessionStorage.setItem("isHost", "false");
-            disableHostFeatures();
-          }
-        }
-      );
+socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+  if (res?.isHost) {
+    sessionStorage.setItem("isHost", "true");
+    enableHostFeatures();
+  } else {
+    sessionStorage.setItem("isHost", "false");
+    disableHostFeatures();
+  }
     });
   }
 
