@@ -393,6 +393,7 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // Join Session + Decide Role
 // ==========================
   console.log("[SOCKET] New connection:", socket.id);
+
 const sessionHosts = new Map();
 
 io.on("connection", (socket) => {
@@ -401,10 +402,13 @@ io.on("connection", (socket) => {
     socket.sessionId = sessionId;
     socket.join(sessionId);
 
-    // Check current host
+    console.log(`\n[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
+
+    // Check if we have a valid host for this session
     let currentHost = sessionHosts.get(sessionId);
     const hostSocket = currentHost ? io.sockets.sockets.get(currentHost) : null;
     if (currentHost && (!hostSocket || !hostSocket.connected)) {
+      console.log(`[HOST] Removing stale host for ${sessionId}`);
       sessionHosts.delete(sessionId);
       currentHost = null;
     }
@@ -421,7 +425,10 @@ io.on("connection", (socket) => {
       if (callback) callback({ isHost: false });
     }
 
-    // Send user list
+    // Show full host map for debugging
+    console.log("[DEBUG] Current hosts:", sessionHosts);
+
+    // Send user list to all clients
     const users = [];
     const room = io.sockets.adapter.rooms.get(sessionId);
     if (room) {
@@ -441,7 +448,6 @@ io.on("connection", (socket) => {
     }
   });
 });
-
 
 
 
