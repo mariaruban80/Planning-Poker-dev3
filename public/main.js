@@ -645,7 +645,7 @@ socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
   }
     });
   }
-
+                }
   // === Continue with other initialization steps ===
   setupCSVUploader();
   setupInviteButton();
