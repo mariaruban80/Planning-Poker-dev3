@@ -396,67 +396,63 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 
 const sessionHosts = new Map(); // sessionId -> socket.id
   socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-    console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
+  console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
 
-    socket.userName = name;
-    socket.join(sessionId);
+  socket.userName = name;
+  socket.join(sessionId);
 
-    let currentHost = sessionHosts.get(sessionId);
+  let currentHost = sessionHosts.get(sessionId);
 
-    // --- CASE 1: User requested host AND no host exists
-    if (requestedHost && !currentHost) {
-      socket.isHost = true;
-      sessionHosts.set(sessionId, socket.id);
-      currentHost = socket.id;
-      console.log(`[HOST] ${name} (${socket.id}) granted HOST role in ${sessionId}`);
-      if (callback) callback({ isHost: true });
+  // ✅ If no host or old host disconnected, assign host
+  const hostSocket = currentHost ? io.sockets.sockets.get(currentHost) : null;
+  if (currentHost && (!hostSocket || !hostSocket.connected)) {
+    sessionHosts.delete(sessionId);
+    currentHost = null;
+  }
 
-    // --- CASE 2: User requested host but host already exists
-    } else if (requestedHost && currentHost) {
-      socket.isHost = false;
-      console.log(`[HOST] ${name} (${socket.id}) DENIED host role in ${sessionId} - host already exists`);
-      if (callback) callback({ isHost: false, reason: "Host already exists" });
+  if (requestedHost && !currentHost) {
+    socket.isHost = true;
+    sessionHosts.set(sessionId, socket.id);
+    currentHost = socket.id;
+    console.log(`[HOST] ${name} (${socket.id}) granted HOST role in ${sessionId}`);
+    if (callback) callback({ isHost: true });
 
-    // --- CASE 3: User did NOT request host AND no host exists yet → auto-assign
-    } else if (!requestedHost && !currentHost && socket.isSessionCreator) {
-      socket.isHost = true;
-      sessionHosts.set(sessionId, socket.id);
-      currentHost = socket.id;
-      console.log(`[HOST] ${name} (${socket.id}) auto-assigned as HOST in ${sessionId}`);
-      if (callback) callback({ isHost: true });
+  } else if (requestedHost && currentHost) {
+    socket.isHost = false;
+    console.log(`[HOST] ${name} (${socket.id}) DENIED host role in ${sessionId} - host already exists`);
+    if (callback) callback({ isHost: false, reason: "Host already exists" });
 
-    // --- CASE 4: Join as guest
-    } else {
-      socket.isHost = false;
-      console.log(`[GUEST] ${name} (${socket.id}) joined as GUEST in ${sessionId}`);
-      if (callback) callback({ isHost: false });
+  } else {
+    socket.isHost = false;
+    console.log(`[GUEST] ${name} (${socket.id}) joined as GUEST in ${sessionId}`);
+    if (callback) callback({ isHost: false });
+  }
+
+  // Update user list
+  const users = [];
+  const room = io.sockets.adapter.rooms.get(sessionId);
+  if (room) {
+    for (let id of room) {
+      const s = io.sockets.sockets.get(id);
+      if (s) users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
     }
+    io.to(sessionId).emit("userListUpdate", users);
+  }
 
-    // Broadcast updated user list
-    const users = [];
-    const room = io.sockets.adapter.rooms.get(sessionId);
-    if (room) {
-      for (let id of room) {
-        const s = io.sockets.sockets.get(id);
-        if (s) {
-          users.push({ id, name: s.userName || "Unknown", isHost: !!s.isHost });
-        }
-      }
-      io.to(sessionId).emit("userListUpdate", users);
-    }
+  console.log(`[DEBUG] Current host for session ${sessionId}: ${currentHost}`);
+});
 
-    console.log(`[DEBUG] Current host for session ${sessionId}: ${currentHost}`);
-  });
 
-// Cleanup on disconnect
 socket.on("disconnect", () => {
   for (let [sessionId, hostId] of sessionHosts.entries()) {
     if (hostId === socket.id) {
+      console.log(`[HOST] Host ${socket.userName} left session ${sessionId}`);
       sessionHosts.delete(sessionId);
-      console.log(`[HOST] Host ${socket.userName} disconnected from ${sessionId}`);
+      io.to(sessionId).emit("hostLeft");
     }
   }
 });
+
 
 
 
