@@ -7231,22 +7231,22 @@ document.getElementById('joinSessionWithName').addEventListener('click', functio
   const urlParams = new URLSearchParams(window.location.search);
   let roomId = urlParams.get('roomId');
   if (!roomId) {
-    roomId = 'room-' + Math.floor(Math.random() \* 10000);
+    roomId = 'room-' + Math.floor(Math.random() * 10000);
     const newUrl = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'roomId=' + roomId;
     window.history.pushState({ path: newUrl }, '', newUrl);
   }
 
- 
   // Get and save Requested Host Variable before redirect
-    const requestHost = document.getElementById("allowJoinAsHost").checked;
-    //Set the variables
-    sessionStorage.setItem("requestedHost",requestHost)
-           //Load the new page
-    window.location.href = "index.html?roomId=" + roomId
+  const requestHost = document.getElementById("allowJoinAsHost").checked;
+  sessionStorage.setItem("requestedHost", requestHost);
+
+  // Load the new page
+  window.location.href = "index.html?roomId=" + roomId;
 
   document.getElementById('loginModalCustom').style.display = 'none';
 });
 </script>
+
 <!-- Translation Loading Overlay (for language-manager.js) -->
 <div id="translationOverlay" style="display:none; position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10001; background:rgba(0,0,0,0.45); color: white; font-size: 2em; align-items:center;justify-content:center; flex-direction:column;">
   <div class="loading-spinner" style="margin-bottom:16px;"></div>
