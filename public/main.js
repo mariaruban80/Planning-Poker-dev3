@@ -601,51 +601,49 @@ window.initializeSocketWithName = function(roomId, name) {
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
   // === Initial join: always as guest ===
-socket.on("connect", () => {
-  console.log(`[SOCKET] Connected with ID: ${socket.id}`);
+  socket.on("connect", () => {
+    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-const sessionId = new URLSearchParams(location.search).get('roomId');
-const name = sessionStorage.getItem('userName') || 'Guest';
-const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
-socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
-  const isHost = !!(res && res.isHost);
-  sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+    const sessionId = new URLSearchParams(location.search).get('roomId');
+    const name = sessionStorage.getItem('userName') || 'Guest';
+    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-  if (!isHost && res && res.reason === 'Host already exists') {
-    // optional UX
-    console.info('[JOIN] Host request denied: host already exists');
-  }
+    socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+      const isHost = !!(res && res.isHost);
+      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
 
-  // now toggle UI based on isHost
-  if (isHost) {
-    enableHostFeatures();
-  } else {
-    disableHostFeatures();
-  }
-});
+      if (!isHost && res && res.reason === 'Host already exists') {
+        console.info('[JOIN] Host request denied: host already exists');
+      }
 
-});
-
-
+      if (isHost) {
+        enableHostFeatures();
+      } else {
+        disableHostFeatures();
+      }
+    });
+  });
 
   // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
       console.log("[HOST REQUEST] User clicked 'Allow as host'");
+      const sessionId = new URLSearchParams(location.search).get('roomId');
       const userNameStored = sessionStorage.getItem("userName");
 
-socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
-  if (res?.isHost) {
-    sessionStorage.setItem("isHost", "true");
-    enableHostFeatures();
-  } else {
-    sessionStorage.setItem("isHost", "false");
-    disableHostFeatures();
-  }
+      socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
+        if (res?.isHost) {
+          sessionStorage.setItem("isHost", "true");
+          enableHostFeatures();
+        } else {
+          sessionStorage.setItem("isHost", "false");
+          disableHostFeatures();
+        }
+      });
     });
   }
-                }
+
   // === Continue with other initialization steps ===
   setupCSVUploader();
   setupInviteButton();
@@ -659,7 +657,6 @@ socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
   addNewLayoutStyles();
   setupHostToggle();
 };
-
 
 
 /**
