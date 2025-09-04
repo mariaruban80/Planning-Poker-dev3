@@ -379,11 +379,9 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
 
   console.log(`\n[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
 
-  // Get current host for this session
+  // Cleanup stale host first
   let currentHost = sessionHosts.get(sessionId);
   const hostSocket = currentHost ? io.sockets.sockets.get(currentHost) : null;
-
-  // If no valid socket exists for the current host, clear it
   if (!hostSocket) {
     if (currentHost) {
       console.log(`[HOST] Removing stale host (${currentHost}) for ${sessionId}`);
@@ -392,23 +390,18 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     currentHost = null;
   }
 
-  console.log("[JOIN SESSION DEBUG]", {
-    sessionId,
-    requestedHost,
-    currentHost,
-    hasHostSocket: !!hostSocket
-  });
+  // Get current host again after cleanup
+  currentHost = sessionHosts.get(sessionId);
+  const hasHostSocket = !!currentHost;
+
+  console.log("[JOIN SESSION DEBUG]", { sessionId, requestedHost, currentHost, hasHostSocket });
 
   // Host assignment logic
-  if (requestedHost && !currentHost) {
+  if (requestedHost && !hasHostSocket) {
     socket.isHost = true;
     sessionHosts.set(sessionId, socket.id);
-
     console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
-
-    // Broadcast new host to everyone in the room
     io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
-
     if (callback) callback({ isHost: true });
   } else {
     socket.isHost = false;
@@ -417,14 +410,14 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   }
 });
 
+socket.on("disconnect", () => {
+  if (socket.sessionId && sessionHosts.get(socket.sessionId) === socket.id) {
+    console.log(`[HOST] Host ${socket.userName} left session ${socket.sessionId}`);
+    sessionHosts.delete(socket.sessionId);
+    io.to(socket.sessionId).emit("hostLeft");
+  }
+});
 
-  socket.on("disconnect", () => {
-    if (socket.sessionId && sessionHosts.get(socket.sessionId) === socket.id) {
-      console.log(`[HOST] Host ${socket.userName} left session ${socket.sessionId}`);
-      sessionHosts.delete(socket.sessionId);
-      io.to(socket.sessionId).emit("hostLeft");
-    }
-  });
 });
 
 
