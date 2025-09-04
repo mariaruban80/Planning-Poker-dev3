@@ -588,7 +588,6 @@ window.initializeSocketWithName = function(roomId, name) {
 
   console.log(`[APP] Initializing socket for room: ${roomId}, username: ${name}`);
 
-  // Store username & sessionId
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
 
@@ -598,53 +597,38 @@ window.initializeSocketWithName = function(roomId, name) {
 
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // Initial join: respect requestedHost if previously stored
-  socket.on("connect", () => {
-    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
+  // === Join logic ===
+  function joinAsHostOrGuest(requestHost) {
+    const sessionId = sessionStorage.getItem("sessionId");
+    const userNameStored = sessionStorage.getItem("userName");
 
-    const sessionId = new URLSearchParams(location.search).get('roomId');
-    const name = sessionStorage.getItem('userName') || 'Guest';
-    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+    console.log("[JOIN ATTEMPT]", { sessionId, requestedHost: requestHost, name: userNameStored });
 
-    console.log("[JOIN DEBUG]", { sessionId, requestedHost, name });
-
-    socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+    socket.emit("joinSession", { sessionId, requestedHost: requestHost, name: userNameStored }, (res) => {
       const isHost = !!(res && res.isHost);
-      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+      sessionStorage.setItem("isHost", isHost ? "true" : "false");
 
       if (isHost) {
         enableHostFeatures();
       } else {
         disableHostFeatures();
+        if (res?.reason) console.info("[JOIN] Host request denied:", res.reason);
       }
-
-      if (res?.reason) console.info("[JOIN] Host request denied:", res.reason);
     });
-  });
+  }
 
-  // “Allow as host” button
+  // Button for requesting host
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
       console.log("[HOST REQUEST] User clicked 'Allow as host'");
-      const sessionId = new URLSearchParams(location.search).get('roomId');
-      const userNameStored = sessionStorage.getItem("userName");
-
-      // Set requestedHost in sessionStorage
-      sessionStorage.setItem('requestedHost', 'true');
-
-      socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
-        if (res?.isHost) {
-          sessionStorage.setItem("isHost", "true");
-          enableHostFeatures();
-        } else {
-          sessionStorage.setItem("isHost", "false");
-          disableHostFeatures();
-          if (res?.reason) console.info("[HOST REQUEST] Host request denied:", res.reason);
-        }
-      });
+      joinAsHostOrGuest(true);
     });
   }
+
+  // Optional: join as guest if auto-join needed
+  const autoJoinGuest = true; // or false if you want user to click
+  if (autoJoinGuest) joinAsHostOrGuest(false);
 
   // Continue initialization
   setupCSVUploader();
