@@ -648,12 +648,14 @@ if (existingVote !== vote) {
   });
   
   // Handle room joining with enhanced state management
+
 socket.on('joinRoom', ({ roomId, userName, requestedHost }, callback) => {
   // Validate username
   if (!userName) {
-    console.error(`[JOIN] Denied  reuest, Requires User name :${userName}`)
+    console.error(`[JOIN] Denied: Requires User name :${userName}`); //Corrected
     return socket.emit('error', { message: 'Username is required' });
   }
+
 
   // Join the Socket.IO room - Ensure this happens first so it updates io.sockets.adapter.rooms
   socket.join(roomId);
@@ -662,7 +664,7 @@ socket.on('joinRoom', ({ roomId, userName, requestedHost }, callback) => {
   socket.data.roomId = roomId;
   socket.data.userName = userName;
 
-  // Load existing room state, or create a fresh room
+  // Initialize room if it doesn't exist
   if (!rooms[roomId]) {
     rooms[roomId] = {
       users: [],
@@ -683,27 +685,28 @@ socket.on('joinRoom', ({ roomId, userName, requestedHost }, callback) => {
   rooms[roomId].lastActivity = Date.now();
 
   // Handle host status - **MODIFIED**
-  const currentHost = sessionHosts.get(roomId)
-  if (requestedHost && !currentHost) {
+    const currentHost = sessionHosts.get(roomId)
+  if (requestedHost && !currentHost) {  //(sessionHosts.get(roomId)== null)) { If there are existing connections we only allow the last person
     // Make the joining user host if requested and no host exists
+        console.log(`${userName} assigned as host ${requestedHost}`)
     sessionHosts.set(roomId, socket.id);
-	socket.isHost = true;
-        console.log(`[SERVER] ${userName} is new HOST for ${sessionId}`);
+		socket.isHost = true;
+ console.log(`[SERVER] ${userName} is new HOST for ${roomId}`);
     io.to(roomId).emit('hostChanged', { hostId: socket.id, userName: socket.data.userName });
-  } else if (currentHost && currentHost !== socket.id && currentHost != null) { //If a current host exists and joining user is not that host and the parameter check
-    console.log(`[SERVER] Request denied  for ${userName} is already HOST for ${roomId}`);
+  } else if (currentHost && currentHost !== socket.id && requestedHost) {
+         console.log(`[SERVER]  denied host request to join from ${userName}`)
+    console.log(`[SERVER] User ${username} is trying to take ownership but there's already a owner from room${roomId} id and orName \`n ${sessionHosts.size}\`n ${socket.userName}`);
   } else {
-  //what to do if the current host already is this user nothing
-    console.log("A Reconnect to the host happened");
-
-  
+   //what to do if the current host already is this user nothing
+ //   sessionHosts.delete(roomId,socket.id );
+console.log("A Reconnect has for the join" );
   }
 
 const isHost = sessionHosts.get(roomId) === socket.id;
 socket.data.isHost = isHost; // set the host flag on the socket for later use
   //✅ If we have no one yet we send a signal out.
   //✅✅ Broadcast  to all clients
-  io.to(roomId).emit('userList', Array.from(io.sockets.adapter.rooms.get(roomId) || []).map(sid => {    return {id:sid, name:userNameToIdMap[io.sockets.sockets.get(sid)?.userName]?.userName       } }));
+     io.to(roomId).emit('userList', Array.from(io.sockets.adapter.rooms.get(roomId) || []).map(sid => {       return {id:sid, name:socket.handshake.query?.userName||io.sockets.sockets.get(sid )?.userName     } }));
 //	io.to(roomId).emit('reSyncUsers',usersToSync); ✅ Now we emit everyone to sync again.
 const users = [];
     const room = io.sockets.adapter.rooms.get(roomId);
@@ -715,7 +718,7 @@ const users = [];
     }
     io.to(roomId).emit("userListUpdate", users);
 
-  console.log(\"[SOCKET] The List of users =\" + users.length)
+  console.log("[SOCKET] The List of users =" + users.length)
 
 //✅ This fixes userMap name. Now it pulls from the session
 if (!userNameToIdMap[userName].socketIds.includes(socket.id))
@@ -727,7 +730,6 @@ if (!userNameToIdMap[userName].socketIds.includes(socket.id))
 console.log("[INFO]The User Connected in = " + userName+  " with USREid="+  socket.data.isHost);
    }
 });
-
 
   
   
