@@ -1936,7 +1936,7 @@ socket.on('resetVotes', ({ storyId }) => {
     console.log(`[SERVER] Socket ${socket.id} disconnected from room ${roomId}`);
   });
 });
-
+});
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
