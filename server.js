@@ -379,36 +379,49 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
 
   console.log(`\n[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
 
-  // Cleanup stale host first
+  // Get current host for this session
   let currentHost = sessionHosts.get(sessionId);
   const hostSocket = currentHost ? io.sockets.sockets.get(currentHost) : null;
-  if (!hostSocket) {
-    if (currentHost) {
-      console.log(`[HOST] Removing stale host (${currentHost}) for ${sessionId}`);
-    }
+
+  // Remove stale host if socket no longer exists
+  if (currentHost && !hostSocket) {
+    console.log(`[HOST] Removing stale host (${currentHost}) for ${sessionId}`);
     sessionHosts.delete(sessionId);
     currentHost = null;
   }
 
-  // Get current host again after cleanup
-  currentHost = sessionHosts.get(sessionId);
-  const hasHostSocket = !!currentHost;
-
-  console.log("[JOIN SESSION DEBUG]", { sessionId, requestedHost, currentHost, hasHostSocket });
+  console.log("[JOIN SESSION DEBUG]", {
+    sessionId,
+    requestedHost,
+    currentHost,
+    hasHostSocket: !!hostSocket
+  });
 
   // Host assignment logic
-  if (requestedHost && !hasHostSocket) {
-    socket.isHost = true;
-    sessionHosts.set(sessionId, socket.id);
-    console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
-    io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
-    if (callback) callback({ isHost: true });
+  if (requestedHost) {
+    if (!currentHost) {
+      // No host exists, assign this user
+      socket.isHost = true;
+      sessionHosts.set(sessionId, socket.id);
+
+      console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
+
+      io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
+      if (callback) callback({ isHost: true });
+    } else {
+      // Host already exists
+      socket.isHost = false;
+      console.log(`[GUEST] ${name} joined as guest (host already exists)`);
+      if (callback) callback({ isHost: false, reason: "Host already exists" });
+    }
   } else {
+    // Normal guest
     socket.isHost = false;
     console.log(`[GUEST] ${name} joined as guest in ${sessionId}`);
     if (callback) callback({ isHost: false });
   }
 });
+
 
 socket.on("disconnect", () => {
   if (socket.sessionId && sessionHosts.get(socket.sessionId) === socket.id) {
