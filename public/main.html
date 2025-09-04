@@ -879,34 +879,15 @@ function joinRoom() {
     return;
   }
 
-  // Save user intent in sessionStorage
+  // Save intent only; start as guest
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
+//  sessionStorage.setItem("isRoomCreator", "false");
+  sessionStorage.setItem("isHost", "false");
 
-  // Create a temporary socket for host check
-  const tempSocket = initializeWebSocket(null, name); // no room yet
-  tempSocket.on("connect", () => {
-    console.log("[TEMP SOCKET] Connected for host check");
-
-    // Ask server if a host exists
-    tempSocket.emit("checkHost", { sessionId }, (res) => {
-      const hostAvailable = !res.hostExists;
-      const finalHostRequest = requestHost && hostAvailable;
-
-      if (requestHost && !hostAvailable) {
-        console.info("Host already exists, joining as guest");
-      }
-
-      // Close temp socket
-      tempSocket.disconnect();
-
-      // Redirect to index.html with correct requestedHost value
-      window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=${finalHostRequest}`;
-    });
-  });
+  // Go to room
+  window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
 }
-
-
    
   </script>
 </body>
