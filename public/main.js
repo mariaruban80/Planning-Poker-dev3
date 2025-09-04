@@ -119,19 +119,6 @@ function enableHostFeatures() {
   console.log('[HOST] Host features enabled successfully');
 }
 
-function updateUserListUI(users) {
-  const userListEl = document.getElementById("userList"); 
-  if (!userListEl) return;
-
-  userListEl.innerHTML = ""; // clear existing
-  users.forEach(u => {
-    const li = document.createElement("li");
-    li.textContent = `${u.name}${u.isHost ? " (Host)" : ""}`;
-    userListEl.appendChild(li);
-  });
-}
-
-
 /**
  * Disable host-only features and UI elements  
  */
