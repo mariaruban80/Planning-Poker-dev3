@@ -879,29 +879,31 @@ function joinRoom() {
     return;
   }
 
+  // Save user intent in sessionStorage
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
 
-  // If you have a socket initialized already:
-  if (window.socket && window.socket.connected) {
-    window.socket.emit("checkHost", { sessionId }, (res) => {
-      const hostAvailable = !res.hostExists;
+  // Create a temporary socket for host check
+  const tempSocket = initializeWebSocket(null, name); // no room yet
+  tempSocket.on("connect", () => {
+    console.log("[TEMP SOCKET] Connected for host check");
 
-      if (requestHost && hostAvailable) {
-        // User can be host
-        window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=true`;
-      } else {
-        // Join as guest
-        if (requestHost && !hostAvailable) {
-          console.info("Host already exists, joining as guest");
-        }
-        window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=false`;
+    // Ask server if a host exists
+    tempSocket.emit("checkHost", { sessionId }, (res) => {
+      const hostAvailable = !res.hostExists;
+      const finalHostRequest = requestHost && hostAvailable;
+
+      if (requestHost && !hostAvailable) {
+        console.info("Host already exists, joining as guest");
       }
+
+      // Close temp socket
+      tempSocket.disconnect();
+
+      // Redirect to index.html with correct requestedHost value
+      window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=${finalHostRequest}`;
     });
-  } else {
-    // No socket yet: just navigate and handle host assignment in index.html
-    window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=${requestHost}`;
-  }
+  });
 }
 
 
