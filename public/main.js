@@ -1545,13 +1545,37 @@ function appendRoomIdToURL(roomId) {
 /**
  * Initialize the application
  */
-function initializeApp(roomId) {
+function initializeApp(roomId, userName, requestedHost = null) {
+  sessionStorage.setItem("userName", userName);
+  sessionStorage.setItem("sessionId", roomId);
+
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
+
   socket.on('connect', () => {
     if (!window.userMap) window.userMap = {};
     window.userMap[socket.id] = userName;
-  });
 
+    // Determine requestedHost from parameter or URL
+    if (requestedHost === null) {
+      const urlParams = new URLSearchParams(window.location.search);
+      requestedHost = urlParams.get('requestedHost') === 'true';
+    }
+
+    // Emit joinSession with host intent
+    socket.emit('joinSession', { sessionId: roomId, requestedHost, name: userName }, (res) => {
+      const isHost = !!(res && res.isHost);
+      sessionStorage.setItem("isHost", isHost ? "true" : "false");
+
+      if (isHost) {
+        enableHostFeatures();
+      } else {
+        disableHostFeatures();
+        if (requestedHost && !isHost) {
+          console.info("[JOIN] Host request denied: host already exists");
+        }
+      }
+    });
+  });
   if (socket && socket.io) {
     socket.io.reconnectionAttempts = 10;
     socket.io.timeout = 20000;
