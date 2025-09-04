@@ -879,14 +879,31 @@ function joinRoom() {
     return;
   }
 
-  // Save intent only
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
- 
-  // Go to room
- // window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
-  window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=${requestHost}`;
+
+  // If you have a socket initialized already:
+  if (window.socket && window.socket.connected) {
+    window.socket.emit("checkHost", { sessionId }, (res) => {
+      const hostAvailable = !res.hostExists;
+
+      if (requestHost && hostAvailable) {
+        // User can be host
+        window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=true`;
+      } else {
+        // Join as guest
+        if (requestHost && !hostAvailable) {
+          console.info("Host already exists, joining as guest");
+        }
+        window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=false`;
+      }
+    });
+  } else {
+    // No socket yet: just navigate and handle host assignment in index.html
+    window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=${requestHost}`;
+  }
 }
+
 
    
   </script>
