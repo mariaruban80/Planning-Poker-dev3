@@ -1552,6 +1552,22 @@ function initializeApp(roomId) {
   socket.on('connect', () => {
     if (!window.userMap) window.userMap = {};
     window.userMap[socket.id] = userName;
+
+    // Immediately emit joinSession to establish or re-establish host status
+    const name = sessionStorage.getItem('userName') || 'Guest';
+    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+
+    socket.emit('joinSession', { roomId, requestedHost, name }, (res) => {
+      sessionStorage.setItem('isHost', res.isHost ? 'true' : 'false');
+      if (res.isHost) {
+        enableHostFeatures();
+      } else {
+        disableHostFeatures();
+        if (requestedHost && res.reason === "Host already exists") {
+          alert("Someone else is already the host for this session.");
+        }
+      }
+    });
   });
 
   if (socket && socket.io) {
