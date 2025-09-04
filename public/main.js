@@ -588,49 +588,63 @@ window.initializeSocketWithName = function(roomId, name) {
 
   console.log(`[APP] Initializing socket for room: ${roomId}, username: ${name}`);
 
+  // Store username & sessionId in sessionStorage
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
 
   userName = name;
 
+  // Load deleted stories first
   loadDeletedStoriesFromStorage(roomId);
 
+  // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // === Join logic ===
-  function joinAsHostOrGuest(requestHost) {
-    const sessionId = sessionStorage.getItem("sessionId");
-    const userNameStored = sessionStorage.getItem("userName");
+  // === Initial join: always as guest ===
+  socket.on("connect", () => {
+    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-    console.log("[JOIN ATTEMPT]", { sessionId, requestedHost: requestHost, name: userNameStored });
+    const sessionId = new URLSearchParams(location.search).get('roomId');
+    const name = sessionStorage.getItem('userName') || 'Guest';
+    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-    socket.emit("joinSession", { sessionId, requestedHost: requestHost, name: userNameStored }, (res) => {
+    socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
       const isHost = !!(res && res.isHost);
-      sessionStorage.setItem("isHost", isHost ? "true" : "false");
+      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+
+      if (!isHost && res && res.reason === 'Host already exists') {
+        console.info('[JOIN] Host request denied: host already exists');
+      }
 
       if (isHost) {
         enableHostFeatures();
       } else {
         disableHostFeatures();
-        if (res?.reason) console.info("[JOIN] Host request denied:", res.reason);
       }
     });
-  }
+  });
 
-  // Button for requesting host
+  // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
       console.log("[HOST REQUEST] User clicked 'Allow as host'");
-      joinAsHostOrGuest(true);
+      const sessionId = new URLSearchParams(location.search).get('roomId');
+      const userNameStored = sessionStorage.getItem("userName");
+
+      socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
+        if (res?.isHost) {
+          sessionStorage.setItem("isHost", "true");
+          enableHostFeatures();
+        } else {
+          sessionStorage.setItem("isHost", "false");
+          disableHostFeatures();
+        }
+      });
     });
   }
 
-  // Optional: join as guest if auto-join needed
-  const autoJoinGuest = true; // or false if you want user to click
-  if (autoJoinGuest) joinAsHostOrGuest(false);
-
-  // Continue initialization
+  // === Continue with other initialization steps ===
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -643,8 +657,6 @@ window.initializeSocketWithName = function(roomId, name) {
   addNewLayoutStyles();
   setupHostToggle();
 };
-
-
 
 
 /**
@@ -1545,37 +1557,13 @@ function appendRoomIdToURL(roomId) {
 /**
  * Initialize the application
  */
-function initializeApp(roomId, userName, requestedHost = null) {
-  sessionStorage.setItem("userName", userName);
-  sessionStorage.setItem("sessionId", roomId);
-
+function initializeApp(roomId) {
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-
   socket.on('connect', () => {
     if (!window.userMap) window.userMap = {};
     window.userMap[socket.id] = userName;
-
-    // Determine requestedHost from parameter or URL
-    if (requestedHost === null) {
-      const urlParams = new URLSearchParams(window.location.search);
-      requestedHost = urlParams.get('requestedHost') === 'true';
-    }
-
-    // Emit joinSession with host intent
-    socket.emit('joinSession', { sessionId: roomId, requestedHost, name: userName }, (res) => {
-      const isHost = !!(res && res.isHost);
-      sessionStorage.setItem("isHost", isHost ? "true" : "false");
-
-      if (isHost) {
-        enableHostFeatures();
-      } else {
-        disableHostFeatures();
-        if (requestedHost && !isHost) {
-          console.info("[JOIN] Host request denied: host already exists");
-        }
-      }
-    });
   });
+
   if (socket && socket.io) {
     socket.io.reconnectionAttempts = 10;
     socket.io.timeout = 20000;
