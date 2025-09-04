@@ -119,6 +119,19 @@ function enableHostFeatures() {
   console.log('[HOST] Host features enabled successfully');
 }
 
+function updateUserListUI(users) {
+  const userListEl = document.getElementById("user-list"); // whatever your container is
+  if (!userListEl) return;
+
+  userListEl.innerHTML = ""; // clear existing
+  users.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = `${u.name}${u.isHost ? " (Host)" : ""}`;
+    userListEl.appendChild(li);
+  });
+}
+
+
 /**
  * Disable host-only features and UI elements  
  */
@@ -587,7 +600,7 @@ window.initializeSocketWithName = function(roomId, name) {
   // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // ✅ Handle connection with proper host request
+  // === Initial join: always as guest ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
@@ -595,31 +608,43 @@ window.initializeSocketWithName = function(roomId, name) {
     const name = sessionStorage.getItem('userName') || 'Guest';
     const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-    console.log(`[JOIN] Attempting to join with requestedHost: ${requestedHost}`);
-
     socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
       const isHost = !!(res && res.isHost);
       sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
 
-      console.log(`[JOIN] Join result - isHost: ${isHost}, response:`, res);
-
-      if (!isHost && requestedHost && res && res.reason === 'Host already exists') {
+      if (!isHost && res && res.reason === 'Host already exists') {
         console.info('[JOIN] Host request denied: host already exists');
-        // Optionally show a message to the user
-        alert('Host position already taken. Joining as guest.');
       }
 
       if (isHost) {
         enableHostFeatures();
-        console.log('[HOST] Host features enabled');
       } else {
         disableHostFeatures();
-        console.log('[HOST] Joined as guest');
       }
     });
   });
 
-  // Continue with other initialization...
+  // === “Allow as host” button ===
+  const allowHostBtn = document.getElementById("allowHostBtn");
+  if (allowHostBtn) {
+    allowHostBtn.addEventListener("click", () => {
+      console.log("[HOST REQUEST] User clicked 'Allow as host'");
+      const sessionId = new URLSearchParams(location.search).get('roomId');
+      const userNameStored = sessionStorage.getItem("userName");
+
+      socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
+        if (res?.isHost) {
+          sessionStorage.setItem("isHost", "true");
+          enableHostFeatures();
+        } else {
+          sessionStorage.setItem("isHost", "false");
+          disableHostFeatures();
+        }
+      });
+    });
+  }
+
+  // === Continue with other initialization steps ===
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -632,8 +657,6 @@ window.initializeSocketWithName = function(roomId, name) {
   addNewLayoutStyles();
   setupHostToggle();
 };
-
-
 
 
 /**
@@ -1536,32 +1559,9 @@ function appendRoomIdToURL(roomId) {
  */
 function initializeApp(roomId) {
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-    socket.on('connect', () => {
+  socket.on('connect', () => {
     if (!window.userMap) window.userMap = {};
     window.userMap[socket.id] = userName;
-
-    const name = sessionStorage.getItem('userName') || 'Guest';
-    const isRoomCreator = sessionStorage.getItem('isRoomCreator') === 'true';
-    const requestedHost = isRoomCreator; // Room creator *always* requests host
-
-    socket.emit('joinSession', { roomId, requestedHost, name }, (res) => {
-      // Only update sessionStorage if this is the initial join
-      if (!sessionStorage.getItem('isHost')) {
-        sessionStorage.setItem('isHost', res.isHost ? 'true' : 'false');
-      }
-
-      if (res.isHost) {
-        enableHostFeatures();
-      } else {
-        disableHostFeatures();
-        if (isRoomCreator && res.reason === "Host already exists") {
-          // Should not happen for creator, but handle just in case
-          alert("Unexpected error: You're the room creator but not the host.");
-        } else if (requestedHost && res.reason === "Host already exists") {
-          alert("Someone else is already the host for this session.");
-        }
-      }
-    });
   });
 
   if (socket && socket.io) {
