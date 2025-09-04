@@ -607,7 +607,11 @@ window.initializeSocketWithName = function(roomId, name) {
     const sessionId = new URLSearchParams(location.search).get('roomId');
     const name = sessionStorage.getItem('userName') || 'Guest';
     const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
-
+console.log("[JOIN DEBUG]", { 
+  sessionId, 
+  requestedHost, 
+  name 
+});
     socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
       const isHost = !!(res && res.isHost);
       sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
