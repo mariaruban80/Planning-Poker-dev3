@@ -18,6 +18,18 @@ let lastKnownRoomState = {
   userVotes: {}      // Track user's own votes by storyId
 };
 
+function updateUserListUI(users) {
+    const userListEl = document.getElementById("userList");
+    if (!userListEl) return;
+
+    userListEl.innerHTML = "";
+    users.forEach(u => {
+        const li = document.createElement("li");
+        li.textContent = `${u.name}${u.isHost ? " (Host)" : ""}`;
+        userListEl.appendChild(li);
+    });
+}
+
 /**
  * Initialize WebSocket connection to server
  * @param {string} roomIdentifier - ID of the room to join
@@ -174,6 +186,12 @@ socket.on('addTicket', ({ ticketData }) => {
 
     // Apply any saved votes from session storage
     // console.log('[SOCKET] Skipped local vote restoration to prevent duplication.');
+ socket.on("userListUpdate", (users) => {  
+        console.log("[USERLIST] Updated user list:", users);
+        updateUserListUI(users); // Call the function which is moved to socket.js file from main.js.
+    });
+
+    
   });
 
 
@@ -1063,6 +1081,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
