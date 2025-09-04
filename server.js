@@ -437,20 +437,6 @@ socket.on("disconnect", () => {
     io.to(socket.sessionId).emit("hostLeft");
   }
 });
-
-});
-
-
-
-
-
-
-
-
-
-
-
-  
 socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   const roomId = socket.data.roomId;
   if (!roomId || !rooms[roomId] || !storyId || !userName) return;
