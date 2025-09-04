@@ -884,7 +884,8 @@ function joinRoom() {
   sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
  
   // Go to room
-  window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+ // window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+  window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}&requestedHost=${requestHost}`;
 }
 
    
