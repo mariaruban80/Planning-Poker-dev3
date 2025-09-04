@@ -5100,7 +5100,23 @@ viewBox="0 0 640 640" width="16" height="16" fill="currentColor" class="menu-ico
 </div>
 </div>
 <!-- Scripts -->
+<script>
+     document.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomId = urlParams.get('roomId');
+  const requestedHost = urlParams.get('requestedHost') === 'true';
+  const userName = sessionStorage.getItem('userName') || 'Guest';
 
+  if (!roomId) {
+    alert("No room specified!");
+    return;
+  }
+
+  // Initialize the app with roomId and userName
+  initializeApp(roomId, userName, requestedHost);
+});
+
+</script>
 <script>
      // Get values from sessionStorage
 
