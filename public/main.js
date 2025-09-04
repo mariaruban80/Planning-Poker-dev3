@@ -1549,21 +1549,28 @@ function appendRoomIdToURL(roomId) {
  */
 function initializeApp(roomId) {
   socket = initializeWebSocket(roomId, userName, handleSocketMessage);
-  socket.on('connect', () => {
+    socket.on('connect', () => {
     if (!window.userMap) window.userMap = {};
     window.userMap[socket.id] = userName;
 
-    // Immediately emit joinSession to establish or re-establish host status
     const name = sessionStorage.getItem('userName') || 'Guest';
-    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+    const isRoomCreator = sessionStorage.getItem('isRoomCreator') === 'true';
+    const requestedHost = isRoomCreator; // Room creator *always* requests host
 
     socket.emit('joinSession', { roomId, requestedHost, name }, (res) => {
-      sessionStorage.setItem('isHost', res.isHost ? 'true' : 'false');
+      // Only update sessionStorage if this is the initial join
+      if (!sessionStorage.getItem('isHost')) {
+        sessionStorage.setItem('isHost', res.isHost ? 'true' : 'false');
+      }
+
       if (res.isHost) {
         enableHostFeatures();
       } else {
         disableHostFeatures();
-        if (requestedHost && res.reason === "Host already exists") {
+        if (isRoomCreator && res.reason === "Host already exists") {
+          // Should not happen for creator, but handle just in case
+          alert("Unexpected error: You're the room creator but not the host.");
+        } else if (requestedHost && res.reason === "Host already exists") {
           alert("Someone else is already the host for this session.");
         }
       }
