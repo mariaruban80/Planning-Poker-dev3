@@ -355,31 +355,6 @@ io.on('connection', (socket) => {
 
   console.log(`[SERVER] New client connected: ${socket.id}`);
 
-socket.on('requestHost', (data, callback) => {
-const roomId = socket.data.roomId;
-if (!roomId) return callback({ allowed: false, error: "No room joined" });
-
-
-if (!roomHosts[roomId]) {
-roomHosts[roomId] = socket.id;
-callback({ allowed: true });
-io.to(roomId).emit('hostChanged', { hostId: socket.id, userName: socket.data.userName });
-console.log(`[SERVER] Host assigned: ${socket.data.userName} (${socket.id}) in room ${roomId}`);
-} else if (roomHosts[roomId] === socket.id) {
-callback({ allowed: true, alreadyHost: true });
-} else {
-callback({ allowed: false });
-}
-});
-  socket.on('releaseHost', () => {
-const roomId = socket.data.roomId;
-if (roomId && roomHosts[roomId] === socket.id) {
-delete roomHosts[roomId];
-io.to(roomId).emit('hostLeft');
-console.log(`[SERVER] Host released by ${socket.data.userName} in room ${roomId}`);
-}
-});
-
 socket.on('disconnect', () => {
 const roomId = socket.data.roomId;
 if (roomId && roomHosts[roomId] === socket.id) {
