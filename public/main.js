@@ -120,7 +120,7 @@ function enableHostFeatures() {
 }
 
 function updateUserListUI(users) {
-  const userListEl = document.getElementById("user-list"); // whatever your container is
+  const userListEl = document.getElementById("userList"); 
   if (!userListEl) return;
 
   userListEl.innerHTML = ""; // clear existing
