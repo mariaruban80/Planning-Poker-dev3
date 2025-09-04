@@ -398,28 +398,35 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
   });
 
   // Host assignment logic
-  if (requestedHost) {
-    if (!currentHost) {
-      // No host exists, assign this user
-      socket.isHost = true;
-      sessionHosts.set(sessionId, socket.id);
+if (requestedHost) {
+  if (!currentHost) {
+    // No host exists at all → assign this user
+    socket.isHost = true;
+    sessionHosts.set(sessionId, socket.id);
 
-      console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
+    console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
+    io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
+    if (callback) callback({ isHost: true });
+
+  } else {
+    const hostSocket = io.sockets.sockets.get(currentHost);
+
+    // 🔑 If the same username reconnects → reclaim host
+    if (hostSocket && hostSocket.userName === name) {
+      console.log(`[HOST RECLAIM] ${name} reclaimed host for ${sessionId}`);
+      sessionHosts.set(sessionId, socket.id);
+      socket.isHost = true;
 
       io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
       if (callback) callback({ isHost: true });
     } else {
-      // Host already exists
+      // Different user, host already exists → guest
       socket.isHost = false;
       console.log(`[GUEST] ${name} joined as guest (host already exists)`);
       if (callback) callback({ isHost: false, reason: "Host already exists" });
     }
-  } else {
-    // Normal guest
-    socket.isHost = false;
-    console.log(`[GUEST] ${name} joined as guest in ${sessionId}`);
-    if (callback) callback({ isHost: false });
   }
+}
 });
 
 
