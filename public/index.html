@@ -7216,18 +7216,7 @@ function handleCsvImport() {
 
     <script type="module" src="main.js"></script>
 
-     <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get('roomId');
-    const requestedHost = urlParams.get('requestedHost') === 'true';
-    const userName = sessionStorage.getItem("userName");
 
-    if (roomId && userName) {
-      initializeApp(roomId, userName, requestedHost);
-    }
-  });
-</script>
 
 <script>
 document.getElementById('joinSessionWithName').addEventListener('click', function () {
