@@ -866,80 +866,83 @@
   window.location.href = `/index.html?roomId=${roomId}`;
 }
   </script>
-
-<!-- Include Socket.IO -->
 <script src="/socket.io/socket.io.js"></script>
 
-<!-- Modal HTML -->
-<div id="hostModal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <h3>Host Already Present</h3>
-    <p>A host already exists in this session. You will join as a guest.</p>
-    <button id="hostModalOk">OK</button>
-  </div>
-</div>
-
 <script>
-  // Initialize socket globally
   const socket = io();
 
-  // Modal elements
-  const hostModal = document.getElementById("hostModal");
-  const hostModalOk = document.getElementById("hostModalOk");
-
-  hostModalOk.addEventListener("click", () => {
-    hostModal.style.display = "none";
-    // After modal, continue navigation
-    navigateToRoom();
+  // Listen for host changes from server
+  socket.on("hostChanged", ({ hostId, userName }) => {
+    const currentSocketId = socket.id;
+    if (currentSocketId === hostId) {
+      sessionStorage.setItem("isHost", "true");
+      console.log("[HOST STATUS] You are the host");
+      // Enable host UI elements
+      enableHostFeatures();
+    } else {
+      sessionStorage.setItem("isHost", "false");
+      console.log("[HOST STATUS] Current host is:", userName || "None");
+      // Disable host UI elements for guest
+      disableHostFeatures();
+    }
   });
 
-  let sessionIdToNavigate = "";
+  // Listen for host leaving
+  socket.on("hostLeft", () => {
+    console.log("[HOST STATUS] Host left, session now has no host");
+    // You could prompt a guest to become host if desired
+  });
 
   function joinRoom() {
     const name = document.getElementById("joinNameInput").value.trim();
     const sessionId = document.getElementById("sessionIdInput").value.trim();
     const requestHost = document.getElementById("allowJoinAsHost").checked;
 
-    if (!name) { alert("Please enter your name."); return; }
-    if (!sessionId) { alert("Please enter a session ID."); return; }
+    if (!name) {
+      alert("Please enter your name.");
+      return;
+    }
 
-    // Save basic info locally
+    if (!sessionId) {
+      alert("Please enter a session ID.");
+      return;
+    }
+
+    // Save user info (basic)
     sessionStorage.setItem("userName", name);
     sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
     sessionStorage.setItem("isRoomCreator", "false");
 
-    // Save sessionId temporarily for navigation after modal
-    sessionIdToNavigate = sessionId;
-
-    // Ask server to join
+    // Ask server to join the session
     socket.emit("joinSession", { sessionId, requestedHost: requestHost, name }, (response) => {
       console.log("[JOIN RESPONSE]", response);
 
-      if (response.isHost) {
-        // User is confirmed as host
-        sessionStorage.setItem("isHost", "true");
-        navigateToRoom();
-      } else {
-        // User is guest
-        sessionStorage.setItem("isHost", "false");
+      // Update host status based on server response
+      sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
 
-        if (response.reason === "Host already exists") {
-          // Show modal
-          hostModal.style.display = "block";
-        } else {
-          navigateToRoom();
-        }
+      if (!response.isHost && response.reason === "Host already exists") {
+        // Inform user they joined as guest
+        alert("A host already exists in this session. You have joined as a guest.");
       }
+
+      // Navigate to room page after server confirms
+      window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
     });
   }
 
-  function navigateToRoom() {
-    if (sessionIdToNavigate) {
-      window.location.href = `/index.html?roomId=${encodeURIComponent(sessionIdToNavigate)}`;
-    }
+  // Example functions to enable/disable host features
+  function enableHostFeatures() {
+    // Show host controls (vote reveal, add story, etc.)
+    console.log("[UI] Host features enabled");
   }
 
+  function disableHostFeatures() {
+    // Hide host controls
+    console.log("[UI] Host features disabled (guest mode)");
+  }
 </script>
+
+
 
 
 
