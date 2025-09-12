@@ -608,7 +608,8 @@ window.initializeSocketWithName = function(roomId, name) {
     const name = sessionStorage.getItem('userName') || 'Guest';
     const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-    socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+    sessionStorage.setItem("isHost", "false"); // reset before asking server
+      socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
       const isHost = !!(res && res.isHost);
       sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
 
@@ -632,7 +633,8 @@ window.initializeSocketWithName = function(roomId, name) {
       const sessionId = new URLSearchParams(location.search).get('roomId');
       const userNameStored = sessionStorage.getItem("userName");
 
-      socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
+      sessionStorage.setItem("isHost", "false"); // reset before asking server
+          socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
         if (res?.isHost) {
           sessionStorage.setItem("isHost", "true");
           enableHostFeatures();
