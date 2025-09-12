@@ -399,23 +399,22 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
 
   // Host assignment logic
   if (requestedHost) {
-      if (!currentHost) {
-        socket.isHost = true;
-        sessionHosts.set(sessionId, socket.id);
-        console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
-        // Emit hostChanged AFTER setting the host, to avoid race conditions
-        io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id }); 
-        callback({ isHost: true }); // Call callback *after* emitting hostChanged
-      } else {
-        socket.isHost = false;
-        console.log(`[GUEST] ${name} joined as guest (host already exists)`);
+    if (!currentHost) {
+      // No host exists, assign this user
+      socket.isHost = true;
+      sessionHosts.set(sessionId, socket.id);
 
-        // IMPORTANT: Ensure the user is actually in the room before calling back!
-        socket.join(sessionId, () => {  // Join the room and wait for confirmation
-           callback({ isHost: false, reason: "Host already exists" });
-        });
-      }
+      console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
+
+      io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
+      if (callback) callback({ isHost: true });
     } else {
+      // Host already exists
+      socket.isHost = false;
+      console.log(`[GUEST] ${name} joined as guest (host already exists)`);
+      if (callback) callback({ isHost: false, reason: "Host already exists" });
+    }
+  } else {
     // Normal guest
     socket.isHost = false;
     console.log(`[GUEST] ${name} joined as guest in ${sessionId}`);
