@@ -608,20 +608,29 @@ window.initializeSocketWithName = function(roomId, name) {
     const name = sessionStorage.getItem('userName') || 'Guest';
     const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-    socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
-      const isHost = !!(res && res.isHost);
-      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+  console.log("[SOCKET] joinSession callback →", res);
 
-      if (!isHost && res && res.reason === 'Host already exists') {
-        console.info('[JOIN] Host request denied: host already exists');
-      }
+  const isHost = !!(res && res.isHost);
+  sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
 
-      if (isHost) {
-        enableHostFeatures();
-      } else {
-        disableHostFeatures();
-      }
-    });
+  if (isHost) {
+    console.log("[HOST] Host mode enabled");
+    enableHostFeatures();
+
+    // 🔥 Move voting system logic here
+    const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
+    socket.emit('votingSystemSelected', { roomId: sessionId, votingSystem });
+  } else {
+    if (res?.reason) {
+      alert(res.reason); // e.g. "Host already exists"
+    }
+    console.log("[HOST] Guest mode enabled");
+    disableHostFeatures();
+  }
+});
+
+
   });
 
   // === “Allow as host” button ===
@@ -1848,12 +1857,12 @@ socket.on('resyncState', ({ tickets, votesPerStory: serverVotes, votesRevealed: 
     setupPlanningCards();
   });
 
-  const isHost = sessionStorage.getItem('isHost') === 'true';
+/**  const isHost = sessionStorage.getItem('isHost') === 'true';
   const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
   if (isHost && socket) {
     socket.emit('votingSystemSelected', { roomId, votingSystem });
-  }
+  } */
 
   updateHeaderStyle();
   addFixedVoteStatisticsStyles();
