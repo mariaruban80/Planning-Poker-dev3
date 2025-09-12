@@ -369,7 +369,8 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 
 // ================= HOST TRACKING =================
 // sessionId → { hostUserName, hostSocketId }
-const sessionHosts = new Map();
+
+const sessionHosts = new Map(); // sessionId → { hostUserName, hostSocketId }
 
 io.on("connection", (socket) => {
   console.log("[SOCKET] New connection:", socket.id);
@@ -381,7 +382,7 @@ io.on("connection", (socket) => {
 
     let session = sessionHosts.get(sessionId) || { hostUserName: null, hostSocketId: null };
 
-    // Remove stale host if socket disconnected
+    // Remove stale host if disconnected
     if (session.hostSocketId && !io.sockets.sockets.get(session.hostSocketId)) {
       console.log(`[HOST] Removing stale host (${session.hostUserName}) for ${sessionId}`);
       session.hostUserName = null;
@@ -390,24 +391,32 @@ io.on("connection", (socket) => {
 
     let isHost = false;
 
-    if (requestedHost) {
+    // === AUTO-ASSIGN HOST FOR FIRST USER ===
+    if (!session.hostUserName) {
+      session.hostUserName = name;
+      session.hostSocketId = socket.id;
+      isHost = true;
+      console.log(`[HOST] ${name} auto-assigned as host for ${sessionId}`);
+    } else if (requestedHost) {
+      // Only allow if no host or same user reconnect
       if (!session.hostUserName) {
-        // Assign host
         session.hostUserName = name;
         session.hostSocketId = socket.id;
         isHost = true;
-        io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
+        console.log(`[HOST] ${name} assigned as host for ${sessionId}`);
       } else if (session.hostUserName === name) {
-        // Same user reconnecting, maintain host
         session.hostSocketId = socket.id;
         isHost = true;
       } else {
-        console.log(`[GUEST] ${name} joined as guest (host already exists)`);
+        console.log(`[GUEST] ${name} joined as guest (host exists)`);
       }
     }
 
     sessionHosts.set(sessionId, session);
     socket.isHost = isHost;
+
+    // Inform everyone about host
+    io.to(sessionId).emit("hostChanged", { userName: session.hostUserName, hostId: session.hostSocketId });
 
     if (callback) callback({ isHost, reason: !isHost && requestedHost ? "Host already exists" : undefined });
   });
@@ -428,8 +437,6 @@ io.on("connection", (socket) => {
     }
   });
 });
-
-
 
 
 
