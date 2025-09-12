@@ -583,80 +583,59 @@ mappingSelects.forEach(select => {
  * @param {string} roomId - Room ID to join 
  * @param {string} name - Username to use
  */
-window.initializeSocketWithName = function(roomId, name) {
+window.initializeSocketWithName = function(roomId, name, isRoomCreator=false) {
   if (!roomId || !name) return;
 
-  console.log(`[APP] Initializing socket for room: ${roomId}, username: ${name}`);
-
-  // Store username & sessionId
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
 
-  userName = name;
-
-  // Load deleted stories first
   loadDeletedStoriesFromStorage(roomId);
 
-  // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // === Socket connect logic ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+    // Only the creator should request host on first join
+    const requestedHost = isRoomCreator;
 
-    // Always join session: let server decide host/guest
-    socket.emit('joinSession', { sessionId: roomId, requestedHost, name }, (res) => {
+    socket.emit("joinSession", { sessionId: roomId, requestedHost, name }, (res) => {
       const isHost = !!(res && res.isHost);
-      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+      sessionStorage.setItem("isHost", isHost ? "true" : "false");
 
-      if (isHost) {
-        enableHostFeatures();
-      } else {
-        disableHostFeatures();
-      }
+      if (isHost) enableHostFeatures();
+      else disableHostFeatures();
 
-      if (!isHost && res?.reason === 'Host already exists') {
-        console.info('[JOIN] Host request denied: host already exists');
+      if (!isHost && res?.reason === "Host already exists") {
+        console.info("[JOIN] Host request denied: host already exists");
       }
     });
   });
 
-  // === Listen for host changes from server ===
-  socket.on('hostChanged', ({ userName: newHostName }) => {
-    console.log(`[SOCKET] Host changed to: ${newHostName}`);
-    const isHostNow = newHostName === sessionStorage.getItem('userName');
-    sessionStorage.setItem('isHost', isHostNow ? 'true' : 'false');
+  socket.on("hostChanged", ({ userName: newHostName }) => {
+    const isHostNow = newHostName === sessionStorage.getItem("userName");
+    sessionStorage.setItem("isHost", isHostNow ? "true" : "false");
 
-    if (isHostNow) {
-      enableHostFeatures();
-    } else {
-      disableHostFeatures();
-    }
+    if (isHostNow) enableHostFeatures();
+    else disableHostFeatures();
   });
 
-  socket.on('hostLeft', () => {
-    console.log(`[SOCKET] Host left session ${roomId}`);
-    disableHostFeatures();
-  });
+  socket.on("hostLeft", () => disableHostFeatures());
 
-  // === Allow host button ===
+  // Allow host button
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
-      console.log("[HOST REQUEST] User clicked 'Allow as host'");
-      socket.emit('joinSession', { sessionId: roomId, requestedHost: true, name }, (res) => {
+      socket.emit("joinSession", { sessionId: roomId, requestedHost: true, name }, (res) => {
         const isHostNow = !!(res && res.isHost);
-        sessionStorage.setItem('isHost', isHostNow ? 'true' : 'false');
-
+        sessionStorage.setItem("isHost", isHostNow ? "true" : "false");
         if (isHostNow) enableHostFeatures();
         else disableHostFeatures();
       });
     });
   }
 
-  // === Other initialization steps ===
+  // Other init steps
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
