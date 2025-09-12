@@ -5351,7 +5351,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   if (sessionId && userName) {
     console.log("[CLIENT] Attempting to join session:", sessionId, "as", userName);
-    // sessionStorage.setItem("isHost", "false");
+    sessionStorage.setItem("isHost", "false");
     socket.emit("joinSession", { sessionId, requestedHost, name: userName }, (response) => {
       console.log("[JOIN RESPONSE]", response);
 
