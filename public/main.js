@@ -599,11 +599,7 @@ window.initializeSocketWithName = function(roomId, name) {
 
   // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
-
-  // === Initial join: always as guest ===
-  socket.on("connect", () => {
-    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
-
+  
     const sessionId = new URLSearchParams(location.search).get('roomId');
     const name = sessionStorage.getItem('userName') || 'Guest';
     const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
@@ -629,6 +625,11 @@ socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
     disableHostFeatures();
   }
 });
+
+  // === Initial join: always as guest ===
+  socket.on("connect", () => {
+    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
+
 
 
   });
