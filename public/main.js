@@ -591,6 +591,7 @@ window.initializeSocketWithName = function(roomId, name) {
   // Store username & sessionId in sessionStorage
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
+
   userName = name;
 
   // Load deleted stories first
@@ -598,51 +599,50 @@ window.initializeSocketWithName = function(roomId, name) {
 
   // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
+
   // === Initial join: always as guest ===
-   socket.on("connect", () => {
+  socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
     const sessionId = new URLSearchParams(location.search).get('roomId');
     const name = sessionStorage.getItem('userName') || 'Guest';
     const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-    console.log(`[JOIN] Attempting to join session ${sessionId}, requestedHost: ${requestedHost}`);
+    socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+      const isHost = !!(res && res.isHost);
+      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
 
-    socket.emit('joinSession', { sessionId, requestedHost, name }, (response) => {
-      console.log('[JOIN] Server response:', response);
-      alert(`Host: ${isHost}`);
-      if (response && response.isHost === true) {
-        console.log('[JOIN] Successfully granted host role');
-        sessionStorage.setItem('isHost', 'true');
+      if (!isHost && res && res.reason === 'Host already exists') {
+        console.info('[JOIN] Host request denied: host already exists');
+      }
+
+      if (isHost) {
         enableHostFeatures();
-        
-        // Show success message
-        showStatusMessage('You are now the host of this session', 'success');
-      } else if (response && response.isHost === false) {
-        console.log('[JOIN] Joined as guest');
-        sessionStorage.setItem('isHost', 'false');
-        disableHostFeatures();
-        
-        if (response.reason === 'Host already exists') {
-          // Show error message for denied host request
-          if (requestedHost) {
-            showHostAlreadyExistsError();
-          } else {
-            showStatusMessage('Joined as guest', 'info');
-          }
-        } else {
-          showStatusMessage('Joined as guest', 'info');
-        }
       } else {
-        // Fallback for unexpected response
-        console.warn('[JOIN] Unexpected server response:', response);
-        alert("test");
-        sessionStorage.setItem('isHost', 'false');
         disableHostFeatures();
       }
     });
   });
 
+  // === “Allow as host” button ===
+  const allowHostBtn = document.getElementById("allowHostBtn");
+  if (allowHostBtn) {
+    allowHostBtn.addEventListener("click", () => {
+      console.log("[HOST REQUEST] User clicked 'Allow as host'");
+      const sessionId = new URLSearchParams(location.search).get('roomId');
+      const userNameStored = sessionStorage.getItem("userName");
+
+      socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
+        if (res?.isHost) {
+          sessionStorage.setItem("isHost", "true");
+          enableHostFeatures();
+        } else {
+          sessionStorage.setItem("isHost", "false");
+          disableHostFeatures();
+        }
+      });
+    });
+  }
 
   // === Continue with other initialization steps ===
   setupCSVUploader();
@@ -657,73 +657,7 @@ window.initializeSocketWithName = function(roomId, name) {
   addNewLayoutStyles();
   setupHostToggle();
 };
-/**
- * Show a status message to the user
- */
-function showStatusMessage(message, type = 'info') {
-  // Create or update a status message element
-  let statusElement = document.getElementById('joinStatusMessage');
-  if (!statusElement) {
-    statusElement = document.createElement('div');
-    statusElement.id = 'joinStatusMessage';
-    statusElement.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 6px;
-      color: white;
-      font-weight: bold;
-      z-index: 10000;
-      transition: opacity 0.3s ease;
-    `;
-    document.body.appendChild(statusElement);
-  }
-  
-  // Set colors based on type
-  switch(type) {
-    case 'success':
-      statusElement.style.backgroundColor = '#4CAF50';
-      break;
-    case 'error':
-      statusElement.style.backgroundColor = '#f44336';
-      break;
-    case 'info':
-    default:
-      statusElement.style.backgroundColor = '#2196F3';
-      break;
-  }
-  
-  statusElement.textContent = message;
-  statusElement.style.opacity = '1';
-  
-  // Auto-hide after 4 seconds
-  setTimeout(() => {
-    if (statusElement) {
-      statusElement.style.opacity = '0';
-      setTimeout(() => {
-        if (statusElement && statusElement.parentNode) {
-          statusElement.parentNode.removeChild(statusElement);
-        }
-      }, 300);
-    }
-  }, 4000);
-}
 
-/**
- * Show error when host role is already taken
- */
-function showHostAlreadyExistsError() {
-  const modal = document.getElementById('hostExistsModal');
-  if (modal) {
-    modal.style.display = 'flex';
-  } else {
-    // Fallback to alert if modal doesn't exist
-    alert('Host role is already taken in this session. You have joined as a guest instead.');
-  }
-  
-  showStatusMessage('Host already exists - joined as guest', 'error');
-}
 
 /**
  * Handle updating a ticket from the modal
@@ -1914,12 +1848,12 @@ socket.on('resyncState', ({ tickets, votesPerStory: serverVotes, votesRevealed: 
     setupPlanningCards();
   });
 
-/**  const isHost = sessionStorage.getItem('isHost') === 'true';
+  const isHost = sessionStorage.getItem('isHost') === 'true';
   const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
 
   if (isHost && socket) {
     socket.emit('votingSystemSelected', { roomId, votingSystem });
-  } */
+  }
 
   updateHeaderStyle();
   addFixedVoteStatisticsStyles();
