@@ -588,10 +588,10 @@ window.initializeSocketWithName = function(roomId, name) {
 
   console.log(`[APP] Initializing socket for room: ${roomId}, username: ${name}`);
 
-  // Store username & sessionId in sessionStorage
+  // Store username & sessionId
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
-  sessionStorage.setItem("isHost", "false"); // reset before asking server
+  sessionStorage.setItem("isHost", "false"); // reset before server confirmation
 
   userName = name;
 
@@ -627,12 +627,14 @@ window.initializeSocketWithName = function(roomId, name) {
   // === Socket connect: initial join ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
-    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
-    joinSession(requestedHost); // request host if user requested
+
+    const isCreator = sessionStorage.getItem("roomCreator") === "true";
+    // Room creator automatically requests host, others join as guest
+    joinSession(isCreator);
   });
 
-  // === Host change events ===
-  socket.on("hostChanged", ({ userName: newHostName, hostId }) => {
+  // === Handle host change events from server ===
+  socket.on("hostChanged", ({ userName: newHostName }) => {
     console.log(`[SOCKET] Host changed to: ${newHostName}`);
     const isHost = sessionStorage.getItem("userName") === newHostName;
     sessionStorage.setItem("isHost", isHost ? "true" : "false");
