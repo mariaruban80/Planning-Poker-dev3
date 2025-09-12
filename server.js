@@ -354,13 +354,17 @@ io.on('connection', (socket) => {
   console.log(`[SERVER] New client connected: ${socket.id}`);
 
 socket.on('disconnect', () => {
-const roomId = socket.data.roomId;
-if (roomId && roomHosts[roomId] === socket.id) {
-delete roomHosts[roomId];
-io.to(roomId).emit('hostLeft');
-console.log(`[SERVER] Host disconnected from room ${roomId}`);
-}
+    const roomId = socket.sessionId; // or socket.data.roomId if you store it there
+    if (roomId) {
+        const hostSocketId = sessionHosts.get(roomId);
+        if (hostSocketId === socket.id) {
+            sessionHosts.delete(roomId);
+            io.to(roomId).emit('hostLeft');
+            console.log(`[SERVER] Host disconnected from room ${roomId}`);
+        }
+    }
 });
+
 
   // ==========================
 // Join Session + Decide Role
