@@ -25,8 +25,6 @@ app.use(express.static(join(__dirname, 'public')));
 // import fetch from 'node-fetch';  // <-- added for JIRA proxy support
 
 app.use(express.json());
-// ================= HOST TRACKING FIX =================
-const roomHosts = {}; // roomId → hostSocketId
 
 // JIRA Proxy route (avoids CORS issues)
 app.post('/api/jira/project', async (req, res) => {
@@ -369,34 +367,63 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
 // ==========================
   console.log("[SOCKET] New connection:", socket.id);
 
-const sessionHosts = new Map();
+
+// ================= HOST TRACKING =================
+const sessionHosts = new Map(); // sessionId → hostSocketId
 
 io.on("connection", (socket) => {
-socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
-  socket.userName = name;
-  socket.sessionId = sessionId;
-  socket.join(sessionId);
+  console.log("[SOCKET] New connection:", socket.id);
 
-  console.log(`\n[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
+  socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
+    socket.userName = name;
+    socket.sessionId = sessionId;
+    socket.join(sessionId);
 
-  // Get current host for this session
-  let currentHost = sessionHosts.get(sessionId);
-  const hostSocket = currentHost ? io.sockets.sockets.get(currentHost) : null;
+    console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
 
-  // Remove stale host if socket no longer exists
-  if (currentHost && !hostSocket) {
-    console.log(`[HOST] Removing stale host (${currentHost}) for ${sessionId}`);
-    sessionHosts.delete(sessionId);
-    currentHost = null;
-  }
+    // Check current host
+    let currentHost = sessionHosts.get(sessionId);
+    const hostSocket = currentHost ? io.sockets.sockets.get(currentHost) : null;
 
-  console.log("[JOIN SESSION DEBUG]", {
-    sessionId,
-    requestedHost,
-    currentHost,
-    hasHostSocket: !!hostSocket
+    // Remove stale host if socket no longer exists
+    if (currentHost && !hostSocket) {
+      console.log(`[HOST] Removing stale host (${currentHost}) for ${sessionId}`);
+      sessionHosts.delete(sessionId);
+      currentHost = null;
+    }
+
+    // Host assignment
+    if (requestedHost) {
+      if (!currentHost) {
+        // Assign as host
+        socket.isHost = true;
+        sessionHosts.set(sessionId, socket.id);
+
+        console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
+        io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
+        callback?.({ isHost: true });
+      } else {
+        // Deny host request
+        socket.isHost = false;
+        console.log(`[GUEST] ${name} joined as guest (host already exists)`);
+        callback?.({ isHost: false, reason: "Host already exists" });
+      }
+    } else {
+      // Normal guest
+      socket.isHost = false;
+      console.log(`[GUEST] ${name} joined as guest in ${sessionId}`);
+      callback?.({ isHost: false });
+    }
   });
 
+  socket.on("disconnect", () => {
+    if (socket.sessionId && sessionHosts.get(socket.sessionId) === socket.id) {
+      console.log(`[HOST] Host ${socket.userName} left session ${socket.sessionId}`);
+      sessionHosts.delete(socket.sessionId);
+      io.to(socket.sessionId).emit("hostLeft");
+    }
+  });
+});
   // Host assignment logic
   if (requestedHost) {
     if (!currentHost) {
