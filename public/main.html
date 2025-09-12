@@ -865,50 +865,85 @@
   // Navigate to the room WITHOUT host parameter
   window.location.href = `/index.html?roomId=${roomId}`;
 }
-
   </script>
-  <script src="/socket.io/socket.io.js"></script>
-      <script>
-        const socket = io();
-function joinRoom() {
+
+<!-- Include Socket.IO -->
+<script src="/socket.io/socket.io.js"></script>
+
+<!-- Modal HTML -->
+<div id="hostModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>Host Already Present</h3>
+    <p>A host already exists in this session. You will join as a guest.</p>
+    <button id="hostModalOk">OK</button>
+  </div>
+</div>
+
+<script>
+  // Initialize socket globally
+  const socket = io();
+
+  // Modal elements
+  const hostModal = document.getElementById("hostModal");
+  const hostModalOk = document.getElementById("hostModalOk");
+
+  hostModalOk.addEventListener("click", () => {
+    hostModal.style.display = "none";
+    // After modal, continue navigation
+    navigateToRoom();
+  });
+
+  let sessionIdToNavigate = "";
+
+  function joinRoom() {
     const name = document.getElementById("joinNameInput").value.trim();
     const sessionId = document.getElementById("sessionIdInput").value.trim();
     const requestHost = document.getElementById("allowJoinAsHost").checked;
 
-    if (!name) {
-        alert("Please enter your name.");
-        return;
-    }
+    if (!name) { alert("Please enter your name."); return; }
+    if (!sessionId) { alert("Please enter a session ID."); return; }
 
-    if (!sessionId) {
-        alert("Please enter a session ID.");
-        return;
-    }
-
-    // Save basic user info locally
+    // Save basic info locally
     sessionStorage.setItem("userName", name);
     sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
     sessionStorage.setItem("isRoomCreator", "false");
 
-    // Ask server to join session
+    // Save sessionId temporarily for navigation after modal
+    sessionIdToNavigate = sessionId;
+
+    // Ask server to join
     socket.emit("joinSession", { sessionId, requestedHost: requestHost, name }, (response) => {
-        console.log("[JOIN RESPONSE]", response);
+      console.log("[JOIN RESPONSE]", response);
 
-        if (response.isHost) {
-            sessionStorage.setItem("isHost", "true");
+      if (response.isHost) {
+        // User is confirmed as host
+        sessionStorage.setItem("isHost", "true");
+        navigateToRoom();
+      } else {
+        // User is guest
+        sessionStorage.setItem("isHost", "false");
+
+        if (response.reason === "Host already exists") {
+          // Show modal
+          hostModal.style.display = "block";
         } else {
-            sessionStorage.setItem("isHost", "false");
-
-            if (response.reason === "Host already exists") {
-                // Show modal or alert
-                alert("A host already exists in this session. You will join as a guest.");
-            }
+          navigateToRoom();
         }
-
-        // Navigate to the room page
-        window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+      }
     });
-}
-      </script> 
+  }
+
+  function navigateToRoom() {
+    if (sessionIdToNavigate) {
+      window.location.href = `/index.html?roomId=${encodeURIComponent(sessionIdToNavigate)}`;
+    }
+  }
+
+</script>
+
+
+
+  
+
 </body>
 </html>
