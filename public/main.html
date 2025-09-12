@@ -864,6 +864,7 @@
   // Navigate to the room WITHOUT host parameter
   window.location.href = `/index.html?roomId=${roomId}`;
 }
+<script>
 function joinRoom() {
     const name = document.getElementById("joinNameInput").value.trim();
     const sessionId = document.getElementById("sessionIdInput").value.trim();
@@ -879,34 +880,32 @@ function joinRoom() {
         return;
     }
 
-    // Save user info
+    // Save basic user info locally
     sessionStorage.setItem("userName", name);
     sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
     sessionStorage.setItem("isRoomCreator", "false");
 
-    // Check current host status for this session
-    let sessionHostKey = `isHost_${sessionId}`; // unique key per session
-    let currentHost = sessionStorage.getItem(sessionHostKey);
+    // Ask server to join session
+    socket.emit("joinSession", { sessionId, requestedHost: requestHost, name }, (response) => {
+        console.log("[JOIN RESPONSE]", response);
 
-    if (requestHost) {
-        if (!currentHost || currentHost === "false") {
-            // If no host yet, or current host is false, make this user the host
-            sessionStorage.setItem(sessionHostKey, "true");
+        if (response.isHost) {
+            sessionStorage.setItem("isHost", "true");
         } else {
-            // Otherwise, keep it false
-            sessionStorage.setItem(sessionHostKey, "false");
+            sessionStorage.setItem("isHost", "false");
+
+            if (response.reason === "Host already exists") {
+                // Show modal or alert
+                alert("A host already exists in this session. You will join as a guest.");
+            }
         }
-    } else {
-        // User didn't request host, keep it false
-        sessionStorage.setItem(sessionHostKey, "false");
-    }
 
-    // Optional: store a global isHost flag for easier access
-    sessionStorage.setItem("isHost", sessionStorage.getItem(sessionHostKey));
-
-    // Navigate to the room page
-    window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+        // Navigate to the room page
+        window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+    });
 }
+</script>
+
 
 
    
