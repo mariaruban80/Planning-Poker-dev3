@@ -374,66 +374,47 @@ socket.on('disconnect', () => {
 // ================= HOST TRACKING =================
 // sessionId → { hostUserName, hostSocketId }
 
-const sessionHosts = new Map(); // sessionId -> hostSocketId
-const sessionCreators = new Map(); // sessionId -> creatorSocketId
+const sessionHosts = new Map(); // sessionId → hostSocketId
 
 io.on("connection", (socket) => {
   console.log("[SOCKET] New connection:", socket.id);
 
-  socket.on("joinSession", ({ sessionId, requestedHost, name, isCreator }, callback) => {
+  socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
     socket.userName = name;
     socket.sessionId = sessionId;
     socket.join(sessionId);
 
-    console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}, isCreator=${isCreator}`);
-
     let currentHost = sessionHosts.get(sessionId);
     const hostSocket = currentHost ? io.sockets.sockets.get(currentHost) : null;
 
-    // Remove stale host
     if (currentHost && !hostSocket) {
-      console.log(`[HOST] Removing stale host (${currentHost}) for ${sessionId}`);
       sessionHosts.delete(sessionId);
       currentHost = null;
     }
 
-    // Mark creator
-    if (isCreator && !sessionCreators.has(sessionId)) {
-      sessionCreators.set(sessionId, socket.id);
-      console.log(`[CREATOR] ${name} marked as creator for ${sessionId}`);
-    }
-
-    // Assign host only if requested OR first creator AND no current host
-    if ((requestedHost || sessionCreators.get(sessionId) === socket.id) && !currentHost) {
+    if (requestedHost || (!currentHost && requestedHost === undefined)) {
+      // Assign as host if requested or first user without host
       socket.isHost = true;
       sessionHosts.set(sessionId, socket.id);
-
-      console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
       io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
       if (callback) callback({ isHost: true });
+      console.log(`[HOST] ${name} is now host for ${sessionId}`);
     } else {
+      // Guest
       socket.isHost = false;
-      console.log(`[GUEST] ${name} joined as guest in ${sessionId}`);
       if (callback) callback({ isHost: false, reason: currentHost ? "Host already exists" : undefined });
+      console.log(`[GUEST] ${name} joined as guest in ${sessionId}`);
     }
   });
 
-  // Handle disconnects
   socket.on("disconnect", () => {
-    if (socket.sessionId) {
-      const currentHost = sessionHosts.get(socket.sessionId);
-      if (currentHost === socket.id) {
-        console.log(`[HOST] Host ${socket.userName} left session ${socket.sessionId}`);
-        sessionHosts.delete(socket.sessionId);
-        io.to(socket.sessionId).emit("hostLeft");
-      } else {
-        console.log(`[GUEST] ${socket.userName} left session ${socket.sessionId}`);
-        io.to(socket.sessionId).emit("guestLeft", { userName: socket.userName });
-      }
+    if (socket.sessionId && sessionHosts.get(socket.sessionId) === socket.id) {
+      console.log(`[HOST] Host ${socket.userName} disconnected from ${socket.sessionId}`);
+      sessionHosts.delete(socket.sessionId);
+      io.to(socket.sessionId).emit("hostLeft");
     }
   });
 });
-
 
 
 
