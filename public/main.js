@@ -616,19 +616,28 @@ window.initializeSocketWithName = function(roomId, name, isRoomCreator = false) 
     });
   });
 
-  socket.on("hostChanged", ({ userName: newHostName }) => {
-    const isHostNow = newHostName === sessionStorage.getItem("userName");
-    sessionStorage.setItem("isHost", isHostNow ? "true" : "false");
+socket.on("hostChanged", ({ userName: newHostName }) => {
+  const currentName = sessionStorage.getItem("userName");
+  const alreadyHost = sessionStorage.getItem("isHost") === "true";
 
-    if (isHostNow) {
-      console.log("[HOST] Promoted to host");
-      setTimeout(() => enableHostFeatures(), 0);
-    } else {
-      console.log("[GUEST] Demoted to guest");
-      disableHostFeatures();
-      setupGuestModeRestrictions(); // 👈 again, only if guest
-    }
-  });
+  const isHostNow = newHostName === currentName;
+  if (isHostNow && alreadyHost) {
+    console.log("[HOST] Already host, ignoring duplicate hostChanged");
+    return;
+  }
+
+  sessionStorage.setItem("isHost", isHostNow ? "true" : "false");
+
+  if (isHostNow) {
+    console.log("[HOST] Promoted to host");
+    setTimeout(() => enableHostFeatures(), 0);
+  } else {
+    console.log("[GUEST] Demoted to guest");
+    disableHostFeatures();
+    setupGuestModeRestrictions();
+  }
+});
+
 
   socket.on("hostLeft", () => {
     disableHostFeatures();
