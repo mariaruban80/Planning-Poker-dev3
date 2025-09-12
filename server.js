@@ -412,7 +412,10 @@ socket.on("joinSession", ({ sessionId, requestedHost, name }, callback) => {
       // Host already exists
       socket.isHost = false;
       console.log(`[GUEST] ${name} joined as guest (host already exists)`);
-      if (callback) callback({ isHost: false, reason: "Host already exists" });
+      if (callback) {
+         console.log(`[CALLBACK] Returning isHost=${socket.isHost} to ${name}`);
+        callback({ isHost: false, reason: "Host already exists" });
+      }
     }
   } else {
     // Normal guest
