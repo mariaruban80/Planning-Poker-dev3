@@ -866,28 +866,28 @@
 }
 
 function joinRoom() {
-  const name = document.getElementById("joinNameInput").value.trim();
-  const sessionId = document.getElementById("sessionIdInput").value.trim();
-  const requestHost = document.getElementById("allowJoinAsHost").checked;
+    const name = document.getElementById("joinNameInput").value.trim();
+    const sessionId = document.getElementById("sessionIdInput").value.trim();
+    const requestHost = document.getElementById("allowJoinAsHost").checked;
 
-  if (!name) {
-    alert("Please enter your name.");
-    return;
-  }
+    if (!name) {
+        alert("Please enter your name.");
+        return;
+    }
 
-  if (!sessionId) {
-    alert("Please enter a session ID.");
-    return;
-  }
+    if (!sessionId) {
+        alert("Please enter a session ID.");
+        return;
+    }
 
-  // Save intent only; start as guest
-  sessionStorage.setItem("userName", name);
-  sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
-//  sessionStorage.setItem("isRoomCreator", "false");
-//  sessionStorage.setItem("isHost", "false");
+    // Save the user's information and intent
+    sessionStorage.setItem("userName", name);
+    sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
+    // DON'T set isHost here - let the server decide
+    sessionStorage.setItem("isRoomCreator", "false");
 
-  // Go to room
-  window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+    // Navigate to the room page
+    window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
 }
    
   </script>
