@@ -368,8 +368,8 @@ console.log(`[SERVER] Host disconnected from room ${roomId}`);
   console.log("[SOCKET] New connection:", socket.id);
 
 // ================= HOST TRACKING =================
-
-const sessionHosts = new Map(); // sessionId → { hostUserName, hostSocketId }
+// sessionId → { hostUserName, hostSocketId }
+const sessionHosts = new Map();
 
 io.on("connection", (socket) => {
   console.log("[SOCKET] New connection:", socket.id);
@@ -379,12 +379,9 @@ io.on("connection", (socket) => {
     socket.sessionId = sessionId;
     socket.join(sessionId);
 
-    console.log(`[JOIN] ${name} joining ${sessionId}, requestedHost=${requestedHost}`);
-
-    // Get current session host info
     let session = sessionHosts.get(sessionId) || { hostUserName: null, hostSocketId: null };
 
-    // Clean up stale host if disconnected
+    // Remove stale host if socket disconnected
     if (session.hostSocketId && !io.sockets.sockets.get(session.hostSocketId)) {
       console.log(`[HOST] Removing stale host (${session.hostUserName}) for ${sessionId}`);
       session.hostUserName = null;
@@ -399,23 +396,17 @@ io.on("connection", (socket) => {
         session.hostUserName = name;
         session.hostSocketId = socket.id;
         isHost = true;
-        console.log(`[HOST] ${name} is now HOST for ${sessionId}`);
-
-        // Notify all clients
         io.to(sessionId).emit("hostChanged", { userName: name, hostId: socket.id });
       } else if (session.hostUserName === name) {
         // Same user reconnecting, maintain host
         session.hostSocketId = socket.id;
         isHost = true;
-        console.log(`[HOST] ${name} reconnected as host for ${sessionId}`);
       } else {
         console.log(`[GUEST] ${name} joined as guest (host already exists)`);
       }
     }
 
-    // Save updated session info
     sessionHosts.set(sessionId, session);
-
     socket.isHost = isHost;
 
     if (callback) callback({ isHost, reason: !isHost && requestedHost ? "Host already exists" : undefined });
@@ -433,17 +424,10 @@ io.on("connection", (socket) => {
       session.hostUserName = null;
       session.hostSocketId = null;
       sessionHosts.set(sessionId, session);
-
-      // Notify remaining clients
       io.to(sessionId).emit("hostLeft");
     }
   });
 });
-
-
-
-
-
 
 
 
