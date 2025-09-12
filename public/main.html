@@ -864,7 +864,6 @@
   // Navigate to the room WITHOUT host parameter
   window.location.href = `/index.html?roomId=${roomId}`;
 }
-
 function joinRoom() {
     const name = document.getElementById("joinNameInput").value.trim();
     const sessionId = document.getElementById("sessionIdInput").value.trim();
@@ -880,15 +879,36 @@ function joinRoom() {
         return;
     }
 
-    // Save the user's information and intent
+    // Save user info
     sessionStorage.setItem("userName", name);
     sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
-    // DON'T set isHost here - let the server decide
     sessionStorage.setItem("isRoomCreator", "false");
+
+    // Check current host status for this session
+    let sessionHostKey = `isHost_${sessionId}`; // unique key per session
+    let currentHost = sessionStorage.getItem(sessionHostKey);
+
+    if (requestHost) {
+        if (!currentHost || currentHost === "false") {
+            // If no host yet, or current host is false, make this user the host
+            sessionStorage.setItem(sessionHostKey, "true");
+        } else {
+            // Otherwise, keep it false
+            sessionStorage.setItem(sessionHostKey, "false");
+        }
+    } else {
+        // User didn't request host, keep it false
+        sessionStorage.setItem(sessionHostKey, "false");
+    }
+
+    // Optional: store a global isHost flag for easier access
+    sessionStorage.setItem("isHost", sessionStorage.getItem(sessionHostKey));
 
     // Navigate to the room page
     window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
 }
+
+
    
   </script>
 </body>
