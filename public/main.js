@@ -636,6 +636,7 @@ window.initializeSocketWithName = function(roomId, name) {
       } else {
         // Fallback for unexpected response
         console.warn('[JOIN] Unexpected server response:', response);
+        alert("test");
         sessionStorage.setItem('isHost', 'false');
         disableHostFeatures();
       }
