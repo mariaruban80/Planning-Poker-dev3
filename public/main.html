@@ -864,7 +864,6 @@
   // Navigate to the room WITHOUT host parameter
   window.location.href = `/index.html?roomId=${roomId}`;
 }
-<script>
 function joinRoom() {
     const name = document.getElementById("joinNameInput").value.trim();
     const sessionId = document.getElementById("sessionIdInput").value.trim();
@@ -904,11 +903,7 @@ function joinRoom() {
         window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
     });
 }
-</script>
-
-
-
-   
+  
   </script>
 </body>
 </html>
