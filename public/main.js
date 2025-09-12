@@ -600,29 +600,29 @@ window.initializeSocketWithName = function(roomId, name) {
   // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // === Initial join: always as guest ===
+  // === Join session on connect ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
     const sessionId = new URLSearchParams(location.search).get('roomId');
-    const name = sessionStorage.getItem('userName') || 'Guest';
+    const userNameStored = sessionStorage.getItem('userName') || 'Guest';
     const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-   // sessionStorage.setItem("isHost", "false"); // reset before asking server
-      socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
-      const isHost = !!(res && res.isHost);
-      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+    joinSession(sessionId, userNameStored, requestedHost);
+  });
 
-      if (!isHost && res && res.reason === 'Host already exists') {
-        console.info('[JOIN] Host request denied: host already exists');
-      }
+  // === Host change events ===
+  socket.on("hostChanged", ({ userName: newHostName, hostId }) => {
+    console.log(`[SOCKET] Host changed to: ${newHostName}`);
+    const isHost = sessionStorage.getItem("userName") === newHostName;
+    sessionStorage.setItem("isHost", isHost ? "true" : "false");
+    toggleHostFeatures(isHost);
+  });
 
-      if (isHost) {
-        enableHostFeatures();
-      } else {
-        disableHostFeatures();
-      }
-    });
+  socket.on("hostLeft", () => {
+    console.log("[SOCKET] Host left, you may request host again");
+    sessionStorage.setItem("isHost", "false");
+    toggleHostFeatures(false);
   });
 
   // === “Allow as host” button ===
@@ -633,20 +633,11 @@ window.initializeSocketWithName = function(roomId, name) {
       const sessionId = new URLSearchParams(location.search).get('roomId');
       const userNameStored = sessionStorage.getItem("userName");
 
-      sessionStorage.setItem("isHost", "false"); // reset before asking server
-          socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
-        if (res?.isHost) {
-          sessionStorage.setItem("isHost", "true");
-          enableHostFeatures();
-        } else {
-          sessionStorage.setItem("isHost", "false");
-          disableHostFeatures();
-        }
-      });
+      joinSession(sessionId, userNameStored, true);
     });
   }
 
-  // === Continue with other initialization steps ===
+  // === Other initialization steps ===
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
@@ -658,7 +649,27 @@ window.initializeSocketWithName = function(roomId, name) {
   setupCSVDeleteButtons();
   addNewLayoutStyles();
   setupHostToggle();
+
+  // === Helper functions ===
+  function joinSession(sessionId, name, requestHost = false) {
+    socket.emit('joinSession', { sessionId, requestedHost: requestHost, name }, (res) => {
+      const isHost = !!(res && res.isHost);
+      sessionStorage.setItem("isHost", isHost ? "true" : "false");
+
+      if (!isHost && res?.reason === "Host already exists") {
+        console.info("[JOIN] Host request denied: host already exists");
+      }
+
+      toggleHostFeatures(isHost);
+    });
+  }
+
+  function toggleHostFeatures(isHost) {
+    if (isHost) enableHostFeatures();
+    else disableHostFeatures();
+  }
 };
+
 
 
 /**
