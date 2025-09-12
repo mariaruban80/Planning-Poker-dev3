@@ -600,28 +600,21 @@ window.initializeSocketWithName = function(roomId, name) {
   // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
   
-    const sessionId = new URLSearchParams(location.search).get('roomId');
-    const name = sessionStorage.getItem('userName') || 'Guest';
-    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+    const sessionId = new URLSearchParams(location.search).get("roomId");
+const userNameStored = sessionStorage.getItem("userName") || "Guest";
+const requestedHost = sessionStorage.getItem("requestedHost") === "true";
 
-socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+socket.emit("joinSession", { sessionId, requestedHost, name: userNameStored }, (res) => {
   console.log("[SOCKET] joinSession callback →", res);
 
-  const isHost = !!(res && res.isHost);
-  sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
-
-  if (isHost) {
-    console.log("[HOST] Host mode enabled");
+  if (res?.isHost) {
+    sessionStorage.setItem("isHost", "true");
     enableHostFeatures();
-
-    // 🔥 Move voting system logic here
-    const votingSystem = sessionStorage.getItem('votingSystem') || 'fibonacci';
-    socket.emit('votingSystemSelected', { roomId: sessionId, votingSystem });
   } else {
+    sessionStorage.setItem("isHost", "false");
     if (res?.reason) {
-      alert(res.reason); // e.g. "Host already exists"
+      alert(res.reason);
     }
-    console.log("[HOST] Guest mode enabled");
     disableHostFeatures();
   }
 });
