@@ -601,7 +601,7 @@ window.initializeSocketWithName = function(roomId, name) {
   // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // === Centralized join function ===
+  // === Central join function ===
   function joinSession(requestHost = false) {
     const sessionId = new URLSearchParams(location.search).get('roomId');
     const userNameStored = sessionStorage.getItem("userName");
@@ -627,10 +627,7 @@ window.initializeSocketWithName = function(roomId, name) {
   // === Socket connect: initial join ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
-
-    const isCreator = sessionStorage.getItem("roomCreator") === "true";
-    // Room creator automatically requests host, others join as guest
-    joinSession(isCreator);
+    joinSession(false); // join as guest; server will auto-assign host if first user
   });
 
   // === Handle host change events from server ===
