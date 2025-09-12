@@ -593,32 +593,40 @@ window.initializeSocketWithName = function(roomId, name, isRoomCreator=false) {
 
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  socket.on("connect", () => {
-    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
+ socket.on("connect", () => {
+  console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-    // Only the creator should request host on first join
-    const requestedHost = isRoomCreator;
+  // Only request host if creator
+  const requestedHost = isRoomCreator; 
+  socket.emit("joinSession", { sessionId: roomId, requestedHost, name }, (res) => {
+    const isHost = !!(res && res.isHost);
+    sessionStorage.setItem("isHost", isHost ? "true" : "false");
 
-    socket.emit("joinSession", { sessionId: roomId, requestedHost, name }, (res) => {
-      const isHost = !!(res && res.isHost);
-      sessionStorage.setItem("isHost", isHost ? "true" : "false");
+    if (isHost) {
+      // Defer to ensure DOM is ready
+      setTimeout(() => enableHostFeatures(), 0);
+    } else {
+      disableHostFeatures();
+    }
 
-      if (isHost) enableHostFeatures();
-      else disableHostFeatures();
-
-      if (!isHost && res?.reason === "Host already exists") {
-        console.info("[JOIN] Host request denied: host already exists");
-      }
-    });
+    if (!isHost && res?.reason === "Host already exists") {
+      console.info("[JOIN] Host request denied: host already exists");
+    }
   });
+});
 
-  socket.on("hostChanged", ({ userName: newHostName }) => {
-    const isHostNow = newHostName === sessionStorage.getItem("userName");
-    sessionStorage.setItem("isHost", isHostNow ? "true" : "false");
 
-    if (isHostNow) enableHostFeatures();
-    else disableHostFeatures();
-  });
+socket.on("hostChanged", ({ userName: newHostName }) => {
+  const isHostNow = newHostName === sessionStorage.getItem("userName");
+  sessionStorage.setItem("isHost", isHostNow ? "true" : "false");
+
+  if (isHostNow) {
+    setTimeout(() => enableHostFeatures(), 0);
+  } else {
+    disableHostFeatures();
+  }
+});
+
 
   socket.on("hostLeft", () => disableHostFeatures());
 
