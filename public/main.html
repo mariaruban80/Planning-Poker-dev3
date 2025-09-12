@@ -923,13 +923,7 @@
 
       if (!response.isHost && response.reason === "Host already exists") {
         // Inform user they joined as guest
-        //alert("A host already exists in this session. You have joined as a guest.");
-        <div id="hostExistsModal" class="modal" style="display:none;">
-          <div class="modal-content">
-            <p>⚠️ Host already available in this room</p>
-            <button onclick="document.getElementById('hostExistsModal').style.display='none'">OK</button>
-          </div>
-        </div>  
+        alert("A host already exists in this session. You have joined as a guest.");     
         
       }
 
