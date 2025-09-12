@@ -591,7 +591,6 @@ window.initializeSocketWithName = function(roomId, name) {
   // Store username & sessionId
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
-  sessionStorage.setItem("isHost", "false"); // reset before server confirmation
 
   userName = name;
 
@@ -601,55 +600,59 @@ window.initializeSocketWithName = function(roomId, name) {
   // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
-  // === Central join function ===
-  function joinSession(requestHost = false) {
-    const sessionId = new URLSearchParams(location.search).get('roomId');
-    const userNameStored = sessionStorage.getItem("userName");
-
-    socket.emit('joinSession', { sessionId, requestedHost: requestHost, name: userNameStored }, (res) => {
-      const isHost = !!res?.isHost;
-      sessionStorage.setItem("isHost", isHost ? "true" : "false");
-
-      if (!isHost && res?.reason === "Host already exists") {
-        console.info("[JOIN] Host request denied: host already exists");
-      }
-
-      toggleHostFeatures(isHost);
-    });
-  }
-
-  // === Toggle host UI/features ===
-  function toggleHostFeatures(isHost) {
-    if (isHost) enableHostFeatures();
-    else disableHostFeatures();
-  }
-
-  // === Socket connect: initial join ===
+  // === Socket connect logic ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
-    joinSession(false); // join as guest; server will auto-assign host if first user
+
+    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+
+    // Always join session: let server decide host/guest
+    socket.emit('joinSession', { sessionId: roomId, requestedHost, name }, (res) => {
+      const isHost = !!(res && res.isHost);
+      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+
+      if (isHost) {
+        enableHostFeatures();
+      } else {
+        disableHostFeatures();
+      }
+
+      if (!isHost && res?.reason === 'Host already exists') {
+        console.info('[JOIN] Host request denied: host already exists');
+      }
+    });
   });
 
-  // === Handle host change events from server ===
-  socket.on("hostChanged", ({ userName: newHostName }) => {
+  // === Listen for host changes from server ===
+  socket.on('hostChanged', ({ userName: newHostName }) => {
     console.log(`[SOCKET] Host changed to: ${newHostName}`);
-    const isHost = sessionStorage.getItem("userName") === newHostName;
-    sessionStorage.setItem("isHost", isHost ? "true" : "false");
-    toggleHostFeatures(isHost);
+    const isHostNow = newHostName === sessionStorage.getItem('userName');
+    sessionStorage.setItem('isHost', isHostNow ? 'true' : 'false');
+
+    if (isHostNow) {
+      enableHostFeatures();
+    } else {
+      disableHostFeatures();
+    }
   });
 
-  socket.on("hostLeft", () => {
-    console.log("[SOCKET] Host left, you may request host again");
-    sessionStorage.setItem("isHost", "false");
-    toggleHostFeatures(false);
+  socket.on('hostLeft', () => {
+    console.log(`[SOCKET] Host left session ${roomId}`);
+    disableHostFeatures();
   });
 
-  // === “Allow as host” button ===
+  // === Allow host button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
       console.log("[HOST REQUEST] User clicked 'Allow as host'");
-      joinSession(true); // request host explicitly
+      socket.emit('joinSession', { sessionId: roomId, requestedHost: true, name }, (res) => {
+        const isHostNow = !!(res && res.isHost);
+        sessionStorage.setItem('isHost', isHostNow ? 'true' : 'false');
+
+        if (isHostNow) enableHostFeatures();
+        else disableHostFeatures();
+      });
     });
   }
 
