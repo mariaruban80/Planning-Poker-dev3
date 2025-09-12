@@ -610,7 +610,7 @@ window.initializeSocketWithName = function(roomId, name) {
 
     socket.emit('joinSession', { sessionId, requestedHost, name }, (response) => {
       console.log('[JOIN] Server response:', response);
-      
+      alert(`Host: ${isHost}`);
       if (response && response.isHost === true) {
         console.log('[JOIN] Successfully granted host role');
         sessionStorage.setItem('isHost', 'true');
@@ -643,25 +643,6 @@ window.initializeSocketWithName = function(roomId, name) {
     });
   });
 
-  // === “Allow as host” button ===
-  const allowHostBtn = document.getElementById("allowHostBtn");
-  if (allowHostBtn) {
-    allowHostBtn.addEventListener("click", () => {
-      console.log("[HOST REQUEST] User clicked 'Allow as host'");
-      const sessionId = new URLSearchParams(location.search).get('roomId');
-      const userNameStored = sessionStorage.getItem("userName");
-
-      socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
-        if (res?.isHost) {
-          sessionStorage.setItem("isHost", "true");
-          enableHostFeatures();
-        } else {
-          sessionStorage.setItem("isHost", "false");
-          disableHostFeatures();
-        }
-      });
-    });
-  }
 
   // === Continue with other initialization steps ===
   setupCSVUploader();
