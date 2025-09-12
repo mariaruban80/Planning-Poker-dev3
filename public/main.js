@@ -608,7 +608,7 @@ window.initializeSocketWithName = function(roomId, name) {
     const name = sessionStorage.getItem('userName') || 'Guest';
     const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-    sessionStorage.setItem("isHost", "false"); // reset before asking server
+   // sessionStorage.setItem("isHost", "false"); // reset before asking server
       socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
       const isHost = !!(res && res.isHost);
       sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
