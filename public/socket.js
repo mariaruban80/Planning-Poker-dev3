@@ -319,27 +319,36 @@ socket.on('addTicket', ({ ticketData }) => {
     }, 100);
   });
 
-  socket.on('storySelected', ({ storyIndex }) => {
-    console.log('[SOCKET] Story selected event received:', storyIndex);
-    selectedStoryIndex = storyIndex;
-    
-    // Store in last known state
-    lastKnownRoomState.selectedIndex = storyIndex;
-    
-    handleMessage({ type: 'storySelected', storyIndex });
-    
-    // When a story is selected, request votes for it to ensure we have the latest
-    setTimeout(() => {
-      const selectedCard = document.querySelector('.story-card.selected');
-      if (selectedCard && socket && socket.connected) {
-        const storyId = selectedCard.id; 
-        if (storyId && !lastKnownRoomState.deletedStoryIds.includes(storyId)) {
-          console.log(`[SOCKET] Requesting votes for newly selected story: ${storyId}`);
-          socket.emit('requestStoryVotes', { storyId });
-        }
+socket.on('storySelected', ({ storyIndex }) => {
+  console.log('[SOCKET] Story selected event received:', storyIndex);
+  selectedStoryIndex = storyIndex;
+
+  // Store in last known state
+  lastKnownRoomState.selectedIndex = storyIndex;
+
+  // Guard: wait until story cards are actually in the DOM
+  const storyCards = document.querySelectorAll('.story-card');
+  if (!storyCards || storyCards.length <= storyIndex) {
+    console.warn('[SOCKET] storySelected ignored — no matching story card yet');
+    return;
+  }
+
+  // Continue normal flow
+  handleMessage({ type: 'storySelected', storyIndex });
+
+  // When a story is selected, request votes for it to ensure we have the latest
+  setTimeout(() => {
+    const selectedCard = document.querySelector('.story-card.selected');
+    if (selectedCard && socket && socket.connected) {
+      const storyId = selectedCard.id; 
+      if (storyId && !lastKnownRoomState.deletedStoryIds.includes(storyId)) {
+        console.log(`[SOCKET] Requesting votes for newly selected story: ${storyId}`);
+        socket.emit('requestStoryVotes', { storyId });
       }
-    }, 100);
-  });
+    }
+  }, 100);
+});
+
 socket.on("userListUpdate", (users) => {
   console.log("[USERLIST] Updated user list:", users);
   updateUserListUI(users); // your UI refresh function
@@ -1063,6 +1072,7 @@ export function cleanup() {
     }
   }
 }
+
 
 
 
