@@ -912,6 +912,7 @@
     sessionStorage.setItem("userName", name);
     sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
     sessionStorage.setItem("isRoomCreator", "false");
+    sessionStorage.setItem("isHost", "false");
 
     // Ask server to join the session
     socket.emit("joinSession", { sessionId, requestedHost: requestHost, name }, (response) => {
