@@ -893,7 +893,7 @@
     // You could prompt a guest to become host if desired
   });
 
-  function joinRoom() {
+ function joinRoom() {
     const name = document.getElementById("joinNameInput").value.trim();
     const sessionId = document.getElementById("sessionIdInput").value.trim();
     const requestHost = document.getElementById("allowJoinAsHost").checked;
@@ -908,28 +908,36 @@
       return;
     }
 
-    // Save user info (basic)
+    // Detect if this user is the room creator
+    const isRoomCreator = !document.getElementById("allowJoinAsHost"); 
+    // or use your own condition if you have a "Create Room" button flow
+
+    // Save user info
     sessionStorage.setItem("userName", name);
-    sessionStorage.setItem("requestedHost", requestHost ? "true" : "false");
-    sessionStorage.setItem("isRoomCreator", "false");
-    sessionStorage.setItem("isHost", "false");
+    sessionStorage.setItem("isRoomCreator", isRoomCreator ? "true" : "false");
+
+    // Decide host request:
+    const shouldRequestHost = isRoomCreator ? true : requestHost;
 
     // Ask server to join the session
-    socket.emit("joinSession", { sessionId, requestedHost: requestHost, name }, (response) => {
-      console.log("[JOIN RESPONSE]", response);
+    socket.emit(
+      "joinSession",
+      { sessionId, requestedHost: shouldRequestHost, name },
+      (response) => {
+        console.log("[JOIN RESPONSE]", response);
 
-      // Update host status based on server response
-      sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
+        sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
 
-      if (!response.isHost && response.reason === "Host already exists") {
-        // Inform user they joined as guest
-        alert("A host already exists in this session. You have joined as a guest.");     
-        
+        if (!response.isHost && response.reason === "Host already exists") {
+          alert(
+            "A host already exists in this session. You have joined as a guest."
+          );
+        }
+
+        // Navigate to room page
+        window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
       }
-
-      // Navigate to room page after server confirms
-      window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
-    });
+    );
   }
 
   // Example functions to enable/disable host features
