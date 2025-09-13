@@ -51,125 +51,74 @@ window.notifyStoriesUpdated = function() {
  */
 function enableHostFeatures() {
   console.log('[HOST] Enabling host features');
+  
+  // Update session storage
   sessionStorage.setItem('isHost', 'true');
-
-  const hostOnlyIds = [
-    'logoutMenuBtn',
-    'jiraImportBtn',
-    'csvUploadBtn',
-    'csvExportBtn',
-    'addTicketBtn',
-    'revealVotesBtn',
-    'resetVotesBtn',
-    'nextStory',
-    'prevStory'
-  ];
-
-  // Try enabling immediately
-  hostOnlyIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.style.display = (el.tagName === 'BUTTON' ? 'block' : 'flex');
-      el.disabled = false;
-      el.classList.remove('hide-for-guests', 'disabled-nav');
-    }
-  });
-
-  // Re-check again after a short delay (in case DOM not ready yet)
-  setTimeout(() => {
-    hostOnlyIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.style.display = (el.tagName === 'BUTTON' ? 'block' : 'flex');
-        el.disabled = false;
-        el.classList.remove('hide-for-guests', 'disabled-nav');
-      }
-    });
-    console.log('[HOST] Host features re-applied after DOM ready');
-  }, 500);
-}
-
-/**
- * Disable host-only features and UI elements
- */
-function disableHostFeatures() {
-  console.log('[HOST] Disabling host features');
-
-  sessionStorage.setItem('isHost', 'false');
-
-  // Profile/menu items (host-only)
+  
+  // Show host-only buttons in the profile menu
   const hostOnlyMenuItems = [
-    'logoutMenuBtn',  // ✅ corrected
-    'jiraImportBtn',  // ✅ corrected
-    'csvUploadBtn',   // ✅ corrected
-    'csvExportBtn'    // ✅ corrected
+    'uploadTicketMenuBtn',
+    'exportToCsvMenuBtn', 
+    'jiraImportMenuBtn'
   ];
-  hostOnlyMenuItems.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.style.display = 'none';
-      el.disabled = true;
-      el.classList.add('hide-for-guests');
+  
+  hostOnlyMenuItems.forEach(elementId => {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.style.display = 'flex';
+      element.classList.remove('hide-for-guests');
     }
   });
-
-  // Control buttons (sidebar)
+  
+  // Show control buttons in sidebar
   const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
-  controlButtons.forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.style.display = 'none';
-      btn.disabled = true;
-      btn.classList.add('hide-for-guests');
+  controlButtons.forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.style.display = 'block';
+      button.disabled = false;
+      button.classList.remove('hide-for-guests');
     }
   });
-
-  // Add ticket button
+  
+  // Show add ticket button
   const addTicketBtn = document.getElementById('addTicketBtn');
   if (addTicketBtn) {
-    addTicketBtn.style.display = 'none';
-    addTicketBtn.disabled = true;
-    addTicketBtn.classList.add('hide-for-guests');
+    addTicketBtn.style.display = 'flex';
+    addTicketBtn.disabled = false;
+    addTicketBtn.classList.remove('hide-for-guests');
   }
-
-  // Story navigation
-  ['nextStory', 'prevStory'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.disabled = true;
-      btn.classList.add('disabled-nav');
+  
+  // Enable story navigation buttons
+  const navButtons = ['nextStory', 'prevStory'];
+  navButtons.forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.disabled = false;
+      button.classList.remove('disabled-nav');
     }
   });
-
-  // Story cards (make unclickable)
+  
+  // Remove guest restrictions from story cards
   document.querySelectorAll('.story-card').forEach(card => {
-    card.classList.add('disabled-story');
-    card.onclick = null;
+    card.classList.remove('disabled-story');
+    
+    // Re-enable click handlers
+    const index = parseInt(card.dataset.index);
+    if (!isNaN(index)) {
+      card.onclick = () => selectStory(index);
+    }
   });
-
-  // Planning cards (disable dragging)
+  
+  // Enable planning cards
   document.querySelectorAll('#planningCards .card').forEach(card => {
-    card.classList.add('disabled');
-    card.setAttribute('draggable', 'false');
+    card.classList.remove('disabled');
+    card.setAttribute('draggable', 'true');
   });
-
-  console.log('[HOST] Host features disabled successfully');
+  
+  console.log('[HOST] Host features enabled successfully');
 }
-// Ensure host features are applied after DOM is fully loaded
-document.addEventListener("DOMContentLoaded", () => {
-  const isHost = sessionStorage.getItem("isHost") === "true";
-  const forceEnable = sessionStorage.getItem("forceEnableHost") === "true";
 
-  if (isHost || forceEnable) {
-    enableHostFeatures();
-    sessionStorage.removeItem("forceEnableHost"); // reset flag
-  } else {
-    disableHostFeatures();
-  }
-});
-
-
-   
 function updateUserListUI(users) {
   const userListEl = document.getElementById("user-list"); // whatever your container is
   if (!userListEl) return;
@@ -181,6 +130,76 @@ function updateUserListUI(users) {
     userListEl.appendChild(li);
   });
 }
+
+
+/**
+ * Disable host-only features and UI elements  
+ */
+function disableHostFeatures() {
+  console.log('[HOST] Disabling host features');
+  
+  // Update session storage
+  sessionStorage.setItem('isHost', 'false');
+  
+  // Hide host-only buttons in the profile menu
+  const hostOnlyMenuItems = [
+    'uploadTicketMenuBtn',
+    'exportToCsvMenuBtn',
+    'jiraImportMenuBtn'
+  ];
+  
+  hostOnlyMenuItems.forEach(elementId => {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.style.display = 'none';
+      element.classList.add('hide-for-guests');
+    }
+  });
+  
+  // Hide control buttons in sidebar
+  const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
+  controlButtons.forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.style.display = 'none';
+      button.disabled = true;
+      button.classList.add('hide-for-guests');
+    }
+  });
+  
+  // Hide add ticket button
+  const addTicketBtn = document.getElementById('addTicketBtn');
+  if (addTicketBtn) {
+    addTicketBtn.style.display = 'none';
+    addTicketBtn.disabled = true;
+    addTicketBtn.classList.add('hide-for-guests');
+  }
+  
+  // Disable story navigation buttons
+  const navButtons = ['nextStory', 'prevStory'];
+  navButtons.forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.disabled = true;
+      button.classList.add('disabled-nav');
+    }
+  });
+  
+  // Add guest restrictions to story cards
+  document.querySelectorAll('.story-card').forEach(card => {
+    card.classList.add('disabled-story');
+    card.onclick = null; // Remove click handler
+  });
+  
+  // Disable planning cards
+  document.querySelectorAll('#planningCards .card').forEach(card => {
+    card.classList.add('disabled');
+    card.setAttribute('draggable', 'false');
+  });
+  
+  console.log('[HOST] Host features disabled successfully');
+}
+
 
 /** function to disable the change language */
 function showPremiumUpgradePopup() {
@@ -564,98 +583,80 @@ mappingSelects.forEach(select => {
  * @param {string} roomId - Room ID to join 
  * @param {string} name - Username to use
  */
-window.initializeSocketWithName = function(roomId, name, isRoomCreator = false) {
+window.initializeSocketWithName = function(roomId, name) {
   if (!roomId || !name) return;
 
+  console.log(`[APP] Initializing socket for room: ${roomId}, username: ${name}`);
+
+  // Store username & sessionId in sessionStorage
   sessionStorage.setItem("userName", name);
   sessionStorage.setItem("sessionId", roomId);
 
+  userName = name;
+
+  // Load deleted stories first
   loadDeletedStoriesFromStorage(roomId);
 
+  // Initialize WebSocket
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
+  // === Initial join: always as guest ===
   socket.on("connect", () => {
     console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-    const requestedHost = isRoomCreator;
-    socket.emit("joinSession", { sessionId: roomId, requestedHost, name }, (res) => {
-      const isHost = !!(res && res.isHost);
-      sessionStorage.setItem("isHost", isHost ? "true" : "false");
+    const sessionId = new URLSearchParams(location.search).get('roomId');
+    const name = sessionStorage.getItem('userName') || 'Guest';
+    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
 
-      if (isHost) {
-        console.log("[HOST] Server confirmed host role");
-        setTimeout(() => enableHostFeatures(), 0);
-      } else {
-        console.log("[GUEST] Joined as guest");
-        disableHostFeatures();
-        setupGuestModeRestrictions(); // 👈 only here for guests
+    socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
+      const isHost = !!(res && res.isHost);
+      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+
+      if (!isHost && res && res.reason === 'Host already exists') {
+        console.info('[JOIN] Host request denied: host already exists');
       }
 
-      if (!isHost && res?.reason === "Host already exists") {
-        console.info("[JOIN] Host request denied: host already exists");
+      if (isHost) {
+        enableHostFeatures();
+      } else {
+        disableHostFeatures();
       }
     });
   });
 
-socket.on("hostChanged", ({ userName: newHostName }) => {
-  const currentName = sessionStorage.getItem("userName");
-  const alreadyHost = sessionStorage.getItem("isHost") === "true";
-
-  const isHostNow = newHostName === currentName;
-  if (isHostNow && alreadyHost) {
-    console.log("[HOST] Already host, ignoring duplicate hostChanged");
-    return;
-  }
-
-  sessionStorage.setItem("isHost", isHostNow ? "true" : "false");
-
-  if (isHostNow) {
-    console.log("[HOST] Promoted to host");
-    setTimeout(() => enableHostFeatures(), 0);
-  } else {
-    console.log("[GUEST] Demoted to guest");
-    disableHostFeatures();
-    setupGuestModeRestrictions();
-  }
-});
-
-
-  socket.on("hostLeft", () => {
-    disableHostFeatures();
-    setupGuestModeRestrictions();
-  });
-
-  // Allow host button
+  // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
   if (allowHostBtn) {
     allowHostBtn.addEventListener("click", () => {
-      socket.emit("joinSession", { sessionId: roomId, requestedHost: true, name }, (res) => {
-        const isHostNow = !!(res && res.isHost);
-        sessionStorage.setItem("isHost", isHostNow ? "true" : "false");
+      console.log("[HOST REQUEST] User clicked 'Allow as host'");
+      const sessionId = new URLSearchParams(location.search).get('roomId');
+      const userNameStored = sessionStorage.getItem("userName");
 
-        if (isHostNow) {
+      socket.emit('joinSession', { sessionId, requestedHost: true, name: userNameStored }, (res) => {
+        if (res?.isHost) {
+          sessionStorage.setItem("isHost", "true");
           enableHostFeatures();
         } else {
+          sessionStorage.setItem("isHost", "false");
           disableHostFeatures();
-          setupGuestModeRestrictions();
         }
       });
     });
   }
 
-  // Other init steps that apply to everyone
+  // === Continue with other initialization steps ===
   setupCSVUploader();
   setupInviteButton();
   setupStoryNavigation();
   setupVoteCardsDrag();
   setupRevealResetButtons();
   setupAddTicketButton();
+  setupGuestModeRestrictions();
   cleanupDeleteButtonHandlers();
   setupCSVDeleteButtons();
   addNewLayoutStyles();
   setupHostToggle();
 };
-
 
 
 /**
