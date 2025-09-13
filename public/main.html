@@ -920,24 +920,19 @@
     const shouldRequestHost = isRoomCreator ? true : requestHost;
 
     // Ask server to join the session
-    socket.emit(
-      "joinSession",
-      { sessionId, requestedHost: shouldRequestHost, name },
-      (response) => {
-        console.log("[JOIN RESPONSE]", response);
+ socket.emit("joinSession", { sessionId, requestedHost: shouldRequestHost, name }, (response) => {
+  console.log("[JOIN RESPONSE]", response);
 
-        sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
+  sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
 
-        if (!response.isHost && response.reason === "Host already exists") {
-          alert(
-            "A host already exists in this session. You have joined as a guest."
-          );
-        }
+  if (response.isHost) {
+    // ✅ mark that we must re-apply host UI after DOM loads
+    sessionStorage.setItem("forceEnableHost", "true");
+  }
 
-        // Navigate to room page
-        window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
-      }
-    );
+  window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+});
+   
   }
 
   // Example functions to enable/disable host features
