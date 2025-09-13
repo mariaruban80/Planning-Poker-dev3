@@ -182,6 +182,18 @@ function disableHostFeatures() {
 
   console.log('[HOST] Host features disabled successfully');
 }
+// Ensure host features are applied after DOM is fully loaded
+document.addEventListener("DOMContentLoaded", () => {
+  const isHost = sessionStorage.getItem("isHost") === "true";
+  const forceEnable = sessionStorage.getItem("forceEnableHost") === "true";
+
+  if (isHost || forceEnable) {
+    enableHostFeatures();
+    sessionStorage.removeItem("forceEnableHost"); // reset flag
+  } else {
+    disableHostFeatures();
+  }
+});
 
 
    
