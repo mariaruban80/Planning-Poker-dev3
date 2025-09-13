@@ -51,71 +51,68 @@ window.notifyStoriesUpdated = function() {
  */
 function enableHostFeatures() {
   console.log('[HOST] Enabling host features');
-  
-  // Update session storage
+
   sessionStorage.setItem('isHost', 'true');
-  
-  // Show host-only buttons in the profile menu
+
+  // Profile menu items (host-only)
   const hostOnlyMenuItems = [
     'uploadTicketMenuBtn',
-    'exportToCsvMenuBtn', 
-    'jiraImportMenuBtn'
+    'exportToCsvMenuBtn',
+    'jiraImportMenuBtn',
+    'logOffBtn' // 👈 fixed to match index.html
   ];
-  
-  hostOnlyMenuItems.forEach(elementId => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.style.display = 'flex';
-      element.classList.remove('hide-for-guests');
+  hostOnlyMenuItems.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.display = 'flex';
+      el.disabled = false;
+      el.classList.remove('hide-for-guests');
     }
   });
-  
-  // Show control buttons in sidebar
+
+  // Control buttons (sidebar)
   const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
-  controlButtons.forEach(buttonId => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.style.display = 'block';
-      button.disabled = false;
-      button.classList.remove('hide-for-guests');
+  controlButtons.forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.style.display = 'block';
+      btn.disabled = false;
+      btn.classList.remove('hide-for-guests');
     }
   });
-  
-  // Show add ticket button
+
+  // Add ticket button
   const addTicketBtn = document.getElementById('addTicketBtn');
   if (addTicketBtn) {
     addTicketBtn.style.display = 'flex';
     addTicketBtn.disabled = false;
     addTicketBtn.classList.remove('hide-for-guests');
   }
-  
-  // Enable story navigation buttons
-  const navButtons = ['nextStory', 'prevStory'];
-  navButtons.forEach(buttonId => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.disabled = false;
-      button.classList.remove('disabled-nav');
+
+  // Story navigation
+  ['nextStory', 'prevStory'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('disabled-nav');
     }
   });
-  
-  // Remove guest restrictions from story cards
+
+  // Story cards (make clickable again)
   document.querySelectorAll('.story-card').forEach(card => {
     card.classList.remove('disabled-story');
-    
-    // Re-enable click handlers
     const index = parseInt(card.dataset.index);
     if (!isNaN(index)) {
       card.onclick = () => selectStory(index);
     }
   });
-  
-  // Enable planning cards
+
+  // Planning cards (re-enable dragging)
   document.querySelectorAll('#planningCards .card').forEach(card => {
     card.classList.remove('disabled');
     card.setAttribute('draggable', 'true');
   });
-  
+
   console.log('[HOST] Host features enabled successfully');
 }
 
@@ -137,69 +134,67 @@ function updateUserListUI(users) {
  */
 function disableHostFeatures() {
   console.log('[HOST] Disabling host features');
-  
-  // Update session storage
+
   sessionStorage.setItem('isHost', 'false');
-  
-  // Hide host-only buttons in the profile menu
+
+  // Profile menu items (host-only)
   const hostOnlyMenuItems = [
     'uploadTicketMenuBtn',
     'exportToCsvMenuBtn',
-    'jiraImportMenuBtn'
+    'jiraImportMenuBtn',
+    'logOffBtn' // 👈 keep consistent
   ];
-  
-  hostOnlyMenuItems.forEach(elementId => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.style.display = 'none';
-      element.classList.add('hide-for-guests');
+  hostOnlyMenuItems.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.display = 'none';
+      el.disabled = true;
+      el.classList.add('hide-for-guests');
     }
   });
-  
-  // Hide control buttons in sidebar
+
+  // Control buttons (sidebar)
   const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
-  controlButtons.forEach(buttonId => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.style.display = 'none';
-      button.disabled = true;
-      button.classList.add('hide-for-guests');
+  controlButtons.forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.style.display = 'none';
+      btn.disabled = true;
+      btn.classList.add('hide-for-guests');
     }
   });
-  
-  // Hide add ticket button
+
+  // Add ticket button
   const addTicketBtn = document.getElementById('addTicketBtn');
   if (addTicketBtn) {
     addTicketBtn.style.display = 'none';
     addTicketBtn.disabled = true;
     addTicketBtn.classList.add('hide-for-guests');
   }
-  
-  // Disable story navigation buttons
-  const navButtons = ['nextStory', 'prevStory'];
-  navButtons.forEach(buttonId => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.disabled = true;
-      button.classList.add('disabled-nav');
+
+  // Story navigation
+  ['nextStory', 'prevStory'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('disabled-nav');
     }
   });
-  
-  // Add guest restrictions to story cards
+
+  // Story cards (make unclickable)
   document.querySelectorAll('.story-card').forEach(card => {
     card.classList.add('disabled-story');
-    card.onclick = null; // Remove click handler
+    card.onclick = null;
   });
-  
-  // Disable planning cards
+
+  // Planning cards (disable dragging)
   document.querySelectorAll('#planningCards .card').forEach(card => {
     card.classList.add('disabled');
     card.setAttribute('draggable', 'false');
   });
-  
+
   console.log('[HOST] Host features disabled successfully');
 }
-
 
 /** function to disable the change language */
 function showPremiumUpgradePopup() {
