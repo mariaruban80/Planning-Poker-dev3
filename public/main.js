@@ -49,9 +49,6 @@ window.notifyStoriesUpdated = function() {
 /**
  * Enable host-only features and UI elements
  */
-/**
- * Enable host-only features and UI elements
- */
 function enableHostFeatures() {
   console.log('[HOST] Enabling host features');
 
@@ -187,6 +184,7 @@ function disableHostFeatures() {
 }
 
 
+   
 function updateUserListUI(users) {
   const userListEl = document.getElementById("user-list"); // whatever your container is
   if (!userListEl) return;
