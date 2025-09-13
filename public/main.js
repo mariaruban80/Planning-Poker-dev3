@@ -49,17 +49,20 @@ window.notifyStoriesUpdated = function() {
 /**
  * Enable host-only features and UI elements
  */
+/**
+ * Enable host-only features and UI elements
+ */
 function enableHostFeatures() {
   console.log('[HOST] Enabling host features');
 
   sessionStorage.setItem('isHost', 'true');
 
-  // Profile menu items (host-only)
+  // Profile/menu items (host-only)
   const hostOnlyMenuItems = [
-    'uploadTicketMenuBtn',
-    'exportToCsvMenuBtn',
-    'jiraImportMenuBtn',
-    'logOffBtn' // 👈 fixed to match index.html
+    'logoutMenuBtn',  // ✅ corrected
+    'jiraImportBtn',  // ✅ corrected
+    'csvUploadBtn',   // ✅ corrected
+    'csvExportBtn'    // ✅ corrected
   ];
   hostOnlyMenuItems.forEach(id => {
     const el = document.getElementById(id);
@@ -116,33 +119,20 @@ function enableHostFeatures() {
   console.log('[HOST] Host features enabled successfully');
 }
 
-function updateUserListUI(users) {
-  const userListEl = document.getElementById("user-list"); // whatever your container is
-  if (!userListEl) return;
-
-  userListEl.innerHTML = ""; // clear existing
-  users.forEach(u => {
-    const li = document.createElement("li");
-    li.textContent = `${u.name}${u.isHost ? " (Host)" : ""}`;
-    userListEl.appendChild(li);
-  });
-}
-
-
 /**
- * Disable host-only features and UI elements  
+ * Disable host-only features and UI elements
  */
 function disableHostFeatures() {
   console.log('[HOST] Disabling host features');
 
   sessionStorage.setItem('isHost', 'false');
 
-  // Profile menu items (host-only)
+  // Profile/menu items (host-only)
   const hostOnlyMenuItems = [
-    'uploadTicketMenuBtn',
-    'exportToCsvMenuBtn',
-    'jiraImportMenuBtn',
-    'logOffBtn' // 👈 keep consistent
+    'logoutMenuBtn',  // ✅ corrected
+    'jiraImportBtn',  // ✅ corrected
+    'csvUploadBtn',   // ✅ corrected
+    'csvExportBtn'    // ✅ corrected
   ];
   hostOnlyMenuItems.forEach(id => {
     const el = document.getElementById(id);
@@ -194,6 +184,19 @@ function disableHostFeatures() {
   });
 
   console.log('[HOST] Host features disabled successfully');
+}
+
+
+function updateUserListUI(users) {
+  const userListEl = document.getElementById("user-list"); // whatever your container is
+  if (!userListEl) return;
+
+  userListEl.innerHTML = ""; // clear existing
+  users.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = `${u.name}${u.isHost ? " (Host)" : ""}`;
+    userListEl.appendChild(li);
+  });
 }
 
 /** function to disable the change language */
