@@ -51,69 +51,42 @@ window.notifyStoriesUpdated = function() {
  */
 function enableHostFeatures() {
   console.log('[HOST] Enabling host features');
-
   sessionStorage.setItem('isHost', 'true');
 
-  // Profile/menu items (host-only)
-  const hostOnlyMenuItems = [
-    'logoutMenuBtn',  // ✅ corrected
-    'jiraImportBtn',  // ✅ corrected
-    'csvUploadBtn',   // ✅ corrected
-    'csvExportBtn'    // ✅ corrected
+  const hostOnlyIds = [
+    'logoutMenuBtn',
+    'jiraImportBtn',
+    'csvUploadBtn',
+    'csvExportBtn',
+    'addTicketBtn',
+    'revealVotesBtn',
+    'resetVotesBtn',
+    'nextStory',
+    'prevStory'
   ];
-  hostOnlyMenuItems.forEach(id => {
+
+  // Try enabling immediately
+  hostOnlyIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
-      el.style.display = 'flex';
+      el.style.display = (el.tagName === 'BUTTON' ? 'block' : 'flex');
       el.disabled = false;
-      el.classList.remove('hide-for-guests');
+      el.classList.remove('hide-for-guests', 'disabled-nav');
     }
   });
 
-  // Control buttons (sidebar)
-  const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
-  controlButtons.forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.style.display = 'block';
-      btn.disabled = false;
-      btn.classList.remove('hide-for-guests');
-    }
-  });
-
-  // Add ticket button
-  const addTicketBtn = document.getElementById('addTicketBtn');
-  if (addTicketBtn) {
-    addTicketBtn.style.display = 'flex';
-    addTicketBtn.disabled = false;
-    addTicketBtn.classList.remove('hide-for-guests');
-  }
-
-  // Story navigation
-  ['nextStory', 'prevStory'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.disabled = false;
-      btn.classList.remove('disabled-nav');
-    }
-  });
-
-  // Story cards (make clickable again)
-  document.querySelectorAll('.story-card').forEach(card => {
-    card.classList.remove('disabled-story');
-    const index = parseInt(card.dataset.index);
-    if (!isNaN(index)) {
-      card.onclick = () => selectStory(index);
-    }
-  });
-
-  // Planning cards (re-enable dragging)
-  document.querySelectorAll('#planningCards .card').forEach(card => {
-    card.classList.remove('disabled');
-    card.setAttribute('draggable', 'true');
-  });
-
-  console.log('[HOST] Host features enabled successfully');
+  // Re-check again after a short delay (in case DOM not ready yet)
+  setTimeout(() => {
+    hostOnlyIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.display = (el.tagName === 'BUTTON' ? 'block' : 'flex');
+        el.disabled = false;
+        el.classList.remove('hide-for-guests', 'disabled-nav');
+      }
+    });
+    console.log('[HOST] Host features re-applied after DOM ready');
+  }, 500);
 }
 
 /**
