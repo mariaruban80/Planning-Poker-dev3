@@ -12,7 +12,6 @@
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="language-manager.js"></script>
 <script src="jira-integration.js"></script>
-<script type="module" src="/socket.io/socket.io.js"></script>
 <script type="module" src="main.js"></script>      
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Planning Poker Interactive</title>
@@ -5266,71 +5265,96 @@ document.addEventListener('DOMContentLoaded', function() {
   const isJoiningViaInvite = urlParams.has('roomId') && !storedUserName;
 
   if (isJoiningViaInvite) {
-    // Someone joining via invite link who doesn't have a userName yet
+    // This is someone joining via invite link who doesn't have a userName yet
+    // ✅ Mark them as guest since they're joining via invite
     sessionStorage.setItem('isHost', 'false');
     sessionStorage.setItem('isRoomCreator', 'false');
 
     showLoginModal();
 
-    // Prevent socket connect until user enters name
+    // Important: Mark username as not ready to prevent socket connection
     window.userNameReady = false;
+
+    // Hide main content until user provides name
     hideMainContent();
   } else {
+    // User already has a name, mark as ready
     window.userNameReady = true;
 
+    // ✅ If no host status is set, check if they have room creator status
     if (!sessionStorage.getItem('isHost')) {
       const isCreator = sessionStorage.getItem('isRoomCreator') === 'true';
       sessionStorage.setItem('isHost', isCreator ? 'true' : 'false');
     }
 
+    // ✅ Update header if we have username - NEW ADDITION
     if (storedUserName) {
       setTimeout(initUserHeaderDisplay, 100);
     }
   }
 
-  // Secure visibility of import buttons (temporary, overridden later by server response)
+  // Secure the visibility of import buttons based on host status
   const isHost = sessionStorage.getItem('isHost') === 'true';
-  toggleHostFeatures(isHost);
+  const uploadBtn = document.getElementById('uploadTicketMenuBtn');
+  const exportBtn = document.getElementById('exportToCsvMenuBtn');
+  const jiraImportBtn = document.getElementById('jiraImportMenuBtn');
 
-  // Debugging
+  if (uploadBtn) {
+    uploadBtn.style.display = isHost ? 'flex' : 'none';
+  }
+  if (exportBtn) {
+    exportBtn.style.display = isHost ? 'flex' : 'none';
+  }
+
+  if (jiraImportBtn) {
+    jiraImportBtn.style.display = isHost ? 'flex' : 'none';
+        jiraImportBtn.addEventListener('click', function() {
+          window.JiraIntegration.showJiraImportModal();
+        });
+  }
+  // Debugging info
   console.log('Username from sessionStorage:', sessionStorage.getItem('userName'));
-  console.log('Host status (pre-server):', sessionStorage.getItem('isHost'));
+  console.log('Host status:', sessionStorage.getItem('isHost'));
   console.log('Room creator:', sessionStorage.getItem('isRoomCreator'));
 
-  // Keep header updated
+  // ✅ NEW ADDITIONS FOR HEADER FUNCTIONALITY
+  // Add periodic check to ensure header stays updated
   setInterval(function() {
     const usernameEl = document.getElementById('headerUsername');
     const currentStoredUserName = sessionStorage.getItem('userName');
-    if (usernameEl && currentStoredUserName &&
-       (usernameEl.textContent === 'User' || usernameEl.textContent === 'Guest')) {
-      console.log('[HEADER] Fixing header with stored username:', currentStoredUserName);
+
+    // If header shows "User" but we have a real username, update it
+    if (usernameEl && currentStoredUserName && (usernameEl.textContent === 'User' || usernameEl.textContent === 'Guest')) {
+      console.log('[HEADER] Header showing default text, updating with stored username:', currentStoredUserName);
       initUserHeaderDisplay();
     }
   }, 2000);
 
-  // Attach login modal events
+  // Add a callback to the join session button to update header after login
   const joinButton = document.getElementById('joinSessionWithName');
   if (joinButton) {
     joinButton.addEventListener('click', function() {
       setTimeout(() => {
-        console.log('[LOGIN] Join button clicked, updating header');
+        console.log('[LOGIN] Join button clicked, updating header display');
         initUserHeaderDisplay();
       }, 100);
     });
   }
 
+  // Also listen for Enter key in username input
   const userNameInput = document.getElementById('userNameInput');
   if (userNameInput) {
     userNameInput.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         setTimeout(() => {
-          console.log('[LOGIN] Enter pressed, updating header');
+          console.log('[LOGIN] Enter key pressed, updating header display');
           initUserHeaderDisplay();
         }, 100);
       }
     });
   }
 
+  // Check when page becomes visible (in case user switched tabs)
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
       setTimeout(function() {
@@ -5343,65 +5367,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // === SERVER-CONFIRMED JOIN LOGIC ===
-  const socket = io();
-  const sessionId = urlParams.get("roomId");
-  const userName = sessionStorage.getItem("userName");
-  const requestedHost = sessionStorage.getItem("requestedHost") === "true";
-
-  if (sessionId && userName) {
-    console.log("[CLIENT] Attempting to join session:", sessionId, "as", userName);
-  //  sessionStorage.setItem("isHost", "false");
-    socket.emit("joinSession", { sessionId, requestedHost, name: userName }, (response) => {
-      console.log("[JOIN RESPONSE]", response);
-
-      // Save confirmed host status
-      sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
-
-      // Update UI
-      toggleHostFeatures(response.isHost);
-    });
-  }
-
-  // === LISTEN FOR HOST UPDATES ===
-  socket.on("hostChanged", ({ hostId, userName }) => {
-    if (socket.id === hostId) {
-      sessionStorage.setItem("isHost", "true");
-      toggleHostFeatures(true);
-    } else {
-      sessionStorage.setItem("isHost", "false");
-      toggleHostFeatures(false);
-    }
-    console.log("[SOCKET] Host changed to:", userName);
-  });
-
-  socket.on("hostLeft", () => {
-    console.log("[SOCKET] Host left the session");
-    sessionStorage.setItem("isHost", "false");
-    toggleHostFeatures(false);
-  });
-
-  // === HELPER FUNCTION ===
-  function toggleHostFeatures(enable) {
-    const uploadBtn = document.getElementById('uploadTicketMenuBtn');
-    const exportBtn = document.getElementById('exportToCsvMenuBtn');
-    const jiraImportBtn = document.getElementById('jiraImportMenuBtn');
-
-    if (uploadBtn) uploadBtn.style.display = enable ? 'flex' : 'none';
-    if (exportBtn) exportBtn.style.display = enable ? 'flex' : 'none';
-    if (jiraImportBtn) {
-      jiraImportBtn.style.display = enable ? 'flex' : 'none';
-      if (enable) {
-        jiraImportBtn.addEventListener('click', function() {
-          window.JiraIntegration.showJiraImportModal();
-        });
-      }
-    }
-  }
 });
-
-
-
 
 
 // Setup mobile-specific features
@@ -6141,10 +6107,6 @@ window.editStory = function(ticketData) {
         });
     </script>
    <!-- ENHANCED SCRIPT FOR USERNAME HANDLING -->
-  <script src="/socket.io/socket.io.js"></script>  
-<script type="module" src="socket.js"></script>
-<script type="module" src="main.js"></script>
-
 <script>
   // Global flag to track if username is ready
   window.userNameReady = false;
