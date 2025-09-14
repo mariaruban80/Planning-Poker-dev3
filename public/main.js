@@ -4349,13 +4349,22 @@ function setupHostToggle() {
           } else {
             console.log('[HOST] Host denied, showing error modal');
             hostToggle.checked = false;
-            
-            const errorModal = document.getElementById('hostModeErrorModal');
-            if (errorModal) {
-              errorModal.style.display = 'flex';
-            } else {
-              alert('Host already available in this room');
-            }
+const modal = document.getElementById('guestModal');
+if (modal) {
+  modal.querySelector("h3").textContent = "Host Already Present";
+  modal.querySelector("p").textContent = "A host already exists in this session. You cannot become host.";
+  modal.classList.remove("hidden");
+
+  document.getElementById("guestOkBtn").onclick = () => {
+    modal.classList.add("hidden");
+  };
+  document.getElementById("guestCancelBtn").onclick = () => {
+    modal.classList.add("hidden");
+  };
+} else {
+  alert('Host already available in this room');
+}
+          
           }
         });
       } else {
