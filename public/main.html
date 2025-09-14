@@ -995,33 +995,34 @@
     sessionStorage.setItem("isHost", "false");
 
     // Ask server to join the session
-    socket.emit("joinSession", { sessionId, requestedHost: requestHost, name }, (response) => {
-      console.log("[JOIN RESPONSE]", response);
+socket.emit("joinSession", { sessionId, requestedHost: requestHost, name }, (response) => {
+  console.log("[JOIN RESPONSE]", response);
 
-      // Update host status based on server response
-      sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
+  // Update host status
+  sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
 
-     if (!response.isHost && response.reason === "Host already exists") {
-  const modal = document.getElementById("guestModal");
-  modal.classList.remove("hidden");
+  // Only show modal if user requested host AND a host already exists
+  if (requestHost && !response.isHost && response.reason === "Host already exists") {
+    const modal = document.getElementById("guestModal");
+    modal.classList.remove("hidden");
 
-  document.getElementById("guestOkBtn").onclick = () => {
-    modal.classList.add("hidden");
-    window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
-  };
-
-  document.getElementById("guestCancelBtn").onclick = () => {
-    modal.classList.add("hidden");
-    window.location.href = `/main.html`;
-  };
-
-  return; // stop auto-navigation until user decides
-}
-
-
-      // Navigate to room page after server confirms
+    document.getElementById("guestOkBtn").onclick = () => {
+      modal.classList.add("hidden");
       window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
-    });
+    };
+
+    document.getElementById("guestCancelBtn").onclick = () => {
+      modal.classList.add("hidden");
+      window.location.href = `/main.html`;
+    };
+
+    return; // stop auto-navigation until user decides
+  }
+
+  // Navigate directly if guest or host allowed
+  window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+});
+
   }
 
   // Example functions to enable/disable host features
