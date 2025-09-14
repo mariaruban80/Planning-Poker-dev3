@@ -586,6 +586,86 @@
       }
     }
   </style>
+  <style>
+    /* Modal Styling */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-box {
+  background: var(--card);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  max-width: 400px;
+  padding: 2rem;
+  text-align: center;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.modal-box h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+.modal-box p {
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.modal-btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  transition: background 0.2s;
+}
+
+.modal-btn.primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.modal-btn.primary:hover {
+  background: var(--primary-dark);
+}
+
+.modal-btn.secondary {
+  background: #f3f4f6;
+  color: var(--text);
+}
+
+.modal-btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+  </style>
 </head>
 <body>
   <header>
@@ -921,11 +1001,23 @@
       // Update host status based on server response
       sessionStorage.setItem("isHost", response.isHost ? "true" : "false");
 
-      if (!response.isHost && response.reason === "Host already exists") {
-        // Inform user they joined as guest
-        alert("A host already exists in this session. You have joined as a guest.");     
-        
-      }
+     if (!response.isHost && response.reason === "Host already exists") {
+  const modal = document.getElementById("guestModal");
+  modal.classList.remove("hidden");
+
+  document.getElementById("guestOkBtn").onclick = () => {
+    modal.classList.add("hidden");
+    window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
+  };
+
+  document.getElementById("guestCancelBtn").onclick = () => {
+    modal.classList.add("hidden");
+    window.location.href = `/main.html`;
+  };
+
+  return; // stop auto-navigation until user decides
+}
+
 
       // Navigate to room page after server confirms
       window.location.href = `/index.html?roomId=${encodeURIComponent(sessionId)}`;
@@ -944,6 +1036,17 @@
   }
 </script>
 
+<!-- Guest Notice Modal -->
+<div id="guestModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3>Guest Access</h3>
+    <p>A host already exists in this session. You have joined as a guest.</p>
+    <div class="modal-actions">
+      <button id="guestOkBtn" class="modal-btn primary">OK</button>
+      <button id="guestCancelBtn" class="modal-btn secondary">Cancel</button>
+    </div>
+  </div>
+</div>
 
 
 
