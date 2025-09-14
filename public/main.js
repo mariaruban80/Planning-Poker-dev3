@@ -601,28 +601,30 @@ window.initializeSocketWithName = function(roomId, name) {
   socket = initializeWebSocket(roomId, name, handleSocketMessage);
 
   // === Initial join: always as guest ===
-  socket.on("connect", () => {
-    console.log(`[SOCKET] Connected with ID: ${socket.id}`);
+// In main.js, around line 4933, update the socket connection handler:
+socket.on("connect", () => {
+  console.log(`[SOCKET] Connected with ID: ${socket.id}`);
 
-    const sessionId = new URLSearchParams(location.search).get('roomId');
-    const name = sessionStorage.getItem('userName') || 'Guest';
-    const requestedHost = sessionStorage.getItem('requestedHost') === 'true';
+  const sessionId = new URLSearchParams(location.search).get('roomId');
+  const name = sessionStorage.getItem('userName') || 'Guest';
+  const requestedHost = sessionStorage.getItem('isRoomCreator') === 'true'; // Use room creator status
 
-    socket.emit('joinSession', { sessionId, requestedHost, name }, (res) => {
-      const isHost = !!(res && res.isHost);
-      sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
+  // Join session with proper host request
+  socket.emit('joinSession', { sessionId, requestedHost, name }, (response) => {
+    console.log('[SOCKET] Join response:', response);
+    
+    const isHost = !!(response && response.isHost);
+    sessionStorage.setItem('isHost', isHost ? 'true' : 'false');
 
-      if (!isHost && res && res.reason === 'Host already exists') {
-        console.info('[JOIN] Host request denied: host already exists');
-      }
-
-      if (isHost) {
-        enableHostFeatures();
-      } else {
-        disableHostFeatures();
-      }
-    });
+    if (isHost) {
+      enableHostFeatures();
+      console.log('[SOCKET] Confirmed as host by server');
+    } else {
+      disableHostFeatures();
+      console.log('[SOCKET] Confirmed as guest by server');
+    }
   });
+});
 
   // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
