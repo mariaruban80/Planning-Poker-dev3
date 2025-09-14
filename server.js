@@ -400,6 +400,41 @@ console.log(`[SERVER] New client connected: ${socket.id}`);
       io.to(socket.sessionId).emit('hostLeft');
     }
   });
+
+// Handle host role request
+socket.on("requestHost", (data, callback) => {
+  const sessionId = socket.sessionId;
+  if (!sessionId) return callback({ allowed: false, reason: "Not in a session" });
+
+  const currentHostId = sessionHosts.get(sessionId);
+
+  if (currentHostId && io.sockets.sockets.get(currentHostId)) {
+    // Host already exists
+    return callback({ allowed: false, reason: "Host already exists" });
+  }
+
+  // Promote this socket to host
+  sessionHosts.set(sessionId, socket.id);
+  socket.isHost = true;
+
+  io.to(sessionId).emit("hostChanged", { userName: socket.userName, hostId: socket.id });
+  return callback({ allowed: true });
+});
+
+// Handle host role release
+socket.on("releaseHost", () => {
+  const sessionId = socket.sessionId;
+  if (!sessionId) return;
+
+  if (sessionHosts.get(sessionId) === socket.id) {
+    sessionHosts.delete(sessionId);
+    socket.isHost = false;
+
+    io.to(sessionId).emit("hostReleased", { userName: socket.userName });
+    console.log(`[HOST] ${socket.userName} released host role in ${sessionId}`);
+  }
+});
+
   
 socket.on('restoreUserVoteByUsername', ({ storyId, vote, userName }) => {
   const roomId = socket.data.roomId;
