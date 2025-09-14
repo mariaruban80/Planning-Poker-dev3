@@ -334,43 +334,6 @@ function restoreUserVotesToCurrentSocket(roomId, socket) {
   io.to(roomId).emit('votesUpdate', rooms[roomId].votesPerStory);
 }
 
-io.on('connection', (socket) => {
-  socket.on('requestCurrentStory', () => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !rooms[roomId]) return;
-
-    const selectedIndex = rooms[roomId].selectedIndex;
-    if (typeof selectedIndex === 'number') {
-      const storyId = getCurrentStoryId(roomId, selectedIndex);
-      if (storyId) {
-        socket.emit('currentStory', {
-          storyIndex: selectedIndex,
-          storyId
-        });
-      }
-    }
-  });
-
-  console.log(`[SERVER] New client connected: ${socket.id}`);
-
-socket.on('disconnect', () => {
-    const roomId = socket.sessionId; // or socket.data.roomId if you store it there
-    if (roomId) {
-        const hostSocketId = sessionHosts.get(roomId);
-        if (hostSocketId === socket.id) {
-            sessionHosts.delete(roomId);
-            io.to(roomId).emit('hostLeft');
-            console.log(`[SERVER] Host disconnected from room ${roomId}`);
-        }
-    }
-});
-
-
-  // ==========================
-// Join Session + Decide Role
-// ==========================
-  console.log("[SOCKET] New connection:", socket.id);
-
 // ================= HOST TRACKING =================
 // sessionId → { hostUserName, hostSocketId }
 
