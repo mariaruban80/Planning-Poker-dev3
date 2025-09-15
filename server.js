@@ -403,35 +403,57 @@ console.log(`[SERVER] New client connected: ${socket.id}`);
 
 // Handle host role request
 socket.on("requestHost", (data, callback) => {
-  const sessionId = socket.sessionId;
-  if (!sessionId) return callback({ allowed: false, reason: "Not in a session" });
+  const sessionId = data.sessionId || socket.sessionId;
+  if (!sessionId) {
+    if (callback) callback({ allowed: false, reason: "Not in a session" });
+    return;
+  }
 
   const currentHostId = sessionHosts.get(sessionId);
+  const currentHostSocket = currentHostId ? io.sockets.sockets.get(currentHostId) : null;
 
-  if (currentHostId && io.sockets.sockets.get(currentHostId)) {
-    // Host already exists
-    return callback({ allowed: false, reason: "Host already exists" });
+  // Clean up invalid host references
+  if (currentHostId && !currentHostSocket) {
+    sessionHosts.delete(sessionId);
+  }
+
+  // Check if there's still an active host
+  const activeHostId = sessionHosts.get(sessionId);
+  if (activeHostId && io.sockets.sockets.get(activeHostId)) {
+    // Host already exists and is active
+    if (callback) callback({ allowed: false, reason: "Host already exists" });
+    return;
   }
 
   // Promote this socket to host
   sessionHosts.set(sessionId, socket.id);
   socket.isHost = true;
 
-  io.to(sessionId).emit("hostChanged", { userName: socket.userName, hostId: socket.id });
-  return callback({ allowed: true });
+  // Notify all clients about the new host
+  io.to(sessionId).emit("hostChanged", { 
+    userName: socket.userName || socket.data?.userName, 
+    hostId: socket.id 
+  });
+  
+  console.log(`[HOST] ${socket.userName || socket.id} became host in session ${sessionId}`);
+  
+  if (callback) callback({ allowed: true });
 });
 
 // Handle host role release
-socket.on("releaseHost", () => {
-  const sessionId = socket.sessionId;
+socket.on("releaseHost", (data) => {
+  const sessionId = data.sessionId || socket.sessionId;
   if (!sessionId) return;
 
   if (sessionHosts.get(sessionId) === socket.id) {
     sessionHosts.delete(sessionId);
     socket.isHost = false;
 
-    io.to(sessionId).emit("hostReleased", { userName: socket.userName });
-    console.log(`[HOST] ${socket.userName} released host role in ${sessionId}`);
+    io.to(sessionId).emit("hostReleased", { 
+      userName: socket.userName || socket.data?.userName 
+    });
+    
+    console.log(`[HOST] ${socket.userName || socket.id} released host role in ${sessionId}`);
   }
 });
 
