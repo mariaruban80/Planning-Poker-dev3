@@ -641,7 +641,7 @@ socket.on("connect", () => {
     }
   });
 });
-});
+
 
   // === “Allow as host” button ===
   const allowHostBtn = document.getElementById("allowHostBtn");
