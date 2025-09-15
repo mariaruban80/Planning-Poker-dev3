@@ -88,7 +88,12 @@ function enableHostFeatures() {
     addTicketBtn.disabled = false;
     addTicketBtn.classList.remove('hide-for-guests');
   }
-  
+
+  const revealButtonContainer = document.querySelector('.reveal-button-container');
+      if (revealButtonContainer) {
+          revealButtonContainer.style.display = 'flex'; // Or 'block' depending on your layout
+      }
+
   // Enable story navigation buttons
   const navButtons = ['nextStory', 'prevStory'];
   navButtons.forEach(buttonId => {
@@ -115,7 +120,7 @@ function enableHostFeatures() {
     card.classList.remove('disabled');
     card.setAttribute('draggable', 'true');
   });
-  
+//  updateUserList(rooms[roomId].users); 
   console.log('[HOST] Host features enabled successfully');
 }
 
