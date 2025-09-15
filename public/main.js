@@ -88,6 +88,12 @@ function enableHostFeatures() {
     addTicketBtn.disabled = false;
     addTicketBtn.classList.remove('hide-for-guests');
   }
+  const revealCenterBtn = document.querySelector('.reveal-button-container button, #revealVotesBtn');
+if (revealCenterBtn) {
+  revealCenterBtn.style.display = 'block'; // or 'flex'
+  revealCenterBtn.disabled = false;
+  revealCenterBtn.classList.remove('hide-for-guests');
+}
 
   const revealButtonContainer = document.querySelector('.reveal-button-container');
       if (revealButtonContainer) {
