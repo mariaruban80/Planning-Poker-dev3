@@ -54,6 +54,13 @@ function enableHostFeatures() {
   
   // Update session storage
   sessionStorage.setItem('isHost', 'true');
+  // Disable Host toggle when user becomes host
+  const hostToggle = document.getElementById("hostToggle");
+  if (hostToggle) {
+    hostToggle.checked = true;
+    hostToggle.disabled = true;   // 🔹 Prevent further changes
+  }
+
   
   // Show host-only buttons in the profile menu
   const hostOnlyMenuItems = [
@@ -147,7 +154,13 @@ function disableHostFeatures() {
   
   // Update session storage
   sessionStorage.setItem('isHost', 'false');
-  
+  // Re-enable Host toggle when user is no longer host
+const hostToggle = document.getElementById("hostToggle");
+if (hostToggle) {
+  hostToggle.checked = false;
+  hostToggle.disabled = false;
+}
+
   // Hide host-only buttons in the profile menu
   const hostOnlyMenuItems = [
     'uploadTicketMenuBtn',
@@ -174,13 +187,7 @@ function disableHostFeatures() {
     }
   });
 
-    const centerRevealBtn = document.querySelector('.reveal-votes-button');
-if (centerRevealBtn) {
-  centerRevealBtn.style.display = 'block';
-  centerRevealBtn.disabled = true;
-  centerRevealBtn.classList.remove('hide-for-guests');
-}
-  
+ 
   // Hide add ticket button
   const addTicketBtn = document.getElementById('addTicketBtn');
   if (addTicketBtn) {
