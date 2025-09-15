@@ -4321,7 +4321,7 @@ function setupHostToggle() {
   hostToggle.addEventListener("change", () => {
     if (!socket || !socket.connected) {
       console.warn("[HOST] Socket not ready yet");
-      hostToggle.checked = false; // reset toggle
+      hostToggle.checked = false;
       return;
     }
 
@@ -4329,29 +4329,27 @@ function setupHostToggle() {
 
     if (hostToggle.checked) {
       console.log("[HOST] Requesting host role...");
-
-      socket.emit("requestHost", { sessionId }, (res) => {
-        if (res.allowed) {
-          console.log("[HOST] Granted host role");
-          sessionStorage.setItem("isHost", "true");
-          enableHostFeatures();
-        } else {
-          console.log("[HOST] Host request denied:", res.reason);
-          hostToggle.checked = false;
-
-          // 🔹 Show a proper modal instead of "Connection not ready"
-          showHostAlreadyExistsModal();
-        }
-      });
+      socket.emit("requestHost", { sessionId });
     } else {
       console.log("[HOST] Releasing host role...");
-      socket.emit("releaseHost");
+      socket.emit("releaseHost", { sessionId });
       sessionStorage.setItem("isHost", "false");
       disableHostFeatures();
     }
   });
+  // 🔹 Listen for server reply
+  socket.on("hostResponse", (res) => {
+    if (res.allowed) {
+      console.log("[HOST] Granted host role");
+      sessionStorage.setItem("isHost", "true");
+      enableHostFeatures();
+    } else {
+      console.log("[HOST] Host request denied:", res.reason);
+      hostToggle.checked = false;
+      showHostAlreadyExistsModal();
+    }
+  });
 }
-
 
 function enableHostUI() {
   document.querySelectorAll('.host-only').forEach(el => {
