@@ -4332,30 +4332,150 @@ function setupInviteButton() {
   };
 }
 function setupHostToggle() {
-  const hostToggle = document.getElementById("hostToggle");
+  const hostToggle = document.getElementById("hostModeToggle");
   if (!hostToggle) return;
 
-  hostToggle.addEventListener("change", () => {
+  // Set initial state based on current host status
+  const isCurrentlyHost = sessionStorage.getItem('isHost') === 'true';
+  hostToggle.checked = isCurrentlyHost;
+
+  hostToggle.addEventListener("change", (e) => {
     if (!socket || !socket.connected) {
       console.warn("[HOST] Socket not ready yet");
-      hostToggle.checked = false;
+      hostToggle.checked = !hostToggle.checked; // Revert the toggle
+      showHostErrorModal("Connection not ready. Please try again.");
       return;
     }
 
     const sessionId = new URLSearchParams(location.search).get("roomId");
+    const userName = sessionStorage.getItem("userName");
+
+    if (!sessionId || !userName) {
+      console.warn("[HOST] Missing session ID or username");
+      hostToggle.checked = !hostToggle.checked; // Revert the toggle
+      showHostErrorModal("Session information missing. Please refresh the page.");
+      return;
+    }
 
     if (hostToggle.checked) {
+      // User wants to become host
       console.log("[HOST] Requesting host role...");
-      socket.emit("requestHost", { sessionId });
+      socket.emit("requestHost", { sessionId }, (response) => {
+        if (response.allowed) {
+          console.log("[HOST] Host role granted");
+          sessionStorage.setItem("isHost", "true");
+          enableHostFeatures();
+          hostToggle.checked = true;
+        } else {
+          console.log("[HOST] Host request denied:", response.reason);
+          sessionStorage.setItem("isHost", "false");
+          hostToggle.checked = false;
+          showHostAlreadyExistsModal();
+        }
+      });
     } else {
+      // User wants to release host role
       console.log("[HOST] Releasing host role...");
       socket.emit("releaseHost", { sessionId });
       sessionStorage.setItem("isHost", "false");
       disableHostFeatures();
+      hostToggle.checked = false;
     }
   });
 
+  // Listen for server-side host changes
+  if (socket) {
+    socket.on("hostChanged", ({ hostId, userName }) => {
+      const isThisUser = socket.id === hostId;
+      hostToggle.checked = isThisUser;
+      sessionStorage.setItem("isHost", isThisUser ? "true" : "false");
+      
+      if (isThisUser) {
+        enableHostFeatures();
+        console.log(`[HOST] You are now the host`);
+      } else {
+        disableHostFeatures();
+        console.log(`[HOST] ${userName} is now the host`);
+      }
+    });
+
+    socket.on("hostLeft", () => {
+      console.log("[HOST] Previous host left the session");
+      // Don't automatically become host, let user choose
+      hostToggle.checked = false;
+      sessionStorage.setItem("isHost", "false");
+      disableHostFeatures();
+    });
+
+    socket.on("hostReleased", ({ userName }) => {
+      console.log(`[HOST] ${userName} released host role`);
+      hostToggle.checked = false;
+      sessionStorage.setItem("isHost", "false");
+      disableHostFeatures();
+    });
+  }
 }
+
+// Function to show host already exists modal
+function showHostAlreadyExistsModal() {
+  // Check if modal exists, create if not
+  let modal = document.getElementById("hostModeErrorModal");
+  
+  if (!modal) {
+    // Create the modal dynamically
+    modal = document.createElement("div");
+    modal.id = "hostModeErrorModal";
+    modal.style.cssText = `
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.6);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    `;
+    
+    modal.innerHTML = `
+      <div style="background:white; padding:24px 32px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.2); max-width:400px; text-align:center;">
+        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+        <h2 style="margin-bottom:12px;color:#e53935; font-size: 20px;">Host Already Present</h2>
+        <p style="margin-bottom:20px; color: #666; line-height: 1.5;">
+          There is already another host in this session. Only one host is allowed per room at a time.
+        </p>
+        <button id="hostErrorOkBtn" style="padding:10px 20px; background:#673ab7; color:white; border:none; border-radius:6px; cursor:pointer; font-weight: 600;">
+          OK
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Add click handler for OK button
+    document.getElementById("hostErrorOkBtn").addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+    
+    // Close on outside click
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
+    });
+  }
+  
+  // Show the modal
+  modal.style.display = "flex";
+}
+
+// Function to show general host error modal
+function showHostErrorModal(message) {
+  alert(message); // Simple fallback, you can enhance this with a proper modal
+}
+
+
 
 function enableHostUI() {
   document.querySelectorAll('.host-only').forEach(el => {
@@ -4368,21 +4488,6 @@ function disableHostUI() {
     el.style.display = 'none';
   });
 }
-
-function showHostAlreadyExistsModal() {
-  const modal = document.getElementById("hostExistsModal");
-  if (!modal) return;
-
-  modal.style.display = "flex";
-
-  const okBtn = document.getElementById("hostExistsOkBtn");
-  if (okBtn) {
-    okBtn.onclick = () => {
-      modal.style.display = "none";
-    };
-  }
-}
-
 
 /**
  * Setup vote cards drag functionality
@@ -4974,6 +5079,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDeletedStoriesFromStorage(roomId);
   
   initializeApp(roomId);
+  setTimeout(() => {
+    setupHostToggle();
+  }, 100);
 });
 
 // Apply CSS to hide elements until initialized
