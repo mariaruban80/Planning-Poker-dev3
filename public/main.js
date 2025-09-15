@@ -80,6 +80,13 @@ function enableHostFeatures() {
       button.classList.remove('hide-for-guests');
     }
   });
+
+  const centerRevealBtn = document.querySelector('.reveal-votes-button');
+if (centerRevealBtn) {
+  centerRevealBtn.style.display = 'block';
+  centerRevealBtn.disabled = false;
+  centerRevealBtn.classList.remove('hide-for-guests');
+}
   
   // Show add ticket button
   const addTicketBtn = document.getElementById('addTicketBtn');
@@ -88,18 +95,7 @@ function enableHostFeatures() {
     addTicketBtn.disabled = false;
     addTicketBtn.classList.remove('hide-for-guests');
   }
-  const revealCenterBtn = document.querySelector('.reveal-button-container button, #revealVotesBtn');
-if (revealCenterBtn) {
-  revealCenterBtn.style.display = 'block'; // or 'flex'
-  revealCenterBtn.disabled = false;
-  revealCenterBtn.classList.remove('hide-for-guests');
-}
-
-  const revealButtonContainer = document.querySelector('.reveal-button-container');
-      if (revealButtonContainer) {
-          revealButtonContainer.style.display = 'flex'; // Or 'block' depending on your layout
-      }
-
+  
   // Enable story navigation buttons
   const navButtons = ['nextStory', 'prevStory'];
   navButtons.forEach(buttonId => {
