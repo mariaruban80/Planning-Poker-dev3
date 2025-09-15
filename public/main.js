@@ -173,6 +173,13 @@ function disableHostFeatures() {
       button.classList.add('hide-for-guests');
     }
   });
+
+    const centerRevealBtn = document.querySelector('.reveal-votes-button');
+if (centerRevealBtn) {
+  centerRevealBtn.style.display = 'block';
+  centerRevealBtn.disabled = true;
+  centerRevealBtn.classList.remove('hide-for-guests');
+}
   
   // Hide add ticket button
   const addTicketBtn = document.getElementById('addTicketBtn');
