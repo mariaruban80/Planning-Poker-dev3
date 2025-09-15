@@ -4314,80 +4314,44 @@ function setupInviteButton() {
     }
   };
 }
-
 function setupHostToggle() {
-  const hostToggle = document.getElementById('hostModeToggle');
-  if (!hostToggle) {
-    console.warn("[HOST] Host toggle element not found in DOM");
-    return;
-  }
+  const hostToggle = document.getElementById("hostToggle");
+  if (!hostToggle) return;
 
-  // Restore checked state if already host
-  const isCurrentHost = sessionStorage.getItem('isHost') === 'true';
-  hostToggle.checked = isCurrentHost;
-  
-  // Apply current host state to UI
-  if (isCurrentHost) {
-    enableHostFeatures();
-  } else {
-    disableHostFeatures();
-  }
+  hostToggle.addEventListener("change", () => {
+    if (!socket || !socket.connected) {
+      console.warn("[HOST] Socket not ready yet");
+      hostToggle.checked = false; // reset toggle
+      return;
+    }
 
-  hostToggle.addEventListener('change', function() {
-    console.log('[HOST] Host toggle changed, checked:', hostToggle.checked);
-    
+    const sessionId = new URLSearchParams(location.search).get("roomId");
+
     if (hostToggle.checked) {
-      console.log('[HOST] Requesting host role...');
-      
-      if (window.socket && typeof window.socket.emit === "function") {
-        window.socket.emit('requestHost', {}, function(response) {
-          console.log('[HOST] Server response:', response);
-          
-          if (response && response.allowed) {
-            console.log('[HOST] Host granted');
-            enableHostFeatures();
-          } else {
-            console.log('[HOST] Host denied, showing error modal');
-            hostToggle.checked = false;
-const modal = document.getElementById('guestModal');
-if (modal) {
-  modal.querySelector("h3").textContent = "Host Already Present";
-  modal.querySelector("p").textContent = "A host already exists in this session. You cannot become host.";
-  modal.classList.remove("hidden");
+      console.log("[HOST] Requesting host role...");
 
-  document.getElementById("guestOkBtn").onclick = () => {
-    modal.classList.add("hidden");
-  };
-  document.getElementById("guestCancelBtn").onclick = () => {
-    modal.classList.add("hidden");
-  };
-} else {
-  alert('Host already available in this room');
-}
-          
-          }
-        });
-      } else {
-        console.warn("[HOST] Socket not ready yet");
-        hostToggle.checked = false;
-        alert('Connection not ready. Please try again.');
-      }
-    } else {
-      console.log('[HOST] Releasing host role...');
-      
-      // Releasing host role
-      if (sessionStorage.getItem('isHost') === 'true') {
-        disableHostFeatures();
-        
-        if (window.socket && typeof window.socket.emit === "function") {
-          window.socket.emit('releaseHost');
+      socket.emit("requestHost", { sessionId }, (res) => {
+        if (res.allowed) {
+          console.log("[HOST] Granted host role");
+          sessionStorage.setItem("isHost", "true");
+          enableHostFeatures();
+        } else {
+          console.log("[HOST] Host request denied:", res.reason);
+          hostToggle.checked = false;
+
+          // 🔹 Show a proper modal instead of "Connection not ready"
+          showHostAlreadyExistsModal();
         }
-      }
+      });
+    } else {
+      console.log("[HOST] Releasing host role...");
+      socket.emit("releaseHost");
+      sessionStorage.setItem("isHost", "false");
+      disableHostFeatures();
     }
   });
-
-  console.log("[HOST] Host toggle initialized");
 }
+
 
 function enableHostUI() {
   document.querySelectorAll('.host-only').forEach(el => {
@@ -4402,11 +4366,16 @@ function disableHostUI() {
 }
 
 function showHostAlreadyExistsModal() {
-  const modal = document.getElementById('hostExistsModal');
-  if (modal) {
-    modal.style.display = 'flex';
-  } else {
-    alert('Host already available');
+  const modal = document.getElementById("hostExistsModal");
+  if (!modal) return;
+
+  modal.style.display = "flex";
+
+  const okBtn = document.getElementById("hostExistsOkBtn");
+  if (okBtn) {
+    okBtn.onclick = () => {
+      modal.style.display = "none";
+    };
   }
 }
 
