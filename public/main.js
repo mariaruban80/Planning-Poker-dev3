@@ -624,6 +624,23 @@ socket.on("connect", () => {
       console.log('[SOCKET] Confirmed as guest by server');
     }
   });
+    socket.on("hostResponse", (res) => {
+    const hostToggle = document.getElementById("hostToggle");
+    if (!hostToggle) return;
+
+    if (res.allowed) {
+      console.log("[HOST] Granted host role");
+      sessionStorage.setItem("isHost", "true");
+      enableHostFeatures();
+      hostToggle.checked = true;
+    } else {
+      console.log("[HOST] Host request denied:", res.reason);
+      sessionStorage.setItem("isHost", "false");
+      hostToggle.checked = false;
+      showHostAlreadyExistsModal();
+    }
+  });
+});
 });
 
   // === “Allow as host” button ===
@@ -4337,18 +4354,7 @@ function setupHostToggle() {
       disableHostFeatures();
     }
   });
-  // 🔹 Listen for server reply
-  socket.on("hostResponse", (res) => {
-    if (res.allowed) {
-      console.log("[HOST] Granted host role");
-      sessionStorage.setItem("isHost", "true");
-      enableHostFeatures();
-    } else {
-      console.log("[HOST] Host request denied:", res.reason);
-      hostToggle.checked = false;
-      showHostAlreadyExistsModal();
-    }
-  });
+
 }
 
 function enableHostUI() {
