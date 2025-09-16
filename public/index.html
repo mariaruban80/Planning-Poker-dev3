@@ -4539,12 +4539,25 @@ input:checked + .slider:before {transform: translateX(16px);}
 
 .profile-menu-item .switch input:checked + .slider:before {
   transform: translateX(18px);
-}
-
-
-
-     
+}     
      </style>
+        <style>
+      .host-toggle-disabled {
+        opacity: 0.6;
+        pointer-events: none; /* Prevents interactions */
+      }
+
+      .host-toggle-disabled .toggle-switch {
+        background-color: #28a745 !important; /* Or use any visually distinct color */
+      }
+
+      .host-toggle-disabled::after {
+        content: " (Host)";
+        font-size: 12px;
+        color: #28a745; /* Or another suitable color */
+        font-weight: bold; /* Make it stand out */
+      }
+    </style>
 </head>
 <body>
 
