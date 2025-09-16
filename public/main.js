@@ -55,12 +55,18 @@ function enableHostFeatures() {
   // Update session storage
   sessionStorage.setItem('isHost', 'true');
   // Disable Host toggle when user becomes host
-  const hostToggle = document.getElementById("hostToggle");
+  const hostToggle = document.getElementById("hostModeToggle");
   if (hostToggle) {
     hostToggle.checked = true;
     hostToggle.disabled = true;   // 🔹 Prevent further changes
-  }
-
+  
+ // Add visual indication that it's disabled
+    const toggleContainer = hostToggle.closest('.toggle-container') || hostToggle.parentElement;
+    if (toggleContainer) {
+      toggleContainer.classList.add('host-toggle-disabled');
+      toggleContainer.setAttribute('title', 'You are currently the host');
+    }
+  } 
   
   // Show host-only buttons in the profile menu
   const hostOnlyMenuItems = [
@@ -155,12 +161,17 @@ function disableHostFeatures() {
   // Update session storage
   sessionStorage.setItem('isHost', 'false');
   // Re-enable Host toggle when user is no longer host
-const hostToggle = document.getElementById("hostToggle");
+const hostToggle = document.getElementById("hostModeToggle");
 if (hostToggle) {
   hostToggle.checked = false;
   hostToggle.disabled = false;
-}
-
+  // Remove visual indication
+    const toggleContainer = hostToggle.closest('.toggle-container') || hostToggle.parentElement;
+    if (toggleContainer) {
+      toggleContainer.classList.remove('host-toggle-disabled');
+      toggleContainer.setAttribute('title', 'Request host privileges');
+    }
+  }
   // Hide host-only buttons in the profile menu
   const hostOnlyMenuItems = [
     'uploadTicketMenuBtn',
@@ -4359,8 +4370,24 @@ function setupHostToggle() {
   // Set initial state based on current host status
   const isCurrentlyHost = sessionStorage.getItem('isHost') === 'true';
   hostToggle.checked = isCurrentlyHost;
+  
+  // ✅ Disable toggle if user is already host
+  if (isCurrentlyHost) {
+    hostToggle.disabled = true;
+    const toggleContainer = hostToggle.closest('.toggle-container') || hostToggle.parentElement;
+    if (toggleContainer) {
+      toggleContainer.classList.add('host-toggle-disabled');
+      toggleContainer.setAttribute('title', 'You are currently the host');
+    }
+  }
 
   hostToggle.addEventListener("change", (e) => {
+    // ✅ Prevent action if disabled
+    if (hostToggle.disabled) {
+      e.preventDefault();
+      return false;
+    }
+
     if (!socket || !socket.connected) {
       console.warn("[HOST] Socket not ready yet");
       hostToggle.checked = !hostToggle.checked; // Revert the toggle
@@ -4384,9 +4411,7 @@ function setupHostToggle() {
       socket.emit("requestHost", { sessionId }, (response) => {
         if (response.allowed) {
           console.log("[HOST] Host role granted");
-          sessionStorage.setItem("isHost", "true");
-          enableHostFeatures();
-          hostToggle.checked = true;
+          enableHostFeatures(); // This will disable the toggle
         } else {
           console.log("[HOST] Host request denied:", response.reason);
           sessionStorage.setItem("isHost", "false");
@@ -4394,48 +4419,32 @@ function setupHostToggle() {
           showHostAlreadyExistsModal();
         }
       });
-    } else {
-      // User wants to release host role
-      console.log("[HOST] Releasing host role...");
-      socket.emit("releaseHost", { sessionId });
-      sessionStorage.setItem("isHost", "false");
-      disableHostFeatures();
-      hostToggle.checked = false;
     }
+    // ✅ Remove the else block since hosts can't toggle off
   });
 
   // Listen for server-side host changes
   if (socket) {
     socket.on("hostChanged", ({ hostId, userName }) => {
       const isThisUser = socket.id === hostId;
-      hostToggle.checked = isThisUser;
-      sessionStorage.setItem("isHost", isThisUser ? "true" : "false");
       
       if (isThisUser) {
-        enableHostFeatures();
+        enableHostFeatures(); // This will disable the toggle
         console.log(`[HOST] You are now the host`);
       } else {
-        disableHostFeatures();
+        disableHostFeatures(); // This will enable the toggle
         console.log(`[HOST] ${userName} is now the host`);
       }
     });
 
     socket.on("hostLeft", () => {
       console.log("[HOST] Previous host left the session");
-      // Don't automatically become host, let user choose
-      hostToggle.checked = false;
-      sessionStorage.setItem("isHost", "false");
-      disableHostFeatures();
-    });
-
-    socket.on("hostReleased", ({ userName }) => {
-      console.log(`[HOST] ${userName} released host role`);
-      hostToggle.checked = false;
-      sessionStorage.setItem("isHost", "false");
-      disableHostFeatures();
+      disableHostFeatures(); // This will enable the toggle for guests
     });
   }
 }
+
+
 
 // Function to show host already exists modal
 function showHostAlreadyExistsModal() {
