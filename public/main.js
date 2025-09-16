@@ -4385,14 +4385,23 @@ function setupHostToggle() {
 
   // Listen for server-side host changes
   if (socket) {
- socket.on("hostChanged", ({ hostId, userName }) => {
-  const isThisUser = socket.id === hostId;
+socket.on("hostChanged", ({ hostId, userName }) => {
   const hostToggle = document.getElementById("hostToggle");
 
-  if (hostToggle) {
-    hostToggle.checked = isThisUser;
-    hostToggle.disabled = true; // 🔒 always disabled (host is unique)
+  if (!hostToggle) return;
+
+  if (!hostId) {
+    // no host in room
+    hostToggle.checked = false;
+    hostToggle.disabled = false; // allow someone to toggle ON
+    disableHostFeatures();
+    console.log("[HOST] No host in the room");
+    return;
   }
+
+  const isThisUser = socket.id === hostId;
+  hostToggle.checked = isThisUser;
+  hostToggle.disabled = true; // lock since host exists
 
   sessionStorage.setItem("isHost", isThisUser ? "true" : "false");
 
@@ -4404,6 +4413,7 @@ function setupHostToggle() {
     console.log(`[HOST] ${userName} is now the host`);
   }
 });
+
 
     socket.on("hostLeft", () => {
       console.log("[HOST] Previous host left the session");
