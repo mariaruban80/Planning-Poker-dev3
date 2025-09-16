@@ -51,24 +51,14 @@ window.notifyStoriesUpdated = function() {
  */
 function enableHostFeatures() {
   console.log('[HOST] Enabling host features');
-  
-  // Update session storage
   sessionStorage.setItem('isHost', 'true');
-  // Disable Host toggle when user becomes host
-  const hostToggle = document.getElementById("hostToggle");
-  if (hostToggle) {
-    hostToggle.checked = true;
-    hostToggle.disabled = true;   // 🔹 Prevent further changes
-  }
 
-  
-  // Show host-only buttons in the profile menu
+  // Host-only menu items
   const hostOnlyMenuItems = [
     'uploadTicketMenuBtn',
-    'exportToCsvMenuBtn', 
+    'exportToCsvMenuBtn',
     'jiraImportMenuBtn'
   ];
-  
   hostOnlyMenuItems.forEach(elementId => {
     const element = document.getElementById(elementId);
     if (element) {
@@ -76,10 +66,9 @@ function enableHostFeatures() {
       element.classList.remove('hide-for-guests');
     }
   });
-  
-  // Show control buttons in sidebar
-  const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
-  controlButtons.forEach(buttonId => {
+
+  // Sidebar control buttons
+  ['revealVotesBtn', 'resetVotesBtn'].forEach(buttonId => {
     const button = document.getElementById(buttonId);
     if (button) {
       button.style.display = 'block';
@@ -88,50 +77,56 @@ function enableHostFeatures() {
     }
   });
 
+  // Central reveal button
   const centerRevealBtn = document.querySelector('.reveal-votes-button');
-if (centerRevealBtn) {
-  centerRevealBtn.style.display = 'block';
-  centerRevealBtn.disabled = false;
-  centerRevealBtn.classList.remove('hide-for-guests');
-}
-  
-  // Show add ticket button
+  if (centerRevealBtn) {
+    centerRevealBtn.style.display = 'block';
+    centerRevealBtn.disabled = false;
+    centerRevealBtn.classList.remove('hide-for-guests');
+  }
+
+  // Show add ticket
   const addTicketBtn = document.getElementById('addTicketBtn');
   if (addTicketBtn) {
     addTicketBtn.style.display = 'flex';
     addTicketBtn.disabled = false;
     addTicketBtn.classList.remove('hide-for-guests');
   }
-  
-  // Enable story navigation buttons
-  const navButtons = ['nextStory', 'prevStory'];
-  navButtons.forEach(buttonId => {
+
+  // Story nav
+  ['nextStory', 'prevStory'].forEach(buttonId => {
     const button = document.getElementById(buttonId);
     if (button) {
       button.disabled = false;
       button.classList.remove('disabled-nav');
     }
   });
-  
+
   // Remove guest restrictions from story cards
   document.querySelectorAll('.story-card').forEach(card => {
     card.classList.remove('disabled-story');
-    
-    // Re-enable click handlers
     const index = parseInt(card.dataset.index);
     if (!isNaN(index)) {
       card.onclick = () => selectStory(index);
     }
   });
-  
+
   // Enable planning cards
   document.querySelectorAll('#planningCards .card').forEach(card => {
     card.classList.remove('disabled');
     card.setAttribute('draggable', 'true');
   });
-//  updateUserList(rooms[roomId].users); 
+
+  // 🔹 Lock host toggle ON
+  const hostToggle = document.getElementById("hostToggle");
+  if (hostToggle) {
+    hostToggle.checked = true;
+    hostToggle.disabled = true;
+  }
+
   console.log('[HOST] Host features enabled successfully');
 }
+
 
 function updateUserListUI(users) {
   const userListEl = document.getElementById("user-list"); // whatever your container is
@@ -151,75 +146,65 @@ function updateUserListUI(users) {
  */
 function disableHostFeatures() {
   console.log('[HOST] Disabling host features');
-  
-  // Update session storage
   sessionStorage.setItem('isHost', 'false');
-  // Re-enable Host toggle when user is no longer host
-const hostToggle = document.getElementById("hostToggle");
-if (hostToggle) {
-  hostToggle.checked = false;
-  hostToggle.disabled = false;
-}
 
-  // Hide host-only buttons in the profile menu
+  // Hide host-only menu items
   const hostOnlyMenuItems = [
     'uploadTicketMenuBtn',
     'exportToCsvMenuBtn',
     'jiraImportMenuBtn'
   ];
-  
   hostOnlyMenuItems.forEach(elementId => {
     const element = document.getElementById(elementId);
     if (element) {
       element.style.display = 'none';
-      element.classList.add('hide-for-guests');
-    }
-  });
-  
-  // Hide control buttons in sidebar
-  const controlButtons = ['revealVotesBtn', 'resetVotesBtn'];
-  controlButtons.forEach(buttonId => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.style.display = 'none';
-      button.disabled = true;
-      button.classList.add('hide-for-guests');
     }
   });
 
- 
-  // Hide add ticket button
-  const addTicketBtn = document.getElementById('addTicketBtn');
-  if (addTicketBtn) {
-    addTicketBtn.style.display = 'none';
-    addTicketBtn.disabled = true;
-    addTicketBtn.classList.add('hide-for-guests');
-  }
-  
-  // Disable story navigation buttons
-  const navButtons = ['nextStory', 'prevStory'];
-  navButtons.forEach(buttonId => {
+  // Sidebar control buttons
+  ['revealVotesBtn', 'resetVotesBtn'].forEach(buttonId => {
     const button = document.getElementById(buttonId);
     if (button) {
       button.disabled = true;
-      button.classList.add('disabled-nav');
     }
   });
-  
-  // Add guest restrictions to story cards
-  document.querySelectorAll('.story-card').forEach(card => {
-    card.classList.add('disabled-story');
-    card.onclick = null; // Remove click handler
+
+  // Central reveal button
+  const centerRevealBtn = document.querySelector('.reveal-votes-button');
+  if (centerRevealBtn) {
+    centerRevealBtn.disabled = true;
+  }
+
+  // Add ticket
+  const addTicketBtn = document.getElementById('addTicketBtn');
+  if (addTicketBtn) {
+    addTicketBtn.disabled = true;
+  }
+
+  // Story nav
+  ['nextStory', 'prevStory'].forEach(buttonId => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.disabled = true;
+    }
   });
-  
+
   // Disable planning cards
   document.querySelectorAll('#planningCards .card').forEach(card => {
     card.classList.add('disabled');
     card.setAttribute('draggable', 'false');
   });
-  
+
+  // 🔹 Unlock host toggle OFF
+  const hostToggle = document.getElementById("hostToggle");
+  if (hostToggle) {
+    hostToggle.checked = false;
+    hostToggle.disabled = false;
+  }
+
   console.log('[HOST] Host features disabled successfully');
 }
+
 
 
 /** function to disable the change language */
