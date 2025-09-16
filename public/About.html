@@ -1439,24 +1439,26 @@
    
   </script>
   <script>
-     // Scroll to top functionality
-const scrollToTopButton = document.getElementById('scrollToTop');
+// Scroll to top functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const scrollToTopButton = document.getElementById('scrollToTop');
 
-// Show/hide scroll to top button based on scroll position
-window.addEventListener('scroll', () => {
-  if (window.pageYOffset > 300) {
-    scrollToTopButton.classList.add('visible');
-  } else {
-    scrollToTopButton.classList.remove('visible');
-  }
-});
+    // Show/hide scroll to top button based on scroll position
+    window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 300) {
+            scrollToTopButton.classList.add('visible');
+        } else {
+            scrollToTopButton.classList.remove('visible');
+        }
+    });
 
-// Smooth scroll to top when button is clicked
-scrollToTopButton.addEventListener('click', () => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  });
+    // Smooth scroll to top when button is clicked
+    scrollToTopButton.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
 });
   </script>
   <button class="scroll-to-top" id="scrollToTop" aria-label="Scroll to top">
@@ -1464,6 +1466,7 @@ scrollToTopButton.addEventListener('click', () => {
 </button>
 </body>
 </html>
+
 
 
 
