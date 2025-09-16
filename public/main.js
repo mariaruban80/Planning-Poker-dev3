@@ -1609,12 +1609,6 @@ function initializeApp(roomId) {
     updateVoteCountUI(storyId);
   });
 
-
-socket.on('hostChanged', ({ hostId, userName }) => {
-  console.log(`[HOST] Host changed: ${userName}`);
-
-});
-
 socket.on('hostLeft', () => {
   console.log('[HOST] Host left — room is free now');
 
@@ -4391,19 +4385,25 @@ function setupHostToggle() {
 
   // Listen for server-side host changes
   if (socket) {
-    socket.on("hostChanged", ({ hostId, userName }) => {
-      const isThisUser = socket.id === hostId;
-      hostToggle.checked = isThisUser;
-      sessionStorage.setItem("isHost", isThisUser ? "true" : "false");
-      
-      if (isThisUser) {
-        enableHostFeatures();
-        console.log(`[HOST] You are now the host`);
-      } else {
-        disableHostFeatures();
-        console.log(`[HOST] ${userName} is now the host`);
-      }
-    });
+ socket.on("hostChanged", ({ hostId, userName }) => {
+  const isThisUser = socket.id === hostId;
+  const hostToggle = document.getElementById("hostToggle");
+
+  if (hostToggle) {
+    hostToggle.checked = isThisUser;
+    hostToggle.disabled = true; // 🔒 always disabled (host is unique)
+  }
+
+  sessionStorage.setItem("isHost", isThisUser ? "true" : "false");
+
+  if (isThisUser) {
+    enableHostFeatures();
+    console.log("[HOST] You are now the host");
+  } else {
+    disableHostFeatures();
+    console.log(`[HOST] ${userName} is now the host`);
+  }
+});
 
     socket.on("hostLeft", () => {
       console.log("[HOST] Previous host left the session");
